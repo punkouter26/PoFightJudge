@@ -14,7 +14,7 @@
 - [x] T07 Client bootstrap
 - [x] T08 Design tokens, theme, shell
 - [x] T09 Client auth (E2EUI AppFixture created here; T11 extends it)
-- [ ] T10 Home, Health, NotFound, banner, empty state
+- [x] T10 Home, Health, NotFound, banner, empty state (banner shipped in T08)
 - [ ] T11 Test infrastructure  ← CP1
 
 ## Phase B — Profiles

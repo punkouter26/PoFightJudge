@@ -6,17 +6,19 @@ namespace PoMarriedFight.E2EUI;
 public class ThemeAndViewportTests(AppFixture app)
 {
     [SkippableFact]
-    public async Task Guest_sign_in_authenticates_the_session()
+    public async Task Unauthenticated_visitor_is_sent_to_login_and_guest_returns_them_home()
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/login", user: null);
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/", user: null);
         await using var _ = context;
 
         var guest = page.GetByRole(AriaRole.Button, new() { Name = "Continue as Guest (Dev)" });
         await guest.WaitForAsync(new() { Timeout = 30_000 });
+        page.Url.Should().EndWith("/login?returnUrl=%2F", "the protected home page redirects and remembers where to return");
         await guest.ClickAsync();
 
-        // Home does not exist yet (T10), but the session does: the layout shows the signed-in user.
-        await page.Locator("header.topbar .user").WaitForAsync(new() { Timeout = 30_000 });
+        await page.Locator("article.channel").First.WaitForAsync(new() { Timeout = 30_000 });
+        page.Url.Should().Be(app.BaseUrl + "/");
+        (await page.Locator("article.channel").CountAsync()).Should().Be(2);
         (await page.Locator("header.topbar .user").InnerTextAsync()).Should().Contain("GUEST-");
         errors.Should().BeEmpty();
     }

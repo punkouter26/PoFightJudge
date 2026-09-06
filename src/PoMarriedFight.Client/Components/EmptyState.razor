@@ -1,0 +1,25 @@
+@* The one "nothing here yet" treatment. Lists, grids and panels use it instead of inventing their own. *@
+<div class="empty po-card po-card--quiet" role="status">
+    <RadzenIcon Icon="@Icon" />
+    <div class="text">
+        <div class="title po-display">@Title</div>
+        @if (!string.IsNullOrWhiteSpace(Text))
+        {
+            <p class="po-muted">@Text</p>
+        }
+    </div>
+    @if (Action is not null)
+    {
+        <div class="action">@Action</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    [Parameter] public string? Text { get; set; }
+
+    [Parameter] public string Icon { get; set; } = "hourglass_empty";
+
+    [Parameter] public RenderFragment? Action { get; set; }
+}

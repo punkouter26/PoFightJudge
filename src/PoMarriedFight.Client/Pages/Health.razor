@@ -1,0 +1,81 @@
+@page "/health"
+@attribute [AllowAnonymous]
+@inject IApiClient Api
+
+<PageTitle>Health · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Diagnostics" Title="Health" Lead="Connections, configuration presence and feature flags. Values are never shown, only whether they are set.">
+    <Actions>
+        <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Secondary" Click="LoadAsync" IsBusy="@_loading" />
+    </Actions>
+    <ChildContent>
+        @if (_error is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+        }
+        else if (_report is null)
+        {
+            <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="overall">
+                <RadzenBadge BadgeStyle="@Style(_report.Overall)" Text="@_report.Overall.ToString()" />
+                <span class="po-muted">@_report.Environment · @_report.Timestamp.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) UTC</span>
+            </div>
+            @foreach (var category in Enum.GetValues<HealthCategory>())
+            {
+                var rows = _report.Checks.Where(c => c.Category == category).ToList();
+                if (rows.Count == 0)
+                {
+                    continue;
+                }
+
+                <h2>@category</h2>
+                <RadzenDataGrid TItem="HealthCheckDto" Data="@rows" AllowSorting="true" Density="Density.Compact" class="grid">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="HealthCheckDto" Property="@nameof(HealthCheckDto.Name)" Title="Check" Width="16rem" />
+                        <RadzenDataGridColumn TItem="HealthCheckDto" Property="@nameof(HealthCheckDto.State)" Title="State" Width="9rem">
+                            <Template Context="row"><RadzenBadge BadgeStyle="@Style(row.State)" Text="@row.State.ToString()" /></Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="HealthCheckDto" Property="@nameof(HealthCheckDto.Detail)" Title="Detail" />
+                    </Columns>
+                </RadzenDataGrid>
+            }
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private HealthReportDto? _report;
+    private string? _error;
+    private bool _loading;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _report = await Api.GetHealthDetailsAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"The API did not answer: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static BadgeStyle Style(HealthState state) => state switch
+    {
+        HealthState.Ok => BadgeStyle.Success,
+        HealthState.Degraded => BadgeStyle.Warning,
+        HealthState.NotConfigured => BadgeStyle.Light,
+        _ => BadgeStyle.Danger,
+    };
+}

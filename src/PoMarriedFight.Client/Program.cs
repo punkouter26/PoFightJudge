@@ -18,6 +18,7 @@ builder.Services.AddRadzenComponents();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddHotKeys2();
 builder.Services.AddScoped<ThemeInterop>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IApiClient, ApiClient>();
 
 // Environment split (SPEC §2): Production = Microsoft Entra ID via MSAL, API calls to our own origin carry the access

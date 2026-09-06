@@ -1,0 +1,32 @@
+@inject NavigationManager Nav
+
+@* One of the two "channels" on Home: WATCH or FIGHT. The big number and the tinted corner are the broadcast idiom. *@
+<article class="channel po-card @(Accent == ChannelAccent.P1 ? "p1" : "p2")" data-channel="@Number">
+    <span class="po-chip po-chip--muted badge">Channel @Number</span>
+    <span class="number po-display" aria-hidden="true">@Number</span>
+    <h2>@Title</h2>
+    <p class="po-muted">@Description</p>
+    <RadzenButton Text="@Cta" Icon="@Icon" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Large" class="cta" Click="@(() => Nav.NavigateTo(Href))" />
+</article>
+
+@code {
+    public enum ChannelAccent
+    {
+        P1,
+        P2,
+    }
+
+    [Parameter, EditorRequired] public int Number { get; set; }
+
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public string Cta { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+
+    [Parameter] public string Icon { get; set; } = "play_arrow";
+
+    [Parameter] public ChannelAccent Accent { get; set; } = ChannelAccent.P1;
+}

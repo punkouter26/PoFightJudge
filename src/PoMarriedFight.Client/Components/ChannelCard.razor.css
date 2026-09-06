@@ -1,0 +1,65 @@
+.channel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--po-space-3);
+  min-height: 260px;
+  padding: var(--po-space-5);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.channel.p1 { background: linear-gradient(165deg, var(--po-p1-soft) 0%, var(--po-surface) 62%); }
+.channel.p2 { background: linear-gradient(165deg, var(--po-p2-soft) 0%, var(--po-surface) 62%); }
+
+.badge {
+  position: absolute;
+  top: var(--po-space-4);
+  left: var(--po-space-5);
+}
+
+.number {
+  position: absolute;
+  top: var(--po-space-3);
+  right: var(--po-space-4);
+  z-index: -1;
+  font-size: var(--po-text-4xl);
+  font-size: calc(var(--po-text-4xl) * 1.8);
+  line-height: 0.8;
+  opacity: 0.12;
+}
+
+.channel.p1 .number { color: var(--po-p1); }
+.channel.p2 .number { color: var(--po-p2); }
+
+h2 {
+  font-size: var(--po-text-4xl);
+}
+
+p {
+  max-width: 40ch;
+}
+
+.channel ::deep .cta {
+  align-self: flex-start;
+  color: var(--po-fg-invert);
+}
+
+.channel.p1 ::deep .cta { background: var(--po-p1); }
+.channel.p2 ::deep .cta { background: var(--po-p2); }
+
+@media (max-width: 40rem) {
+  .channel {
+    min-height: 170px;
+    padding: var(--po-space-4);
+  }
+
+  h2 {
+    font-size: var(--po-text-3xl);
+  }
+
+  .channel ::deep .cta {
+    align-self: stretch;
+  }
+}

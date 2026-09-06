@@ -1,0 +1,40 @@
+@page "/"
+@inject TimeProvider Clock
+
+<PageTitle>PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard">
+    <div class="hero">
+        <div class="titles">
+            <div class="po-eyebrow">@Clock.GetLocalNow().ToString("dddd · h:mm tt", System.Globalization.CultureInfo.InvariantCulture)</div>
+            <h1>What are we fighting about tonight?</h1>
+        </div>
+        <span class="po-chip po-chip--live">Live</span>
+    </div>
+
+    <div class="channels">
+        <ChannelCard Number="1" Title="Watch" Icon="theaters" Href="watch" Cta="Pick the couple" Accent="ChannelCard.ChannelAccent.P1"
+                     Description="Pick a husband and a wife from your profiles. Their AI versions argue three rounds each in their own voices; a judge calls it." />
+        <ChannelCard Number="2" Title="Fight" Icon="mic" Href="fight" Cta="Start the fight" Accent="ChannelCard.ChannelAccent.P2"
+                     Description="You two, one microphone. The Referee moderates, interrupts, cross-examines and rules — then the full breakdown." />
+    </div>
+
+    <div class="below">
+        <section class="replays">
+            <div class="section-head">
+                <h2>Replays</h2>
+                <RadzenLink Path="history" Text="All history" Icon="chevron_right" />
+            </div>
+            @* The unified history grid (RadzenDataGrid over /api/matches) lands with the records slice (T47). *@
+            <EmptyState Icon="history" Title="No matches yet" Text="Your first watch or fight will show up here with its replay." />
+        </section>
+        <section class="fighters">
+            <div class="section-head">
+                <h2>Top fighters</h2>
+                <RadzenLink Path="leaderboard" Text="Leaderboard" Icon="chevron_right" />
+            </div>
+            @* Fighter records come from /api/fighters (T48). *@
+            <EmptyState Icon="sports_mma" Title="Nobody on the card" Text="Fighters are created the first time their tag steps up to the mic." />
+        </section>
+    </div>
+</PageShell>

@@ -1,0 +1,16 @@
+.overall {
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-3);
+  margin-bottom: var(--po-space-5);
+}
+
+h2 {
+  font-size: var(--po-text-xl);
+  margin: var(--po-space-5) 0 var(--po-space-3);
+}
+
+.grid {
+  border: 1px solid var(--po-border);
+  border-radius: var(--po-radius-md);
+}
