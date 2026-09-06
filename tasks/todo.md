@@ -6,7 +6,7 @@
 
 ## Phase A — Foundation
 - [x] T01 Solution skeleton
-- [ ] T02 Shared contracts
+- [x] T02 Shared contracts
 - [ ] T03 Api host bootstrap + secrets + degraded mode
 - [ ] T04 Diagnostics endpoints
 - [ ] T05 Auth (server)

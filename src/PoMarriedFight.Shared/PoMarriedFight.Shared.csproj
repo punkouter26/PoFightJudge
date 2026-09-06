@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Wire contracts only: ApiRoutes, ConfigKeys, ids, DTOs, validators, JSON context. No logic, no I/O (NET_RULES §1.4). -->
   <ItemGroup>
-    <PackageReference Include="Vogen" PrivateAssets="all" />
+    <PackageReference Include="Vogen" />
     <PackageReference Include="FluentValidation" />
   </ItemGroup>
 </Project>
