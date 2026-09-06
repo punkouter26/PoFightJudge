@@ -1,4 +1,7 @@
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage.Blobs;
@@ -31,16 +34,43 @@ public static class StorageServiceExtensions
     /// </summary>
     public static IServiceCollection AddPoStorage(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        TokenCredential credential = new DefaultAzureCredential();
+        var azurite = environment.IsDevelopment() && configuration.GetValue<bool>($"{Flags.Section}:{Flags.UseAzurite}");
+
+        // Locally the cloud-only providers (environment, workload identity, IMDS) only add seconds of probing before
+        // `az login` is tried; Production keeps the full chain, where managed identity is the one that answers.
+        TokenCredential credential = environment.IsDevelopment()
+            ? new DefaultAzureCredential(new DefaultAzureCredentialOptions
+            {
+                ExcludeEnvironmentCredential = true,
+                ExcludeWorkloadIdentityCredential = true,
+                ExcludeManagedIdentityCredential = true,
+                ExcludeInteractiveBrowserCredential = true,
+            })
+            : new DefaultAzureCredential();
 
         // Azurite rejects the audience Azure.Data.Tables asks for; pin the storage scope in that one configuration only.
-        if (environment.IsDevelopment() && configuration.GetValue<bool>($"{Flags.Section}:{Flags.UseAzurite}"))
+        if (azurite)
         {
             credential = new AzuriteStorageScopedCredential(credential);
         }
 
-        services.AddSingleton(new TableServiceClient(EndpointOrPlaceholder(configuration, ConfigKeys.Storage.TableEndpoint, "table"), credential));
-        services.AddSingleton(new BlobServiceClient(EndpointOrPlaceholder(configuration, ConfigKeys.Storage.BlobEndpoint, "blob"), credential));
+        var tableEndpoint = EndpointOrPlaceholder(configuration, ConfigKeys.Storage.TableEndpoint, "table");
+        var blobEndpoint = EndpointOrPlaceholder(configuration, ConfigKeys.Storage.BlobEndpoint, "blob");
+        var tableOptions = new TableClientOptions();
+        var blobOptions = new BlobClientOptions();
+        if (azurite)
+        {
+            // The emulator's TLS certificate is the exported ASP.NET dev cert, which this machine may not have trusted
+            // (trusting it needs an interactive prompt). Accept exactly that cert — CN=localhost, on a loopback host — for
+            // the storage clients in this one configuration; Production validation is untouched.
+#pragma warning disable CA2000 // HttpClientTransport owns and disposes the handler.
+            tableOptions.Transport = new HttpClientTransport(AzuriteTransportHandler(tableEndpoint.Host));
+            blobOptions.Transport = new HttpClientTransport(AzuriteTransportHandler(blobEndpoint.Host));
+#pragma warning restore CA2000
+        }
+
+        services.AddSingleton(new TableServiceClient(tableEndpoint, credential, tableOptions));
+        services.AddSingleton(new BlobServiceClient(blobEndpoint, credential, blobOptions));
         services.AddSingleton(StorageContainers.From(configuration));
         services.AddSingleton<IAudioBlobStore, AudioBlobStore>();
         services.AddHealthChecks().AddCheck<StorageHealthCheck>("storage", tags: [HealthEndpoints.ReadyTag]);
@@ -55,4 +85,27 @@ public static class StorageServiceExtensions
             ? endpoint
             : new Uri($"https://unconfigured.{service}.core.windows.net/");
     }
+
+    /// <summary>True for the local emulator's certificate only: a loopback host presenting the dev cert (CN=localhost).</summary>
+    public static bool IsLocalDevCertificate(string host, X509Certificate? certificate, SslPolicyErrors errors)
+    {
+        if (errors == SslPolicyErrors.None)
+        {
+            return true;
+        }
+
+        var loopback = host is "localhost" or "127.0.0.1" or "::1";
+        return loopback
+            && errors is SslPolicyErrors.RemoteCertificateChainErrors
+            && certificate is X509Certificate2 { Subject: "CN=localhost" };
+    }
+
+    /// <summary>The endpoint host is captured up front: the callbacks sender is the SslStream, not the request.</summary>
+    private static SocketsHttpHandler AzuriteTransportHandler(string host) => new()
+    {
+        SslOptions = new SslClientAuthenticationOptions
+        {
+            RemoteCertificateValidationCallback = (_, certificate, _, errors) => IsLocalDevCertificate(host, certificate, errors),
+        },
+    };
 }

@@ -11,7 +11,8 @@ namespace PoMarriedFight.Api.Features.Diagnostics;
 /// </summary>
 public sealed class StorageHealthCheck(TableServiceClient tables, BlobServiceClient blobs) : IHealthCheck
 {
-    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
+    /// <summary>Generous enough for a cold DefaultAzureCredential (the first token can take a few seconds locally), short enough for a probe.</summary>
+    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(8);
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {

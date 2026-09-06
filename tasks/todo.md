@@ -15,7 +15,7 @@
 - [x] T08 Design tokens, theme, shell
 - [x] T09 Client auth (E2EUI AppFixture created here; T11 extends it)
 - [x] T10 Home, Health, NotFound, banner, empty state (banner shipped in T08)
-- [ ] T11 Test infrastructure  ← CP1
+- [x] T11 Test infrastructure  ← CP1 reached 2026-09-06: shell + guest login + theme + 390px (E2EUI 3), /api/health Healthy vs real Azurite (OAuth+HTTPS), all 5 test projects run
 
 ## Phase B — Profiles
 - [ ] T12 Profile domain + repository
