@@ -1,14 +1,17 @@
 using Azure.Core;
 using Azure.Identity;
 using Carter;
+using FluentValidation;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.FeatureManagement;
 using PoMarriedFight.Api.Common;
 using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Diagnostics;
+using PoMarriedFight.Api.Features.Profiles;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Configuration;
+using PoMarriedFight.Shared.Validators;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -109,6 +112,8 @@ try
     builder.Services.AddSingleton<StartupHealthState>();
     builder.Services.AddPoDiagnostics(builder.Configuration);
     builder.Services.AddPoStorage(builder.Configuration, builder.Environment);
+    builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+    builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
     builder.Services.TryAddSingleton(TimeProvider.System);
     builder.Services.AddFeatureManagement();

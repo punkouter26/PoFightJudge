@@ -18,7 +18,7 @@
 - [x] T11 Test infrastructure  ← CP1 reached 2026-09-06: shell + guest login + theme + 390px (E2EUI 3), /api/health Healthy vs real Azurite (OAuth+HTTPS), all 5 test projects run
 
 ## Phase B — Profiles
-- [ ] T12 Profile domain + repository
+- [x] T12 Profile domain + repository
 - [ ] T13 Profile endpoints, faces, seeding
 - [ ] T14 Profiles UI  ← CP2
 

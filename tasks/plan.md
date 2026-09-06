@@ -473,14 +473,14 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
 | T07 | `AddBlazoredLocalStorage()`, `AddHotKeys2()` |
 | T08 | `ThemeToggle` persists via `ILocalStorageService` (theme.js still stamps pre-paint from the same key) |
 | T11 | `TestSupport/Fakers.cs` — Bogus fakers for profiles, fighters, turns, transcripts (seeded, deterministic) |
-| T12 | `ProfileMapping` = `[Mapper] static partial class`; `Shared/Validation/CreateProfileRequestValidator` (FluentValidation, in Shared so both sides share it); endpoints validate via `IValidator<T>` filter |
+| T12 | `ProfileMapping` = `[Mapper] static partial class`; `Shared/Validators/CreateProfileRequestValidator` (FluentValidation, in Shared so both sides share it); endpoints validate via `IValidator<T>` filter |
 | T13 | `ProfileImageService` uses ImageSharp (decode any → 512×512 cover crop → PNG) |
 | T14 | `ProfileEditDialog` uses `<FluentValidationValidator>` inside `RadzenTemplateForm` |
 | T16/T23 | Dev fakes draw persona/dialogue material from the Bogus fakers |
 | T23, T31, T32, T39 | Verify snapshots: `RoundPromptBuilder` (system + user halves), `JudgePromptBuilder`, `LiveSetupBuilder` JSON, `HostPersona.SystemInstruction` per persona, `AnalysisSchema.Build()` — `*.verified.txt` committed |
 | T26/T36 | Last WATCH matchup / last fighter pair remembered in LocalStorage |
 | T27/T37 | HotKeys2: `Space` SLAP, `Esc` cancel, `E` end fight, `?` shortcut sheet (`RadzenDialog`) |
-| T30 | `Shared/Validation/CreateFightRequestValidator` (distinct tags, persona known, topic ≤ 200) |
+| T30 | `Shared/Validators/CreateFightRequestValidator` (distinct tags, persona known, topic ≤ 200) |
 | T33 | `DebateOrchestratorTests` assert `[LoggerMessage]` events with `FakeLogger` (tool call ok/fail, nudge kinds, persist failure) |
 | **T41b (new)** — Opus recordings | Files: `Api/Features/Storage/OpusAudio.cs` (Concentus encode PCM16 → Ogg/Opus, decode → PCM), `DebateOrchestrator.cs` (persist tracks as `.opus`, WAV kept when `Audio:StoreOpus=false`), `AnalysisPipeline.cs` (uploads `audio/ogg`), `WavSlicer.cs` (decode Opus before slicing), `AudioBlobStore.cs` (content types). Tests: `OpusAudioTests` (round-trip length ± 20 ms, size ≤ 15 % of WAV), pipeline + clip tests on Opus input. Deps: T42. Guarded by `PoMarriedFight:Audio:StoreOpus` (default true) |
 | T45/T46 | `HybridCache` (30 s) around leaderboard + fighter profile reads; invalidated by tag on analysis completion / delete |
