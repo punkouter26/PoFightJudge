@@ -75,6 +75,7 @@ public partial class HealthTests(ApiFactory factory)
         var flags = await client.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url);
 
         flags!.UseFakeAi.Should().BeTrue("the test host forces the fakes");
+        flags.SelfPlayer.Should().BeTrue("the fake transcriber can finish a spoken turn, so the SELF player is offered");
         flags.SelfPlayer.Should().BeTrue();
         flags.BrowserSpeechRecognition.Should().BeTrue();
     }

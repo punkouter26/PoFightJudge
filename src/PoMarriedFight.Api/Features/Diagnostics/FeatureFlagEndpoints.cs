@@ -1,5 +1,6 @@
 using Carter;
 using Microsoft.FeatureManagement;
+using PoMarriedFight.Api.Features.Voice;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Configuration;
 using PoMarriedFight.Shared.Models;
@@ -14,13 +15,13 @@ namespace PoMarriedFight.Api.Features.Diagnostics;
 public sealed class FeatureFlagEndpoints : ICarterModule
 {
     public void AddRoutes(IEndpointRouteBuilder app) =>
-        app.MapGet(ApiRoutes.Features.Url, async (IConfiguration config, IHostEnvironment env, IFeatureManager features) =>
+        app.MapGet(ApiRoutes.Features.Url, async (IConfiguration config, IHostEnvironment env, IFeatureManager features, ITranscriptionService transcription) =>
             Results.Ok(new FeatureFlagsDto(
                 UseFakeAi: DiagEndpoints.IsFakeAi(env, config, await features.IsEnabledAsync(Flags.UseFakeAi)),
                 DevGuestEnabled: !env.IsProduction() && await features.IsEnabledAsync(Flags.DevGuestEnabled),
-                // The server half of the SELF gate; the client ANDs it with its own microphone check. T21 ANDs in
-                // whether a transcription provider is actually available.
-                SelfPlayer: await features.IsEnabledAsync(Flags.SelfPlayer),
+                // The server half of the SELF gate; the client ANDs it with its own microphone check. The flag alone
+                // is not enough: the player is only offered a spoken turn when a transcriber can actually finish it.
+                SelfPlayer: await features.IsEnabledAsync(Flags.SelfPlayer) && transcription.IsEnabled,
                 BrowserSpeechRecognition: await features.IsEnabledAsync(Flags.BrowserSpeechRecognition))))
             .AllowAnonymous().WithTags("Diagnostics");
 }

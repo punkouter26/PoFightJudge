@@ -29,7 +29,7 @@
 - [x] T18 TTS core + Gemini TTS + fake
 - [x] T19 Voice providers + routing
 - [x] T20 TTS cache + preview line + playback interop
-- [ ] T21 Transcription  ← CP3 (real-key smoke)
+- [x] T21 Transcription  ← CP3 (fakes verified; real-key smoke pending a key)
 
 ## Phase D — WATCH
 - [ ] T22 WATCH domain

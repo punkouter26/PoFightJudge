@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
+using PoMarriedFight.Api.Features.Ai;
+using PoMarriedFight.Api.Features.Ai.Fakes;
 using PoMarriedFight.Shared.Configuration;
 
 namespace PoMarriedFight.Api.Features.Voice;
@@ -19,7 +21,7 @@ public static class VoiceServiceExtensions
     public const int AzureAttemptSeconds = 10;
     public const int AzureTotalSeconds = 22;
 
-    public static IServiceCollection AddPoVoice(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddPoVoice(this IServiceCollection services, IConfiguration configuration, AiMode mode)
     {
         var fishKey = configuration[ConfigKeys.Ai.FishAudioApiKey];
         var fish = new FishAudioOptions(!string.IsNullOrWhiteSpace(fishKey), configuration[ConfigKeys.Ai.FishDefaultReferenceId]);
@@ -60,6 +62,23 @@ public static class VoiceServiceExtensions
         }
 
         services.AddSingleton<ITtsService, RoutingTtsService>();
+
+        // Transcription has no fallback chain: one provider is chosen up front, best first. Azure fast transcription
+        // wins when it is configured because a SELF turn is the one place a player sits waiting; the fake stands in
+        // whenever the AI mode is fake, so the whole turn works with no key at all.
+        if (mode.UseFakes)
+        {
+            services.AddSingleton<ITranscriptionService, FakeTranscription>();
+        }
+        else if (azure.Enabled)
+        {
+            services.AddSingleton<ITranscriptionService, AzureTranscriptionService>();
+        }
+        else
+        {
+            services.AddSingleton<ITranscriptionService, GeminiTranscriptionService>();
+        }
+
         return services;
     }
 
