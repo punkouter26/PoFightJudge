@@ -32,7 +32,7 @@
 - [x] T21 Transcription  ← CP3 (fakes verified; real-key smoke pending a key)
 
 ## Phase D — WATCH
-- [ ] T22 WATCH domain
+- [x] T22 WATCH domain
 - [ ] T23 Prompts + IWatchAi
 - [ ] T24 Match storage (both modes)
 - [ ] T25 WATCH endpoints
