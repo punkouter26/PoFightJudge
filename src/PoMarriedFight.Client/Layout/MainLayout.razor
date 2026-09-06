@@ -1,0 +1,10 @@
+@inherits LayoutComponentBase
+@* T07 placeholder so the router has a layout; T08 builds the Broadcast shell (TopBar, ticker, PageShell, dialogs). *@
+
+<div class="shell">
+    <main class="content">
+        @Body
+    </main>
+    <RadzenDialog />
+    <RadzenNotification />
+</div>

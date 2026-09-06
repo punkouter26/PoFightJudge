@@ -178,6 +178,9 @@ try
 
     // Unknown /api/* routes must be a clean 404, never the SPA fallback (which would answer 200 + index.html).
     app.MapFallback($"{ApiRoutes.ApiPrefix}/{{**path}}", () => Results.NotFound(new { error = "No such API route." })).AllowAnonymous();
+    // A missing file-like path (/nope.txt, a browsers /favicon.ico) must be a 404: with a fallback authorization policy the
+    // authorization middleware challenges even endpoint-less requests, which turned every such miss into a 401.
+    app.MapFallback("{*path:file}", () => Results.NotFound()).AllowAnonymous();
     app.MapFallbackToFile("index.html", staticFiles).AllowAnonymous();
 
     app.Run();

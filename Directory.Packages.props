@@ -14,6 +14,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.11" />
+    <!-- Microsoft.Extensions.Http is framework-provided on the server (NU1510) but a real dependency for the WASM client. -->
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.11" />

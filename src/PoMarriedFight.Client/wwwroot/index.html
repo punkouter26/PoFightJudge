@@ -1,14 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PoMarriedFight</title>
-    <base href="/" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0b0d12" />
+  <title>PoMarriedFight</title>
+  <base href="/" />
+  <!-- Theme is stamped before the first stylesheet paints, or the OS palette renders and then snaps (see js/theme.js). -->
+  <script src="js/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" />
+  <!-- Radzen's theme stylesheet is injected by <RadzenTheme> in App.razor; app.css bridges its variables onto the --po-* tokens. -->
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="PoMarriedFight.Client.styles.css" />
 </head>
 <body>
-    <div id="app">Loading PoMarriedFight…</div>
-    <div id="blazor-error-ui" style="display:none"></div>
-    <script src="_framework/blazor.webassembly.js"></script>
+  <div id="app">
+    <div class="po-boot">Loading PoMarriedFight…</div>
+  </div>
+  <div id="blazor-error-ui" role="alert">
+    An unhandled error has occurred. <a href="." class="reload">Reload</a>
+  </div>
+  <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+  <!-- MSAL bridge for Production Entra ID sign-in (defines window.AuthenticationService); inert in Dev/Test. -->
+  <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
+  <script src="_framework/blazor.webassembly.js"></script>
 </body>
 </html>

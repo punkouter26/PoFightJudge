@@ -1,2 +1,23 @@
-@* T01 stub — replaced by the router + auth shell in T07. *@
-<h1>PoMarriedFight</h1>
+@* Dark is the default (SPEC §5); ThemeToggle swaps material-dark <-> material through ThemeService and stamps data-theme. *@
+<RadzenTheme Theme="material-dark" />
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+                <Authorizing>
+                    <p class="po-boot">Checking sign-in…</p>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found · PoMarriedFight</PageTitle>
+            <LayoutView Layout="@typeof(Layout.MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

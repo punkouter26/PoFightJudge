@@ -93,6 +93,10 @@ public partial class HealthTests(ApiFactory factory)
         missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
         missing.Content.Headers.ContentType!.MediaType.Should().Be("application/json");
         missing.Headers.Contains("Content-Security-Policy").Should().BeTrue();
+
+        // A missing static file is a 404, not an auth challenge (the SPA fallback for client routes is covered by E2EUI,
+        // where the static web assets exist).
+        (await client.GetAsync("/js/does-not-exist.js")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [GeneratedRegex("AIza[0-9A-Za-z_-]{20,}", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
