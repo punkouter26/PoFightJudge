@@ -1,0 +1,58 @@
+@* One side of a matchup as it will be argued: a cast portrait, or the person at the microphone. *@
+<article class="speaker po-card @(IsWife ? "p2" : "p1")" data-side="@(IsWife ? "wife" : "husband")" data-kind="@(Side?.Kind.ToString().ToLowerInvariant() ?? "empty")">
+    <div class="role po-eyebrow">@(IsWife ? "Wife" : "Husband")</div>
+
+    @if (Side is null)
+    {
+        <div class="face face--empty" aria-hidden="true">?</div>
+        <div class="who">
+            <h3 class="po-muted">Nobody yet</h3>
+            <p class="po-muted">Pick a persona, or step up to the microphone.</p>
+        </div>
+    }
+    else if (Side.IsHuman)
+    {
+        <div class="face face--human" aria-hidden="true">
+            <RadzenIcon Icon="mic" />
+        </div>
+        <div class="who">
+            <h3>@Side.DisplayName</h3>
+            <div class="meta">
+                <span class="po-chip po-chip--accent">@Side.Id · you</span>
+                <span class="po-muted">Speaks for themselves</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (Profile is { HasFace: true })
+        {
+            <RadzenImage Path="@FaceUrl" AlternateText="@Side.DisplayName" class="face" />
+        }
+        else
+        {
+            <div class="face face--blank po-display" aria-hidden="true">@Side.Id</div>
+        }
+        <div class="who">
+            <h3>@Side.DisplayName</h3>
+            <div class="meta">
+                <span class="po-chip @(IsWife ? "po-chip--p2" : "po-chip--p1")">@Side.Id</span>
+                @if (Profile is not null && !string.IsNullOrWhiteSpace(Profile.Persona.Occupation))
+                {
+                    <span class="po-muted">@Profile.Persona.Occupation</span>
+                }
+            </div>
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter] public MatchSide? Side { get; set; }
+
+    /// <summary>The cast entry behind a persona side, when it is loaded; a person has none by design.</summary>
+    [Parameter] public ProfileDto? Profile { get; set; }
+
+    [Parameter] public bool IsWife { get; set; }
+
+    private string FaceUrl => Profile is null ? string.Empty : ApiRoutes.Profiles.Face(Profile.Id);
+}

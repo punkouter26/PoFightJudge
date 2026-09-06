@@ -1,0 +1,14 @@
+.picker {
+  display: grid;
+  gap: var(--po-space-3);
+}
+
+::deep .choice,
+::deep .tag {
+  width: 100%;
+}
+
+.validation-message {
+  color: var(--po-danger);
+  font-size: var(--po-text-xs);
+}

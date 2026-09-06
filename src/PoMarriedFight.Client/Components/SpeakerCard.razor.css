@@ -1,0 +1,64 @@
+.speaker {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "role role"
+    "face who";
+  gap: var(--po-space-2) var(--po-space-3);
+  align-items: center;
+  border-top: 3px solid var(--po-p1);
+}
+
+.speaker.p2 { border-top-color: var(--po-p2); }
+
+.speaker[data-kind="empty"] { border-top-color: var(--po-border); }
+
+.speaker[data-kind="human"] { border-top-color: var(--po-accent); }
+
+.role { grid-area: role; }
+
+::deep .face,
+.face {
+  grid-area: face;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: var(--po-surface-2);
+  border: 2px solid var(--po-border);
+  color: var(--po-muted);
+}
+
+.speaker.p1 ::deep .face { border-color: var(--po-p1); }
+.speaker.p2 ::deep .face { border-color: var(--po-p2); }
+.face--human { border-color: var(--po-accent); color: var(--po-accent); }
+
+.who {
+  grid-area: who;
+  min-width: 0;
+  display: grid;
+  gap: var(--po-space-1);
+}
+
+h3 {
+  margin: 0;
+  font-family: var(--po-font-display);
+  font-size: var(--po-text-lg);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+p {
+  margin: 0;
+  font-size: var(--po-text-sm);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--po-space-2);
+  font-size: var(--po-text-sm);
+}

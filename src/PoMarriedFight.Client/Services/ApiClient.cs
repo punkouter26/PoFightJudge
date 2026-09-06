@@ -43,6 +43,18 @@ public interface IApiClient
 
     /// <summary>One in-character line spoken in the persona's own voice; nothing is saved.</summary>
     Task<PreviewLineResponse> PreviewLineAsync(CreateProfileRequest persona, CancellationToken ct = default);
+
+    /// <summary>The next line of a WATCH match, for the persona whose turn it is.</summary>
+    Task<GenerateRoundResponse> GenerateRoundAsync(GenerateRoundRequest request, CancellationToken ct = default);
+
+    /// <summary>Speaks a line that has already been generated.</summary>
+    Task<TtsAudioDto> RoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default);
+
+    /// <summary>Ends the match: the judge rules and the whole thing is recorded.</summary>
+    Task<VerdictResponse> VerdictAsync(VerdictRequest request, CancellationToken ct = default);
+
+    /// <summary>Turns one recorded spoken turn into words. An empty answer means nothing intelligible was said.</summary>
+    Task<TranscribeResponse> TranscribeAsync(TranscribeRequest request, CancellationToken ct = default);
 }
 
 /// <summary>A non-success answer from the API, carrying the problem details so a form can show the server's words.</summary>
@@ -198,6 +210,30 @@ public sealed class ApiClient(HttpClient http) : IApiClient
     {
         using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Profiles.PreviewLineUrl), persona, ct);
         return await ReadAsync<PreviewLineResponse>(response, ct);
+    }
+
+    public async Task<GenerateRoundResponse> GenerateRoundAsync(GenerateRoundRequest request, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Watch.GenerateRoundUrl), request, ct);
+        return await ReadAsync<GenerateRoundResponse>(response, ct);
+    }
+
+    public async Task<TtsAudioDto> RoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Watch.RoundAudioUrl), request, ct);
+        return await ReadAsync<TtsAudioDto>(response, ct);
+    }
+
+    public async Task<VerdictResponse> VerdictAsync(VerdictRequest request, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Watch.VerdictUrl), request, ct);
+        return await ReadAsync<VerdictResponse>(response, ct);
+    }
+
+    public async Task<TranscribeResponse> TranscribeAsync(TranscribeRequest request, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Watch.TranscribeUrl), request, ct);
+        return await ReadAsync<TranscribeResponse>(response, ct);
     }
 
     private static Uri Relative(string path) => new(path, UriKind.Relative);

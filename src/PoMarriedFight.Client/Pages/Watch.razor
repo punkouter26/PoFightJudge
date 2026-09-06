@@ -1,0 +1,126 @@
+@page "/watch"
+@inject IApiClient Api
+@inject SimulationState Simulation
+@inject NavigationManager Nav
+
+<PageTitle>Watch · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Channel 1" Title="Watch"
+           Lead="Two of your personas argue it out in their own voices, and a judge calls it on the merits. Take a side yourself and it counts towards your record.">
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="2" Label="Loading the cast" />
+        }
+        else if (_loadError is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_loadError</RadzenAlert>
+        }
+        else if (_cast.Count == 0)
+        {
+            <EmptyState Icon="groups" Title="No cast yet" Text="A watch needs personas to argue. Build one, or load the default cast.">
+                <Action>
+                    <RadzenButton Text="Go to profiles" Icon="groups" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo("profiles"))" />
+                </Action>
+            </EmptyState>
+        }
+        else
+        {
+            <div class="setup">
+                <section class="sides">
+                    <ProfilePicker Cast="@_cast" IsWife="false" AllowHuman="@AllowHuman" Excluded="@_wife?.Id" Side="@_husband" SideChanged="@(s => _husband = s)" />
+                    <ProfilePicker Cast="@_cast" IsWife="true" AllowHuman="@AllowHuman" Excluded="@_husband?.Id" Side="@_wife" SideChanged="@(s => _wife = s)" />
+                </section>
+
+                <section class="preview" aria-label="The matchup">
+                    <SpeakerCard Side="@_husband" Profile="@ProfileFor(_husband)" IsWife="false" />
+                    <div class="versus po-display" aria-hidden="true">vs</div>
+                    <SpeakerCard Side="@_wife" Profile="@ProfileFor(_wife)" IsWife="true" />
+                </section>
+
+                <section class="topic">
+                    <RadzenFormField Text="What is the fight about?" Variant="Variant.Outlined">
+                        <ChildContent>
+                            <RadzenTextBox @bind-Value="_topic" Name="topic" MaxLength="200" Placeholder="the thermostat" />
+                        </ChildContent>
+                        <Helper><span class="po-muted">Leave it blank and they will find something.</span></Helper>
+                    </RadzenFormField>
+                    <RadzenButton Text="Random" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@PickRandomTopic" />
+                </section>
+
+                @if (Problem is { Length: > 0 })
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
+                }
+
+                <div class="go">
+                    <RadzenButton Text="Start the argument" Icon="theaters" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large" Disabled="@(Problem is not null)" Click="@Start" />
+                </div>
+            </div>
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private static readonly string[] RandomTopics =
+    [
+        "the thermostat", "whose turn it is to load the dishwasher", "the in-laws at Christmas",
+        "screen time after nine", "who forgot the anniversary", "the correct way to load a car",
+        "leaving every light on", "weekend plans, again", "whose family we visit first",
+    ];
+
+    private List<ProfileDto> _cast = [];
+    private MatchSide? _husband;
+    private MatchSide? _wife;
+    private string _topic = string.Empty;
+    private bool _loading = true;
+    private string? _loadError;
+    private FeatureFlagsDto? _flags;
+
+    /// <summary>A person may only take a side when the server can actually transcribe their turn.</summary>
+    private bool AllowHuman => _flags?.HumanInWatch ?? false;
+
+    /// <summary>Why the match cannot start yet, or null when it can. Doubles as the disabled reason on the button.</summary>
+    private string? Problem =>
+        _husband is null || _wife is null ? "Pick both sides."
+        : _husband.IsHuman && _wife.IsHuman ? "Two people arguing is a fight, not a watch."
+        : string.Equals(_husband.Id, _wife.Id, StringComparison.OrdinalIgnoreCase) ? "Both sides cannot be the same."
+        : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _flags = await Api.GetFeaturesAsync();
+            _cast = [.. await Api.GetProfilesAsync()];
+        }
+        catch (HttpRequestException ex)
+        {
+            _loadError = $"Could not load the cast ({ex.Message}).";
+        }
+        catch (ApiException ex)
+        {
+            _loadError = ex.Summary;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private ProfileDto? ProfileFor(MatchSide? side) =>
+        side is null || side.IsHuman ? null : _cast.FirstOrDefault(p => string.Equals(p.Persona.Initials, side.Id, StringComparison.OrdinalIgnoreCase));
+
+    private void PickRandomTopic() => _topic = RandomTopics[Random.Shared.Next(RandomTopics.Length)];
+
+    private void Start()
+    {
+        if (Problem is not null)
+        {
+            return;
+        }
+
+        Simulation.Set(_husband!, _wife!, _topic);
+        Nav.NavigateTo("watch/play");
+    }
+}
