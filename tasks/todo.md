@@ -7,7 +7,7 @@
 ## Phase A — Foundation
 - [x] T01 Solution skeleton
 - [x] T02 Shared contracts
-- [ ] T03 Api host bootstrap + secrets + degraded mode
+- [x] T03 Api host bootstrap + secrets + degraded mode
 - [ ] T04 Diagnostics endpoints
 - [ ] T05 Auth (server)
 - [ ] T06 Storage clients + Azurite credential
