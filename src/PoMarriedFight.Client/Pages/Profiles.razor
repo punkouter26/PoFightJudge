@@ -1,0 +1,192 @@
+@page "/profiles"
+@inject IApiClient Api
+@inject DialogService Dialog
+@inject NotificationService Notify
+@inject TimeProvider Clock
+
+<PageTitle>Profiles · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="The cast" Title="Profiles"
+           Lead="Every WATCH match is two of these. Build a husband and a wife, or load the default cast.">
+    <Actions>
+        <RadzenSelectBar TValue="RoleFilter" @bind-Value="_filter" Size="ButtonSize.Small" aria-label="Show">
+            <Items>
+                <RadzenSelectBarItem Text="All" Value="RoleFilter.All" />
+                <RadzenSelectBarItem Text="Husbands" Value="RoleFilter.Husbands" />
+                <RadzenSelectBarItem Text="Wives" Value="RoleFilter.Wives" />
+            </Items>
+        </RadzenSelectBar>
+        <RadzenButton Text="Load default cast" Icon="groups" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@SeedAsync" IsBusy="@_seeding" BusyText="Loading…" />
+        <RadzenButton Text="New profile" Icon="person_add" ButtonStyle="ButtonStyle.Primary" Click="@(() => OpenEditorAsync(null))" />
+    </Actions>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="6" Label="Loading the cast" />
+        }
+        else if (_error is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+        }
+        else if (_profiles.Count == 0)
+        {
+            <EmptyState Icon="groups" Title="No profiles yet" Text="Create your first husband or wife, or load the default cast — eight personas, six with portraits.">
+                <Action>
+                    <RadzenButton Text="New profile" Icon="person_add" ButtonStyle="ButtonStyle.Primary" Click="@(() => OpenEditorAsync(null))" />
+                    <RadzenButton Text="Load default cast" Icon="groups" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@SeedAsync" IsBusy="@_seeding" BusyText="Loading…" />
+                </Action>
+            </EmptyState>
+        }
+        else
+        {
+            @foreach (var (role, label, chip) in Sections)
+            {
+                var members = _profiles.Where(p => p.Persona.Role == role).OrderBy(p => p.Persona.Name ?? p.Persona.Initials, StringComparer.OrdinalIgnoreCase).ToList();
+                if (members.Count == 0)
+                {
+                    continue;
+                }
+
+                <section class="cast" aria-label="@label">
+                    <div class="section-head">
+                        <span class="po-chip @chip">@label</span>
+                        <span class="po-muted po-num">@members.Count</span>
+                    </div>
+                    <RadzenDataList TItem="ProfileDto" Data="@members" WrapItems="true" AllowPaging="false" class="cards">
+                        <Template Context="profile">
+                            <ProfileCard Profile="@profile" FaceVersion="@_stamp" OnEdit="@(p => OpenEditorAsync(p))" OnDelete="@DeleteAsync" />
+                        </Template>
+                    </RadzenDataList>
+                </section>
+            }
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private enum RoleFilter
+    {
+        All,
+        Husbands,
+        Wives,
+    }
+
+    private List<ProfileDto> _profiles = [];
+    private bool _loading = true;
+    private bool _seeding;
+    private string? _error;
+    private RoleFilter _filter = RoleFilter.All;
+    private string _stamp = string.Empty;
+
+    private IEnumerable<(ProfileRole Role, string Label, string Chip)> Sections
+    {
+        get
+        {
+            if (_filter is RoleFilter.All or RoleFilter.Husbands)
+            {
+                yield return (ProfileRole.Husband, "Husbands", "po-chip--p1");
+            }
+
+            if (_filter is RoleFilter.All or RoleFilter.Wives)
+            {
+                yield return (ProfileRole.Wife, "Wives", "po-chip--p2");
+            }
+        }
+    }
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _profiles = [.. await Api.GetProfilesAsync()];
+            _stamp = Clock.GetUtcNow().ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"Could not load the cast ({ex.Message}).";
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Summary;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenEditorAsync(ProfileDto? existing)
+    {
+        var parameters = new Dictionary<string, object?>(StringComparer.Ordinal);
+        if (existing is not null)
+        {
+            parameters[nameof(ProfileEditDialog.Existing)] = existing;
+        }
+
+        var result = (object?)await Dialog.OpenAsync<ProfileEditDialog>(
+            existing is null ? "New profile" : $"Edit {existing.Persona.Initials}",
+            parameters,
+            new DialogOptions { Width = "min(780px, 96vw)", CloseDialogOnOverlayClick = false, Resizable = false, Draggable = false });
+
+        if (result is ProfileDto saved)
+        {
+            Notify.Notify(NotificationSeverity.Success, "Saved", $"{saved.Persona.Initials} is on the cast.");
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(ProfileDto profile)
+    {
+        var confirmed = await Dialog.Confirm(
+            $"Delete {profile.Persona.Initials}? Their WATCH record goes with them.",
+            "Delete profile",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Keep" });
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            await Api.DeleteProfileAsync(profile.Id);
+            Notify.Notify(NotificationSeverity.Info, "Deleted", $"{profile.Persona.Initials} is off the cast.");
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            Notify.Notify(NotificationSeverity.Error, "Could not delete", ex.Summary);
+        }
+    }
+
+    private async Task SeedAsync()
+    {
+        var confirmed = await Dialog.Confirm(
+            "Load the eight default personas? Ones you have edited go back to their defaults; your own profiles are untouched.",
+            "Load default cast",
+            new ConfirmOptions { OkButtonText = "Load cast", CancelButtonText = "Not now" });
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        _seeding = true;
+        try
+        {
+            var result = await Api.SeedProfilesAsync();
+            Notify.Notify(NotificationSeverity.Success, "Cast loaded", $"{result.Seeded} personas, {result.Faces} with a portrait.");
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            Notify.Notify(NotificationSeverity.Error, ex.Status == 403 ? "Not allowed" : "Could not load the cast", ex.Summary);
+        }
+        finally
+        {
+            _seeding = false;
+        }
+    }
+}

@@ -1,0 +1,24 @@
+@* A bipolar trait bar: two poles, one marker. Value 0 = fully the left pole, 100 = fully the right. *@
+<div class="stat" role="img" aria-label="@($"{LeftLabel} to {RightLabel}: {Math.Clamp(Value, 0, 100)} of 100")">
+    <div class="poles">
+        <span class="pole">@LeftLabel</span>
+        <span class="pole">@RightLabel</span>
+    </div>
+    <div class="track">
+        @* Per-instance numbers ride on custom properties; the stylesheet owns the presentation. *@
+        <div class="fill" style="@FillVars"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string LeftLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public string RightLabel { get; set; } = string.Empty;
+
+    [Parameter] public int Value { get; set; } = 50;
+
+    /// <summary>Any CSS colour; defaults to the broadcast accent.</summary>
+    [Parameter] public string Color { get; set; } = "var(--po-accent)";
+
+    private string FillVars => $"--stat-value:{Math.Clamp(Value, 0, 100)}%;--stat-color:{Color};";
+}

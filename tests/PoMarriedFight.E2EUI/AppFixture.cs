@@ -4,17 +4,20 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Playwright;
 using PoMarriedFight.Api.Features.Auth;
+using PoMarriedFight.Api.Features.Profiles;
 using PoMarriedFight.Shared.Configuration;
+using PoMarriedFight.TestSupport;
 
 namespace PoMarriedFight.E2EUI;
 
 /// <summary>
 /// Hosts the real API on Kestrel (a free port, static web assets on so the WASM client is served) under the
 /// <c>Test</c> environment, then drives headless Chromium with a fake microphone that plays
-/// <c>fixtures/debate-60s.wav</c>. Fakes and in-memory stores join as their features land (T11+).
+/// <c>fixtures/debate-60s.wav</c>. In-memory stores stand in for storage; the AI fakes join in T15.
 /// Set <c>POMARRIEDFIGHT_E2E_REAL=1</c> (with <c>GEMINI_API_KEY</c>) to drive the real providers instead.
 /// </summary>
 public sealed class AppFixture : IAsyncLifetime
@@ -150,7 +153,7 @@ public sealed class AppFixture : IAsyncLifetime
     }
 }
 
-/// <summary>The Test-environment host: no Key Vault, fake credentials allowed, static web assets on, no storage probe.</summary>
+/// <summary>The Test-environment host: no Key Vault, fake credentials allowed, static web assets on, in-memory stores, no storage probe.</summary>
 internal sealed class HostFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -166,6 +169,10 @@ internal sealed class HostFactory : WebApplicationFactory<Program>
         builder.UseSetting(ConfigKeys.Ai.GeminiApiKey, AppFixture.RealMode ? Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty : "test-key");
         builder.ConfigureTestServices(services =>
         {
+            services.RemoveAll<IProfileRepository>();
+            services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
+            services.RemoveAll<IProfileImageService>();
+            services.AddSingleton<IProfileImageService, InMemoryProfileImageService>();
             services.Configure<HealthCheckServiceOptions>(o =>
             {
                 foreach (var registration in o.Registrations.Where(r => string.Equals(r.Name, "storage", StringComparison.Ordinal)).ToList())

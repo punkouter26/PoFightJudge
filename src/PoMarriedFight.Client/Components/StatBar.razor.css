@@ -1,0 +1,31 @@
+.stat {
+  display: grid;
+  gap: var(--po-space-1);
+}
+
+.poles {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--po-text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--po-muted);
+}
+
+.track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--po-radius-pill);
+  background: var(--po-surface-3);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--stat-value, 50%);
+  background: var(--stat-color, var(--po-accent));
+  border-radius: inherit;
+  transition: width var(--po-dur-base) var(--po-ease);
+}

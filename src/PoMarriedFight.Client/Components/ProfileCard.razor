@@ -1,0 +1,81 @@
+@* One persona on the cast: portrait, who they are, four trait bars, the traits that are on, their line. *@
+<article class="profile po-card @(IsWife ? "p2" : "p1")" data-initials="@Persona.Initials">
+    <header>
+        @if (Profile.HasFace)
+        {
+            <RadzenImage Path="@FaceUrl" AlternateText="@DisplayName" class="face" />
+        }
+        else
+        {
+            <div class="face face--blank po-display" aria-hidden="true">@Persona.Initials</div>
+        }
+        <div class="who">
+            <h3>@DisplayName</h3>
+            <div class="meta">
+                <span class="po-chip @(IsWife ? "po-chip--p2" : "po-chip--p1")">@Persona.Initials · @Persona.Role</span>
+                @if (!string.IsNullOrWhiteSpace(Persona.Occupation))
+                {
+                    <span class="po-muted">@Persona.Occupation@(Persona.Age is { } age ? $", {age}" : string.Empty)</span>
+                }
+            </div>
+        </div>
+        <div class="actions">
+            <RadzenButton Icon="edit" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
+                          title="Edit" aria-label="@($"Edit {Persona.Initials}")" Click="@(() => OnEdit.InvokeAsync(Profile))" />
+            <RadzenButton Icon="delete" Variant="Variant.Text" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                          title="Delete" aria-label="@($"Delete {Persona.Initials}")" Click="@(() => OnDelete.InvokeAsync(Profile))" />
+        </div>
+    </header>
+
+    <div class="bars">
+        <StatBar LeftLabel="Logic" RightLabel="Emotion" Value="@Persona.LogicVsEmotion" Color="@Accent" />
+        <StatBar LeftLabel="Chill" RightLabel="Impatient" Value="@(100 - Persona.Patience)" Color="@Accent" />
+        <StatBar LeftLabel="Secure" RightLabel="Jealous" Value="@Persona.Jealousy" Color="@Accent" />
+        <StatBar LeftLabel="Forgiving" RightLabel="Holds on" Value="@Persona.HoldsGrudges" Color="@Accent" />
+    </div>
+
+    @if (Traits.Count > 0)
+    {
+        <div class="traits">
+            @foreach (var trait in Traits)
+            {
+                <span class="po-chip po-chip--muted">@trait</span>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Persona.Philosophy))
+    {
+        <blockquote class="quote po-muted">“@Persona.Philosophy”</blockquote>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public ProfileDto Profile { get; set; } = default!;
+
+    /// <summary>Changes whenever the list reloads, so a replaced portrait is not served from the browser cache.</summary>
+    [Parameter] public string FaceVersion { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<ProfileDto> OnEdit { get; set; }
+
+    [Parameter] public EventCallback<ProfileDto> OnDelete { get; set; }
+
+    private CreateProfileRequest Persona => Profile.Persona;
+
+    private bool IsWife => Persona.Role == ProfileRole.Wife;
+
+    private string Accent => IsWife ? "var(--po-p2)" : "var(--po-p1)";
+
+    private string DisplayName => string.IsNullOrWhiteSpace(Persona.Name) ? Persona.Initials : Persona.Name;
+
+    private string FaceUrl => $"{ApiRoutes.Profiles.Face(Profile.Id)}?v={Uri.EscapeDataString(FaceVersion)}";
+
+    private List<string> Traits =>
+    [
+        .. new (bool On, string Label)[]
+        {
+            (Persona.IsIntrovert, "Introvert"), (Persona.IsStubborn, "Stubborn"), (Persona.IsSpontaneous, "Spontaneous"),
+            (Persona.IsSarcastic, "Sarcastic"), (Persona.IsWorkaholic, "Workaholic"), (Persona.IsPackRat, "Pack rat"),
+        }.Where(t => t.On).Select(t => t.Label),
+    ];
+}

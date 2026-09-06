@@ -503,4 +503,9 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
 - **Faces are blobs only** (SPEC §6 `FacePic (blob)`): `POST /api/profiles/{id}/face` takes the raw image body,
   `ProfileImageService` crops it to a 512 px PNG (ImageSharp) and stores `{initials}.png` in the faces container;
   `ProfileDto.HasFace` + the anonymous `GET .../face` replace PoMarriedLife's inline data-URI path.
+- **T14 manifest additions**: `Client/Services/ApiClient.cs` gains the profile calls and an `ApiException` that carries
+  the server's problem details (the plan listed `ApiClient.cs` under T26 but the Profiles UI is its first consumer);
+  `Client/Program.cs` registers the shared validator for `<FluentValidationValidator>` (registration line, exempt).
+  The edit dialog is hosted by Radzen `DialogService` (CSP allows it: no inline script) rather than PoMarriedLife's
+  hand-rolled modal; delete confirms through `DialogService.Confirm`.
 
