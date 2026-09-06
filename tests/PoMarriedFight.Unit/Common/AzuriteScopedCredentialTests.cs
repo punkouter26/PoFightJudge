@@ -50,7 +50,7 @@ public class AzuriteScopedCredentialTests
     }
 
     [Fact]
-    public void Only_the_local_dev_certificate_on_a_loopback_host_bypasses_chain_validation()
+    public void Only_the_local_dev_certificate_on_a_loopback_host_bypasses_chain_and_name_validation()
     {
         using var rsa = System.Security.Cryptography.RSA.Create(2048);
         using var localhost = new System.Security.Cryptography.X509Certificates.CertificateRequest("CN=localhost", rsa, System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pkcs1)
@@ -58,12 +58,15 @@ public class AzuriteScopedCredentialTests
         using var other = new System.Security.Cryptography.X509Certificates.CertificateRequest("CN=evil.example", rsa, System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pkcs1)
             .CreateSelfSigned(DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddYears(100));
         const System.Net.Security.SslPolicyErrors chain = System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors;
+        const System.Net.Security.SslPolicyErrors nameMismatch = System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch;
 
         StorageServiceExtensions.IsLocalDevCertificate("localhost", localhost, chain).Should().BeTrue();
         StorageServiceExtensions.IsLocalDevCertificate("127.0.0.1", localhost, chain).Should().BeTrue();
+        StorageServiceExtensions.IsLocalDevCertificate("127.0.0.1", localhost, chain | nameMismatch).Should().BeTrue("the dev cert only names localhost, and the endpoints use the IP");
         StorageServiceExtensions.IsLocalDevCertificate("storage.azure.com", localhost, chain).Should().BeFalse("only loopback hosts");
+        StorageServiceExtensions.IsLocalDevCertificate("storage.azure.com", localhost, nameMismatch).Should().BeFalse("only loopback hosts");
         StorageServiceExtensions.IsLocalDevCertificate("localhost", other, chain).Should().BeFalse("only the dev cert subject");
-        StorageServiceExtensions.IsLocalDevCertificate("localhost", localhost, System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch).Should().BeFalse("only an untrusted chain is forgiven");
+        StorageServiceExtensions.IsLocalDevCertificate("localhost", localhost, System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable).Should().BeFalse("only chain and name errors are forgiven");
         StorageServiceExtensions.IsLocalDevCertificate("anything", other, System.Net.Security.SslPolicyErrors.None).Should().BeTrue("a valid chain is always fine");
     }
 }

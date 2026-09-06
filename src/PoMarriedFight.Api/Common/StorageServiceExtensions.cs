@@ -86,7 +86,12 @@ public static class StorageServiceExtensions
             : new Uri($"https://unconfigured.{service}.core.windows.net/");
     }
 
-    /// <summary>True for the local emulator's certificate only: a loopback host presenting the dev cert (CN=localhost).</summary>
+    /// <summary>
+    /// True for the local emulator's certificate only: a loopback host presenting the dev cert (CN=localhost). Two
+    /// errors are tolerated there and nowhere else — an untrusted chain (the cert was never trusted on this machine) and
+    /// a name mismatch (the endpoints use 127.0.0.1, because the Azure SDK parses a path-style account out of an IP host
+    /// but reads "localhost" as a DNS-style account name and drops the container from blob URLs).
+    /// </summary>
     public static bool IsLocalDevCertificate(string host, X509Certificate? certificate, SslPolicyErrors errors)
     {
         if (errors == SslPolicyErrors.None)
@@ -94,9 +99,10 @@ public static class StorageServiceExtensions
             return true;
         }
 
+        const SslPolicyErrors tolerated = SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch;
         var loopback = host is "localhost" or "127.0.0.1" or "::1";
         return loopback
-            && errors is SslPolicyErrors.RemoteCertificateChainErrors
+            && (errors & ~tolerated) == SslPolicyErrors.None
             && certificate is X509Certificate2 { Subject: "CN=localhost" };
     }
 

@@ -100,8 +100,8 @@ try {
 
     Write-Host ''
     Write-Host 'Azurite is up.' -ForegroundColor Green
-    Write-Host '  Blob   https://localhost:12000/devstoreaccount1' -ForegroundColor Gray
-    Write-Host '  Table  https://localhost:12002/devstoreaccount1' -ForegroundColor Gray
+    Write-Host '  Blob   https://127.0.0.1:12000/devstoreaccount1' -ForegroundColor Gray
+    Write-Host '  Table  https://127.0.0.1:12002/devstoreaccount1' -ForegroundColor Gray
     Write-Host ''
     Write-Host 'The API uses it whenever Features:UseAzurite is true (default in Development).' -ForegroundColor Gray
     Write-Host 'Set it to false in appsettings.Development.json to go back to real dev storage.' -ForegroundColor Gray
