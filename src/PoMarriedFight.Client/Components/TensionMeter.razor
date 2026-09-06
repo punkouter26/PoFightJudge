@@ -1,0 +1,25 @@
+@* How hot the argument has become, read from the moods of the lines actually spoken. *@
+<div class="tension" role="group" aria-label="Tension">
+    <div class="head">
+        <span class="po-eyebrow">Tension</span>
+        <span class="level" data-level="@Level">@Level</span>
+    </div>
+    <RadzenProgressBar Value="@Value" Max="100" ShowValue="false" ProgressBarStyle="@Style" class="bar"
+                       aria-label="@($"Tension {Value} of 100, {Level}")" />
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<WatchRoundDto> Rounds { get; set; } = [];
+
+    /// <summary>Whether a slap has landed in this match; it raises the temperature of the same transcript.</summary>
+    [Parameter] public bool Slapped { get; set; }
+
+    public int Value => TensionCalculator.Tension(Rounds, Slapped);
+
+    private string Level => TensionCalculator.Level(Value);
+
+    private ProgressBarStyle Style =>
+        Value >= 75 ? ProgressBarStyle.Danger
+        : Value >= 50 ? ProgressBarStyle.Warning
+        : ProgressBarStyle.Info;
+}

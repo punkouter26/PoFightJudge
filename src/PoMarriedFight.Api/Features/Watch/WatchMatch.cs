@@ -20,11 +20,11 @@ public sealed record WatchRound(
     string AudioFormat = "pcm")
 {
     /// <summary>Wire values for <see cref="Speaker"/>. The husband/wife pair is the WATCH vocabulary; storage maps them onto Player1/Player2.</summary>
-    public const string Husband = "husband";
+    public const string Husband = WatchTurns.Husband;
 
-    public const string Wife = "wife";
+    public const string Wife = WatchTurns.Wife;
 
-    public bool IsHusband => string.Equals(Speaker, Husband, StringComparison.OrdinalIgnoreCase);
+    public bool IsHusband => WatchTurns.IsHusband(Speaker);
 }
 
 /// <summary>
@@ -35,15 +35,14 @@ public sealed record WatchRound(
 /// </summary>
 public sealed class WatchMatch
 {
-    /// <summary>Per-speaker round cap: husband and wife alternate three each, six lines in all.</summary>
-    public const int MaxRoundsPerMatch = 3;
+    /// <summary>Per-speaker round cap. Defined in Shared, because the play screen counts the rounds the same way.</summary>
+    public const int MaxRoundsPerMatch = WatchTurns.RoundsPerSide;
 
     /// <summary>
-    /// A slap interrupts one line and inserts an extra reaction, and it is available once per match — so a
-    /// legitimate match can carry seven lines, not six. Without this allowance every slapped match failed at the
-    /// verdict, and "retry" could never succeed because it rebuilt the same seven-line payload.
+    /// The seven-line ceiling a slap allows. Without this allowance every slapped match failed at the verdict, and
+    /// "retry" could never succeed because it rebuilt the same seven-line payload.
     /// </summary>
-    public const int MaxLinesPerMatch = (MaxRoundsPerMatch * 2) + 1;
+    public const int MaxLinesPerMatch = WatchTurns.MaxLines;
 
     private readonly List<WatchRound> _rounds = [];
 

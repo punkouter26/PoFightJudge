@@ -100,3 +100,64 @@ public sealed record TranscribeRequest(string WavBase64);
 
 /// <summary>What was heard. An empty <paramref name="Text"/> means nothing intelligible was said — a legitimate outcome, not an error.</summary>
 public sealed record TranscribeResponse(string Text, bool IsFake);
+
+/// <summary>
+/// The turn rules of a WATCH match. They are shared because both ends need them: the server enforces them, and the
+/// play screen has to know whose turn it is in order to ask for the right line. A second copy in the client is how
+/// the two would drift.
+/// </summary>
+public static class WatchTurns
+{
+    /// <summary>Wire values for a speaker. Storage maps the pair onto Player1/Player2.</summary>
+    public const string Husband = "husband";
+
+    public const string Wife = "wife";
+
+    /// <summary>Per-speaker round cap: the two alternate three each, six lines in all.</summary>
+    public const int RoundsPerSide = 3;
+
+    /// <summary>
+    /// A slap interrupts one line and inserts an extra reaction, and it is available once per match — so a
+    /// legitimate match can carry seven lines, not six.
+    /// </summary>
+    public const int MaxLines = (RoundsPerSide * 2) + 1;
+
+    /// <summary>The registers a line may carry. The judge, the tension meter and the schema all read this set, so it is closed.</summary>
+    public static IReadOnlyList<string> Moods { get; } =
+        ["calm", "humble", "apologetic", "smug", "passive-aggressive", "frustrated", "angry", "sarcastic", "hostile", "hateful", "furious", "sad"];
+
+    /// <summary>Maps whatever a model said onto the closed set, defaulting to the middle of the range rather than an extreme.</summary>
+    public static string NormalizeMood(string? mood)
+    {
+        if (string.IsNullOrWhiteSpace(mood))
+        {
+            return "angry";
+        }
+
+        var cleaned = mood.Trim().ToLowerInvariant();
+        return Moods.FirstOrDefault(m => string.Equals(m, cleaned, StringComparison.Ordinal))
+            ?? Moods.FirstOrDefault(m => cleaned.Contains(m, StringComparison.Ordinal))
+            ?? "angry";
+    }
+
+    public static bool IsHusband(string? speaker) => string.Equals(speaker, Husband, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Whose turn it is next. The husband opens and the two alternate; a slap is the one exception, because the
+    /// slapped speaker reacts instead of the turn passing over.
+    /// </summary>
+    public static string NextSpeaker(int linesSoFar, bool afterSlap)
+    {
+        var evenTurn = linesSoFar % 2 == 0;
+        var husbandsTurn = afterSlap ? !evenTurn : evenTurn;
+        return husbandsTurn ? Husband : Wife;
+    }
+
+    /// <summary>True when both sides have had all their rounds. Counted per speaker, because a slap adds a line without advancing a round.</summary>
+    public static bool IsComplete(IEnumerable<string> speakers)
+    {
+        ArgumentNullException.ThrowIfNull(speakers);
+        var spoken = speakers as IReadOnlyList<string> ?? [.. speakers];
+        return spoken.Count(IsHusband) >= RoundsPerSide && spoken.Count(s => !IsHusband(s)) >= RoundsPerSide;
+    }
+}

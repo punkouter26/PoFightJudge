@@ -1,0 +1,29 @@
+.tension {
+  display: grid;
+  gap: var(--po-space-2);
+  min-width: 12rem;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--po-space-2);
+}
+
+.level {
+  font-family: var(--po-font-display);
+  font-size: var(--po-text-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--po-muted);
+}
+
+.level[data-level="Heated"] { color: var(--po-warning); }
+
+.level[data-level="Nuclear"] { color: var(--po-danger); }
+
+::deep .bar {
+  width: 100%;
+  height: 0.5rem;
+}

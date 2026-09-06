@@ -1,0 +1,128 @@
+@page "/watch/play"
+
+<PageTitle>@Headline · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="Channel 1" Title="@Headline" Lead="@Lead">
+    <Actions>
+        <RadzenButton Text="Leave" Icon="close" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@Leave" />
+    </Actions>
+    <ChildContent>
+        @if (!Simulation.IsReady)
+        {
+            <LoadingRows Count="1" Label="Back to the setup" />
+        }
+        else
+        {
+            <div class="play">
+                <section class="stage" aria-label="The matchup">
+                    <div class="corner @(IsSpeaking(WatchTurns.Husband) ? "speaking" : null)">
+                        <SpeakerCard Side="@Simulation.Husband" Profile="@ProfileFor(Simulation.Husband)" IsWife="false" />
+                    </div>
+
+                    <div class="middle">
+                        <TensionMeter Rounds="@_rounds" Slapped="@_slapUsed" />
+                        <InterjectionBar Used="@_slapUsed" Enabled="@(_stage == Stage.Arguing)" Throw="@ThrowAsync" />
+                        @if (_isFake)
+                        {
+                            <span class="po-chip">Rehearsal voices</span>
+                        }
+                    </div>
+
+                    <div class="corner @(IsSpeaking(WatchTurns.Wife) ? "speaking" : null)">
+                        <SpeakerCard Side="@Simulation.Wife" Profile="@ProfileFor(Simulation.Wife)" IsWife="true" />
+                    </div>
+                </section>
+
+                @if (_rounds.Count == 0 && _error is null)
+                {
+                    <LoadingRows Count="2" Label="Working out how to start" />
+                }
+
+                <RadzenTimeline Orientation="Orientation.Vertical" LinePosition="LinePosition.Center" class="transcript" aria-label="The argument so far">
+                    <Items>
+                        @foreach (var round in _rounds)
+                        {
+                            <RadzenTimelineItem PointStyle="@(WatchTurns.IsHusband(round.Speaker) ? PointStyle.Primary : PointStyle.Secondary)">
+                                <PointContent>
+                                    <RadzenIcon Icon="@(WatchTurns.IsHusband(round.Speaker) ? "man" : "woman")" />
+                                </PointContent>
+                                <ChildContent>
+                                    <article class="line po-card @(WatchTurns.IsHusband(round.Speaker) ? "p1" : "p2")"
+                                             data-speaker="@round.Speaker" data-mood="@round.Mood">
+                                        <header>
+                                            <span class="who">@NameOf(round.Speaker)</span>
+                                            <span class="po-chip">@round.Mood</span>
+                                        </header>
+                                        <p>@round.Text</p>
+                                    </article>
+                                </ChildContent>
+                            </RadzenTimelineItem>
+                        }
+                    </Items>
+                </RadzenTimeline>
+
+                @if (_stage == Stage.WaitingForPerson && Person is not null)
+                {
+                    <section class="your-turn po-card" aria-label="Your turn">
+                        <h2>Your turn, @Person.DisplayName</h2>
+                        <p class="po-muted">Answer what was just said. It goes on your record under @Person.Id.</p>
+                        <RadzenFormField Text="What you say back" Variant="Variant.Outlined" class="say">
+                            <ChildContent>
+                                @* Published as it is typed: a Say button that stays grey until you click elsewhere reads as broken. *@
+                                <RadzenTextArea Value="@_line" @oninput="@OnLineTyped" Name="line" Rows="3" MaxLength="600"
+                                                Placeholder="That is not what I said and you know it." aria-label="What you say back" />
+                            </ChildContent>
+                        </RadzenFormField>
+                        <div class="go">
+                            <RadzenButton Text="Say it" Icon="record_voice_over" ButtonStyle="ButtonStyle.Primary"
+                                          Size="ButtonSize.Large" Disabled="@(_line.Trim().Length == 0)" Click="@SayAsync" />
+                        </div>
+                    </section>
+                }
+
+                @if (_stage == Stage.Judging)
+                {
+                    <section class="judging" aria-live="polite">
+                        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Medium" />
+                        <span>The judge is reading it back.</span>
+                    </section>
+                }
+
+                @if (_error is not null)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                        <div class="failure">
+                            <span>@_error</span>
+                            <RadzenButton Text="Try again" Icon="refresh" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined" Click="@RetryAsync" />
+                        </div>
+                    </RadzenAlert>
+                }
+
+                @if (_verdict is not null)
+                {
+                    <section class="verdict po-card" aria-label="The ruling">
+                        <div class="ruling">
+                            <span class="po-eyebrow po-eyebrow--accent">The ruling</span>
+                            <h2 class="po-display">@WinnerLine</h2>
+                            <p>@_verdict.Verdict</p>
+                        </div>
+                        <div class="scores">
+                            <div class="score p1">
+                                <span class="po-eyebrow">@Simulation.Husband!.DisplayName</span>
+                                <strong class="po-display">@_verdict.HusbandScore</strong>
+                            </div>
+                            <div class="score p2">
+                                <span class="po-eyebrow">@Simulation.Wife!.DisplayName</span>
+                                <strong class="po-display">@_verdict.WifeScore</strong>
+                            </div>
+                        </div>
+                        <div class="after">
+                            <RadzenButton Text="Argue again" Icon="replay" ButtonStyle="ButtonStyle.Primary" Click="@RematchAsync" />
+                            <RadzenButton Text="New matchup" Icon="groups" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@Leave" />
+                        </div>
+                    </section>
+                }
+            </div>
+        }
+    </ChildContent>
+</PageShell>

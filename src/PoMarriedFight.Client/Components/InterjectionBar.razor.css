@@ -1,0 +1,29 @@
+.interjections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--po-space-2);
+}
+
+.hint {
+  font-size: var(--po-text-xs);
+}
+
+::deep .heckle {
+  font-family: var(--po-font-display);
+  letter-spacing: 0.08em;
+  box-shadow: var(--po-shadow-2);
+}
+
+::deep .heckle:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+::deep .heckle {
+  transition: transform var(--po-dur-fast) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::deep .heckle { transition: none; }
+  ::deep .heckle:not(:disabled):hover { transform: none; }
+}

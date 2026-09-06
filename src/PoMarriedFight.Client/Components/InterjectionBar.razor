@@ -1,0 +1,27 @@
+@* What the spectator can throw into the argument. Each interjection is spent once and the catalogue is shared with the prompt builder. *@
+<div class="interjections" role="group" aria-label="Interjections">
+    @foreach (var heckle in Interjections.All)
+    {
+        <RadzenButton Text="@($"{heckle.Icon} {heckle.Label}")"
+                      ButtonStyle="ButtonStyle.Danger"
+                      Variant="Variant.Filled"
+                      Shade="Shade.Default"
+                      Size="ButtonSize.Large"
+                      Disabled="@(Used || !Enabled)"
+                      Click="@(() => Throw.InvokeAsync(heckle))"
+                      title="@heckle.Tooltip"
+                      class="heckle" />
+    }
+    <span class="hint po-muted">@(Used ? "Spent." : "Once per match.")</span>
+</div>
+
+@code {
+    /// <summary>Raised with the interjection the spectator threw; the page decides what it does to the next line.</summary>
+    [Parameter] public EventCallback<Interjection> Throw { get; set; }
+
+    /// <summary>Set once the slap has been thrown. Owned by the page, because the match is what remembers it.</summary>
+    [Parameter] public bool Used { get; set; }
+
+    /// <summary>False while nobody is speaking — there is nothing to interrupt between the verdict and the rematch.</summary>
+    [Parameter] public bool Enabled { get; set; } = true;
+}

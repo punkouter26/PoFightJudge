@@ -1,3 +1,5 @@
+using PoMarriedFight.Shared.Models;
+
 namespace PoMarriedFight.Api.Features.Watch;
 
 /// <summary>
@@ -40,41 +42,19 @@ public static class WatchRules
     /// <summary>Which rules apply for this turn.</summary>
     public static string LineRulesFor(bool opponentIsHuman) => opponentIsHuman ? HumanReplyLineRules : StockLineRules;
 
-    /// <summary>The moods a generated line may carry. The judge and the tension meter both read these, so the set is closed.</summary>
-    public static IReadOnlyList<string> Moods { get; } =
-        ["calm", "humble", "apologetic", "smug", "passive-aggressive", "frustrated", "angry", "sarcastic", "hostile", "hateful", "furious", "sad"];
+    /// <summary>The registers a line may carry. Defined in Shared, because the tension meter on the play screen reads the same set.</summary>
+    public static IReadOnlyList<string> Moods => WatchTurns.Moods;
 
-    /// <summary>Maps whatever the model said onto the closed set, defaulting to the middle of the range rather than the extreme.</summary>
-    public static string NormalizeMood(string? mood)
-    {
-        if (string.IsNullOrWhiteSpace(mood))
-        {
-            return "angry";
-        }
+    /// <inheritdoc cref="WatchTurns.NormalizeMood" />
+    public static string NormalizeMood(string? mood) => WatchTurns.NormalizeMood(mood);
 
-        var cleaned = mood.Trim().ToLowerInvariant();
-        return Moods.FirstOrDefault(m => string.Equals(m, cleaned, StringComparison.Ordinal))
-            ?? Moods.FirstOrDefault(m => cleaned.Contains(m, StringComparison.Ordinal))
-            ?? "angry";
-    }
+    /// <inheritdoc cref="WatchTurns.NextSpeaker" />
+    public static string NextSpeaker(int linesSoFar, bool afterSlap) => WatchTurns.NextSpeaker(linesSoFar, afterSlap);
 
-    /// <summary>
-    /// Whose turn it is next. The husband opens and the two alternate; a slap is the one exception, because the
-    /// slapped speaker reacts instead of the turn passing over. That extra reaction is what makes a slapped match
-    /// seven lines rather than six.
-    /// </summary>
-    public static string NextSpeaker(int linesSoFar, bool afterSlap)
-    {
-        var evenTurn = linesSoFar % 2 == 0;
-        var husbandsTurn = afterSlap ? !evenTurn : evenTurn;
-        return husbandsTurn ? WatchRound.Husband : WatchRound.Wife;
-    }
-
-    /// <summary>True when both sides have had all their rounds. Counted per speaker, because a slap reaction adds a line without advancing the round.</summary>
+    /// <inheritdoc cref="WatchTurns.IsComplete" />
     public static bool IsComplete(IEnumerable<WatchRound> rounds)
     {
         ArgumentNullException.ThrowIfNull(rounds);
-        var spoken = rounds as IReadOnlyList<WatchRound> ?? [.. rounds];
-        return spoken.Count(r => r.IsHusband) >= WatchMatch.MaxRoundsPerMatch && spoken.Count(r => !r.IsHusband) >= WatchMatch.MaxRoundsPerMatch;
+        return WatchTurns.IsComplete(rounds.Select(r => r.Speaker));
     }
 }
