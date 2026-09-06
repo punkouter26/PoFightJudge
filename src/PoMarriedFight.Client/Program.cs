@@ -23,6 +23,7 @@ builder.Services.AddHotKeys2();
 builder.Services.AddScoped<ThemeInterop>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IApiClient, ApiClient>();
+builder.Services.AddScoped<AudioInterop>();
 // The same rules the API enforces, for <FluentValidationValidator> (registered explicitly: no assembly scanning under trimming).
 builder.Services.AddScoped<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
 

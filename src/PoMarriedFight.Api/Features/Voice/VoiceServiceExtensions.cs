@@ -35,8 +35,15 @@ public static class VoiceServiceExtensions
             WireFormat: TtsAudioFormats.Normalize(configuration[ConfigKeys.Ai.TtsWireFormat]),
             CacheEnabled: configuration.GetValue<bool>($"{Flags.Section}:{Flags.TtsCacheEnabled}")));
 
-        // The blob-backed cache replaces this in T20; routing already talks to the seam.
-        services.AddSingleton<ITtsCache, NullTtsCache>();
+        // Caching is a flag: off means every line is synthesized fresh, which is what a prompt-tuning session wants.
+        if (configuration.GetValue<bool>($"{Flags.Section}:{Flags.TtsCacheEnabled}"))
+        {
+            services.AddSingleton<ITtsCache, BlobTtsCache>();
+        }
+        else
+        {
+            services.AddSingleton<ITtsCache, NullTtsCache>();
+        }
 
         if (fish.Enabled)
         {

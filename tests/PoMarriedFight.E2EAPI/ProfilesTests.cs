@@ -188,4 +188,29 @@ public class ProfilesTests(ApiFactory factory)
 
         (await client.PostAsync(ApiRoutes.Profiles.Generate("banana"), null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task Preview_line_speaks_an_unsaved_persona_and_never_stores_it()
+    {
+        using var client = User();
+        var persona = Persona("PRV", ProfileRole.Wife);
+        persona.Name = "Vera Quill";
+
+        var response = await client.PostAsJsonAsync(ApiRoutes.Profiles.PreviewLineUrl, persona);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = (await response.Content.ReadFromJsonAsync<PreviewLineResponse>())!;
+        preview.Line.Should().NotBeNullOrWhiteSpace();
+        preview.Mood.Should().NotBeNullOrWhiteSpace();
+        preview.Audio.IsEmpty.Should().BeFalse("the fake voice still speaks");
+        preview.Audio.Format.Should().BeOneOf("pcm", "mp3");
+        Convert.FromBase64String(preview.Audio.Base64).Length.Should().BeGreaterThan(0);
+
+        (await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!
+            .Should().NotContain(p => string.Equals(p.Persona.Initials, "PRV", StringComparison.Ordinal), "a preview is not a profile");
+
+        var invalid = Persona("PRV");
+        invalid.Likes = string.Empty;
+        (await client.PostAsJsonAsync(ApiRoutes.Profiles.PreviewLineUrl, invalid)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

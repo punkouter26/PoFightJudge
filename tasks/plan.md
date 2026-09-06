@@ -513,4 +513,12 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
   `TtsCacheKey` + `BlobTtsCache` and swaps the registration, leaving the routing service untouched. `TtsRoutingOptions`
   lives in `RoutingTtsService.cs` (as in PoMarriedLife) rather than its own file, and `ConfigKeys.Ai.TtsWireFormat`
   is one new Shared key. Fish and Azure implement T18's `ITtsProvider` instead of getting an interface each.
+- **T20 manifest notes**: the preview button went on `ProfileCard` as planned, and the endpoint takes the whole
+  persona so an unsaved draft can be auditioned. `ApiClient.cs` gains `PreviewLineAsync`, `Client/Program.cs`
+  registers `AudioInterop` and `index.html` loads `js/audio.js` (registration/include lines). The preview prompt is
+  deliberately minimal and local to `ProfileEndpoints`; the real round prompts belong to T23. `TtsAudioDto` and
+  `PreviewLineResponse` join `Shared/Models/ProfileModels.cs` (T20's one Shared model file).
+- **The blob TTS cache degrades, never throws**: an outage arrives as an `AggregateException` from the retry policy,
+  so both cache paths catch broadly. The E2EAPI/E2EUI hosts run with `TtsCacheEnabled=false` because they have no
+  storage account and the retry budget otherwise dominated the run (81 s -> 1 s).
 

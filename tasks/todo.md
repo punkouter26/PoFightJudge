@@ -28,7 +28,7 @@
 - [x] T17 Profile generation  ← CP2.5
 - [x] T18 TTS core + Gemini TTS + fake
 - [x] T19 Voice providers + routing
-- [ ] T20 TTS cache + preview line + playback interop
+- [x] T20 TTS cache + preview line + playback interop
 - [ ] T21 Transcription  ← CP3 (real-key smoke)
 
 ## Phase D — WATCH

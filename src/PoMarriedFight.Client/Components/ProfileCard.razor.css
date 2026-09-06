@@ -80,3 +80,24 @@ h3 {
   font-style: italic;
   font-size: var(--po-text-sm);
 }
+
+.preview {
+  display: grid;
+  gap: var(--po-space-2);
+  padding: var(--po-space-3);
+  border-radius: var(--po-radius-sm);
+  background: var(--po-surface-2);
+}
+
+.preview p {
+  margin: 0;
+  font-size: var(--po-text-sm);
+  font-style: italic;
+}
+
+.preview-error {
+  margin: 0;
+  font-size: var(--po-text-xs);
+  color: var(--po-danger);
+}
+

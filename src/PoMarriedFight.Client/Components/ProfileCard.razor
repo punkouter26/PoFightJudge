@@ -20,6 +20,8 @@
             </div>
         </div>
         <div class="actions">
+            <RadzenButton Icon="@(_playing ? "graphic_eq" : "volume_up")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
+                          title="Preview voice" aria-label="@($"Preview {Persona.Initials}")" Click="@PreviewAsync" IsBusy="@_previewing" Disabled="@_playing" />
             <RadzenButton Icon="edit" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
                           title="Edit" aria-label="@($"Edit {Persona.Initials}")" Click="@(() => OnEdit.InvokeAsync(Profile))" />
             <RadzenButton Icon="delete" Variant="Variant.Text" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
@@ -48,10 +50,26 @@
     {
         <blockquote class="quote po-muted">“@Persona.Philosophy”</blockquote>
     }
+
+    @if (_preview is not null)
+    {
+        <div class="preview" role="status">
+            <span class="po-chip po-chip--accent">@_preview.Mood</span>
+            <p>“@_preview.Line”</p>
+        </div>
+    }
+    @if (_previewError is not null)
+    {
+        <p class="preview-error po-muted" role="status">@_previewError</p>
+    }
 </article>
 
 @code {
     [Parameter, EditorRequired] public ProfileDto Profile { get; set; } = default!;
+
+    [Inject] private IApiClient Api { get; set; } = default!;
+
+    [Inject] private AudioInterop Audio { get; set; } = default!;
 
     /// <summary>Changes whenever the list reloads, so a replaced portrait is not served from the browser cache.</summary>
     [Parameter] public string FaceVersion { get; set; } = string.Empty;
@@ -69,6 +87,43 @@
     private string DisplayName => string.IsNullOrWhiteSpace(Persona.Name) ? Persona.Initials : Persona.Name;
 
     private string FaceUrl => $"{ApiRoutes.Profiles.Face(Profile.Id)}?v={Uri.EscapeDataString(FaceVersion)}";
+
+    private PreviewLineResponse? _preview;
+    private string? _previewError;
+    private bool _previewing;
+    private bool _playing;
+
+    /// <summary>Generates one in-character line and speaks it, so the persona can be heard without starting a match.</summary>
+    private async Task PreviewAsync()
+    {
+        _previewing = true;
+        _previewError = null;
+        try
+        {
+            _preview = await Api.PreviewLineAsync(Persona);
+            _previewing = false;
+            if (!_preview.Audio.IsEmpty)
+            {
+                _playing = true;
+                StateHasChanged();
+                var duration = await Audio.PlayAsync(_preview.Audio);
+                await Task.Delay(duration);
+            }
+        }
+        catch (ApiException ex)
+        {
+            _previewError = ex.Summary;
+        }
+        catch (HttpRequestException ex)
+        {
+            _previewError = $"The API is not answering ({ex.Message}).";
+        }
+        finally
+        {
+            _previewing = false;
+            _playing = false;
+        }
+    }
 
     private List<string> Traits =>
     [

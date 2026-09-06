@@ -128,3 +128,18 @@ public sealed record ProfileDto
 
 /// <summary>Result of <c>POST /api/seed/profiles</c>: how many personas were written and how many got a bundled face.</summary>
 public sealed record SeedResultDto(int Seeded, IReadOnlyList<string> Initials, int Faces);
+
+/// <summary>
+/// Synthesized speech on the wire. The format is carried with the bytes because the server's provider chain can fall
+/// back mid-line: the browser decodes on this value, never on what was asked for.
+/// </summary>
+public sealed record TtsAudioDto(string Base64, string Format)
+{
+    public static TtsAudioDto None { get; } = new(string.Empty, "pcm");
+
+    public bool IsEmpty => string.IsNullOrEmpty(Base64);
+}
+
+/// <summary>One in-character line spoken in the persona's own voice, for auditioning a persona before it is saved.</summary>
+public sealed record PreviewLineResponse(string Line, string Mood, TtsAudioDto Audio);
+

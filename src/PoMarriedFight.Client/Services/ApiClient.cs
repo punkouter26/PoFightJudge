@@ -40,6 +40,9 @@ public interface IApiClient
 
     /// <summary>An AI-invented, unsaved persona draft for the editor.</summary>
     Task<CreateProfileRequest> GenerateProfileAsync(ProfileRole role, CancellationToken ct = default);
+
+    /// <summary>One in-character line spoken in the persona's own voice; nothing is saved.</summary>
+    Task<PreviewLineResponse> PreviewLineAsync(CreateProfileRequest persona, CancellationToken ct = default);
 }
 
 /// <summary>A non-success answer from the API, carrying the problem details so a form can show the server's words.</summary>
@@ -189,6 +192,12 @@ public sealed class ApiClient(HttpClient http) : IApiClient
     {
         using var response = await http.PostAsync(Relative(ApiRoutes.Profiles.Generate(role.ToString())), null, ct);
         return await ReadAsync<CreateProfileRequest>(response, ct);
+    }
+
+    public async Task<PreviewLineResponse> PreviewLineAsync(CreateProfileRequest persona, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Profiles.PreviewLineUrl), persona, ct);
+        return await ReadAsync<PreviewLineResponse>(response, ct);
     }
 
     private static Uri Relative(string path) => new(path, UriKind.Relative);
