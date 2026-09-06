@@ -5,18 +5,29 @@ using PoMarriedFight.Shared.Configuration;
 namespace PoMarriedFight.Api.Common;
 
 /// <summary>
-/// Who may run the seed endpoint. The client hides the button; this is the real check, so a hand-crafted request with
-/// an ordinary token cannot rewrite the cast. Qualifies: the <c>Admin</c> role (FakeAuth <c>X-Fake-Roles</c> in
-/// Development/Test, an Entra app role in Production) or a real login whose email is on the list
-/// (<c>PoMarriedFight:Seed:AdminEmails</c>, defaulting to the repository owner). Guests never qualify. Fails closed.
+/// Who may run the seed endpoint. In Production this is the real check, so a hand-crafted request with an ordinary
+/// token cannot rewrite the cast: the <c>Admin</c> app role, or a real login whose email is on the list
+/// (<c>PoMarriedFight:Seed:AdminEmails</c>, defaulting to the repository owner); guests never qualify; fails closed.
+/// Outside Production every identity is a header or a dev cookie anyone can mint, so gating there is theatre — any
+/// signed-in user (the dev guest included) may load the cast.
 /// </summary>
 public static class SeedAdminGate
 {
     public static IReadOnlyList<string> DefaultAdminEmails { get; } = ["punkouter26@gmail.com"];
 
-    public static bool IsSeedAdmin(ClaimsPrincipal user, IConfiguration configuration)
+    public static bool IsSeedAdmin(ClaimsPrincipal user, IConfiguration configuration, bool production)
     {
-        if (user.Identity?.IsAuthenticated != true || IsGuest(user))
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        if (!production)
+        {
+            return true;
+        }
+
+        if (IsGuest(user))
         {
             return false;
         }

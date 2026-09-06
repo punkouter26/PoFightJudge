@@ -141,14 +141,14 @@ public class ProfilesTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Seeding_is_admin_only_and_idempotent()
+    public async Task Seeding_needs_a_signed_in_user_and_is_idempotent()
     {
         using var anonymous = factory.CreateClient();
         using var user = User("e2e-plain");
         using var admin = User("e2e-admin", roles: "Admin");
 
         (await anonymous.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await user.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await user.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.OK, "outside Production any signed-in user may load the cast; the Production rules are unit-tested on the gate");
 
         var first = await admin.PostAsync(ApiRoutes.Seed.ProfilesUrl, null);
         first.StatusCode.Should().Be(HttpStatusCode.OK);

@@ -6,7 +6,7 @@ using PoMarriedFight.Shared.Models;
 namespace PoMarriedFight.Api.Features.Profiles.Seeding;
 
 /// <summary>
-/// <c>POST /api/seed/profiles</c>: writes the default cast (SPEC §7, admin gate). Upsert semantics — re-running restores
+/// <c>POST /api/seed/profiles</c>: writes the default cast (SPEC §7; admin gate in Production, any signed-in user elsewhere). Upsert semantics — re-running restores
 /// a default persona that was edited, keeps any face already uploaded, and stores the bundled portrait for the
 /// personas that ship with one.
 /// </summary>
@@ -25,7 +25,7 @@ public sealed class SeedEndpoints : ICarterModule
         ILogger<SeedEndpoints> logger,
         CancellationToken ct)
     {
-        if (!SeedAdminGate.IsSeedAdmin(http.User, configuration))
+        if (!SeedAdminGate.IsSeedAdmin(http.User, configuration, environment.IsProduction()))
         {
             return Results.Forbid();
         }

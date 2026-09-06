@@ -17,14 +17,16 @@ public class SeedAdminGateTests
         new(new ClaimsIdentity(claims.Select(c => new Claim(c.Type, c.Value)), authType));
 
     [Fact]
-    public void Anonymous_and_guest_sessions_are_never_admins()
+    public void Anonymous_never_qualifies_and_guests_only_outside_production()
     {
         var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
         var guest = Principal(GuestMiddleware.AuthenticationType,
             (ClaimTypes.NameIdentifier, "GUEST-1"), ("auth_type", GuestMiddleware.AuthenticationType), ("preferred_username", SeedAdminGate.DefaultAdminEmails[0]));
 
-        SeedAdminGate.IsSeedAdmin(anonymous, Empty).Should().BeFalse();
-        SeedAdminGate.IsSeedAdmin(guest, Empty).Should().BeFalse("a guest cookie is not an identity, whatever claims it carries");
+        SeedAdminGate.IsSeedAdmin(anonymous, Empty, production: true).Should().BeFalse();
+        SeedAdminGate.IsSeedAdmin(anonymous, Empty, production: false).Should().BeFalse("signed in is the floor everywhere");
+        SeedAdminGate.IsSeedAdmin(guest, Empty, production: true).Should().BeFalse("a guest cookie is not an identity, whatever claims it carries");
+        SeedAdminGate.IsSeedAdmin(guest, Empty, production: false).Should().BeTrue("outside Production the dev guest is the only login there is");
     }
 
     [Fact]
@@ -33,8 +35,8 @@ public class SeedAdminGateTests
         var admin = Principal(FakeAuthOptions.DefaultScheme, (ClaimTypes.NameIdentifier, "dev"), (ClaimTypes.Role, "Admin"));
         var user = Principal(FakeAuthOptions.DefaultScheme, (ClaimTypes.NameIdentifier, "dev"));
 
-        SeedAdminGate.IsSeedAdmin(admin, Empty).Should().BeTrue();
-        SeedAdminGate.IsSeedAdmin(user, Empty).Should().BeFalse();
+        SeedAdminGate.IsSeedAdmin(admin, Empty, production: true).Should().BeTrue();
+        SeedAdminGate.IsSeedAdmin(user, Empty, production: true).Should().BeFalse();
     }
 
     [Fact]
@@ -47,10 +49,10 @@ public class SeedAdminGateTests
             .AddInMemoryCollection(new Dictionary<string, string?> { [$"{ConfigKeys.Seed.AdminEmails}:0"] = "Boss@Example.com" })
             .Build();
 
-        SeedAdminGate.IsSeedAdmin(owner, Empty).Should().BeTrue("the default list is the repository owner, case-insensitively");
-        SeedAdminGate.IsSeedAdmin(stranger, Empty).Should().BeFalse();
-        SeedAdminGate.IsSeedAdmin(boss, overridden).Should().BeTrue();
-        SeedAdminGate.IsSeedAdmin(owner, overridden).Should().BeFalse("a configured list replaces the default rather than extending it");
+        SeedAdminGate.IsSeedAdmin(owner, Empty, production: true).Should().BeTrue("the default list is the repository owner, case-insensitively");
+        SeedAdminGate.IsSeedAdmin(stranger, Empty, production: true).Should().BeFalse();
+        SeedAdminGate.IsSeedAdmin(boss, overridden, production: true).Should().BeTrue();
+        SeedAdminGate.IsSeedAdmin(owner, overridden, production: true).Should().BeFalse("a configured list replaces the default rather than extending it");
     }
 
     [Fact]
