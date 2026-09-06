@@ -34,7 +34,7 @@
 ## Phase D — WATCH
 - [x] T22 WATCH domain
 - [x] T23 Prompts + IWatchAi
-- [ ] T24 Match storage (both modes)
+- [x] T24 Match storage (both modes)
 - [ ] T25 WATCH endpoints
 - [ ] T26 WATCH setup UI
 - [ ] T27 WATCH play UI
