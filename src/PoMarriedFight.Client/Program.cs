@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using PoMarriedFight.Client;
+using PoMarriedFight.Client.Services;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Models;
 using Radzen;
@@ -20,6 +21,7 @@ var baseAddress = new Uri(builder.HostEnvironment.BaseAddress);
 builder.Services.AddRadzenComponents();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddHotKeys2();
+builder.Services.AddScoped<ThemeInterop>();
 
 // Environment split (SPEC §2): Production = Microsoft Entra ID via MSAL, API calls to our own origin carry the access
 // token. Everything else = the guest cookie / FakeAuth header the API understands; auth state is whatever /auth/me says.

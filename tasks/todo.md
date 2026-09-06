@@ -12,7 +12,7 @@
 - [x] T05 Auth (server) — done before T04 (diag needs the auth services)
 - [x] T06 Storage clients + Azurite credential
 - [x] T07 Client bootstrap
-- [ ] T08 Design tokens, theme, shell
+- [x] T08 Design tokens, theme, shell
 - [ ] T09 Client auth
 - [ ] T10 Home, Health, NotFound, banner, empty state
 - [ ] T11 Test infrastructure  ← CP1

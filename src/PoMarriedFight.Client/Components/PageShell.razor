@@ -1,0 +1,56 @@
+@* The one page container: three widths, one vertical rhythm. Pages pick a width instead of inventing a max-width. *@
+
+<section class="po-shell @Width.ToString().ToLowerInvariant() @Class">
+    @if (!string.IsNullOrWhiteSpace(Title))
+    {
+        <header class="head">
+            <div class="titles">
+                @if (!string.IsNullOrWhiteSpace(Eyebrow))
+                {
+                    <div class="po-eyebrow po-eyebrow--accent">@Eyebrow</div>
+                }
+                <h1>@Title</h1>
+                @if (!string.IsNullOrWhiteSpace(Lead))
+                {
+                    <p class="lead">@Lead</p>
+                }
+            </div>
+            @if (Actions is not null)
+            {
+                <div class="actions">@Actions</div>
+            }
+        </header>
+    }
+    @ChildContent
+</section>
+
+@code {
+    public enum ShellWidth
+    {
+        /// <summary>Forms and reading: 46rem.</summary>
+        Narrow,
+
+        /// <summary>Home, lists, the verdict: 75rem.</summary>
+        Standard,
+
+        /// <summary>The live stage: 86rem.</summary>
+        Wide,
+    }
+
+    [Parameter] public ShellWidth Width { get; set; } = ShellWidth.Standard;
+
+    /// <summary>Small caps line above the title (the broadcast "strap").</summary>
+    [Parameter] public string? Eyebrow { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    [Parameter] public string? Lead { get; set; }
+
+    /// <summary>Buttons or links that sit on the title row.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Extra classes for the page (a persona theme, for instance).</summary>
+    [Parameter] public string? Class { get; set; }
+}

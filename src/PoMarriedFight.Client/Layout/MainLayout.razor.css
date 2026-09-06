@@ -1,0 +1,133 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--po-fg);
+}
+
+/* ── Top bar: [brand | primary nav | session] ── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--po-space-5);
+  min-height: 64px;
+  padding: 0 var(--po-space-6);
+  border-bottom: 1px solid var(--po-border);
+  background: color-mix(in srgb, var(--po-bg-elev) 88%, transparent);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--po-space-3);
+  color: var(--po-fg);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.brand:hover { color: var(--po-fg); }
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--po-radius-sm);
+  background: var(--po-accent);
+  color: var(--po-accent-fg);
+}
+
+.wordmark {
+  font-family: var(--po-font-display);
+  font-size: var(--po-text-xl);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.wordmark em {
+  font-style: normal;
+  color: var(--po-accent-text);
+}
+
+/* Radzen menu: broadcast tabs — flat, underlined when active. */
+.nav {
+  min-width: 0;
+  justify-self: center;
+}
+
+.nav ::deep .rz-navigation-item-link {
+  padding: 0 var(--po-space-4);
+  border-radius: var(--po-radius-sm);
+  color: var(--po-muted);
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: color var(--po-dur-fast) var(--po-ease), background var(--po-dur-fast) var(--po-ease);
+}
+
+.nav ::deep .rz-navigation-item-link:hover {
+  color: var(--po-fg);
+  background: var(--po-surface-2);
+}
+
+.nav ::deep .rz-navigation-item-link.rz-navigation-item-link-active,
+.nav ::deep .rz-navigation-item-wrapper-active > .rz-navigation-item-link {
+  color: var(--po-fg);
+  font-weight: 700;
+  background: var(--po-surface-2);
+  border-bottom-color: var(--po-accent);
+}
+
+.nav ::deep .rz-navigation-item-icon {
+  color: inherit;
+}
+
+.session {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-2);
+}
+
+.user {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--po-space-2);
+  padding: var(--po-space-1) var(--po-space-3);
+  border: 1px solid var(--po-border);
+  border-radius: var(--po-radius-pill);
+  background: var(--po-surface-2);
+  color: var(--po-muted);
+  font-size: var(--po-text-sm);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Nav switches at 64rem: seven tabs, a brand and a session block do not fit sooner. ── */
+@media (max-width: 64rem) {
+  .topbar {
+    grid-template-columns: auto 1fr auto;
+    gap: var(--po-space-3);
+    padding: 0 var(--po-space-4);
+  }
+
+  .user {
+    display: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .wordmark {
+    font-size: var(--po-text-lg);
+  }
+}
