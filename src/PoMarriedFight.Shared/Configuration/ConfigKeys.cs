@@ -57,6 +57,9 @@ public static class ConfigKeys
         public const string Voice = $"{Section}:Voice";
         public const string JudgeThinkingLevel = $"{Section}:JudgeThinkingLevel";
         public const string JudgeServiceTier = $"{Section}:JudgeServiceTier";
+
+        /// <summary>Wire format the voice chain asks providers for: <c>mp3</c> (default) or <c>pcm</c>.</summary>
+        public const string TtsWireFormat = $"{Section}:TtsWireFormat";
     }
 
     /// <summary>

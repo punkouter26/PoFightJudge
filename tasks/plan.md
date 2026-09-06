@@ -508,4 +508,9 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
   `Client/Program.cs` registers the shared validator for `<FluentValidationValidator>` (registration line, exempt).
   The edit dialog is hosted by Radzen `DialogService` (CSP allows it: no inline script) rather than PoMarriedLife's
   hand-rolled modal; delete confirms through `DialogService.Confirm`.
+- **T19 manifest notes**: `Api/Features/Voice/TtsCache.cs` is created here holding only `ITtsCache` + `NullTtsCache`,
+  because `RoutingTtsService` takes the cache seam as a constructor dependency; T20 fills the same file with
+  `TtsCacheKey` + `BlobTtsCache` and swaps the registration, leaving the routing service untouched. `TtsRoutingOptions`
+  lives in `RoutingTtsService.cs` (as in PoMarriedLife) rather than its own file, and `ConfigKeys.Ai.TtsWireFormat`
+  is one new Shared key. Fish and Azure implement T18's `ITtsProvider` instead of getting an interface each.
 

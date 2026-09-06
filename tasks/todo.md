@@ -27,7 +27,7 @@
 - [x] T16 Gemini text client + fakes + latency tracker
 - [x] T17 Profile generation  ← CP2.5
 - [x] T18 TTS core + Gemini TTS + fake
-- [ ] T19 Voice providers + routing
+- [x] T19 Voice providers + routing
 - [ ] T20 TTS cache + preview line + playback interop
 - [ ] T21 Transcription  ← CP3 (real-key smoke)
 

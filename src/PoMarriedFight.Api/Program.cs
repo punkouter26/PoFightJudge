@@ -10,6 +10,7 @@ using PoMarriedFight.Api.Features.Ai;
 using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Diagnostics;
 using PoMarriedFight.Api.Features.Profiles;
+using PoMarriedFight.Api.Features.Voice;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Configuration;
 using PoMarriedFight.Shared.Validators;
@@ -119,6 +120,7 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
     var ai = builder.Services.AddPoAi(builder.Configuration, builder.Environment);
+    builder.Services.AddPoVoice(builder.Configuration);
     Log.Information("AI providers: {Mode} ({Reason})", ai.UseFakes ? "fakes" : "real", ai.Reason);
     builder.Services.TryAddSingleton(TimeProvider.System);
     builder.Services.AddFeatureManagement();
