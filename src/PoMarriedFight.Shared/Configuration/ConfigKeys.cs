@@ -136,7 +136,7 @@ public static class Flags
     public const string DevGuestEnabled = "DevGuestEnabled";
 
     /// <summary>Offer the SELF (live human) player in WATCH.</summary>
-    public const string SelfPlayer = "SelfPlayer";
+    public const string HumanInWatch = "HumanInWatch";
 
     /// <summary>Try the browser's Web Speech API for a SELF turn before posting the clip to the server.</summary>
     public const string BrowserSpeechRecognition = "BrowserSpeechRecognition";
@@ -155,6 +155,6 @@ public static class Flags
 
     public static readonly IReadOnlyList<string> All =
     [
-        UseFakeAi, DevGuestEnabled, SelfPlayer, BrowserSpeechRecognition, PreferFastVoice, TtsCacheEnabled, UseAzurite, DiagRequiresAdminInDev,
+        UseFakeAi, DevGuestEnabled, HumanInWatch, BrowserSpeechRecognition, PreferFastVoice, TtsCacheEnabled, UseAzurite, DiagRequiresAdminInDev,
     ];
 }

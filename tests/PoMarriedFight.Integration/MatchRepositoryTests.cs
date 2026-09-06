@@ -23,10 +23,8 @@ public class MatchRepositoryTests(AzuriteFixture azurite)
         startedAt ?? At,
         (startedAt ?? At).AddMinutes(4),
         "the thermostat",
-        side1,
-        side2,
-        "Matthew",
-        "Kimberly",
+        mode == MatchMode.Watch ? MatchSide.Persona(side1, "Matthew") : MatchSide.Human(side1, "Alex"),
+        mode == MatchMode.Watch ? MatchSide.Persona(side2, "Kimberly") : MatchSide.Human(side2, "Casey"),
         SessionPhase.Done,
         SessionStatus.Ready,
         side1,
@@ -113,11 +111,11 @@ public class MatchRepositoryTests(AzuriteFixture azurite)
         await matches.SaveAnalysisAsync(new AnalysisRecordDto(match.Id, AnalysisStatus.Ready, "{}", null, At));
         await results.SaveAsync(
         [
-            new WatchResultDto(match.Side1, match.Id, At, match.Topic, match.Side2, Won: true, Draw: false, Score: 70, AdvancedStatsDto.Empty),
-            new WatchResultDto(match.Side2, match.Id, At, match.Topic, match.Side1, Won: false, Draw: false, Score: 40, AdvancedStatsDto.Empty),
+            new WatchResultDto(match.Side1.Id, match.Id, At, match.Topic, match.Side2.Id, Won: true, Draw: false, Score: 70, AdvancedStatsDto.Empty),
+            new WatchResultDto(match.Side2.Id, match.Id, At, match.Topic, match.Side1.Id, Won: false, Draw: false, Score: 40, AdvancedStatsDto.Empty),
         ]);
 
-        (await results.ListForAsync(match.Side1)).Should().ContainSingle();
+        (await results.ListForAsync(match.Side1.Id)).Should().ContainSingle();
 
         var deleted = await matches.DeleteAsync(user, match.Id);
 
@@ -125,8 +123,8 @@ public class MatchRepositoryTests(AzuriteFixture azurite)
         (await matches.GetAsync(user, match.Id)).Should().BeNull();
         (await matches.GetTurnsAsync(match.Id)).Should().BeEmpty();
         (await matches.GetAnalysisAsync(match.Id)).Should().BeNull();
-        (await results.ListForAsync(match.Side1)).Should().BeEmpty("a half-deleted match would still show on a leaderboard");
-        (await results.ListForAsync(match.Side2)).Should().BeEmpty();
+        (await results.ListForAsync(match.Side1.Id)).Should().BeEmpty("a half-deleted match would still show on a leaderboard");
+        (await results.ListForAsync(match.Side2.Id)).Should().BeEmpty();
         (await matches.DeleteAsync(user, match.Id)).Should().BeFalse("there is nothing left to delete");
     }
 }

@@ -19,9 +19,9 @@ public sealed class FeatureFlagEndpoints : ICarterModule
             Results.Ok(new FeatureFlagsDto(
                 UseFakeAi: DiagEndpoints.IsFakeAi(env, config, await features.IsEnabledAsync(Flags.UseFakeAi)),
                 DevGuestEnabled: !env.IsProduction() && await features.IsEnabledAsync(Flags.DevGuestEnabled),
-                // The server half of the SELF gate; the client ANDs it with its own microphone check. The flag alone
-                // is not enough: the player is only offered a spoken turn when a transcriber can actually finish it.
-                SelfPlayer: await features.IsEnabledAsync(Flags.SelfPlayer) && transcription.IsEnabled,
+                // The server half of the gate on a person taking a side in WATCH; the client ANDs it with its own
+                // microphone check. A spoken turn is only offered when a transcriber can actually finish it.
+                HumanInWatch: await features.IsEnabledAsync(Flags.HumanInWatch) && transcription.IsEnabled,
                 BrowserSpeechRecognition: await features.IsEnabledAsync(Flags.BrowserSpeechRecognition))))
             .AllowAnonymous().WithTags("Diagnostics");
 }

@@ -15,7 +15,7 @@ public static class TableNames
     public const string Turns = "pomarriedfightturns";
     public const string Analyses = "pomarriedfightanalyses";
     public const string WatchResults = "pomarriedfightwatchresults";
-    public const string FightResults = "pomarriedfightfightresults";
+    public const string FighterResults = "pomarriedfightfighterresults";
     public const string Fighters = "pomarriedfightfighters";
 }
 
@@ -50,6 +50,11 @@ public sealed class MatchEntity : ITableEntity
 
     public string Side2Name { get; set; } = string.Empty;
 
+    /// <summary>Whether each side was an authored persona or a real person; a human side earns a fighter result row.</summary>
+    public string Side1Kind { get; set; } = nameof(SideKind.Persona);
+
+    public string Side2Kind { get; set; } = nameof(SideKind.Persona);
+
     public string Phase { get; set; } = nameof(SessionPhase.Intro);
 
     public string Status { get; set; } = nameof(SessionStatus.Live);
@@ -76,10 +81,12 @@ public sealed class MatchEntity : ITableEntity
             StartedAt = dto.StartedAt,
             EndedAt = dto.EndedAt,
             Topic = dto.Topic,
-            Side1 = dto.Side1,
-            Side2 = dto.Side2,
-            Side1Name = dto.Side1Name,
-            Side2Name = dto.Side2Name,
+            Side1 = dto.Side1.Id,
+            Side2 = dto.Side2.Id,
+            Side1Name = dto.Side1.DisplayName,
+            Side2Name = dto.Side2.DisplayName,
+            Side1Kind = dto.Side1.Kind.ToString(),
+            Side2Kind = dto.Side2.Kind.ToString(),
             Phase = dto.Phase.ToString(),
             Status = dto.Status.ToString(),
             Winner = dto.Winner,
@@ -97,10 +104,8 @@ public sealed class MatchEntity : ITableEntity
         StartedAt,
         EndedAt,
         Topic,
-        Side1,
-        Side2,
-        Side1Name,
-        Side2Name,
+        new MatchSide(Side1, Side1Name, ParseKind(Side1Kind)),
+        new MatchSide(Side2, Side2Name, ParseKind(Side2Kind)),
         Enum.TryParse<SessionPhase>(Phase, ignoreCase: true, out var phase) ? phase : SessionPhase.Done,
         Enum.TryParse<SessionStatus>(Status, ignoreCase: true, out var status) ? status : SessionStatus.Ready,
         Winner,
@@ -110,6 +115,8 @@ public sealed class MatchEntity : ITableEntity
         Persona = Persona,
         AudioBlobName = AudioBlobName,
     };
+
+    private static SideKind ParseKind(string? kind) => Enum.TryParse<SideKind>(kind, ignoreCase: true, out var parsed) ? parsed : SideKind.Persona;
 }
 
 /// <summary>PartitionKey = match id, RowKey = zero-padded index, so turns read back in play order without a sort.</summary>
@@ -313,8 +320,11 @@ public sealed class WatchResultEntity : ITableEntity
         string.IsNullOrEmpty(StatsJson) ? AdvancedStatsDto.Empty : JsonSerializer.Deserialize<AdvancedStatsDto>(StatsJson) ?? AdvancedStatsDto.Empty);
 }
 
-/// <summary>One fighter's record of one fight, with the style snapshot the host digest reads. Keyed like <see cref="WatchResultEntity"/>.</summary>
-public sealed class FightResultEntity : ITableEntity
+/// <summary>
+/// One person's record of one debate they spoke in, either mode, with the style snapshot their profile is built
+/// from. Keyed like <see cref="WatchResultEntity"/>: PK the tag, RK the match.
+/// </summary>
+public sealed class FighterResultEntity : ITableEntity
 {
     public string PartitionKey { get; set; } = string.Empty;
 
@@ -338,12 +348,16 @@ public sealed class FightResultEntity : ITableEntity
 
     public string StyleJson { get; set; } = string.Empty;
 
-    public static FightResultEntity From(FightResultDto dto)
+    /// <summary>Which engine the debate ran in, so a profile can say how much of it came from arguing people rather than personas.</summary>
+    public string Mode { get; set; } = nameof(MatchMode.Fight);
+
+    public static FighterResultEntity From(FighterResultDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        return new FightResultEntity
+        return new FighterResultEntity
         {
             PartitionKey = dto.Tag,
+            Mode = dto.Mode.ToString(),
             RowKey = dto.MatchId.Value,
             At = dto.At,
             Topic = dto.Topic,
@@ -355,19 +369,20 @@ public sealed class FightResultEntity : ITableEntity
         };
     }
 
-    public FightResultDto ToDto() => new(
+    public FighterResultDto ToDto() => new(
         PartitionKey,
         MatchId.From(RowKey),
+        Enum.TryParse<MatchMode>(Mode, ignoreCase: true, out var mode) ? mode : MatchMode.Fight,
         At,
         Topic,
         Opponent,
         Won,
         Draw,
         Score,
-        string.IsNullOrEmpty(StyleJson) ? FightStyleSnapshot.Empty : JsonSerializer.Deserialize<FightStyleSnapshot>(StyleJson) ?? FightStyleSnapshot.Empty);
+        string.IsNullOrEmpty(StyleJson) ? StyleSnapshot.Empty : JsonSerializer.Deserialize<StyleSnapshot>(StyleJson) ?? StyleSnapshot.Empty);
 }
 
-/// <summary>A fighter, created by their first fight. One partition: the roster is small and always read whole.</summary>
+/// <summary>A person, created by their first debate. One partition: the roster is small and always read whole.</summary>
 public sealed class FighterEntity : ITableEntity
 {
     public const string Partition = "fighter";

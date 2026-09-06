@@ -521,4 +521,15 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
 - **The blob TTS cache degrades, never throws**: an outage arrives as an `AggregateException` from the retry policy,
   so both cache paths catch broadly. The E2EAPI/E2EUI hosts run with `TtsCacheEnabled=false` because they have no
   storage account and the retry budget otherwise dominated the run (81 s -> 1 s).
+- **Decision change (2026-09-06, after T24): a person is a Fighter in both modes, and every human debate is recorded.**
+  The original `SELF` sentinel — an anonymous, unrecorded stand-in — is gone. A human side now types their fighter tag
+  before speaking, so one person has one profile that grows from every debate they speak in, whether the opponent was
+  a persona (WATCH) or another person (FIGHT); there is no anonymous play. Landed with this change: `MatchSide`
+  (persona or human, with the tag and display name) replaces the flat side columns on `MatchDto`/`MatchEntity`,
+  `Profile.CreateHuman(role, tag, name)` replaces `CreateSelf`, `WatchMatch.HumanSides` replaces `IsExhibition`,
+  result deletion routes per side kind rather than per mode, `FightResult*` became `FighterResult*` (it now carries
+  results from both modes and a `Mode` column), `FightStyleSnapshot` became `StyleSnapshot`, and the `SelfPlayer`
+  feature flag became `HumanInWatch`. Still to come with it: T25 writes a fighter result for a human side, T26/T28
+  ask for the tag before the mic opens, T30 makes fighters shared by both modes, T41 extracts a snapshot from a WATCH
+  transcript too, and T45 aggregates both into one style profile.
 

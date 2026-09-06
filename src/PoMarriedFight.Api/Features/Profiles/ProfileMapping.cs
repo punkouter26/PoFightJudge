@@ -14,19 +14,19 @@ namespace PoMarriedFight.Api.Features.Profiles;
 public static partial class ProfileMapping
 {
     [MapperIgnoreSource(nameof(Profile.Initials))]
-    [MapperIgnoreSource(nameof(Profile.IsSelf))]
+    [MapperIgnoreSource(nameof(Profile.IsHuman))]
     [MapProperty(nameof(Profile.FacePic), nameof(ProfileDto.HasFace), Use = nameof(HasValue))]
     [MapPropertyFromSource(nameof(ProfileDto.Persona))]
     public static partial ProfileDto ToDto(this Profile profile);
 
     /// <summary>The editable view of a stored persona — what the editor form is seeded with.</summary>
     [MapperIgnoreSource(nameof(Profile.Id))]
-    [MapperIgnoreSource(nameof(Profile.IsSelf))]
+    [MapperIgnoreSource(nameof(Profile.IsHuman))]
     [MapperIgnoreSource(nameof(Profile.FacePic))]
     public static partial CreateProfileRequest ToRequest(this Profile profile);
 
     [MapperIgnoreSource(nameof(Profile.Id))]
-    [MapperIgnoreSource(nameof(Profile.IsSelf))]
+    [MapperIgnoreSource(nameof(Profile.IsHuman))]
     [MapperIgnoreTarget(nameof(ProfileTableEntity.Timestamp))]
     [MapperIgnoreTarget(nameof(ProfileTableEntity.ETag))]
     [MapValue(nameof(ProfileTableEntity.PartitionKey), ProfileTableEntity.Partition)]

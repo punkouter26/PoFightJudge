@@ -23,10 +23,6 @@ public class IdentifierTests
     [Fact]
     public void ProfileId_accepts_the_SELF_sentinel_but_not_junk()
     {
-        ProfileId.TryFrom(SelfPlayer.Initials, out var self).Should().BeTrue();
-        SelfPlayer.Is(self).Should().BeTrue();
-        SelfPlayer.InMatch(ProfileId.From("KDH"), self).Should().BeTrue();
-        SelfPlayer.InMatch(ProfileId.From("KDH"), ProfileId.From("MLT")).Should().BeFalse();
 
         ProfileId.TryFrom(string.Empty, out _).Should().BeFalse();
         ProfileId.TryFrom("!!!", out _).Should().BeFalse();

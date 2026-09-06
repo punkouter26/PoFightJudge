@@ -1,5 +1,4 @@
 using PoMarriedFight.Api.Features.Watch;
-using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
 
@@ -13,10 +12,10 @@ public class WatchMatchTests
 
     private static List<WatchRound> Rounds(int count) => [.. Enumerable.Range(0, count).Select(i => Round(i % 2 == 0 ? WatchRound.Husband : WatchRound.Wife))];
 
-    private static WatchMatch Complete(int roundCount, string winner = "MAH", ProfileId? husband = null, ProfileId? wife = null) => WatchMatch.Complete(
+    private static WatchMatch Complete(int roundCount, string winner = "MAH", MatchSide? husband = null, MatchSide? wife = null) => WatchMatch.Complete(
         MatchId.New(),
-        husband ?? ProfileId.From("MAH"),
-        wife ?? ProfileId.From("KSH"),
+        husband ?? MatchSide.Persona("MAH", "Matthew"),
+        wife ?? MatchSide.Persona("KSH", "Kimberly"),
         "user-1",
         "the freezer",
         Rounds(roundCount),
@@ -38,7 +37,7 @@ public class WatchMatchTests
         var tooMany = () => Complete(WatchMatch.MaxLinesPerMatch + 1);
         tooMany.Should().Throw<InvalidOperationException>().WithMessage("*at most 7*");
 
-        var none = () => WatchMatch.Complete(MatchId.New(), ProfileId.From("MAH"), ProfileId.From("KSH"), "u", null, [], "MAH", "v", AdvancedStats.Empty, AdvancedStats.Empty, Ended);
+        var none = () => WatchMatch.Complete(MatchId.New(), MatchSide.Persona("MAH"), MatchSide.Persona("KSH"), "u", null, [], "MAH", "v", AdvancedStats.Empty, AdvancedStats.Empty, Ended);
         none.Should().Throw<InvalidOperationException>();
     }
 
@@ -47,7 +46,7 @@ public class WatchMatchTests
     {
         var id = MatchId.New();
 
-        var match = WatchMatch.Complete(id, ProfileId.From("MAH"), ProfileId.From("KSH"), "u", null, Rounds(2), "MAH", "v", AdvancedStats.Empty, AdvancedStats.Empty, Ended);
+        var match = WatchMatch.Complete(id, MatchSide.Persona("MAH"), MatchSide.Persona("KSH"), "u", null, Rounds(2), "MAH", "v", AdvancedStats.Empty, AdvancedStats.Empty, Ended);
 
         match.Id.Should().Be(id);
         match.EndedAt.Should().Be(Ended);
@@ -57,18 +56,22 @@ public class WatchMatchTests
     [Fact]
     public void The_winner_resolves_to_a_side_case_insensitively_and_a_draw_resolves_to_neither()
     {
-        Complete(2, winner: "MAH").WinnerId().Should().Be(ProfileId.From("MAH"));
-        Complete(2, winner: "ksh").WinnerId().Should().Be(ProfileId.From("KSH"), "the judge's casing is not the record's problem");
-        Complete(2, winner: string.Empty).WinnerId().Should().BeNull();
-        Complete(2, winner: "XXX").WinnerId().Should().BeNull("a name that is neither side is not a winner");
+        Complete(2, winner: "MAH").WinnerSide()!.Id.Should().Be("MAH");
+        Complete(2, winner: "ksh").WinnerSide()!.Id.Should().Be("KSH", "the judge's casing is not the record's problem");
+        Complete(2, winner: string.Empty).WinnerSide().Should().BeNull();
+        Complete(2, winner: "XXX").WinnerSide().Should().BeNull("a name that is neither side is not a winner");
     }
 
     [Fact]
-    public void A_match_with_the_live_human_on_either_side_is_an_exhibition()
+    public void A_person_arguing_a_persona_is_recorded_so_their_profile_can_grow_from_the_match()
     {
-        Complete(2, husband: SelfPlayer.Id).IsExhibition.Should().BeTrue();
-        Complete(2, wife: SelfPlayer.Id).IsExhibition.Should().BeTrue();
-        Complete(2).IsExhibition.Should().BeFalse();
+        var withHuman = Complete(2, wife: MatchSide.Human("KD", "Kim"));
+
+        // A person's record and style profile are built from every debate they speak in.
+        withHuman.HumanSides.Select(s => s.Id).Should().Equal("KD");
+        withHuman.Husband.IsHuman.Should().BeFalse("the persona side stays an authored profile");
+        Complete(2).HumanSides.Should().BeEmpty("two personas arguing involves nobody real");
+        Complete(2, husband: MatchSide.Human("MA"), wife: MatchSide.Human("KD")).HumanSides.Should().HaveCount(2);
     }
 
     [Fact]
@@ -77,7 +80,7 @@ public class WatchMatchTests
         var id = MatchId.New();
         var stats = new AdvancedStats(10, 20, 30, 4, 50, 60, 70, 80, 90, 100);
 
-        var match = WatchMatch.Rehydrate(id, ProfileId.From("MAH"), ProfileId.From("KSH"), "user-1", "the freezer", "MAH", "held the point", Ended, Rounds(6), stats, AdvancedStats.Empty);
+        var match = WatchMatch.Rehydrate(id, MatchSide.Persona("MAH"), MatchSide.Persona("KSH"), "user-1", "the freezer", "MAH", "held the point", Ended, Rounds(6), stats, AdvancedStats.Empty);
 
         match.Id.Should().Be(id);
         match.UserId.Should().Be("user-1");

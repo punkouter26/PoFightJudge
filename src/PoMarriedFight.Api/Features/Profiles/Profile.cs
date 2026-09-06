@@ -1,4 +1,3 @@
-using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
 
@@ -75,8 +74,8 @@ public sealed class Profile
 
     public TtsSettings TtsSettings { get; private set; } = TtsSettings.Default(ProfileRole.Husband);
 
-    /// <summary>True when this is the live human stand-in rather than a stored profile.</summary>
-    public bool IsSelf => SelfPlayer.Is(Id);
+    /// <summary>True when this side is a real person rather than an authored persona. Never stored: a human has a fighter row, not a profile.</summary>
+    public bool IsHuman { get; private set; }
 
     private Profile()
     {
@@ -104,15 +103,21 @@ public sealed class Profile
     }
 
     /// <summary>
-    /// The blank stand-in for the live human player (SELF). It has no stored row, so it is minted per request. Every
-    /// trait stays neutral and every free-text field empty: the human is whatever they say into the microphone, and
-    /// inventing a personality here would have the AI spouse arguing against a character the player never chose.
+    /// The stand-in for a real person taking a side, carrying their fighter tag so the match can be recorded against
+    /// them. It is minted per request and never stored — a person's identity lives in the Fighters table, and their
+    /// argument style is derived from what they actually say, match after match.
     /// </summary>
-    public static Profile CreateSelf(ProfileRole role) => new()
+    /// <remarks>
+    /// Every trait stays neutral and every free-text field empty on purpose: the person is whatever they say into the
+    /// microphone, and inventing a personality here would have the AI spouse arguing against a character they never
+    /// chose. The prompt is told as much (see the human-opponent directive).
+    /// </remarks>
+    public static Profile CreateHuman(ProfileRole role, string tag, string? displayName = null) => new()
     {
-        Id = SelfPlayer.Id,
-        Name = SelfPlayer.DisplayName,
+        Id = ProfileId.From(Shared.Models.Initials.Normalize(tag)),
+        Name = string.IsNullOrWhiteSpace(displayName) ? tag : displayName,
         Role = role,
+        IsHuman = true,
         TtsSettings = TtsSettings.Default(role),
     };
 

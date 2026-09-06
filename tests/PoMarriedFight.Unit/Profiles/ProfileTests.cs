@@ -1,6 +1,5 @@
 using System.Text.Json;
 using PoMarriedFight.Api.Features.Profiles;
-using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
 
@@ -47,7 +46,7 @@ public class ProfileTests
         profile.Id.Should().Be(ProfileId.From("AB1"));
         profile.Role.Should().Be(ProfileRole.Husband);
         profile.TtsSettings.Should().Be(TtsSettings.Default(ProfileRole.Husband));
-        profile.IsSelf.Should().BeFalse();
+        profile.IsHuman.Should().BeFalse();
         profile.LogicVsEmotion.Should().Be(50, "sliders start neutral");
     }
 
@@ -62,16 +61,17 @@ public class ProfileTests
     }
 
     [Fact]
-    public void Self_is_a_neutral_unstored_stand_in()
+    public void A_human_side_carries_its_tag_and_stays_deliberately_blank()
     {
-        var self = Profile.CreateSelf(ProfileRole.Wife);
+        var human = Profile.CreateHuman(ProfileRole.Wife, "kd", "Kim");
 
-        self.IsSelf.Should().BeTrue();
-        self.Id.Should().Be(SelfPlayer.Id);
-        self.Name.Should().Be(SelfPlayer.DisplayName);
-        self.Likes.Should().BeEmpty();
-        self.Patience.Should().Be(50);
-        self.TtsSettings.VoiceName.Should().Be("Kore");
+        human.IsHuman.Should().BeTrue();
+        human.Initials.Should().Be("KD", "the fighter tag is the identity, so the match can be recorded against them");
+        human.Name.Should().Be("Kim");
+        human.Likes.Should().BeEmpty("a person is whatever they say into the microphone, not an invented personality");
+        human.Patience.Should().Be(50);
+        human.TtsSettings.VoiceName.Should().Be("Kore");
+        Profile.CreateHuman(ProfileRole.Husband, "AB").Name.Should().Be("AB", "the tag stands in until they name themselves");
     }
 
     [Fact]

@@ -100,7 +100,7 @@ public class ProfilesTests(ApiFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problem = (await response.Content.ReadFromJsonAsync<HttpValidationProblemDetails>())!;
         problem.Errors.Keys.Should().Contain(["Initials", "Patience", "TtsSettings.Pitch"]);
-        problem.Errors["Initials"].Single().Should().Contain("reserved");
+        problem.Errors["Initials"].Single().Should().Contain("1–3 letters or digits");
     }
 
     [Fact]

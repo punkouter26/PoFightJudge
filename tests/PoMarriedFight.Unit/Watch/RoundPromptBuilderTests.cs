@@ -101,7 +101,7 @@ public class RoundPromptBuilderTests
     [Fact]
     public void The_human_opponents_block_says_the_profile_is_blank_on_purpose()
     {
-        var user = Prompt(WatchRound.Husband, wife: Profile.CreateSelf(ProfileRole.Wife)).User;
+        var user = Prompt(WatchRound.Husband, wife: Profile.CreateHuman(ProfileRole.Wife, "KD")).User;
 
         user.Should().Contain("REAL PERSON").And.Contain("intentionally empty",
             "a blank profile must read as 'you know nothing', not as 'invent something'");
@@ -114,7 +114,7 @@ public class RoundPromptBuilderTests
     public void The_line_rules_switch_with_the_opponent_and_a_slap_is_announced()
     {
         Prompt(WatchRound.Husband).System.Should().Contain("slider MUST visibly affect the line");
-        Prompt(WatchRound.Husband, wife: Profile.CreateSelf(ProfileRole.Wife)).System.Should().Contain("ANSWER THEIR LAST LINE");
+        Prompt(WatchRound.Husband, wife: Profile.CreateHuman(ProfileRole.Wife, "KD")).System.Should().Contain("ANSWER THEIR LAST LINE");
 
         var slapped = RoundPromptBuilder.Build(Husband(), Wife(), [], WatchRound.Wife, "furious", wasSlapped: true).User;
         slapped.Should().Contain("SLAPPED");

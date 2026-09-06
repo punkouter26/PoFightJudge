@@ -18,7 +18,6 @@ public class CreateProfileRequestValidatorTests
     public static TheoryData<string, Action<CreateProfileRequest>> Invalid => new()
     {
         { nameof(CreateProfileRequest.Initials), r => r.Initials = "" },
-        { nameof(CreateProfileRequest.Initials), r => r.Initials = "SELF" },
         { nameof(CreateProfileRequest.Initials), r => r.Initials = "ABCD" },
         { nameof(CreateProfileRequest.Initials), r => r.Initials = "A-B" },
         { nameof(CreateProfileRequest.Role), r => r.Role = (ProfileRole)42 },
@@ -51,10 +50,12 @@ public class CreateProfileRequestValidatorTests
     }
 
     [Fact]
-    public void Initials_messages_name_the_reserved_tag()
+    public void The_initials_message_says_what_a_tag_may_contain()
     {
+        // "SELF" used to be a reserved sentinel for the live player. A person now takes a side under their own
+        // fighter tag, so the only rule left is the shape of a tag.
         var request = ProfileTests.FullRequest(initials: "self");
 
-        _sut.TestValidate(request).ShouldHaveValidationErrorFor(r => r.Initials).WithErrorMessage("SELF is reserved for the live player.");
+        _sut.TestValidate(request).ShouldHaveValidationErrorFor(r => r.Initials).WithErrorMessage("Initials are 1–3 letters or digits.");
     }
 }

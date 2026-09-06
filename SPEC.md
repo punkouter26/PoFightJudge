@@ -20,10 +20,23 @@ The two modes have **two kinds of profile**:
 
 - **`Profile`** (WATCH) — a hand-authored AI persona: husband/wife, traits, sliders, voice, face. You write it; the AI
   plays it.
-- **`Fighter`** (FIGHT) — a real person, identified by 1–3-character initials typed at fight setup. **Nobody writes a
-  Fighter.** It is created automatically the first time those initials fight and its *argument-style profile* is built
-  up over time from every analysed fight: record, averages, badges, rivalries, tone, signature phrases, favourite
-  fallacies, typical opener, CEFR trend, emotion profile. The host reads that profile before the bell.
+- **`Fighter`** (a real person, either mode) — identified by a 1–3-character tag typed before they speak. **Nobody
+  writes a Fighter.** It is created automatically the first time that tag argues and its *argument-style profile* is
+  built up over time from every debate they speak in: record, averages, badges, rivalries, tone, signature phrases,
+  favourite fallacies, typical opener, CEFR trend, emotion profile. The host reads that profile before the bell.
+
+**A person keeps one identity across both modes.** The same tag is used whether they argue an AI persona in WATCH or
+another person in FIGHT, so one person has one profile that grows from every match they spoke in. There is no
+anonymous play: a human side always types a tag and the match is always recorded. (This replaces the original apps'
+`SELF` sentinel, which was an unrecorded exhibition and left the human with nothing that accumulated.)
+
+The three matchups that fall out of this:
+
+| Matchup | Mode | Sides | What is recorded |
+|---|---|---|---|
+| CPU vs CPU | WATCH | two personas | both personas' WATCH records |
+| CPU vs human | WATCH | persona + tagged person | the persona's WATCH record, and the person's record + style snapshot |
+| Human vs human | FIGHT | two tagged people | both people's records + style snapshots |
 
 History is unified (one list, a Mode column); leaderboards are per mode (AI profiles vs real fighters).
 
@@ -36,7 +49,7 @@ History is unified (one list, a Mode column); leaderboards are per mode (AI prof
    the current one plays. The spectator may hit **SLAP** once; the slapped spouse reacts furiously and the other's turn
    is skipped. Tension meter and moods update per line.
 4. After 6 lines (7 with a slap) the judge speaks a verdict; the screen shows the winner, the verdict text, and both
-   spouses' `AdvancedStats` bars. Wins/losses post to the leaderboard (not for SELF matches — exhibitions).
+   spouses' `AdvancedStats` bars. Wins/losses post to the leaderboard; a person on either side is recorded under their tag.
 5. The match appears in History with replayable audio.
 
 **J2 — FIGHT live (primary)**
@@ -202,7 +215,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
   explicitly in `Program.cs`. One `Map` per feature.
 - Fakes: `IsFake => true` on every stand-in; registered only when `!IsProduction()` and the real key is absent (or
   `Features:UseFakeAi=true`); `/api/features` reports `UseFakeAi` and the client shows the banner. A fake match in
-  WATCH is an exhibition (no records); a fake FIGHT is fully recorded (it is the E2E path) but flagged `IsFake` on the row.
+  a fake match is fully recorded (it is the E2E path) but flagged `IsFake` on the row.
 - UI: Radzen components only (`InputFile` is the one framework exception); `style` attribute only to pass CSS custom
   properties; presentation in `.razor.css`; every value in `app.css` resolves through a `--po-*` token; `color-scheme`
   + `light-dark()` theming, `data-theme` pinned by `theme.js` before first paint, **no `prefers-color-scheme` blocks**;
@@ -249,7 +262,7 @@ display name and host digest so the host can greet accurately and needle them on
 |---|---|
 | `GET /api/health`, `/healthz`, `/healthz/ready` | probes (storage + configuration); `/health` is the Blazor page |
 | `GET /api/diag` | redacted diagnostics (auth required; admin-only outside Development) |
-| `GET /api/features` | `UseFakeAi`, `DevGuestEnabled`, `SelfPlayerEnabled`, `BrowserSpeechRecognition` |
+| `GET /api/features` | `UseFakeAi`, `DevGuestEnabled`, `HumanInWatch`, `BrowserSpeechRecognition` |
 | `GET/POST /auth/me`, `/auth/guest`, `/auth/logout` | BFF-facing auth probes (root, not `/api`) |
 | `GET/POST/PUT/DELETE /api/profiles[/{id}]`, `POST /api/profiles/{id}/face`, `POST /api/profiles/generate?role=`, `POST /api/profiles/preview-line`, `GET /api/profiles/{id}/record` | WATCH personas + record |
 | `GET /api/fighters`, `GET /api/fighters/{tag}` (record + style profile), `PUT /api/fighters/{tag}` (display name only), `DELETE /api/fighters/{tag}` | real fighters (auto-created by `POST /api/fights`) |
@@ -303,7 +316,7 @@ multi-instance (F1 is single instance by design).
 | No Gemini key (Dev/Test) | Fakes register; banner "USING FAKE AI"; everything runs; WATCH results are exhibitions |
 | No Gemini key (Production) | `StartupSecretValidator` → degraded: shell + `/diag` serve, `/api/*` → 503 with missing keys; `/api/health` unhealthy so the deploy fails |
 | Fish / Azure Speech key absent or provider fails | Chain falls through; a voice problem never fails a round; `/diag` shows provider state |
-| Mic denied / no mic | FIGHT page blocking error with retry; nothing saved. WATCH hides SELF |
+| Mic denied / no mic | FIGHT page blocking error with retry; nothing saved. WATCH hides the human-side option |
 | Live socket drops / `GoAway` | Resume with `sessionResumption` ≤ 3×; on failure end the session and analyse what was recorded |
 | Browser closes mid-fight | Session ends and persists after 30 s without a client; a new fight by the same user ends the old one |
 | Fighter talks > 45 s | Host interrupts by name and hands over; counted as `HostInterrupt` |
@@ -319,7 +332,7 @@ multi-instance (F1 is single instance by design).
 | Fighter deleted | `Fighters` row + all their `FightResults` removed; matches stay (tags denormalised on the row); leaderboard drops them |
 | WATCH round generation fails | Retry once via resilience; then inline error with *Retry round*; match not persisted |
 | WATCH verdict with 7 lines (slap) | Accepted (`MaxLinesPerGame = 7`) |
-| SELF in WATCH | Exhibition: nothing persisted, no records |
+| A person takes a side in WATCH | Recorded like any other debate: the persona gets a WATCH result, the person gets a fighter result and a style snapshot from what they said |
 | Same profile / same tag picked twice | Setup blocks with a message (`Initials.ArePair`) |
 | Profile deleted with matches | Matches stay (names denormalised on the row); `WatchResults` for that profile removed; leaderboard drops them |
 | Azurite down locally | `/api/health` degraded; Start buttons disabled with reason |

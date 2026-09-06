@@ -71,7 +71,7 @@ public static class RoundPromptBuilder
             contradict THEIR philosophy. Quote a specific like or dislike verbatim when natural.
 
             LINE RULES:
-            {{WatchRules.LineRulesFor(other.IsSelf)}}
+            {{WatchRules.LineRulesFor(other.IsHuman)}}
 
             OUTPUT — respond with ONLY a JSON object (no markdown fences): {"line": "...", "mood": "..."}
               • "line": heated dialogue for the named speaker ONLY.
@@ -147,7 +147,7 @@ public static class RoundPromptBuilder
                 spends freely      {p.SpendsMoneyFreely,3}  ({SliderLabel("spends", p.SpendsMoneyFreely)})
                 holds grudges      {p.HoldsGrudges,3}  ({SliderLabel("grudges", p.HoldsGrudges)})
                 patience           {p.Patience,3}  ({SliderLabel("patience", p.Patience)})
-            {(p.IsSelf ? HumanOpponentDirective : string.Empty)}
+            {(p.IsHuman ? HumanOpponentDirective : string.Empty)}
             """;
     }
 

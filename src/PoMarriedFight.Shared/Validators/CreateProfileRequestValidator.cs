@@ -24,7 +24,6 @@ public sealed class CreateProfileRequestValidator : AbstractValidator<CreateProf
         RuleFor(r => r.Initials)
             .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Initials are required.")
-            .Must(v => !SelfPlayer.Is(v)).WithMessage($"{SelfPlayer.Initials} is reserved for the live player.")
             .Must(v => Initials.IsValid(v) && Initials.Normalize(v).Length == v.Trim().Length)
             .WithMessage($"Initials are 1–{Initials.MaxLength} letters or digits.");
 

@@ -15,10 +15,8 @@ public class StorageEntityTests
         At,
         At.AddMinutes(4),
         "the thermostat",
-        mode == MatchMode.Watch ? "MAH" : "AB",
-        mode == MatchMode.Watch ? "KSH" : "CD",
-        "Matthew",
-        "Kimberly",
+        mode == MatchMode.Watch ? MatchSide.Persona("MAH", "Matthew") : MatchSide.Human("AB", "Alex"),
+        mode == MatchMode.Watch ? MatchSide.Persona("KSH", "Kimberly") : MatchSide.Human("CD", "Casey"),
         SessionPhase.Done,
         SessionStatus.Ready,
         "MAH",
@@ -47,9 +45,10 @@ public class StorageEntityTests
     {
         MatchEntity.From(Match(MatchMode.Fight)).ToDto().Mode.Should().Be(MatchMode.Fight);
 
-        var legacy = new MatchEntity { PartitionKey = "u", RowKey = MatchId.New().Value, Mode = "Sideways", Phase = "Nope", Status = "Unknown" };
+        var legacy = new MatchEntity { PartitionKey = "u", RowKey = MatchId.New().Value, Mode = "Sideways", Phase = "Nope", Status = "Unknown", Side1Kind = "Nonsense" };
 
         var dto = legacy.ToDto();
+        dto.Side1.Kind.Should().Be(SideKind.Persona, "an unreadable side kind reads as a persona, which is the older shape");
         dto.Mode.Should().Be(MatchMode.Watch);
         dto.Phase.Should().Be(SessionPhase.Done);
         dto.Status.Should().Be(SessionStatus.Ready, "a row written by older code still has to render in history");
@@ -120,18 +119,18 @@ public class StorageEntityTests
     }
 
     [Fact]
-    public void A_fight_result_carries_the_style_snapshot_the_host_digest_reads()
+    public void A_fighter_result_carries_the_style_snapshot_their_profile_is_built_from()
     {
         var id = MatchId.New();
-        var style = new FightStyleSnapshot("clipped", ["you always"], ["strawman"], "Look, the thing is", "B2", ["angry"], "That is not what I said.", ["let them finish"]);
-        var result = new FightResultDto("AB", id, At, "the bins", "CD", Won: false, Draw: true, Score: 55, style);
+        var style = new StyleSnapshot("clipped", ["you always"], ["strawman"], "Look, the thing is", "B2", ["angry"], "That is not what I said.", ["let them finish"]);
+        var result = new FighterResultDto("AB", id, MatchMode.Fight, At, "the bins", "CD", Won: false, Draw: true, Score: 55, style);
 
-        var back = FightResultEntity.From(result).ToDto();
+        var back = FighterResultEntity.From(result).ToDto();
 
         // BeEquivalentTo, not Be: the snapshot holds lists, which records compare by reference.
         back.Should().BeEquivalentTo(result);
         back.Style.Phrases.Should().Equal("you always");
-        FightResultEntity.From(result with { Style = FightStyleSnapshot.Empty }).ToDto().Style.Should().BeEquivalentTo(FightStyleSnapshot.Empty);
+        FighterResultEntity.From(result with { Style = StyleSnapshot.Empty }).ToDto().Style.Should().BeEquivalentTo(StyleSnapshot.Empty);
     }
 
     [Fact]

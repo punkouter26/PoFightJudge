@@ -65,7 +65,7 @@ public sealed record DiagDto(
 }
 
 /// <summary>Flags returned by <c>GET /api/features</c> — the effective values, after environment rules.</summary>
-public sealed record FeatureFlagsDto(bool UseFakeAi, bool DevGuestEnabled, bool SelfPlayer, bool BrowserSpeechRecognition);
+public sealed record FeatureFlagsDto(bool UseFakeAi, bool DevGuestEnabled, bool HumanInWatch, bool BrowserSpeechRecognition);
 
 /// <summary>One AI operation's rolling latency summary (window of recent calls, milliseconds).</summary>
 public sealed record AiLatencyDto(string Operation, int Count, double P50Ms, double P95Ms, double LastMs);

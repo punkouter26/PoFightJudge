@@ -1,4 +1,3 @@
-using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
 
@@ -31,6 +30,8 @@ public sealed record WatchRound(
 /// <summary>
 /// Aggregate root for a finished WATCH match. A match only ever exists in its completed form: the round loop plays
 /// out on the client, and the verdict endpoint persists the whole thing in one step through <see cref="Complete"/>.
+/// A side is either an authored persona or a real person arguing by microphone; both kinds are recorded, because a
+/// person's argument profile is built from every debate they speak in.
 /// </summary>
 public sealed class WatchMatch
 {
@@ -52,9 +53,9 @@ public sealed class WatchMatch
 
     public MatchId Id { get; private set; }
 
-    public ProfileId Husband { get; private set; }
+    public MatchSide Husband { get; private set; } = MatchSide.Persona(string.Empty);
 
-    public ProfileId Wife { get; private set; }
+    public MatchSide Wife { get; private set; } = MatchSide.Persona(string.Empty);
 
     public string UserId { get; private set; } = string.Empty;
 
@@ -73,8 +74,8 @@ public sealed class WatchMatch
 
     public IReadOnlyList<WatchRound> Rounds => _rounds;
 
-    /// <summary>True when the live human played a side: the match is an exhibition and nothing about it is recorded.</summary>
-    public bool IsExhibition => SelfPlayer.InMatch(Husband, Wife);
+    /// <summary>Every side a real person argued. Each of them gets a result row, so their profile grows from this match.</summary>
+    public IEnumerable<MatchSide> HumanSides => new[] { Husband, Wife }.Where(s => s.IsHuman);
 
     /// <summary>
     /// Builds a finished match in one step. The line cap is enforced here; the endpoint validates the request first,
@@ -82,8 +83,8 @@ public sealed class WatchMatch
     /// </summary>
     public static WatchMatch Complete(
         MatchId id,
-        ProfileId husband,
-        ProfileId wife,
+        MatchSide husband,
+        MatchSide wife,
         string userId,
         string? topic,
         IReadOnlyList<WatchRound> rounds,
@@ -124,8 +125,8 @@ public sealed class WatchMatch
     /// <summary>Full hydration for the repository.</summary>
     public static WatchMatch Rehydrate(
         MatchId id,
-        ProfileId husband,
-        ProfileId wife,
+        MatchSide husband,
+        MatchSide wife,
         string userId,
         string? topic,
         string winner,
@@ -153,8 +154,8 @@ public sealed class WatchMatch
     }
 
     /// <summary>Which side won, as the results tables record it. Null when the judge called neither.</summary>
-    public ProfileId? WinnerId() =>
-        string.Equals(Winner, Husband.Value, StringComparison.OrdinalIgnoreCase) ? Husband
-        : string.Equals(Winner, Wife.Value, StringComparison.OrdinalIgnoreCase) ? Wife
+    public MatchSide? WinnerSide() =>
+        string.Equals(Winner, Husband.Id, StringComparison.OrdinalIgnoreCase) ? Husband
+        : string.Equals(Winner, Wife.Id, StringComparison.OrdinalIgnoreCase) ? Wife
         : null;
 }

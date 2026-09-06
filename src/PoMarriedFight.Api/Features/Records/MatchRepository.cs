@@ -9,7 +9,7 @@ namespace PoMarriedFight.Api.Features.Records;
 /// <summary>
 /// Every match, both engines, with its turns and its analysis. Deleting is a cascade by design: a match, its turns,
 /// its analysis, its audio and both sides' results go together, because a half-deleted match still shows up on a
-/// leaderboard.
+/// leaderboard — and because deleting a debate must also take back what it contributed to a person's style profile.
 /// </summary>
 public interface IMatchRepository
 {
@@ -133,13 +133,17 @@ public sealed class MatchRepository(TableServiceClient tables) : IMatchRepositor
             }
         }, ct);
 
-    /// <summary>Both sides' result rows, in whichever table this mode writes to.</summary>
+    /// <summary>
+    /// Each side's result row, from whichever table that side writes to. Chosen per side rather than per mode,
+    /// because a watch match can pair an authored persona with a real person: the persona's row lives with the
+    /// watch results, the person's with their fighter results.
+    /// </summary>
     private async Task DeleteResultsAsync(MatchDto match, CancellationToken ct)
     {
-        var table = match.Mode == MatchMode.Watch ? TableNames.WatchResults : TableNames.FightResults;
-        foreach (var side in new[] { match.Side1, match.Side2 }.Where(s => !string.IsNullOrEmpty(s)).Distinct(StringComparer.Ordinal))
+        foreach (var side in new[] { match.Side1, match.Side2 }.Where(s => !string.IsNullOrEmpty(s.Id)).DistinctBy(s => (s.Id, s.Kind)))
         {
-            await StorageBootstrap.WithTableAsync(tables, table, token => Table(table).DeleteEntityAsync(side, match.Id.Value, cancellationToken: token), ct);
+            var table = side.IsHuman ? TableNames.FighterResults : TableNames.WatchResults;
+            await StorageBootstrap.WithTableAsync(tables, table, token => Table(table).DeleteEntityAsync(side.Id, match.Id.Value, cancellationToken: token), ct);
         }
     }
 }
