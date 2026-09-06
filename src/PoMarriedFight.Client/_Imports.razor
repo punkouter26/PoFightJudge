@@ -19,3 +19,7 @@
 @using PoMarriedFight.Shared.Configuration
 @using PoMarriedFight.Shared.Identifiers
 @using PoMarriedFight.Shared.Models
+
+@* Every page requires a signed-in (or guest) user unless it opts out with [AllowAnonymous]: AuthorizeRouteView enforces
+   attributes only, so the client-side fallback policy alone would not redirect. *@
+@attribute [Authorize]
