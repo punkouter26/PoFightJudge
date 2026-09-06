@@ -532,4 +532,7 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
   feature flag became `HumanInWatch`. Still to come with it: T25 writes a fighter result for a human side, T26/T28
   ask for the tag before the mic opens, T30 makes fighters shared by both modes, T41 extracts a snapshot from a WATCH
   transcript too, and T45 aggregates both into one style profile.
+- **T30 ran before T25**: with a person able to take a side in WATCH, the verdict endpoint has to write a fighter
+  result, so the fighter domain and its repositories are a prerequisite of the WATCH endpoints rather than the start
+  of Phase E. `FighterResultRepository` lives in `Features/Records` alongside the other result store.
 

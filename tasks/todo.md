@@ -42,7 +42,7 @@
 - [ ] T29 WATCH end-to-end hardening  ← CP4
 
 ## Phase E — FIGHT live
-- [ ] T30 Fighter domain + repositories
+- [x] T30 Fighter domain + repositories  (pulled ahead of T25: a person in WATCH needs a fighter result)
 - [ ] T31 Gemini Live client
 - [ ] T32 Debate state machine + host personas
 - [ ] T33 Orchestrator

@@ -9,6 +9,7 @@ using PoMarriedFight.Api.Common;
 using PoMarriedFight.Api.Features.Ai;
 using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Diagnostics;
+using PoMarriedFight.Api.Features.Fighters;
 using PoMarriedFight.Api.Features.Profiles;
 using PoMarriedFight.Api.Features.Records;
 using PoMarriedFight.Api.Features.Voice;
@@ -120,6 +121,8 @@ try
     builder.Services.AddSingleton<IProfileImageService, ProfileImageService>();
     builder.Services.AddSingleton<IProfileGenerator, ProfileGenerator>();
     builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+    builder.Services.AddScoped<IFighterRepository, FighterRepository>();
+    builder.Services.AddScoped<IFighterResultRepository, FighterResultRepository>();
     builder.Services.AddScoped<IWatchResultRepository, WatchResultRepository>();
     builder.Services.AddScoped<IWatchAudioStore, WatchAudioBlobService>();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
