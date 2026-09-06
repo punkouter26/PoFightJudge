@@ -2,7 +2,8 @@
   <PropertyGroup>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
-    <NoWarn>$(NoWarn);CA1707;CS1591;CA1515;CA2234;CA1861;MA0002;MA0011;VSTHRD200</NoWarn>
+    <!-- CA1707 underscores in test names; CA1711 xunit *Collection fixtures; the rest are test-only ergonomics. -->
+    <NoWarn>$(NoWarn);CA1707;CA1711;CS1591;CA1515;CA2234;CA1861;MA0002;MA0011;VSTHRD200</NoWarn>
   </PropertyGroup>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">

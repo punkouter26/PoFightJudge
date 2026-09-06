@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.FeatureManagement;
 using PoMarriedFight.Api.Common;
+using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Diagnostics;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Configuration;
@@ -103,6 +104,8 @@ try
     });
 
     // ── Services ──────────────────────────────────────────────────────────────────────────────────────────────────
+    var fakeAuth = GuestMiddleware.IsEnabledIn(builder.Environment, builder.Configuration);
+    builder.Services.AddPoAuth(builder.Configuration, builder.Environment, fakeAuth);
     builder.Services.AddSingleton<StartupHealthState>();
     builder.Services.AddHostedService<StartupSecretValidator>();
     builder.Services.TryAddSingleton(TimeProvider.System);
@@ -143,6 +146,14 @@ try
         },
     };
     app.UseStaticFiles(staticFiles);
+
+    app.UseAuthentication();
+    if (fakeAuth)
+    {
+        app.UseMiddleware<GuestMiddleware>();
+    }
+
+    app.UseAuthorization();
 
     // Degraded gate: in Production with missing config every /api route except diag answers 503 with the missing keys.
     var health = app.Services.GetRequiredService<StartupHealthState>();
