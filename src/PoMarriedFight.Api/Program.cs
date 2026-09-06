@@ -108,6 +108,7 @@ try
     builder.Services.AddPoAuth(builder.Configuration, builder.Environment, fakeAuth);
     builder.Services.AddSingleton<StartupHealthState>();
     builder.Services.AddPoDiagnostics(builder.Configuration);
+    builder.Services.AddPoStorage(builder.Configuration, builder.Environment);
     builder.Services.AddHostedService<StartupSecretValidator>();
     builder.Services.TryAddSingleton(TimeProvider.System);
     builder.Services.AddFeatureManagement();

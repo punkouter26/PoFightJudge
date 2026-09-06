@@ -10,7 +10,7 @@
 - [x] T03 Api host bootstrap + secrets + degraded mode
 - [x] T04 Diagnostics endpoints
 - [x] T05 Auth (server) — done before T04 (diag needs the auth services)
-- [ ] T06 Storage clients + Azurite credential
+- [x] T06 Storage clients + Azurite credential
 - [ ] T07 Client bootstrap
 - [ ] T08 Design tokens, theme, shell
 - [ ] T09 Client auth

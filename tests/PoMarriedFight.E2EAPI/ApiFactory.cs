@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PoMarriedFight.Shared.Configuration;
 
 namespace PoMarriedFight.E2EAPI;
@@ -20,9 +22,17 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting(ConfigKeys.Ai.GeminiApiKey, "test-key");
         builder.UseSetting(ConfigKeys.Auth.AllowFakeAuth, "true");
         builder.UseSetting($"{Flags.Section}:{Flags.UseAzurite}", "false");
-        builder.ConfigureTestServices(_ =>
+        builder.ConfigureTestServices(services =>
         {
-            // In-memory repositories and the AI fakes are registered here as their features arrive (T11+).
+            // No storage account in this host: the storage probe would make /api/health depend on Azurite. The
+            // repositories are swapped for in-memory stores (T11+), so the check has nothing real to report here.
+            services.Configure<HealthCheckServiceOptions>(o =>
+            {
+                foreach (var registration in o.Registrations.Where(r => string.Equals(r.Name, "storage", StringComparison.Ordinal)).ToList())
+                {
+                    o.Registrations.Remove(registration);
+                }
+            });
         });
     }
 }
