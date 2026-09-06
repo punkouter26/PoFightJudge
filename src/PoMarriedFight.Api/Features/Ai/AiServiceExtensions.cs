@@ -1,6 +1,7 @@
 using PoMarriedFight.Api.Features.Ai.Fakes;
 using PoMarriedFight.Api.Features.Diagnostics;
 using PoMarriedFight.Api.Features.Voice;
+using PoMarriedFight.Api.Features.Watch;
 using PoMarriedFight.Shared.Configuration;
 
 namespace PoMarriedFight.Api.Features.Ai;
@@ -44,11 +45,15 @@ public static class AiServiceExtensions
         {
             services.AddSingleton<IGeminiText>(sp => new FakeGeminiText(sp.GetRequiredService<AiLatencyTracker>()));
             services.AddSingleton<ITtsProvider, FakeTts>();
+            // The WATCH fake sits at the game's seam rather than the transport's: a whole match plays out from the
+            // personas' own words, which the schema-driven text fake could not do on its own.
+            services.AddSingleton<IWatchAi>(_ => new FakeWatchAi());
         }
         else
         {
             services.AddSingleton<IGeminiText, GeminiTextClient>();
             services.AddSingleton<ITtsProvider, GeminiTtsService>();
+            services.AddSingleton<IWatchAi, WatchAi>();
         }
 
         return mode;
