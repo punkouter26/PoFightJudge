@@ -113,6 +113,7 @@ try
     builder.Services.AddPoDiagnostics(builder.Configuration);
     builder.Services.AddPoStorage(builder.Configuration, builder.Environment);
     builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+    builder.Services.AddSingleton<IProfileImageService, ProfileImageService>();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
     builder.Services.TryAddSingleton(TimeProvider.System);

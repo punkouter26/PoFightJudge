@@ -19,7 +19,7 @@
 
 ## Phase B — Profiles
 - [x] T12 Profile domain + repository
-- [ ] T13 Profile endpoints, faces, seeding
+- [x] T13 Profile endpoints, faces, seeding
 - [ ] T14 Profiles UI  ← CP2
 
 ## Phase C — AI core + Voice

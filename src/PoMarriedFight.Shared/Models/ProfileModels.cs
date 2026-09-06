@@ -125,3 +125,6 @@ public sealed record ProfileDto
 
     public required CreateProfileRequest Persona { get; init; }
 }
+
+/// <summary>Result of <c>POST /api/seed/profiles</c>: how many personas were written and how many got a bundled face.</summary>
+public sealed record SeedResultDto(int Seeded, IReadOnlyList<string> Initials, int Faces);

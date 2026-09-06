@@ -496,3 +496,11 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
   touched it.)
 - **T05 ran before T04**: `/api/diag`'s `RequireAuthorization` needs the auth services, so auth precedes diagnostics.
 - **`ApiFactory` (E2EAPI) was created in T05** with the auth settings; T11 extends it with the in-memory stores and fakes.
+- **T13 manifest additions**: `Api/Common/ValidationFilter.cs` (the `IValidator<T>` endpoint filter every request body
+  uses from here on — first consumer, so it lands here), `ConfigKeys.Seed.AdminEmails` (one key), and the six face PNGs
+  under `Client/wwwroot/images/profiles/` moved from T14 to T13 because the seed endpoint stores them as face blobs.
+  `SeedResultDto` joins `Shared/Models/ProfileModels.cs` (T13's one Shared model file).
+- **Faces are blobs only** (SPEC §6 `FacePic (blob)`): `POST /api/profiles/{id}/face` takes the raw image body,
+  `ProfileImageService` crops it to a 512 px PNG (ImageSharp) and stores `{initials}.png` in the faces container;
+  `ProfileDto.HasFace` + the anonymous `GET .../face` replace PoMarriedLife's inline data-URI path.
+

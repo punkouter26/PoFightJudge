@@ -29,6 +29,12 @@ public static class ConfigKeys
         public const string AllowFakeAuth = $"{Root}:Auth:AllowFakeAuth";
     }
 
+    /// <summary>Who may run <c>POST /api/seed/profiles</c> with a real login: a list of emails (Admin role always qualifies).</summary>
+    public static class Seed
+    {
+        public const string AdminEmails = $"{Root}:Seed:AdminEmails";
+    }
+
     /// <summary>AI provider credentials and the model ids per operation (config-driven: the published ids move on their own).</summary>
     public static class Ai
     {

@@ -1,0 +1,121 @@
+using Carter;
+using Microsoft.AspNetCore.Mvc;
+using PoMarriedFight.Api.Common;
+using PoMarriedFight.Shared;
+using PoMarriedFight.Shared.Identifiers;
+using PoMarriedFight.Shared.Models;
+
+namespace PoMarriedFight.Api.Features.Profiles;
+
+/// <summary>
+/// WATCH persona CRUD plus the face image. Profiles are global (SPEC §6), so there is no ownership check; every route
+/// needs a signed-in user through the fallback policy except the face itself, which is fetched by <c>&lt;img&gt;</c>
+/// without a bearer token.
+/// </summary>
+public sealed class ProfileEndpoints : ICarterModule
+{
+    public void AddRoutes(IEndpointRouteBuilder app)
+    {
+        var profiles = app.MapGroup(ApiRoutes.Profiles.Base).WithTags("Profiles");
+
+        profiles.MapGet(string.Empty, ListAsync).Produces<List<ProfileDto>>();
+        profiles.MapGet(ApiRoutes.Profiles.ByIdSegment, GetAsync).Produces<ProfileDto>().Produces(StatusCodes.Status404NotFound);
+        profiles.MapPost(string.Empty, CreateAsync).WithValidation<CreateProfileRequest>()
+            .Produces<ProfileDto>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status409Conflict);
+        profiles.MapPut(ApiRoutes.Profiles.ByIdSegment, UpdateAsync).WithValidation<CreateProfileRequest>()
+            .Produces<ProfileDto>().Produces(StatusCodes.Status404NotFound);
+        profiles.MapDelete(ApiRoutes.Profiles.ByIdSegment, DeleteAsync).Produces(StatusCodes.Status204NoContent);
+
+        profiles.MapGet(ApiRoutes.Profiles.FaceSegment, GetFaceAsync).AllowAnonymous()
+            .Produces(StatusCodes.Status200OK, contentType: ProfileImageService.ContentType).Produces(StatusCodes.Status404NotFound);
+        profiles.MapPost(ApiRoutes.Profiles.FaceSegment, UploadFaceAsync)
+            .WithMetadata(new RequestSizeLimitAttribute(ProfileImageService.MaxUploadBytes))
+            .Produces<ProfileDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status415UnsupportedMediaType).Produces(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> ListAsync(IProfileRepository repo, CancellationToken ct) =>
+        Results.Ok((await repo.GetAllAsync(ct)).Select(p => p.ToDto()).ToList());
+
+    private static async Task<IResult> GetAsync(ProfileId id, IProfileRepository repo, CancellationToken ct) =>
+        await repo.GetByIdAsync(id, ct) is { } profile ? Results.Ok(profile.ToDto()) : Results.NotFound();
+
+    /// <summary>Create must not clobber: initials are the key, and an upsert here silently replaced an existing persona in PoMarriedLife.</summary>
+    private static async Task<IResult> CreateAsync(CreateProfileRequest request, IProfileRepository repo, CancellationToken ct)
+    {
+        var profile = request.ToDomain();
+        if (await repo.GetByIdAsync(profile.Id, ct) is not null)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: $"A profile with initials {profile.Initials} already exists.");
+        }
+
+        await repo.UpsertAsync(profile, ct);
+        return Results.Created(ApiRoutes.Profiles.ById(profile.Id), profile.ToDto());
+    }
+
+    private static async Task<IResult> UpdateAsync(ProfileId id, CreateProfileRequest request, IProfileRepository repo, CancellationToken ct)
+    {
+        var existing = await repo.GetByIdAsync(id, ct);
+        if (existing is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (!string.Equals(Initials.Normalize(request.Initials), id.Value, StringComparison.Ordinal))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                [nameof(CreateProfileRequest.Initials)] = ["Initials are the key and cannot change; create a new profile instead."],
+            });
+        }
+
+        var profile = request.ToDomain();
+        profile.UpdateFacePic(existing.FacePic); // the face has its own endpoint; an edit never drops it
+        await repo.UpsertAsync(profile, ct);
+        return Results.Ok(profile.ToDto());
+    }
+
+    private static async Task<IResult> DeleteAsync(ProfileId id, IProfileRepository repo, IProfileImageService images, CancellationToken ct)
+    {
+        await images.DeleteFaceAsync(id, ct);
+        await repo.DeleteAsync(id, ct);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetFaceAsync(ProfileId id, IProfileImageService images, HttpContext http, CancellationToken ct)
+    {
+        var face = await images.GetFaceAsync(id, ct);
+        if (face is null)
+        {
+            return Results.NotFound();
+        }
+
+        // Anonymous and same-origin as the SPA: the browser must never sniff a stored blob into something script-capable.
+        http.Response.Headers.XContentTypeOptions = "nosniff";
+        return Results.Bytes(face.Bytes, face.ContentType);
+    }
+
+    /// <summary>The body is the image itself (any raster type); it is re-encoded before anything is stored.</summary>
+    private static async Task<IResult> UploadFaceAsync(ProfileId id, HttpRequest request, IProfileRepository repo, IProfileImageService images, CancellationToken ct)
+    {
+        if (request.ContentType is not { } type || !type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Send the image bytes with an image/* content type.");
+        }
+
+        var profile = await repo.GetByIdAsync(id, ct);
+        if (profile is null)
+        {
+            return Results.NotFound();
+        }
+
+        var stored = await images.StoreFaceAsync(id, request.Body, ct);
+        if (!stored.IsSuccess)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal) { ["face"] = [stored.Error!] });
+        }
+
+        profile.UpdateFacePic(stored.Value);
+        await repo.UpsertAsync(profile, ct);
+        return Results.Ok(profile.ToDto());
+    }
+}
