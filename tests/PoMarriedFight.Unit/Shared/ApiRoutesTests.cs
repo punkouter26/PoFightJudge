@@ -54,7 +54,10 @@ public class ApiRoutesTests
         ApiRoutes.Fights.Clip(match, 2).Should().Be($"/api/fights/{match.Value}/clips/2");
         ApiRoutes.Matches.ById(match).Should().Be($"/api/matches/{match.Value}");
         ApiRoutes.Audio.Round(match, 3).Should().Be($"/api/audio/{match.Value}/3");
-        ApiRoutes.Watch.GenerateRound(profile, ProfileId.From("MLT")).Should().Be("/api/watch/generate-round/KDH/MLT");
+        // The two sides travel in the body, not the path: a side is a persona or a live person, and a route segment
+        // cannot say which without inventing an encoding for it.
+        ApiRoutes.Watch.GenerateRoundUrl.Should().Be("/api/watch/generate-round");
+        ApiRoutes.Watch.VerdictUrl.Should().Be("/api/watch/verdict");
         ApiRoutes.Hubs.Live.Should().Be("/hubs/live");
         ApiRoutes.Health.PageUrl.Should().Be("/health", "the Blazor page owns bare /health; probes live under /healthz");
     }

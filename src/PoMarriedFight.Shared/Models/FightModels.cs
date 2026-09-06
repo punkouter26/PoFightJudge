@@ -1,6 +1,8 @@
+using System.Text.Json.Serialization;
 namespace PoMarriedFight.Shared.Models;
 
 /// <summary>Which engine produced a match. Stored on every <c>Matches</c> row; drives history badges and the leaderboard tabs.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<MatchMode>))]
 public enum MatchMode
 {
     Watch,
@@ -8,6 +10,7 @@ public enum MatchMode
 }
 
 /// <summary>Live fight phases, driven only by the host's tool calls and the tick nudges.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<SessionPhase>))]
 public enum SessionPhase
 {
     Intro,
@@ -19,6 +22,7 @@ public enum SessionPhase
 }
 
 /// <summary>Lifecycle of a match row after the live part is over.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<SessionStatus>))]
 public enum SessionStatus
 {
     Live,
@@ -27,6 +31,7 @@ public enum SessionStatus
     Failed,
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<Speaker>))]
 public enum Speaker
 {
     Host,
@@ -35,6 +40,7 @@ public enum Speaker
 }
 
 /// <summary>What a stored turn is. <see cref="Round"/> is a WATCH line; the rest come from a live fight.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<TurnKind>))]
 public enum TurnKind
 {
     Talk,
@@ -44,6 +50,7 @@ public enum TurnKind
     Round,
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<AnalysisStatus>))]
 public enum AnalysisStatus
 {
     Queued,

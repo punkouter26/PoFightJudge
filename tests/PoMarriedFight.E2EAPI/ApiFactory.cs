@@ -4,7 +4,10 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using PoMarriedFight.Api.Features.Fighters;
 using PoMarriedFight.Api.Features.Profiles;
+using PoMarriedFight.Api.Features.Records;
+using PoMarriedFight.Api.Features.Watch;
 using PoMarriedFight.Shared.Configuration;
 using PoMarriedFight.TestSupport;
 
@@ -36,6 +39,16 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
             services.RemoveAll<IProfileImageService>();
             services.AddSingleton<IProfileImageService, InMemoryProfileImageService>();
+            services.RemoveAll<IWatchResultRepository>();
+            services.AddSingleton<IWatchResultRepository, InMemoryWatchResultRepository>();
+            services.RemoveAll<IFighterResultRepository>();
+            services.AddSingleton<IFighterResultRepository, InMemoryFighterResultRepository>();
+            services.RemoveAll<IFighterRepository>();
+            services.AddSingleton<IFighterRepository, InMemoryFighterRepository>();
+            services.RemoveAll<IMatchRepository>();
+            services.AddSingleton<IMatchRepository, InMemoryMatchRepository>();
+            services.RemoveAll<IWatchAudioStore>();
+            services.AddSingleton<IWatchAudioStore, InMemoryWatchAudioStore>();
 
             // No storage account in this host: the storage probe would make /api/health depend on Azurite, and the
             // stores above never touch it, so the check has nothing real to report here.

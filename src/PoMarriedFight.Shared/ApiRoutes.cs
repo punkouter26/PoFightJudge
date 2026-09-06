@@ -79,23 +79,22 @@ public static class ApiRoutes
     public static class Watch
     {
         public const string Base = $"{ApiPrefix}/watch";
-        public const string GenerateRoundSegment = "/generate-round/{husband}/{wife}";
-        public const string GenerateRoundStreamSegment = "/generate-round-stream/{husband}/{wife}";
+        public const string GenerateRoundSegment = "/generate-round";
+        public const string GenerateRoundStreamSegment = "/generate-round-stream";
         public const string RoundAudioSegment = "/round-audio";
         public const string RoundAudioStreamSegment = "/round-audio-stream";
         public const string VerdictSegment = "/verdict";
         public const string TranscribeSegment = "/transcribe";
 
+        public const string GenerateRoundUrl = $"{Base}{GenerateRoundSegment}";
+        public const string GenerateRoundStreamUrl = $"{Base}{GenerateRoundStreamSegment}";
         public const string RoundAudioUrl = $"{Base}{RoundAudioSegment}";
         public const string RoundAudioStreamUrl = $"{Base}{RoundAudioStreamSegment}";
         public const string VerdictUrl = $"{Base}{VerdictSegment}";
         public const string TranscribeUrl = $"{Base}{TranscribeSegment}";
 
-        public static string GenerateRound(ProfileId husband, ProfileId wife) =>
-            $"{Base}/generate-round/{Uri.EscapeDataString(husband.Value)}/{Uri.EscapeDataString(wife.Value)}";
-
-        public static string GenerateRoundStream(ProfileId husband, ProfileId wife) =>
-            $"{Base}/generate-round-stream/{Uri.EscapeDataString(husband.Value)}/{Uri.EscapeDataString(wife.Value)}";
+        // The two sides travel in the body rather than the path: a side is a persona or a live person, and the route
+        // cannot say which without inventing an encoding for it.
     }
 
     /// <summary>Archived WATCH round audio, proxied through the API so it inherits the match's ownership check.</summary>

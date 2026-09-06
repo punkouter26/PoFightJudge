@@ -57,8 +57,14 @@ public sealed record WatchRoundDto(string Speaker, string Text, string Mood)
     public TtsAudioDto? Audio { get; init; }
 }
 
-/// <summary>Asks for the next line. The client drives the loop, so it sends the state rather than the server holding a session.</summary>
+/// <summary>
+/// Asks for the next line. The client drives the loop, so it sends the whole state rather than the server holding a
+/// session. Each side is a persona or a live person; the server only ever generates a line for a persona, because a
+/// person speaks for themselves.
+/// </summary>
 public sealed record GenerateRoundRequest(
+    MatchSide Husband,
+    MatchSide Wife,
     IReadOnlyList<WatchRoundDto> History,
     string Speaker,
     string? Topic = null,
@@ -71,10 +77,14 @@ public sealed record GenerateRoundResponse(string Text, string Mood, string Atti
 /// <summary>Asks for the audio of a line that has already been generated.</summary>
 public sealed record RoundAudioRequest(ProfileId Speaker, string Text);
 
-/// <summary>Ends a match: the judge rules on the transcript and the result is persisted (unless a human played).</summary>
-public sealed record VerdictRequest(ProfileId Husband, ProfileId Wife, IReadOnlyList<WatchRoundDto> Rounds, string? Topic = null, MatchId? MatchId = null);
+/// <summary>
+/// Ends a match: the judge rules on the transcript and the whole thing is persisted. A persona side gets a watch
+/// result; a person's side gets a fighter result, so their profile grows from this debate too.
+/// <paramref name="MatchId"/> is only for re-judging a match the caller already owns.
+/// </summary>
+public sealed record VerdictRequest(MatchSide Husband, MatchSide Wife, IReadOnlyList<WatchRoundDto> Rounds, string? Topic = null, MatchId? MatchId = null);
 
-/// <summary>The ruling. <paramref name="Winner"/> is the winner's initials, or empty when the judge called neither.</summary>
+/// <summary>The ruling. <paramref name="Winner"/> is the winning side's id, or empty when the judge called neither.</summary>
 public sealed record VerdictResponse(
     MatchId MatchId,
     string Winner,

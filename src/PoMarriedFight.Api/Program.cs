@@ -124,7 +124,7 @@ try
     builder.Services.AddScoped<IFighterRepository, FighterRepository>();
     builder.Services.AddScoped<IFighterResultRepository, FighterResultRepository>();
     builder.Services.AddScoped<IWatchResultRepository, WatchResultRepository>();
-    builder.Services.AddScoped<IWatchAudioStore, WatchAudioBlobService>();
+    builder.Services.AddPoWatch();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
     var ai = builder.Services.AddPoAi(builder.Configuration, builder.Environment);
@@ -136,13 +136,16 @@ try
     builder.Services.AddCarter();
     builder.Services.AddOpenApi();
     builder.Services.AddProblemDetails();
+    builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
     builder.Services.Configure<JsonOptions>(o => o.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase);
 
     var app = builder.Build();
 
     // ── Pipeline ──────────────────────────────────────────────────────────────────────────────────────────────────
-    app.UseExceptionHandler();
+    // Request logging sits outside the exception handler so the line records the status the caller actually got.
+    // The other way round, a malformed request that the handler answers with a 400 was logged as a 500.
     app.UseSerilogRequestLogging();
+    app.UseExceptionHandler();
     app.UseMiddleware<SecurityHeadersMiddleware>();
     if (app.Environment.IsDevelopment())
     {
@@ -191,6 +194,9 @@ try
     }
 
     app.UseAuthorization();
+
+    // After authorization, so the AI limit partitions by the caller rather than by connection.
+    app.UseRateLimiter();
 
     // Degraded gate: in Production with missing config every /api route except diag answers 503 with the missing keys.
     var health = app.Services.GetRequiredService<StartupHealthState>();

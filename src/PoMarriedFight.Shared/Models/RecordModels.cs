@@ -1,8 +1,10 @@
+using System.Text.Json.Serialization;
 using PoMarriedFight.Shared.Identifiers;
 
 namespace PoMarriedFight.Shared.Models;
 
 /// <summary>What is occupying a side of a match.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<SideKind>))]
 public enum SideKind
 {
     /// <summary>An authored AI persona from the Profiles cast.</summary>
