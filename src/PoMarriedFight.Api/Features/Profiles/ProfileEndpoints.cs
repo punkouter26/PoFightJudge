@@ -25,6 +25,7 @@ public sealed class ProfileEndpoints : ICarterModule
         profiles.MapPut(ApiRoutes.Profiles.ByIdSegment, UpdateAsync).WithValidation<CreateProfileRequest>()
             .Produces<ProfileDto>().Produces(StatusCodes.Status404NotFound);
         profiles.MapDelete(ApiRoutes.Profiles.ByIdSegment, DeleteAsync).Produces(StatusCodes.Status204NoContent);
+        profiles.MapPost(ApiRoutes.Profiles.GenerateSegment, GenerateAsync).Produces<CreateProfileRequest>().ProducesValidationProblem();
 
         profiles.MapGet(ApiRoutes.Profiles.FaceSegment, GetFaceAsync).AllowAnonymous()
             .Produces(StatusCodes.Status200OK, contentType: ProfileImageService.ContentType).Produces(StatusCodes.Status404NotFound);
@@ -72,6 +73,18 @@ public sealed class ProfileEndpoints : ICarterModule
         profile.UpdateFacePic(existing.FacePic); // the face has its own endpoint; an edit never drops it
         await repo.UpsertAsync(profile, ct);
         return Results.Ok(profile.ToDto());
+    }
+
+    /// <summary>An unsaved draft for the editor: the user reviews it, edits, and only then creates the profile.</summary>
+    private static async Task<IResult> GenerateAsync(string? role, IProfileGenerator generator, IProfileRepository repo, CancellationToken ct)
+    {
+        if (!Enum.TryParse<ProfileRole>(role, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal) { ["role"] = ["role must be Husband or Wife."] });
+        }
+
+        var existing = await repo.GetAllAsync(ct);
+        return Results.Ok(await generator.GenerateAsync(parsed, existing, ct));
     }
 
     private static async Task<IResult> DeleteAsync(ProfileId id, IProfileRepository repo, IProfileImageService images, CancellationToken ct)

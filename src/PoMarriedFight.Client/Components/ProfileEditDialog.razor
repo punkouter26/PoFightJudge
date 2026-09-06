@@ -11,6 +11,19 @@
 <RadzenTemplateForm TItem="CreateProfileRequest" Data="@_model" Submit="@SaveAsync" class="editor">
     <FluentValidationValidator DisableAssemblyScanning="true" />
 
+    @if (!IsEdit)
+    {
+        <div class="generate">
+            <RadzenButton Text="Generate with AI" Icon="auto_awesome" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined"
+                          Click="@GenerateAsync" IsBusy="@_generating" BusyText="Inventing…" Disabled="@_busy" />
+            @if (_generating)
+            {
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+            }
+            <span class="po-muted hint">Invents a persona for the selected role. Review it, tweak it, then create.</span>
+        </div>
+    }
+
     <RadzenFieldset Text="Identity" class="section">
         <div class="identity">
             <div class="portrait">
@@ -187,6 +200,7 @@
     private string? _faceDataUrl;
     private string? _error;
     private bool _busy;
+    private bool _generating;
 
     private bool IsEdit => Existing is not null;
 
@@ -249,6 +263,30 @@
         JsonSerializer.Deserialize<CreateProfileRequest>(JsonSerializer.Serialize(source, CloneOptions), CloneOptions)!;
 
     private void OnFaceError(UploadErrorEventArgs args) => _error = "That image is too large — pick one under 4 MB.";
+
+    private async Task GenerateAsync()
+    {
+        _generating = true;
+        _error = null;
+        try
+        {
+            var draft = await Api.GenerateProfileAsync(_model.Role);
+            draft.TtsSettings ??= new TtsSettingsDto();
+            _model = draft;
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Summary;
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"The API is not answering ({ex.Message}).";
+        }
+        finally
+        {
+            _generating = false;
+        }
+    }
 
     private async Task SaveAsync(CreateProfileRequest model)
     {

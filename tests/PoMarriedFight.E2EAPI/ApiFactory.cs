@@ -26,6 +26,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting(ConfigKeys.Ai.GeminiApiKey, "test-key");
         builder.UseSetting(ConfigKeys.Auth.AllowFakeAuth, "true");
         builder.UseSetting($"{Flags.Section}:{Flags.UseAzurite}", "false");
+        // The key above exercises the real registration path; the flag still routes every AI call to the deterministic fakes.
+        builder.UseSetting($"{Flags.Section}:{Flags.UseFakeAi}", "true");
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IProfileRepository>();

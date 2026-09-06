@@ -1,6 +1,7 @@
 using Bunit;
 using FluentValidation;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -105,5 +106,31 @@ public class ProfileEditDialogTests : BunitContext
 
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("already exists"));
         closed.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Generate_asks_the_api_for_the_selected_role_and_fills_the_form_with_the_draft()
+    {
+        var draft = Valid("GEN");
+        draft.Name = "Gen Persona";
+        draft.Likes = "long walks through spreadsheets";
+        _api.GenerateProfileAsync(ProfileRole.Wife, Arg.Any<CancellationToken>()).Returns(draft);
+        var seed = new CreateProfileRequest { Role = ProfileRole.Wife };
+        var cut = Render<ProfileEditDialog>(p => p.Add(x => x.Template, seed));
+
+        await cut.Find(".generate .rz-button").ClickAsync(new MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => cut.Find("input[name=Name]").GetAttribute("value").Should().Be("Gen Persona"));
+        cut.Find("textarea[name=Likes]").GetAttribute("value").Should().Be("long walks through spreadsheets");
+        await _api.Received(1).GenerateProfileAsync(ProfileRole.Wife, Arg.Any<CancellationToken>());
+        await _api.DidNotReceive().CreateProfileAsync(Arg.Any<CreateProfileRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void Editing_an_existing_profile_offers_no_generate_button()
+    {
+        var cut = Render<ProfileEditDialog>(p => p.Add(x => x.Existing, Dto(Valid("MAH"))));
+
+        cut.FindAll(".generate").Should().BeEmpty();
     }
 }

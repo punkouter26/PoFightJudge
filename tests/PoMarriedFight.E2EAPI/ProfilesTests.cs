@@ -170,4 +170,22 @@ public class ProfilesTests(ApiFactory factory)
         (await anonymous.GetAsync(ApiRoutes.Profiles.Base)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await anonymous.PostAsJsonAsync(ApiRoutes.Profiles.Base, Persona("ANO"))).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task Generate_returns_an_unsaved_valid_draft_for_the_role_and_rejects_an_unknown_role()
+    {
+        using var client = User();
+
+        var response = await client.PostAsync(ApiRoutes.Profiles.Generate("wife"), null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var draft = (await response.Content.ReadFromJsonAsync<CreateProfileRequest>())!;
+        draft.Role.Should().Be(ProfileRole.Wife);
+        (await new PoMarriedFight.Shared.Validators.CreateProfileRequestValidator().ValidateAsync(draft)).IsValid.Should().BeTrue();
+        draft.TtsSettings.VoiceName.Should().BeOneOf("Kore", "Zephyr");
+        (await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!
+            .Should().NotContain(p => string.Equals(p.Persona.Initials, draft.Initials, StringComparison.Ordinal), "a draft is not persisted");
+
+        (await client.PostAsync(ApiRoutes.Profiles.Generate("banana"), null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

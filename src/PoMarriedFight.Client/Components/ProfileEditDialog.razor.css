@@ -132,3 +132,14 @@
 }
 
 ::deep .error { margin: 0; }
+
+.generate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--po-space-3);
+}
+
+.generate .hint {
+  text-align: left;
+}

@@ -166,6 +166,8 @@ internal sealed class HostFactory : WebApplicationFactory<Program>
         builder.UseSetting(ConfigKeys.Auth.AllowFakeAuth, "true");
         builder.UseSetting($"{Flags.Section}:{Flags.DevGuestEnabled}", "true");
         builder.UseSetting($"{Flags.Section}:{Flags.UseAzurite}", "false");
+        // Real mode drives the real providers; otherwise the flag routes every AI call to the deterministic fakes.
+        builder.UseSetting($"{Flags.Section}:{Flags.UseFakeAi}", AppFixture.RealMode ? "false" : "true");
         builder.UseSetting(ConfigKeys.Ai.GeminiApiKey, AppFixture.RealMode ? Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty : "test-key");
         builder.ConfigureTestServices(services =>
         {

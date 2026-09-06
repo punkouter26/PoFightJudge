@@ -115,6 +115,7 @@ try
     builder.Services.AddPoStorage(builder.Configuration, builder.Environment);
     builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
     builder.Services.AddSingleton<IProfileImageService, ProfileImageService>();
+    builder.Services.AddSingleton<IProfileGenerator, ProfileGenerator>();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
     var ai = builder.Services.AddPoAi(builder.Configuration, builder.Environment);

@@ -58,7 +58,7 @@ public partial class HealthTests(ApiFactory factory)
             var dto = await response.Content.ReadFromJsonAsync<DiagDto>();
             dto!.Status.Should().Be("ok");
             dto.Gemini.Should().Be(DiagDto.Configured);
-            dto.FakeAi.Should().BeFalse("a key is configured and the flag is off");
+            dto.FakeAi.Should().BeTrue("the test host keeps a placeholder key but forces the fakes with the flag");
             dto.Ready.Should().BeTrue();
             dto.Models.Live.Should().Be("gemini-3.1-flash-live-preview");
             dto.Models.Round.Should().Be("gemini-3.1-flash-lite");
@@ -74,7 +74,7 @@ public partial class HealthTests(ApiFactory factory)
 
         var flags = await client.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url);
 
-        flags!.UseFakeAi.Should().BeFalse();
+        flags!.UseFakeAi.Should().BeTrue("the test host forces the fakes");
         flags.SelfPlayer.Should().BeTrue();
         flags.BrowserSpeechRecognition.Should().BeTrue();
     }

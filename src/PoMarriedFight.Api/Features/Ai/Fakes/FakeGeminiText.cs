@@ -133,7 +133,14 @@ public sealed class FakeGeminiText(AiLatencyTracker latency, TimeSpan? chunkDela
             case "BOOLEAN":
                 return JsonValue.Create(faker.Random.Bool());
             default:
-                return JsonValue.Create(StringFor(name, faker));
+                var text = StringFor(name, faker);
+                var minLength = (int?)Number(s["minLength"]) ?? 0;
+                while (text.Length < minLength)
+                {
+                    text += " " + faker.Lorem.Sentence(8);
+                }
+
+                return JsonValue.Create(text);
         }
     }
 
