@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.FeatureManagement;
 using PoMarriedFight.Api.Common;
+using PoMarriedFight.Api.Features.Ai;
 using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Diagnostics;
 using PoMarriedFight.Api.Features.Profiles;
@@ -116,6 +117,8 @@ try
     builder.Services.AddSingleton<IProfileImageService, ProfileImageService>();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
+    var ai = builder.Services.AddPoAi(builder.Configuration, builder.Environment);
+    Log.Information("AI providers: {Mode} ({Reason})", ai.UseFakes ? "fakes" : "real", ai.Reason);
     builder.Services.TryAddSingleton(TimeProvider.System);
     builder.Services.AddFeatureManagement();
     builder.Services.AddHybridCache();

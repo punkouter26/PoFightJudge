@@ -23,7 +23,7 @@
 - [x] T14 Profiles UI  ← CP2 reached 2026-09-06: Profiles page (cast by role, RadzenDataList cards, DialogService editor with the shared validator, portrait upload, delete confirm, Load default cast); E2EUI create/delete + seed with 512px portraits
 
 ## Phase C — AI core + Voice
-- [ ] T15 Gemini HTTP core
+- [x] T15 Gemini HTTP core
 - [ ] T16 Gemini text client + fakes + latency tracker
 - [ ] T17 Profile generation
 - [ ] T18 TTS core + Gemini TTS + fake
