@@ -1,0 +1,30 @@
+@page "/authentication/{action}"
+@attribute [AllowAnonymous]
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment Env
+
+<PageTitle>Signing in · PoMarriedFight</PageTitle>
+
+@if (Env.IsProduction())
+{
+    @* MSAL's redirect handler. Only registered in Production, so rendering it elsewhere would throw. *@
+    <RemoteAuthenticatorView Action="@Action">
+        <LoggingIn><p class="po-boot">Signing you in…</p></LoggingIn>
+        <CompletingLoggingIn><p class="po-boot">Completing sign-in…</p></CompletingLoggingIn>
+        <LogOut><p class="po-boot">Signing you out…</p></LogOut>
+        <LogOutSucceeded><p class="po-boot">Signed out.</p></LogOutSucceeded>
+        <LogInFailed><RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false">Microsoft sign-in failed: @context</RadzenAlert></LogInFailed>
+    </RemoteAuthenticatorView>
+}
+else
+{
+    <PageShell Width="PageShell.ShellWidth.Narrow" Title="Microsoft sign-in">
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+            Microsoft sign-in is a Production feature. In Development use <a href="login">Continue as Guest</a>.
+        </RadzenAlert>
+    </PageShell>
+}
+
+@code {
+    [Parameter] public string? Action { get; set; }
+}

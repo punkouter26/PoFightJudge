@@ -150,6 +150,20 @@ try
     };
     app.UseStaticFiles(staticFiles);
 
+    // A missing file-like path (/nope.txt, a browsers /favicon.ico) is a 404. Without this the fallback authorization
+    // policy challenges even endpoint-less requests and every such miss became a 401. A middleware, not an endpoint: a
+    // matched endpoint would stop StaticFileMiddleware from serving the assets that do exist.
+    app.Use(async (ctx, next) =>
+    {
+        if (ctx.GetEndpoint() is null && Path.HasExtension(ctx.Request.Path.Value))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        await next();
+    });
+
     app.UseAuthentication();
     if (fakeAuth)
     {
@@ -178,9 +192,6 @@ try
 
     // Unknown /api/* routes must be a clean 404, never the SPA fallback (which would answer 200 + index.html).
     app.MapFallback($"{ApiRoutes.ApiPrefix}/{{**path}}", () => Results.NotFound(new { error = "No such API route." })).AllowAnonymous();
-    // A missing file-like path (/nope.txt, a browsers /favicon.ico) must be a 404: with a fallback authorization policy the
-    // authorization middleware challenges even endpoint-less requests, which turned every such miss into a 401.
-    app.MapFallback("{*path:file}", () => Results.NotFound()).AllowAnonymous();
     app.MapFallbackToFile("index.html", staticFiles).AllowAnonymous();
 
     app.Run();

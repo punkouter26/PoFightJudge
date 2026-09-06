@@ -1,5 +1,3 @@
-using System.Net.Http.Json;
-using System.Security.Claims;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -8,8 +6,6 @@ using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using PoMarriedFight.Client;
 using PoMarriedFight.Client.Services;
-using PoMarriedFight.Shared;
-using PoMarriedFight.Shared.Models;
 using Radzen;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
@@ -22,6 +18,7 @@ builder.Services.AddRadzenComponents();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddHotKeys2();
 builder.Services.AddScoped<ThemeInterop>();
+builder.Services.AddScoped<IApiClient, ApiClient>();
 
 // Environment split (SPEC §2): Production = Microsoft Entra ID via MSAL, API calls to our own origin carry the access
 // token. Everything else = the guest cookie / FakeAuth header the API understands; auth state is whatever /auth/me says.
@@ -46,7 +43,8 @@ else
 {
     builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = baseAddress);
     builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClients.Api));
-    builder.Services.AddScoped<AuthenticationStateProvider, ApiMeAuthStateProvider>();
+    builder.Services.AddScoped<ApiAuthStateProvider>();
+    builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<ApiAuthStateProvider>());
 }
 
 // No anonymous browsing: every page needs a signed-in (or guest) user unless it opts out.
@@ -61,37 +59,5 @@ namespace PoMarriedFight.Client
     public static class HttpClients
     {
         public const string Api = "PoMarriedFight.Api";
-    }
-
-    /// <summary>
-    /// Development/Test auth state: asks the API who the cookie (or FakeAuth header) says we are. T09 replaces this
-    /// with the ApiClient-backed provider once the typed client exists; the contract (/auth/me → claims) is identical.
-    /// </summary>
-    file sealed class ApiMeAuthStateProvider(HttpClient http) : AuthenticationStateProvider
-    {
-        private static readonly AuthenticationState Anonymous = new(new ClaimsPrincipal(new ClaimsIdentity()));
-
-        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
-        {
-            try
-            {
-                var me = await http.GetFromJsonAsync<AuthMeDto>(ApiRoutes.Auth.Me);
-                if (me is not { Authenticated: true })
-                {
-                    return Anonymous;
-                }
-
-                var identity = new ClaimsIdentity(
-                [
-                    new Claim(ClaimTypes.NameIdentifier, me.UserId ?? string.Empty),
-                new Claim(ClaimTypes.Name, me.Name ?? me.UserId ?? "user"),
-            ], me.AuthType ?? "api");
-                return new AuthenticationState(new ClaimsPrincipal(identity));
-            }
-            catch (HttpRequestException)
-            {
-                return Anonymous;
-            }
-        }
     }
 }

@@ -57,7 +57,7 @@
         try
         {
             // Best-effort: the guest cookie is server-side; the page is the cache we have to clear.
-            await Http.PostAsync(ApiRoutes.Auth.Logout, null);
+            await Http.PostAsync(new Uri(ApiRoutes.Auth.Logout, UriKind.Relative), null);
         }
         catch (HttpRequestException)
         {
