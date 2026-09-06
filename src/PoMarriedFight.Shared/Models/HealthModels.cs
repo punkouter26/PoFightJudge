@@ -53,7 +53,9 @@ public sealed record DiagDto(
     string TableStorage,
     string BlobStorage,
     ModelIdsDto Models,
-    IReadOnlyDictionary<string, bool> Flags)
+    IReadOnlyDictionary<string, bool> Flags,
+    IReadOnlyList<AiLatencyDto> Latency,
+    IReadOnlyList<AiUsageDto> Usage)
 {
     public const string Configured = "Configured";
     public const string NotConfigured = "NotConfigured";
@@ -64,3 +66,16 @@ public sealed record DiagDto(
 
 /// <summary>Flags returned by <c>GET /api/features</c> — the effective values, after environment rules.</summary>
 public sealed record FeatureFlagsDto(bool UseFakeAi, bool DevGuestEnabled, bool SelfPlayer, bool BrowserSpeechRecognition);
+
+/// <summary>One AI operation's rolling latency summary (window of recent calls, milliseconds).</summary>
+public sealed record AiLatencyDto(string Operation, int Count, double P50Ms, double P95Ms, double LastMs);
+
+/// <summary>One AI operation's cumulative token usage since process start.</summary>
+public sealed record AiUsageDto(string Operation, int Calls, long PromptTokens, long OutputTokens, long CachedTokens)
+{
+    /// <summary>Share of prompt tokens served from the provider's context cache — the scoreboard for cache-friendly prompt ordering.</summary>
+    public double CacheHitRatio => PromptTokens == 0 ? 0 : (double)CachedTokens / PromptTokens;
+
+    /// <summary>Mean prompt tokens per call — the number a prompt trim is supposed to move.</summary>
+    public double AveragePromptTokens => Calls == 0 ? 0 : (double)PromptTokens / Calls;
+}

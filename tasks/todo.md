@@ -24,7 +24,7 @@
 
 ## Phase C — AI core + Voice
 - [x] T15 Gemini HTTP core
-- [ ] T16 Gemini text client + fakes + latency tracker
+- [x] T16 Gemini text client + fakes + latency tracker
 - [ ] T17 Profile generation
 - [ ] T18 TTS core + Gemini TTS + fake
 - [ ] T19 Voice providers + routing

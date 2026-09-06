@@ -10,13 +10,13 @@ namespace PoMarriedFight.Api.Features.Diagnostics;
 
 /// <summary>
 /// Authenticated diagnostics: environment, readiness, which providers are configured (presence, never values), the
-/// model ids in use and the effective feature flags. Admin-only in Production (or anywhere when
+/// model ids in use, the effective feature flags and the AI latency/token tables. Admin-only in Production (or anywhere when
 /// <see cref="Flags.DiagRequiresAdminInDev"/> is on).
 /// </summary>
 public sealed class DiagEndpoints : ICarterModule
 {
     public void AddRoutes(IEndpointRouteBuilder app) =>
-        app.MapGet(ApiRoutes.Diag.Url, async (HttpContext ctx, IConfiguration config, IHostEnvironment env, StartupHealthState health, IFeatureManager features) =>
+        app.MapGet(ApiRoutes.Diag.Url, async (HttpContext ctx, IConfiguration config, IHostEnvironment env, StartupHealthState health, IFeatureManager features, AiLatencyTracker latency) =>
         {
             var adminOnly = env.IsProduction() || await features.IsEnabledAsync(Flags.DiagRequiresAdminInDev);
             if (adminOnly && !ctx.User.IsAdmin())
@@ -48,7 +48,9 @@ public sealed class DiagEndpoints : ICarterModule
                     config[ConfigKeys.Ai.LiveModel] ?? string.Empty,
                     config[ConfigKeys.Ai.TranscribeModel] ?? string.Empty,
                     config[ConfigKeys.Ai.Voice] ?? string.Empty),
-                flags));
+                flags,
+                latency.Snapshot(),
+                latency.UsageSnapshot()));
         }).RequireAuthorization().WithTags("Diagnostics");
 
     /// <summary>

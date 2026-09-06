@@ -1,3 +1,4 @@
+using PoMarriedFight.Api.Features.Ai.Fakes;
 using PoMarriedFight.Api.Features.Diagnostics;
 using PoMarriedFight.Shared.Configuration;
 
@@ -13,9 +14,9 @@ public sealed record AiMode(bool UseFakes, bool HasGeminiKey, string Reason);
 public static class AiServiceExtensions
 {
     /// <summary>
-    /// Registers the mode, the model ids and the named Gemini clients. The typed clients (text, TTS, live, analysis)
-    /// and their fakes register in their own slices and read <see cref="AiMode"/> to pick a side; the transport is
-    /// always there so a real call can be made the moment a key appears.
+    /// Registers the mode, the model ids, the latency tracker, the named Gemini clients and the text seam (real client or
+    /// the schema-driven fake). TTS, live and analysis register in their own slices and read <see cref="AiMode"/> to pick
+    /// a side; the transport is always there so a real call can be made the moment a key appears.
     /// </summary>
     public static AiMode AddPoAi(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
@@ -35,7 +36,18 @@ public static class AiServiceExtensions
         var mode = new AiMode(useFakes, hasKey, reason);
         services.AddSingleton(mode);
         services.AddSingleton(GeminiModelOptions.FromConfiguration(configuration));
+        services.AddSingleton<AiLatencyTracker>();
         services.AddGeminiClients(apiKey);
+
+        if (useFakes)
+        {
+            services.AddSingleton<IGeminiText>(sp => new FakeGeminiText(sp.GetRequiredService<AiLatencyTracker>()));
+        }
+        else
+        {
+            services.AddSingleton<IGeminiText, GeminiTextClient>();
+        }
+
         return mode;
     }
 }
