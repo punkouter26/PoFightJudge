@@ -487,3 +487,12 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
 | T47/T48 | Humanizer for relative times, counts, ordinals |
 | T50 | CI: `reportgenerator -reporttypes:Html;MarkdownSummary` + `-minimumCoverageThresholds` line ≥ 80 (fails the job); publish with `-p:Aot=true`; `dotnet tool restore` |
 | T51 | `setup.ps1` runs `dotnet tool restore` + `dotnet husky install`; README documents Seq at http://localhost:5341 |
+
+## 10. Build-time amendments
+
+- **Program.cs registrations are exempt from the manifest rule.** Carter removes endpoint mapping from `Program.cs`, but
+  middleware and service registration (`AddPoX()` / `UseX()`) still land there. Any task may add its one or two
+  registration lines to `Program.cs`; the manifest lists the feature files only. (Applied from T04 on; T03/T05 also
+  touched it.)
+- **T05 ran before T04**: `/api/diag`'s `RequireAuthorization` needs the auth services, so auth precedes diagnostics.
+- **`ApiFactory` (E2EAPI) was created in T05** with the auth settings; T11 extends it with the in-memory stores and fakes.

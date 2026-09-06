@@ -8,7 +8,7 @@
 - [x] T01 Solution skeleton
 - [x] T02 Shared contracts
 - [x] T03 Api host bootstrap + secrets + degraded mode
-- [ ] T04 Diagnostics endpoints
+- [x] T04 Diagnostics endpoints
 - [x] T05 Auth (server) — done before T04 (diag needs the auth services)
 - [ ] T06 Storage clients + Azurite credential
 - [ ] T07 Client bootstrap

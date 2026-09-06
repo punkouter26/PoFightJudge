@@ -1,0 +1,66 @@
+namespace PoMarriedFight.Shared.Models;
+
+/// <summary>Outcome of a single health probe.</summary>
+public enum HealthState
+{
+    /// <summary>Reachable / configured as expected.</summary>
+    Ok,
+
+    /// <summary>Optional dependency is absent — the app still runs.</summary>
+    NotConfigured,
+
+    /// <summary>Reachable but not in a fully healthy state.</summary>
+    Degraded,
+
+    /// <summary>Required dependency is unreachable or unconfigured.</summary>
+    Failed,
+}
+
+/// <summary>Grouping used by the /health page to lay out its sections.</summary>
+public enum HealthCategory
+{
+    /// <summary>Live probes against external services.</summary>
+    Connection,
+
+    /// <summary>Presence (never the raw value) of configuration.</summary>
+    Configuration,
+
+    /// <summary>Runtime feature flags.</summary>
+    Feature,
+}
+
+/// <summary>One row of the health report. <see cref="Detail"/> is masked server-side — it never carries a raw secret.</summary>
+public sealed record HealthCheckDto(string Name, HealthState State, string Detail, HealthCategory Category);
+
+/// <summary>Full connection/configuration status, rendered by the /health page. Anonymous, so presence only.</summary>
+public sealed record HealthReportDto(string Environment, HealthState Overall, DateTimeOffset Timestamp, IReadOnlyList<HealthCheckDto> Checks);
+
+/// <summary>Model ids in use per operation, as reported by /api/diag.</summary>
+public sealed record ModelIdsDto(string Round, string Judge, string Profile, string Tts, string Live, string Transcribe, string Voice);
+
+/// <summary>
+/// What <c>/api/diag</c> reports: environment, readiness, provider presence and the model ids in use. Presence only —
+/// never a secret value. Both ends read this one record, so a field added here cannot go missing on the other side.
+/// </summary>
+public sealed record DiagDto(
+    string Environment,
+    string Status,
+    IReadOnlyList<string> MissingKeys,
+    bool FakeAi,
+    string Gemini,
+    string FishAudio,
+    string AzureSpeech,
+    string TableStorage,
+    string BlobStorage,
+    ModelIdsDto Models,
+    IReadOnlyDictionary<string, bool> Flags)
+{
+    public const string Configured = "Configured";
+    public const string NotConfigured = "NotConfigured";
+
+    /// <summary>What the client needs before it will let anyone start a match.</summary>
+    public bool Ready => string.Equals(Status, "ok", StringComparison.Ordinal) && (FakeAi || string.Equals(Gemini, Configured, StringComparison.Ordinal));
+}
+
+/// <summary>Flags returned by <c>GET /api/features</c> — the effective values, after environment rules.</summary>
+public sealed record FeatureFlagsDto(bool UseFakeAi, bool DevGuestEnabled, bool SelfPlayer, bool BrowserSpeechRecognition);
