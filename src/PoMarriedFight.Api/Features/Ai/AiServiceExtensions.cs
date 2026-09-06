@@ -1,5 +1,6 @@
 using PoMarriedFight.Api.Features.Ai.Fakes;
 using PoMarriedFight.Api.Features.Diagnostics;
+using PoMarriedFight.Api.Features.Voice;
 using PoMarriedFight.Shared.Configuration;
 
 namespace PoMarriedFight.Api.Features.Ai;
@@ -42,10 +43,12 @@ public static class AiServiceExtensions
         if (useFakes)
         {
             services.AddSingleton<IGeminiText>(sp => new FakeGeminiText(sp.GetRequiredService<AiLatencyTracker>()));
+            services.AddSingleton<ITtsProvider, FakeTts>();
         }
         else
         {
             services.AddSingleton<IGeminiText, GeminiTextClient>();
+            services.AddSingleton<ITtsProvider, GeminiTtsService>();
         }
 
         return mode;
