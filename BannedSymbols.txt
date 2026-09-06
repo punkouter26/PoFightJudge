@@ -1,0 +1,13 @@
+# Enforced by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030). Each line = SPEC §9 "never" rule made compile-time.
+P:System.DateTime.Now;Use TimeProvider.GetLocalNow()
+P:System.DateTime.UtcNow;Use TimeProvider.GetUtcNow()
+P:System.DateTimeOffset.Now;Use TimeProvider.GetLocalNow()
+P:System.DateTimeOffset.UtcNow;Use TimeProvider.GetUtcNow()
+M:System.Net.Http.HttpClient.#ctor;Use IHttpClientFactory named clients (resilience + timeouts live there)
+M:System.Net.Http.HttpClient.#ctor(System.Net.Http.HttpMessageHandler);Use IHttpClientFactory named clients
+M:Azure.Data.Tables.TableServiceClient.#ctor(System.String);No connection strings — endpoint + DefaultAzureCredential
+M:Azure.Data.Tables.TableServiceClient.#ctor(System.String,Azure.Data.Tables.TableClientOptions);No connection strings — endpoint + DefaultAzureCredential
+M:Azure.Storage.Blobs.BlobServiceClient.#ctor(System.String);No connection strings — endpoint + DefaultAzureCredential
+M:Azure.Storage.Blobs.BlobServiceClient.#ctor(System.String,Azure.Storage.Blobs.BlobClientOptions);No connection strings — endpoint + DefaultAzureCredential
+P:System.Threading.Tasks.Task`1.Result;await it
+M:System.Threading.Tasks.Task.Wait;await it

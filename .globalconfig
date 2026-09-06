@@ -1,0 +1,38 @@
+# Solution-wide analyzer severities. AnalysisLevel=latest-all turns everything on; each line below is a deliberate
+# demotion with its reason. Anything not listed is an error (TreatWarningsAsErrors).
+is_global = true
+global_level = 100
+
+# ASP.NET Core / Blazor: no synchronization context, ConfigureAwait(false) is noise.
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.MA0004.severity = none
+dotnet_diagnostic.VSTHRD111.severity = none
+# Nullable reference types already enforce argument null-checks at the boundary.
+dotnet_diagnostic.CA1062.severity = none
+# An app (not a library): public types are the norm for endpoints, DI and Razor.
+dotnet_diagnostic.CA1515.severity = none
+# Types instantiated by DI / the test runner look "never instantiated" to the analyzer.
+dotnet_diagnostic.CA1812.severity = none
+# English-only app (SPEC §10); no resource tables.
+dotnet_diagnostic.CA1303.severity = none
+# Broad catches are used deliberately at resilience boundaries, always with a `when` filter or a log.
+dotnet_diagnostic.CA1031.severity = none
+# Uri-typed properties would leak into JSON contracts; strings are the wire type.
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1055.severity = none
+dotnet_diagnostic.CA1056.severity = none
+# Fakes and attitude selection use Random for variety, never for security.
+dotnet_diagnostic.CA5394.severity = none
+# SPEC §5: one type per file when there is one, <Concept>Models.cs when there is a cluster.
+dotnet_diagnostic.MA0048.severity = none
+# Method length is a review concern, not a build gate.
+dotnet_diagnostic.MA0051.severity = none
+# Identifiers may match language keywords in other languages (e.g. `Error`, `Stop`).
+dotnet_diagnostic.CA1716.severity = none
+# Hot paths use [LoggerMessage]; cold paths may log directly.
+dotnet_diagnostic.CA1848.severity = none
+# Static-holder sealing and nested-type visibility rules fight the Razor / Minimal-API idioms.
+dotnet_diagnostic.CA1034.severity = none
+# Records with collection properties are DTOs; exposing IReadOnlyList<T> is intended.
+dotnet_diagnostic.CA1002.severity = none
+dotnet_diagnostic.CA2227.severity = none

@@ -1,0 +1,74 @@
+# PoMarriedFight — TODO (one commit per task; tick when merged to master)
+
+## Pre-build
+- [x] Library selection (top-50 → picks → top-10 examples → tasks updated)
+- [x] /design: 10 concepts → pick (04 Broadcast) → component hierarchy confirmed
+
+## Phase A — Foundation
+- [x] T01 Solution skeleton
+- [ ] T02 Shared contracts
+- [ ] T03 Api host bootstrap + secrets + degraded mode
+- [ ] T04 Diagnostics endpoints
+- [ ] T05 Auth (server)
+- [ ] T06 Storage clients + Azurite credential
+- [ ] T07 Client bootstrap
+- [ ] T08 Design tokens, theme, shell
+- [ ] T09 Client auth
+- [ ] T10 Home, Health, NotFound, banner, empty state
+- [ ] T11 Test infrastructure  ← CP1
+
+## Phase B — Profiles
+- [ ] T12 Profile domain + repository
+- [ ] T13 Profile endpoints, faces, seeding
+- [ ] T14 Profiles UI  ← CP2
+
+## Phase C — AI core + Voice
+- [ ] T15 Gemini HTTP core
+- [ ] T16 Gemini text client + fakes + latency tracker
+- [ ] T17 Profile generation
+- [ ] T18 TTS core + Gemini TTS + fake
+- [ ] T19 Voice providers + routing
+- [ ] T20 TTS cache + preview line + playback interop
+- [ ] T21 Transcription  ← CP3 (real-key smoke)
+
+## Phase D — WATCH
+- [ ] T22 WATCH domain
+- [ ] T23 Prompts + IWatchAi
+- [ ] T24 Match storage (both modes)
+- [ ] T25 WATCH endpoints
+- [ ] T26 WATCH setup UI
+- [ ] T27 WATCH play UI
+- [ ] T28 SELF turn
+- [ ] T29 WATCH end-to-end hardening  ← CP4
+
+## Phase E — FIGHT live
+- [ ] T30 Fighter domain + repositories
+- [ ] T31 Gemini Live client
+- [ ] T32 Debate state machine + host personas
+- [ ] T33 Orchestrator
+- [ ] T34 Registry, hub, fight endpoints
+- [ ] T35 Browser audio
+- [ ] T36 Fight setup UI
+- [ ] T37 Fight live UI
+- [ ] T38 Live UI 2 + FIGHT E2E  ← CP5 (real-key Live smoke)
+
+## Phase F — Analysis
+- [ ] T39 Analysis clients + schema
+- [ ] T40 Metrics, mapping, highlights
+- [ ] T41 Pipeline + style snapshot
+- [ ] T42 Analysis endpoints, fakes, DI
+- [ ] T41b Opus recordings (Concentus)
+- [ ] T43 Verdict UI 1
+- [ ] T44 Verdict UI 2 + E2E  ← CP6
+
+## Phase G — Records + Fighter style
+- [ ] T45 Stats + style builders
+- [ ] T46 Records endpoints
+- [ ] T47 Records UI
+- [ ] T48 Fighters UI + host digest  ← CP7
+
+## Phase H — PWA, infra, docs, verification
+- [ ] T49 PWA
+- [ ] T50 Infra as code + CI
+- [ ] T51 Scripts, docs, secret seeding (ask-first)
+- [ ] T52 Verify, review, simplify, evidence  ← CP8

@@ -1,0 +1,6 @@
+{
+  "tasks": [
+    { "name": "format-check", "group": "pre-commit", "command": "dotnet", "args": ["format", "PoMarriedFight.slnx", "--verify-no-changes", "--no-restore"] },
+    { "name": "unit-tests", "group": "pre-commit", "command": "dotnet", "args": ["test", "tests/PoMarriedFight.Unit", "--no-restore", "--verbosity", "quiet"] }
+  ]
+}
