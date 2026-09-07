@@ -78,9 +78,14 @@
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
+
+        // Everything about the last persona goes, including their name: a page that says "no such persona" under
+        // somebody else's heading is worse than one that says nothing.
+        _profile = null;
+        _record = null;
+
         if (!ProfileId.TryParse(Initials, CultureInfo.InvariantCulture, out var id))
         {
-            _record = null;
             _loading = false;
             return;
         }
@@ -91,12 +96,9 @@
             _profile = await Api.GetProfileAsync(id);
             _record = await Api.GetProfileRecordAsync(id);
         }
-        catch (ApiException)
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
         {
-            _record = null;
-        }
-        catch (HttpRequestException)
-        {
+            _profile = null;
             _record = null;
         }
         finally

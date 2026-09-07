@@ -40,6 +40,13 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
     private readonly WavWriter _playersTrack = new(PlayerSampleRate);
     private readonly WavWriter _hostTrack = new(HostSampleRate);
     private readonly StringBuilder _playerCaption = new();
+
+    /// <summary>
+    /// Who was speaking when the sentence in <see cref="_playerCaption"/> began. A sentence arrives in pieces and
+    /// the floor can move while it is still arriving — the long-talker nudge exists to make that happen — so the
+    /// caption is labelled with whoever started it rather than with whoever holds the floor when it is flushed.
+    /// </summary>
+    private Speaker? _playerCaptionSpeaker;
     private readonly StringBuilder _hostCaption = new();
     private readonly CaptionTranscript _captions = new();
     private readonly CancellationTokenSource _cts = new();
@@ -391,11 +398,21 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
                 break;
 
             case LiveServerEvent.InputTranscript heard:
+                var speaking = Session.CurrentSpeaker?.ToSpeaker() ?? Speaker.Player1;
+                if (_playerCaption.Length > 0 && _playerCaptionSpeaker is { } started && started != speaking)
+                {
+                    // The floor moved mid-sentence. Finish what the last one was saying under their own name
+                    // before the new one starts, or their words end up printed under somebody else's.
+                    await _sink.CaptionAsync(new CaptionDto(started, _playerCaption.ToString(), true), ct);
+                    _playerCaption.Clear();
+                }
+
+                _playerCaptionSpeaker = speaking;
                 _playerCaption.Append(heard.Text);
 
                 // The same text the room reads is the transcript the analysis reads: the show is transcribed once.
-                _captions.Add(heard.Text, Session.CurrentSpeaker?.ToSpeaker(), CaptionTranscript.Elapsed(Now, Session.StartedAt));
-                await _sink.CaptionAsync(new CaptionDto(Session.CurrentSpeaker?.ToSpeaker() ?? Speaker.Player1, _playerCaption.ToString(), false), ct);
+                _captions.Add(heard.Text, speaking, CaptionTranscript.Elapsed(Now, Session.StartedAt));
+                await _sink.CaptionAsync(new CaptionDto(speaking, _playerCaption.ToString(), false), ct);
                 break;
 
             case LiveServerEvent.OutputTranscript said:
@@ -435,8 +452,9 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
     {
         if (_playerCaption.Length > 0)
         {
-            await _sink.CaptionAsync(new CaptionDto(Session.CurrentSpeaker?.ToSpeaker() ?? Speaker.Player1, _playerCaption.ToString(), true), ct);
+            await _sink.CaptionAsync(new CaptionDto(_playerCaptionSpeaker ?? Speaker.Player1, _playerCaption.ToString(), true), ct);
             _playerCaption.Clear();
+            _playerCaptionSpeaker = null;
         }
 
         if (_hostCaption.Length > 0)

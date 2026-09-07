@@ -35,6 +35,9 @@ public enum NudgeKind
 
     /// <summary>The questioning ran long; the host must rule now.</summary>
     ProbeCap,
+
+    /// <summary>The two of them have been named and are talking, but the argument was never formally started.</summary>
+    SetupCap,
 }
 
 /// <summary>A deterministic instruction for the host, produced by the state machine's clock.</summary>
@@ -87,6 +90,12 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
     private DateTimeOffset _lastSpeech = startedAt;
     private DateTimeOffset _turnStartedAt = startedAt;
     private DateTimeOffset? _debateStartedAt;
+
+    /// <summary>When the arguing stopped. The clock the room sees has to stop with it.</summary>
+    private DateTimeOffset? _debateEndedAt;
+
+    /// <summary>When the two of them were named, so a show that never gets going can be nudged out of Setup.</summary>
+    private DateTimeOffset? _setupStartedAt;
     private DateTimeOffset? _probeStartedAt;
     private int? _openTurnIndex;
     private int _silenceLevel;
@@ -114,7 +123,12 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 
     public IReadOnlyList<TurnDto> Turns => _turns;
 
-    public TimeSpan DebateElapsed(DateTimeOffset now) => _debateStartedAt is null ? TimeSpan.Zero : now - _debateStartedAt.Value;
+    /// <summary>
+    /// How long they argued for. It stops when the argument does — the room is shown this as a countdown, and a
+    /// timer that keeps running through the questions and the ruling counts down to nothing in front of everybody.
+    /// </summary>
+    public TimeSpan DebateElapsed(DateTimeOffset now) =>
+        _debateStartedAt is null ? TimeSpan.Zero : (_debateEndedAt ?? now) - _debateStartedAt.Value;
 
     public TimeSpan DebateRemaining(DateTimeOffset now)
     {
@@ -147,6 +161,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         }
 
         Phase = SessionPhase.Setup;
+        _setupStartedAt ??= now;
         NoteSpeech(now);
         return Outcome.Ok;
     }
@@ -194,6 +209,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         if (Phase is SessionPhase.Intro && setup?.HasPlayers == true)
         {
             Phase = SessionPhase.Setup;
+            _setupStartedAt ??= now;
             NoteSpeech(now);
         }
     }
@@ -227,7 +243,12 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         // socket lives — which is what a real one did, for eight minutes, while the host asked eleven times.
         if (Phase is SessionPhase.Setup)
         {
-            StartTurn(PlayerId.Player1, now);
+            // Straight to Debate rather than through StartTurn: opening a turn here would put an empty one on the
+            // record, attributed to somebody who never got the floor, and then close it in the next breath. The
+            // They have been arguing since some point this session, so the start is the session rather than this
+            // instant: recording it as "now" would report an eight-minute argument as having lasted no time.
+            Phase = SessionPhase.Debate;
+            _debateStartedAt ??= StartedAt;
         }
 
         if (Phase is not SessionPhase.Debate)
@@ -235,6 +256,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
             return Outcome.Fail($"Cannot end the argument during {Phase}.");
         }
 
+        _debateEndedAt = now;
         CloseOpenTurn(now);
         CurrentSpeaker = null;
         Phase = SessionPhase.Probe;
@@ -341,6 +363,16 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         if (Phase is SessionPhase.Debate)
         {
             AddDebateNudges(now, nudges);
+        }
+        else if (Phase is SessionPhase.Setup && _setupStartedAt is { } setupStart
+            && !_nudged.Contains(NudgeKind.SetupCap) && now - setupStart >= TimeSpan.FromSeconds(options.MaxSetupSeconds))
+        {
+            // The silence nudges above never fire while they are arguing, and none of the debate clocks are running
+            // yet — so without this the show can sit here talking until the session's own cap kills it.
+            _nudged.Add(NudgeKind.SetupCap);
+            nudges.Add(new DebateNudge(
+                NudgeKind.SetupCap,
+                $"SYSTEM: {Player1Name} and {Player2Name} are already arguing. Start the argument properly now — hand the floor to one of them (call start_turn)."));
         }
         else if (Phase is SessionPhase.Probe && _probeStartedAt is { } probeStart
             && !_nudged.Contains(NudgeKind.ProbeCap) && now - probeStart >= TimeSpan.FromSeconds(options.MaxProbeSeconds))

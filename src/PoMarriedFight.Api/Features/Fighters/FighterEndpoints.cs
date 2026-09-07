@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using Carter;
+using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Records;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Identifiers;
@@ -11,8 +13,13 @@ namespace PoMarriedFight.Api.Features.Fighters;
 /// fights under, rather than letting them invent a second one by accident.
 /// </summary>
 /// <remarks>
-/// Fighters are not owned by a user. A tag is a person, and two people who argue on one microphone are usually
-/// signed in as one of them; scoping the roster per account would hide half of every couple from themselves.
+/// The roster itself is not owned by anybody. A tag is a person, and two people who argue on one microphone are
+/// usually signed in as one of them, so scoping the list of tags per account would hide half of every couple from
+/// themselves.
+///
+/// Their record is a different matter. What was argued about, who said the best line and how it was scored come
+/// out of somebody's private debates, so every read of the results is filtered to the account that ran them —
+/// otherwise anybody could walk the three-letter tag space and read a stranger's arguments back to them.
 /// </remarks>
 public sealed class FighterEndpoints : ICarterModule
 {
@@ -46,12 +53,13 @@ public sealed class FighterEndpoints : ICarterModule
     /// what a list of fighters has to say to be worth looking at: a page of bare tags says nothing.
     /// </summary>
     private static async Task<IReadOnlyList<FighterStatsDto>> RosterAsync(
+        ClaimsPrincipal user,
         IFighterRepository fighters,
         IFighterResultRepository results,
         CancellationToken ct)
     {
         var roster = await fighters.ListAsync(ct);
-        var byTag = (await results.ListAllAsync(ct))
+        var byTag = (await results.ListAllAsync(user.UserId(), ct))
             .GroupBy(r => r.Tag, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, IReadOnlyList<FighterResultDto> (g) => [.. g], StringComparer.OrdinalIgnoreCase);
 
@@ -69,6 +77,7 @@ public sealed class FighterEndpoints : ICarterModule
     /// <summary>Everything one person's page shows: who they are, their record, how they argue, and what they argued.</summary>
     private static async Task<IResult> ProfileAsync(
         FighterId tag,
+        ClaimsPrincipal user,
         IFighterRepository fighters,
         IFighterResultRepository results,
         CancellationToken ct)
@@ -78,7 +87,7 @@ public sealed class FighterEndpoints : ICarterModule
             return Results.NotFound();
         }
 
-        var rows = await results.ListForAsync(tag, ct);
+        var rows = await results.ListForAsync(tag, user.UserId(), ct);
         var dto = fighter.ToDto();
         return Results.Ok(new FighterProfileDto(
             dto,
@@ -95,11 +104,13 @@ public sealed class FighterEndpoints : ICarterModule
         await fighters.RenameAsync(tag, request?.DisplayName, ct) is { } renamed ? Results.Ok(renamed.ToDto()) : Results.NotFound();
 
     /// <summary>
-    /// Removes the person and everything on their record. The debates themselves stay: the other side argued in
-    /// them too, and they are somebody else's history as much as this person's.
+    /// Forgets this person: everything they have on record with this account. The debates themselves stay — the
+    /// other side argued in them too, and they are somebody else's history as much as this person's — and the tag
+    /// stays on the roster as long as anybody else still has a record under it.
     /// </summary>
     private static async Task<IResult> DeleteAsync(
         FighterId tag,
+        ClaimsPrincipal user,
         IFighterRepository fighters,
         IFighterResultRepository results,
         CancellationToken ct)
@@ -109,12 +120,16 @@ public sealed class FighterEndpoints : ICarterModule
             return Results.NotFound();
         }
 
-        foreach (var row in await results.ListForAsync(tag, ct))
+        foreach (var row in await results.ListForAsync(tag, user.UserId(), ct))
         {
             await results.DeleteForMatchAsync(row.MatchId, [tag.Value], ct);
         }
 
-        await fighters.DeleteAsync(tag, ct);
+        if ((await results.ListForAnyoneAsync(tag, ct)).Count == 0)
+        {
+            await fighters.DeleteAsync(tag, ct);
+        }
+
         return Results.NoContent();
     }
 

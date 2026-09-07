@@ -351,12 +351,16 @@ public sealed class FighterResultEntity : ITableEntity
     /// <summary>Which engine the debate ran in, so a profile can say how much of it came from arguing people rather than personas.</summary>
     public string Mode { get; set; } = nameof(MatchMode.Fight);
 
+    /// <summary>The account whose debate this was. Rows are read back filtered on it; see <see cref="FighterResultDto"/>.</summary>
+    public string UserId { get; set; } = string.Empty;
+
     public static FighterResultEntity From(FighterResultDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         return new FighterResultEntity
         {
             PartitionKey = dto.Tag,
+            UserId = dto.UserId,
             Mode = dto.Mode.ToString(),
             RowKey = dto.MatchId.Value,
             At = dto.At,
@@ -371,6 +375,7 @@ public sealed class FighterResultEntity : ITableEntity
 
     public FighterResultDto ToDto() => new(
         PartitionKey,
+        UserId,
         MatchId.From(RowKey),
         Enum.TryParse<MatchMode>(Mode, ignoreCase: true, out var mode) ? mode : MatchMode.Fight,
         At,

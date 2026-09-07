@@ -153,8 +153,8 @@ public class AnalysisTests(ApiFactory factory)
         ready.Report.Overall.Reasons.Should().NotBeEmpty();
 
         var results = factory.Services.GetRequiredService<IFighterResultRepository>();
-        (await results.ListForAsync(FighterId.From("F1"))).Should().ContainSingle();
-        (await results.ListForAsync(FighterId.From("F2"))).Should().ContainSingle();
+        (await results.ListForAsync(FighterId.From("F1"), "analysis-full")).Should().ContainSingle();
+        (await results.ListForAsync(FighterId.From("F2"), "analysis-full")).Should().ContainSingle();
     }
 
     /// <summary>Puts a recording where the pipeline expects one, for a fight nobody spoke into.</summary>

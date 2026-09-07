@@ -1,6 +1,6 @@
 // PoAudio — the browser side of playback. One AudioContext, one rolling schedule clock, so consecutive chunks of a
-// line butt up against each other instead of leaving a gap or overlapping. WATCH playback lives here; FIGHT capture
-// and the host bus join in T35.
+// line butt up against each other instead of leaving a gap or overlapping. This is WATCH playback; a live fight
+// captures through mic.js and plays the host through live-audio.js, which owns its own context and bus.
 const PoAudio = (() => {
   const SAMPLE_RATE = 24000; // raw PCM from Gemini TTS / the fake is always 24 kHz mono 16-bit
   let context = null;

@@ -120,11 +120,21 @@ public sealed class InMemoryFighterResultRepository : IFighterResultRepository
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<FighterResultDto>>([.. _rows.Values.Where(r => string.Equals(r.Tag, tag.Value, StringComparison.Ordinal)).OrderByDescending(r => r.At)]);
+    public Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, string userId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<FighterResultDto>>(
+        [
+            .. _rows.Values
+                .Where(r => string.Equals(r.Tag, tag.Value, StringComparison.Ordinal) && string.Equals(r.UserId, userId, StringComparison.Ordinal))
+                .OrderByDescending(r => r.At),
+        ]);
 
-    public Task<IReadOnlyList<FighterResultDto>> ListAllAsync(CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<FighterResultDto>>([.. _rows.Values.OrderByDescending(r => r.At)]);
+    public Task<IReadOnlyList<FighterResultDto>> ListAllAsync(string userId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<FighterResultDto>>(
+            [.. _rows.Values.Where(r => string.Equals(r.UserId, userId, StringComparison.Ordinal)).OrderByDescending(r => r.At)]);
+
+    public Task<IReadOnlyList<FighterResultDto>> ListForAnyoneAsync(FighterId tag, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<FighterResultDto>>(
+            [.. _rows.Values.Where(r => string.Equals(r.Tag, tag.Value, StringComparison.Ordinal)).OrderByDescending(r => r.At)]);
 
     public Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> tags, CancellationToken ct = default)
     {

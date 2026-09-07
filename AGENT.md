@@ -75,11 +75,23 @@ Each was a deliberate decision made while building; the commit that made it says
 | T49 | registration in `index.html` | `wwwroot/js/pwa.js` | the app's own CSP is `script-src 'self'`, so the inline script was blocked and nothing registered — caught by `PwaTests` |
 | T50 | "workflow YAML parsed by a test" | `InfraTests` reads the workflow as text | a YAML parser is a new package, which is ask-first |
 | T41 | Opus recordings via Concentus (T41b) | still outstanding | deferred behind the UI work; recordings are WAV until it lands |
+| T39 | one judge call assessing both players | one call per player | the live endpoint refuses a response schema carrying two full assessments, and `$ref` with it |
 
 ## Still outstanding
 
 - **T41b** — Opus recordings (Concentus). WAV works; this is about size.
-- **Real-key measurements** for CP4, CP5 and CP6 (`docs/CP4.md`, `docs/CP5.md`, `docs/CP6.md`). No key is
-  configured on this machine, and copying them is an ask-first step: `./SCRIPTS/seed-secrets.ps1`.
 - **Nothing has been deployed.** The templates compile and the workflow is written; the repository, the OIDC
   registration and the first release are yours to approve.
+- The **transcription fallback** has never run against the real service: both real fights had usable live
+  captions, which the pipeline prefers.
+
+The real-key measurements for CP4, CP5 and CP6 are done (2026-09-07) and written up in `docs/CP4.md`,
+`docs/CP5.md`, `docs/CP6.md` and `docs/VERIFICATION.md`. They were worth running: nine defects came out of them,
+seven of which no test on the stand-ins could have seen.
+
+## Costs
+
+The four test tiers spend nothing: every AI seam has a deterministic stand-in, and the tests that talk to Google
+skip unless a variable says otherwise — `GEMINI_API_KEY` for the live smoke, `POMARRIEDFIGHT_E2E_REAL=1` for a
+browser fight against the real service, `POMARRIEDFIGHT_SMOKE_URL` for the deployed-site check. Those are worth
+running when the wire format or a schema changes, and not otherwise.

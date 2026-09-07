@@ -3,6 +3,7 @@ using PoMarriedFight.Api.Features.Records;
 using PoMarriedFight.Integration.Support;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
+using PoMarriedFight.TestSupport;
 
 namespace PoMarriedFight.Integration;
 
@@ -17,7 +18,12 @@ public class FighterRepositoryTests(AzuriteFixture azurite)
         return new FighterRepository(azurite.Tables);
     }
 
-    private static FighterId Tag() => FighterId.From($"F{Random.Shared.Next(10, 99)}");
+    /// <summary>
+    /// A tag no earlier test and no earlier run has used. The table outlives the run, and these tests assert
+    /// things like "a tag that never argued cannot be renamed" — with eighty-nine possible tags that was true
+    /// most of the time, which is the worst kind of true.
+    /// </summary>
+    private static FighterId Tag() => FighterId.From(TestTags.Next());
 
     [SkippableFact]
     public async Task Ensure_creates_a_fighter_once_and_then_only_moves_the_last_seen_time()
@@ -85,10 +91,13 @@ public class FighterResultRepositoryTests(AzuriteFixture azurite)
         return new FighterResultRepository(azurite.Tables);
     }
 
-    private static FighterId Tag() => FighterId.From($"R{Random.Shared.Next(10, 99)}");
+    private static FighterId Tag() => FighterId.From(TestTags.Next());
 
-    private static FighterResultDto Result(FighterId tag, MatchId id, MatchMode mode = MatchMode.Fight, bool won = true, StyleSnapshot? style = null) =>
-        new(tag.Value, id, mode, At, "the bins", "OPP", won, Draw: false, Score: won ? 80 : 40, style ?? StyleSnapshot.Empty);
+    /// <summary>The account these rows belong to. Results are read back per account, so every read here names it.</summary>
+    private const string User = "repo-user";
+
+    private static FighterResultDto Result(FighterId tag, MatchId id, MatchMode mode = MatchMode.Fight, bool won = true, StyleSnapshot? style = null, string userId = User) =>
+        new(tag.Value, userId, id, mode, At, "the bins", "OPP", won, Draw: false, Score: won ? 80 : 40, style ?? StyleSnapshot.Empty);
 
     [SkippableFact]
     public async Task Re_analysing_a_debate_replaces_its_row_rather_than_counting_twice()
@@ -101,7 +110,7 @@ public class FighterResultRepositoryTests(AzuriteFixture azurite)
         await sut.SaveAsync([Result(tag, id, won: false)]);
         await sut.SaveAsync([Result(tag, id, won: true, style: style)]);
 
-        var rows = await sut.ListForAsync(tag);
+        var rows = await sut.ListForAsync(tag, User);
         rows.Should().ContainSingle();
         rows[0].Won.Should().BeTrue();
         rows[0].Style.Should().BeEquivalentTo(style, "the style snapshot is what the profile is built from");
@@ -121,11 +130,11 @@ public class FighterResultRepositoryTests(AzuriteFixture azurite)
             Result(tag, fight, MatchMode.Fight),
         ]);
 
-        var rows = await sut.ListForAsync(tag);
+        var rows = await sut.ListForAsync(tag, User);
         rows.Select(r => r.MatchId).Should().Equal(fight, watch);
         // Arguing a persona counts towards the same profile as arguing a person.
         rows.Select(r => r.Mode).Should().Equal(MatchMode.Fight, MatchMode.Watch);
-        (await sut.ListAllAsync()).Should().Contain(r => r.MatchId == fight);
+        (await sut.ListAllAsync(User)).Should().Contain(r => r.MatchId == fight);
     }
 
     [SkippableFact]
@@ -138,9 +147,9 @@ public class FighterResultRepositoryTests(AzuriteFixture azurite)
         await sut.SaveAsync([Result(tag, first), Result(tag, second)]);
 
         await sut.DeleteForMatchAsync(first, [tag.Value]);
-        (await sut.ListForAsync(tag)).Select(r => r.MatchId).Should().Equal(second);
+        (await sut.ListForAsync(tag, User)).Select(r => r.MatchId).Should().Equal(second);
 
         await sut.DeleteForFighterAsync(tag);
-        (await sut.ListForAsync(tag)).Should().BeEmpty("deleting the person removes everything their profile was built from");
+        (await sut.ListForAsync(tag, User)).Should().BeEmpty("deleting the person removes everything their profile was built from");
     }
 }

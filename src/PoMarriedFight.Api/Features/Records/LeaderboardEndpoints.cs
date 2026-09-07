@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using Carter;
+using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Fighters;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Models;
@@ -39,11 +41,13 @@ public sealed class LeaderboardEndpoints : ICarterModule
 
     /// <summary>The people, ranked the same way. A tag is the identity, and the display name is whatever they chose.</summary>
     private static async Task<IReadOnlyList<LeaderboardRowDto>> FightAsync(
+        ClaimsPrincipal user,
         IFighterResultRepository results,
         IFighterRepository fighters,
         CancellationToken ct)
     {
-        var all = await results.ListAllAsync(ct);
+        // The board ranks the people this account has argued with, not everybody who has ever used the app.
+        var all = await results.ListAllAsync(user.UserId(), ct);
         var roster = (await fighters.ListAsync(ct)).ToDictionary(f => f.Tag, f => f.DisplayName, StringComparer.OrdinalIgnoreCase);
 
         return Rank(all

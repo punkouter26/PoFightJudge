@@ -91,7 +91,7 @@ public sealed class ConfigurationHealthCheck(StartupHealthState state) : IHealth
 public static class DiagnosticsServiceExtensions
 {
     /// <summary>
-    /// Registers the health checks. <c>ready</c>: configuration (storage joins in T06). <c>ai</c>: TLS reachability of
+    /// Registers the health checks. <c>ready</c>: configuration and storage. <c>ai</c>: TLS reachability of
     /// the AI hosts — any HTTP answer counts, because the point is DNS + TLS, not an authenticated call; failures only
     /// degrade, never fail, so an upstream blip cannot take the site out of rotation.
     /// </summary>

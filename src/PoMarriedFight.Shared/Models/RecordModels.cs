@@ -125,6 +125,14 @@ public sealed record StyleSnapshot(
 /// </summary>
 public sealed record FighterResultDto(
     string Tag,
+
+    /// <summary>
+    /// Whose debate this was. A tag is a person and the roster is shared, but what was argued about, who said the
+    /// best line and how it was scored belong to the account that ran the fight — so a record is read back per
+    /// account rather than pooled across everybody who has ever used the same three letters.
+    /// </summary>
+    string UserId,
+
     MatchId MatchId,
     MatchMode Mode,
     DateTimeOffset At,

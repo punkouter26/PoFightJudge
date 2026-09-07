@@ -47,7 +47,7 @@ public class FightTests(ApiFactory factory)
         {
             await results.SaveAsync(
             [
-                new FighterResultDto(known.Value, MatchId.New(), MatchMode.Fight, now.AddDays(day), "the thermostat", "DG2",
+                new FighterResultDto(known.Value, "fight-digest", MatchId.New(), MatchMode.Fight, now.AddDays(day), "the thermostat", "DG2",
                     true, false, 70, StyleSnapshot.Empty with { Tone = "clipped", Opener = "Look, the thing is", Cefr = "B2" }),
             ]);
         }

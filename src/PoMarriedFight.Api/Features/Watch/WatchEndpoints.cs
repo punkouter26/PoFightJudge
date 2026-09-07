@@ -295,7 +295,7 @@ public sealed class WatchEndpoints : ICarterModule
                 var spoken = match.Rounds.Where(r => string.Equals(r.Speaker, SpeakerOf(side, match), StringComparison.Ordinal)).Select(r => r.Text);
                 var style = FightStyleSnapshotExtractor.FromSpokenLines(spoken);
                 await fighters.EnsureAsync(FighterId.From(side.Id), now, ct);
-                await fighterResults.SaveAsync([new FighterResultDto(side.Id, match.Id, MatchMode.Watch, now, match.Topic ?? string.Empty, opponent.Id, won, draw, score, style)], ct);
+                await fighterResults.SaveAsync([new FighterResultDto(side.Id, match.UserId, match.Id, MatchMode.Watch, now, match.Topic ?? string.Empty, opponent.Id, won, draw, score, style)], ct);
             }
             else
             {

@@ -189,6 +189,7 @@ public sealed partial class AnalysisPipeline(
 
         FighterResultDto Row(Speaker side, string tag, string opponent, PlayerReportDto theirs) => new(
             tag,
+            match.UserId,
             match.Id,
             MatchMode.Fight,
             at,

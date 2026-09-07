@@ -91,7 +91,7 @@ public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, Gemini
         {
             return await SendAsync<T>(body, ct);
         }
-        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.ServiceUnavailable && WithoutServiceTier(body) is { } standard)
+        catch (Exception ex) when (IsTierBusy(ex, ct) && WithoutServiceTier(body) is { } standard)
         {
             // The discount tier is a price for work nobody is waiting on, not a promise of capacity: when it is
             // busy it says so, and it says so for as long as it is busy — five patient retries over half a minute
@@ -111,6 +111,18 @@ public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, Gemini
         await GeminiHttp.EnsureSuccessAsync(response, "judge.generateContent", ct);
         return Parse<T>(await response.Content.ReadAsStringAsync(ct));
     }
+
+    /// <summary>
+    /// Whether this looks like the discount tier refusing the work rather than the request being wrong. A 503 says
+    /// so outright; a client timeout is the same story told slowly — a queued request that never got served — and
+    /// it arrives as a cancellation that the caller did not ask for.
+    /// </summary>
+    private static bool IsTierBusy(Exception ex, CancellationToken ct) => !ct.IsCancellationRequested && ex switch
+    {
+        HttpRequestException http => http.StatusCode is HttpStatusCode.ServiceUnavailable,
+        TaskCanceledException or OperationCanceledException => true,
+        _ => false,
+    };
 
     /// <summary>The same request at the standard tier, or null when it was never asking for a discount.</summary>
     public static string? WithoutServiceTier(string body)

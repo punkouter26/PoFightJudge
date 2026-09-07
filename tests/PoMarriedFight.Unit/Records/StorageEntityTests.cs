@@ -123,7 +123,7 @@ public class StorageEntityTests
     {
         var id = MatchId.New();
         var style = new StyleSnapshot("clipped", ["you always"], ["strawman"], "Look, the thing is", "B2", ["angry"], "That is not what I said.", ["let them finish"]);
-        var result = new FighterResultDto("AB", id, MatchMode.Fight, At, "the bins", "CD", Won: false, Draw: true, Score: 55, style);
+        var result = new FighterResultDto("AB", "u", id, MatchMode.Fight, At, "the bins", "CD", Won: false, Draw: true, Score: 55, style);
 
         var back = FighterResultEntity.From(result).ToDto();
 

@@ -2,6 +2,7 @@ using PoMarriedFight.Api.Features.Records;
 using PoMarriedFight.Integration.Support;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
+using PoMarriedFight.TestSupport;
 
 namespace PoMarriedFight.Integration;
 
@@ -104,7 +105,7 @@ public class MatchRepositoryTests(AzuriteFixture azurite)
     {
         var (matches, results) = Sut();
         var user = $"user-{Guid.NewGuid():N}";
-        var match = Match(user, side1: $"H{Random.Shared.Next(10, 99)}", side2: $"W{Random.Shared.Next(10, 99)}");
+        var match = Match(user, side1: TestTags.Next(), side2: TestTags.Next());
 
         await matches.UpsertAsync(match);
         await matches.SaveTurnsAsync(match.Id, [new TurnDto(match.Id, 0, Speaker.Player1, TurnKind.Round, "Only line.")]);
@@ -144,7 +145,7 @@ public class WatchResultRepositoryTests(AzuriteFixture azurite)
     public async Task Re_judging_a_match_replaces_its_row_rather_than_counting_twice()
     {
         var sut = Sut();
-        var side = $"R{Random.Shared.Next(10, 99)}";
+        var side = TestTags.Next();
         var id = MatchId.New();
         var stats = new AdvancedStatsDto(10, 20, 30, 4, 50, 60, 70, 80, 90, 100);
 
@@ -162,7 +163,7 @@ public class WatchResultRepositoryTests(AzuriteFixture azurite)
     public async Task A_personas_results_come_back_newest_first_and_deletion_is_per_match()
     {
         var sut = Sut();
-        var side = $"S{Random.Shared.Next(10, 99)}";
+        var side = TestTags.Next();
         var older = MatchId.New();
         var newer = MatchId.New();
 

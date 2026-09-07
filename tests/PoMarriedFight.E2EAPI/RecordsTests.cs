@@ -45,9 +45,9 @@ public class RecordsTests(ApiFactory factory)
         await fighters.EnsureAsync(FighterId.From(two), now);
         await results.SaveAsync(
         [
-            new FighterResultDto(one, id, mode, now, "the thermostat", two, oneWon, false, score,
+            new FighterResultDto(one, userId, id, mode, now, "the thermostat", two, oneWon, false, score,
                 StyleSnapshot.Empty with { Tone = "clipped", Opener = "Look, the thing is", Cefr = "B2" }),
-            new FighterResultDto(two, id, mode, now, "the thermostat", one, !oneWon, false, 100 - score, StyleSnapshot.Empty),
+            new FighterResultDto(two, userId, id, mode, now, "the thermostat", one, !oneWon, false, 100 - score, StyleSnapshot.Empty),
         ]);
 
         return id;
@@ -86,14 +86,14 @@ public class RecordsTests(ApiFactory factory)
         var client = User("records-delete");
         var id = await RecordAsync("records-delete", "de1", "de2");
         var results = factory.Services.GetRequiredService<IFighterResultRepository>();
-        (await results.ListForAsync(FighterId.From("DE1"))).Should().NotBeEmpty();
+        (await results.ListForAsync(FighterId.From("DE1"), "records-delete")).Should().NotBeEmpty();
 
         var deleted = await client.DeleteAsync(ApiRoutes.Matches.ById(id));
 
         deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await client.GetAsync(ApiRoutes.Matches.ById(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await results.ListForAsync(FighterId.From("DE1"))).Should().BeEmpty("a record that outlived its debate is a record of nothing");
-        (await results.ListForAsync(FighterId.From("DE2"))).Should().BeEmpty();
+        (await results.ListForAsync(FighterId.From("DE1"), "records-delete")).Should().BeEmpty("a record that outlived its debate is a record of nothing");
+        (await results.ListForAsync(FighterId.From("DE2"), "records-delete")).Should().BeEmpty();
     }
 
     [Fact]
@@ -157,6 +157,62 @@ public class RecordsTests(ApiFactory factory)
         roster.Should().BeInDescendingOrder(r => r.Fights);
     }
 
+    /// <summary>
+    /// The roster is shared on purpose — two people on one microphone are signed in as one of them — but what they
+    /// argued about is not. Walking the three-letter tag space must not read a stranger's debates back to them.
+    /// </summary>
+    [Fact]
+    public async Task A_fighters_record_is_only_what_this_account_saw_them_do()
+    {
+        var mine = User("records-mine-tag");
+        await RecordAsync("records-mine-tag", "sh1", "sh2", score: 90);
+        await RecordAsync("records-someone-else", "sh1", "sh3", score: 20, oneWon: false);
+
+        var profile = await mine.GetFromJsonAsync<FighterProfileDto>(ApiRoutes.Fighters.Profile(FighterId.From("SH1")));
+
+        profile!.Results.Should().ContainSingle("the other account's debate is theirs, not mine");
+        profile.Results[0].Opponent.Should().Be("SH2");
+        profile.Stats.Fights.Should().Be(1);
+        profile.Stats.Wins.Should().Be(1, "the loss belongs to somebody else's night");
+
+        var roster = await mine.GetFromJsonAsync<IReadOnlyList<FighterStatsDto>>(ApiRoutes.Fighters.RosterUrl);
+        roster!.Should().Contain(r => string.Equals(r.Tag, "SH3", StringComparison.Ordinal), "the tag is on the shared roster");
+        roster.Single(r => string.Equals(r.Tag, "SH3", StringComparison.Ordinal)).Fights
+            .Should().Be(0, "but with no record, because none of it was mine");
+    }
+
+    [Fact]
+    public async Task Forgetting_a_fighter_forgets_them_here_and_leaves_somebody_elses_record_alone()
+    {
+        var mine = User("records-forget-mine");
+        await RecordAsync("records-forget-mine", "fm1", "fm2");
+        await RecordAsync("records-forget-theirs", "fm1", "fm3");
+        var results = factory.Services.GetRequiredService<IFighterResultRepository>();
+
+        var deleted = await mine.DeleteAsync(ApiRoutes.Fighters.ByTag(FighterId.From("FM1")));
+
+        deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await results.ListForAsync(FighterId.From("FM1"), "records-forget-mine")).Should().BeEmpty();
+        (await results.ListForAsync(FighterId.From("FM1"), "records-forget-theirs")).Should().NotBeEmpty("their record is not mine to delete");
+        (await factory.Services.GetRequiredService<IFighterRepository>().GetAsync(FighterId.From("FM1")))
+            .Should().NotBeNull("the tag stays on the roster while somebody still has a record under it");
+    }
+
+    [Fact]
+    public async Task The_board_ranks_the_people_this_account_has_argued_with()
+    {
+        var mine = User("records-board-mine");
+        await RecordAsync("records-board-mine", "bm1", "bm2");
+        await RecordAsync("records-board-mine", "bm1", "bm2");
+        await RecordAsync("records-board-theirs", "bt1", "bt2");
+        await RecordAsync("records-board-theirs", "bt1", "bt2");
+
+        var board = await mine.GetFromJsonAsync<IReadOnlyList<LeaderboardRowDto>>(ApiRoutes.Leaderboard.FightUrl);
+
+        board!.Should().Contain(r => string.Equals(r.Id, "BM1", StringComparison.Ordinal));
+        board.Should().NotContain(r => string.Equals(r.Id, "BT1", StringComparison.Ordinal), "somebody else's fights are not on my board");
+    }
+
     [Fact]
     public async Task A_fighter_can_be_renamed_but_never_re_tagged()
     {
@@ -181,8 +237,8 @@ public class RecordsTests(ApiFactory factory)
         var deleted = await client.DeleteAsync(ApiRoutes.Fighters.ByTag(FighterId.From("FO1")));
 
         deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await results.ListForAsync(FighterId.From("FO1"))).Should().BeEmpty();
-        (await results.ListForAsync(FighterId.From("FO2"))).Should().NotBeEmpty("the other one argued in it too");
+        (await results.ListForAsync(FighterId.From("FO1"), "records-forget")).Should().BeEmpty();
+        (await results.ListForAsync(FighterId.From("FO2"), "records-forget")).Should().NotBeEmpty("the other one argued in it too");
         (await client.GetAsync(ApiRoutes.Matches.ById(id))).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

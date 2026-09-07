@@ -39,9 +39,32 @@ Both fighters are created the moment a fight starts, so a record has somewhere t
 - The roster endpoint did not exist, so every fight page logged a 404 fetching it. Listing and reading a fighter
   were brought forward from T46.
 
-## Outstanding
+## The real-key leg — measured 2026-09-07
 
-The real-key leg has **not** run: greeting by tag within fifteen seconds against the live endpoint. No key is
-configured on this machine, and copying the secrets out of Key Vault is an ask-first step in T51. The live smoke
-test exists and skips (`GeminiLiveSmokeTests`); it is the only thing that can confirm the wire format against the
-real service, and it is carried to T51 with the CP4 measurement rather than recorded as done.
+`GeminiLiveSmokeTests` ran against the live endpoint and passed in 5 s: the setup frame is accepted, the session
+answers out loud, and the wire format this whole phase was written against is confirmed. It is the only test that
+can say so, and until now it had never run.
+
+Then a whole fight in a browser against live Gemini (`POMARRIEDFIGHT_E2E_REAL=1`), passing in 3 m 29 s:
+
+| Measurement | Target | Measured |
+| --- | --- | --- |
+| Host greets both fighters by tag after joining | ≤ 15 s | **14 s** (`set_players` accepted) |
+| Debate phase | ≤ 3:00 | 39 s |
+| Probe | a question each, one at a time | two `ask_probe` calls, 37 s apart |
+| Verdict | delivered | `deliver_verdict -> ok` |
+
+`docs/screenshots/fight-live.png` is from that run: "Al and SM, ready to settle who does the dishes?" — the host
+names both tags without asking who anybody is.
+
+### The bugs this leg found
+
+The live half of the fight did not work at first, and none of it was visible to the scripted host:
+
+- A host that never called `start_turn` left the session in Setup. One real fight sat there for eight minutes
+  while the host asked to end the argument eleven times and was refused eleven times. Another asked its first
+  question during Intro and never left it. Skipping forward is now allowed from both; going back still is not.
+- The host reached for a fighter's tag in a tool call — the name it had been using all night — and was told
+  "unknown player". Tags count as names now.
+- The caption feed printed the host's greeting twice. A live session interleaves the host's transcript with the
+  players', so the line to extend is that speaker's own last line, not the last line in the log.

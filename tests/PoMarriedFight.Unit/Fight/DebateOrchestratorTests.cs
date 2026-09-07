@@ -260,6 +260,34 @@ public sealed class DebateOrchestratorTests : IAsyncDisposable
         orchestrator.Session.Turns.Should().Contain(t => t.Kind == TurnKind.Interrupt, "the interruption belongs in the transcript");
     }
 
+    /// <summary>
+    /// A sentence is transcribed in pieces, and the floor can change while it is still arriving — the long-talker
+    /// nudge exists to make that happen. Whoever started the sentence said all of it.
+    /// </summary>
+    [Fact]
+    public async Task A_sentence_keeps_the_name_of_whoever_started_it_even_if_the_floor_moves()
+    {
+        var orchestrator = await DebatingAsync("player1");
+
+        await EmitAsync(new LiveServerEvent.InputTranscript("you never "), () => _sink.Captions.Count == 1);
+        await EmitAsync(Call(ToolDeclarations.StartTurn, new { player = "player2" }), () => orchestrator.Session.CurrentSpeaker == PlayerId.Player2);
+        // Each wait names the caption it is waiting for: "at least two captions" was already true, so the test
+        // could read the sink before the work it was waiting on had happened.
+        await EmitAsync(
+            new LiveServerEvent.InputTranscript("listen"),
+            () => _sink.Captions.Any(c => c.Final && c.Text.Contains("you never", StringComparison.Ordinal)));
+        await EmitAsync(
+            new LiveServerEvent.TurnComplete(),
+            () => _sink.Captions.Any(c => c.Final && string.Equals(c.Text, "listen", StringComparison.Ordinal)));
+
+        var theirs = _sink.Captions.Last(c => c.Final && c.Text.Contains("you never", StringComparison.Ordinal));
+        theirs.Speaker.Should().Be(Speaker.Player1, "player one said those words, whoever holds the floor now");
+
+        var next = _sink.Captions.Last(c => c.Final);
+        next.Text.Should().Be("listen", "what the second one says is their own line, not the tail of somebody else's");
+        next.Speaker.Should().Be(Speaker.Player2);
+    }
+
     [Fact]
     public async Task What_the_room_hears_is_recorded_and_captions_are_kept_for_the_analysis()
     {

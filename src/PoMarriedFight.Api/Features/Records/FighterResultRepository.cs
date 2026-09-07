@@ -15,11 +15,17 @@ public interface IFighterResultRepository
 {
     Task SaveAsync(IEnumerable<FighterResultDto> results, CancellationToken ct = default);
 
-    /// <summary>One person's results, newest first — the input to their record and style profile.</summary>
-    Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, CancellationToken ct = default);
+    /// <summary>
+    /// One person's results as far as one account is concerned, newest first — the input to their record and style
+    /// profile. The roster is shared; what was argued about is not, so the account is part of the question.
+    /// </summary>
+    Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, string userId, CancellationToken ct = default);
 
-    /// <summary>Every result, for the leaderboard.</summary>
-    Task<IReadOnlyList<FighterResultDto>> ListAllAsync(CancellationToken ct = default);
+    /// <summary>Every result this account produced, for the leaderboard.</summary>
+    Task<IReadOnlyList<FighterResultDto>> ListAllAsync(string userId, CancellationToken ct = default);
+
+    /// <summary>Every result for this tag, whoever ran the debate. Only for deciding whether a fighter is still anybody's.</summary>
+    Task<IReadOnlyList<FighterResultDto>> ListForAnyoneAsync(FighterId tag, CancellationToken ct = default);
 
     Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> tags, CancellationToken ct = default);
 
@@ -42,10 +48,14 @@ public sealed class FighterResultRepository(TableServiceClient tables) : IFighte
             }
         }, ct);
 
-    public Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, CancellationToken ct = default) =>
-        QueryAsync(TableClient.CreateQueryFilter($"PartitionKey eq {tag.Value}"), ct);
+    public Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, string userId, CancellationToken ct = default) =>
+        QueryAsync(TableClient.CreateQueryFilter($"PartitionKey eq {tag.Value} and UserId eq {userId}"), ct);
 
-    public Task<IReadOnlyList<FighterResultDto>> ListAllAsync(CancellationToken ct = default) => QueryAsync(filter: null, ct);
+    public Task<IReadOnlyList<FighterResultDto>> ListAllAsync(string userId, CancellationToken ct = default) =>
+        QueryAsync(TableClient.CreateQueryFilter($"UserId eq {userId}"), ct);
+
+    public Task<IReadOnlyList<FighterResultDto>> ListForAnyoneAsync(FighterId tag, CancellationToken ct = default) =>
+        QueryAsync(TableClient.CreateQueryFilter($"PartitionKey eq {tag.Value}"), ct);
 
     public Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> tags, CancellationToken ct = default) =>
         StorageBootstrap.WithTableAsync(tables, TableNames.FighterResults, async token =>

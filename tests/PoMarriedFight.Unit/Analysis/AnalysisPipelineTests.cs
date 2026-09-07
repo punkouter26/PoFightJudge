@@ -109,9 +109,9 @@ public sealed class AnalysisPipelineTests : IDisposable
         stored!.Status.Should().Be(SessionStatus.Ready);
         stored.Winner.Should().Be("AL", "the ruling names a tag, which is what a record is keyed on");
 
-        var rows = await _fighterResults.ListForAsync(FighterId.From("AL"), CancellationToken.None);
+        var rows = await _fighterResults.ListForAsync(FighterId.From("AL"), "user-1", CancellationToken.None);
         rows.Should().ContainSingle().Which.Won.Should().BeTrue();
-        (await _fighterResults.ListForAsync(FighterId.From("SM"), CancellationToken.None)).Should().ContainSingle()
+        (await _fighterResults.ListForAsync(FighterId.From("SM"), "user-1", CancellationToken.None)).Should().ContainSingle()
             .Which.Won.Should().BeFalse();
     }
 
@@ -123,7 +123,7 @@ public sealed class AnalysisPipelineTests : IDisposable
         using var pipeline = Pipeline();
         await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
 
-        var style = (await _fighterResults.ListForAsync(FighterId.From("AL"), CancellationToken.None))[0].Style;
+        var style = (await _fighterResults.ListForAsync(FighterId.From("AL"), "user-1", CancellationToken.None))[0].Style;
         style.Tone.Should().Contain("clear");
         style.Cefr.Should().Be("B2");
         style.Fallacies.Should().Contain("Straw man");

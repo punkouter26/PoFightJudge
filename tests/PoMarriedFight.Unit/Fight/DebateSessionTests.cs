@@ -141,6 +141,7 @@ public class DebateSessionTests
 
         ended.IsSuccess.Should().BeTrue("a host asking to end has plainly decided the argument is over");
         session.Phase.Should().Be(SessionPhase.Probe);
+        session.Turns.Should().BeEmpty("nobody was given the floor, so nobody gets a turn on the record");
     }
 
     [Fact]
@@ -195,6 +196,58 @@ public class DebateSessionTests
 
         session.EndDebate(At(30)).IsSuccess.Should().BeFalse("who is arguing is genuinely not known yet");
         session.Phase.Should().Be(SessionPhase.Intro);
+    }
+
+    /// <summary>
+    /// The silence nudges never fire while people are talking, and the debate clocks do not run until the argument
+    /// formally starts — so a show whose host forgot to start it had nothing at all telling it to move.
+    /// </summary>
+    [Fact]
+    public void A_host_that_lets_them_argue_without_starting_the_argument_is_told_to_get_on_with_it()
+    {
+        var session = NewSession(Pair);
+        session.SetPlayers("the thermostat", "AB", "CD", At(5));
+
+        // They are arguing over the top of the introductions, so nothing is ever silent.
+        for (var second = 6; second < 50; second++)
+        {
+            session.NoteSpeech(At(second));
+            session.Tick(At(second));
+        }
+
+        session.NoteSpeech(At(51));
+        var nudges = session.Tick(At(51));
+
+        nudges.Should().ContainSingle().Which.Kind.Should().Be(NudgeKind.SetupCap);
+        nudges[0].Message.Should().Contain("start_turn").And.Contain("AB");
+        session.Tick(At(60)).Should().BeEmpty("it is said once, not every second");
+    }
+
+    [Fact]
+    public void The_clock_the_room_sees_stops_when_the_arguing_does()
+    {
+        var session = Debating();
+
+        session.DebateElapsed(At(40)).Should().Be(TimeSpan.FromSeconds(30), "they started at ten seconds");
+
+        session.EndDebate(At(60));
+
+        session.DebateElapsed(At(200)).Should().Be(TimeSpan.FromSeconds(50),
+            "the argument ran fifty seconds however long the questions take");
+        session.DebateRemaining(At(200)).Should().BeGreaterThan(TimeSpan.Zero,
+            "a timer that keeps running counts down to nothing in front of everybody");
+    }
+
+    [Fact]
+    public void An_argument_nobody_formally_started_is_not_recorded_as_having_taken_no_time()
+    {
+        var session = NewSession(Pair);
+        session.SetPlayers("the thermostat", "AB", "CD", At(5));
+
+        session.EndDebate(At(300));
+
+        session.DebateElapsed(At(300)).Should().Be(TimeSpan.FromSeconds(300),
+            "they were arguing for the whole five minutes, whatever the host called it");
     }
 
     [Fact]

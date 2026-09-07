@@ -110,8 +110,8 @@ public class FighterProfilePageTests : BunitContext
         new StyleProfileDto("AB", 3, "clipped", ["look, the thing is"], ["Straw man"], "Look, the thing is", 2, "B2",
             ["frustration"], "You never load the dishwasher.", ["Let them finish."], "3 fights. Sounds clipped."),
         [
-            new FighterResultDto("AB", MatchId.New(), MatchMode.Fight, Night, "the thermostat", "CD", true, false, 81, StyleSnapshot.Empty),
-            new FighterResultDto("AB", MatchId.New(), MatchMode.Watch, Night.AddDays(-1), "the bins", "CD", false, false, 40, StyleSnapshot.Empty),
+            new FighterResultDto("AB", "u", MatchId.New(), MatchMode.Fight, Night, "the thermostat", "CD", true, false, 81, StyleSnapshot.Empty),
+            new FighterResultDto("AB", "u", MatchId.New(), MatchMode.Watch, Night.AddDays(-1), "the bins", "CD", false, false, 40, StyleSnapshot.Empty),
         ]);
 
     private IRenderedComponent<FighterProfile> RenderProfile() =>

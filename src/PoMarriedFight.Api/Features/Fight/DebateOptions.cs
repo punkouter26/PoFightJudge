@@ -9,6 +9,13 @@ public sealed class DebateOptions
 
     public int MaxDebateSeconds { get; set; } = 180;
 
+    /// <summary>
+    /// How long the show may sit between the two of them being named and the argument formally starting. It exists
+    /// because a real fight sat there for eight minutes: the couple simply started arguing, the host followed the
+    /// argument instead of the script, and nothing was ever silent enough to nudge it.
+    /// </summary>
+    public int MaxSetupSeconds { get; set; } = 45;
+
     public int LongTalkerSeconds { get; set; } = 45;
 
     public int SilenceSeconds { get; set; } = 10;

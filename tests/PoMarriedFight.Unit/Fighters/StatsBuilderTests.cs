@@ -22,7 +22,7 @@ public class FighterStatsBuilderTests
         bool draw = false,
         MatchMode mode = MatchMode.Fight,
         StyleSnapshot? style = null) =>
-        new("AL", MatchId.New(), mode, Start.AddDays(day), "the thermostat", opponent, won, draw, score, style ?? StyleSnapshot.Empty);
+        new("AL", "u", MatchId.New(), mode, Start.AddDays(day), "the thermostat", opponent, won, draw, score, style ?? StyleSnapshot.Empty);
 
     [Fact]
     public void Somebody_who_has_never_argued_has_a_record_of_nothing_rather_than_no_record()

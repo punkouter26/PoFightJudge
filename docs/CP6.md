@@ -34,8 +34,26 @@ Asserted on the page itself, not just on the API:
   pretending to be a trend.
 - An uncertain speaker attribution is said at the top of the ruling, before anybody reads a word of it.
 
-## Outstanding
+## The real-key leg — measured 2026-09-07
 
-The timing the checkpoint names — a full analysis inside forty-five seconds — is a real-key measurement. With the
-stand-ins it is instantaneous, which proves the path and not the budget. It joins the CP4 and CP5 measurements
-waiting on a key in T51.
+A whole fight against live Gemini, analysed by the real pipeline: **ready in 38.1 s**, inside the forty-five the
+checkpoint asks for. 381 words came from the live-caption transcript; 197 words of host speech were recognised as
+the host and left out.
+
+### The bugs this leg found
+
+- **The judge asked for both players in one response schema, and Gemini refused every such request.** Bisected
+  against the live endpoint: one player's assessment is accepted; the same schema with a second player carrying
+  fourteen of the twenty-seven fields is not; `$ref` is rejected outright, so the assessment cannot be declared
+  once and referenced twice. Each player is now assessed in a call of their own, sent in order so the second finds
+  the shared prefix — the instructions, the recording, the session data — still warm.
+- **A busy discount tier lost the whole analysis.** The judge runs on flex, which answers "this model is currently
+  experiencing high demand" under load. Five patient retries over half a minute were all refused, and the fight
+  ended with no report. The same request now goes again at the standard tier rather than being abandoned.
+- **The retry was too impatient to be a retry**: three attempts inside two seconds, and a full-jitter backoff that
+  could try again after almost no wait at all. Five attempts, seconds apart, half the window fixed.
+
+### Still unverified
+
+The transcription fallback (`gemini-3.5-transcribe`) has not run against the real service. Both real fights had
+usable live captions, which the pipeline prefers, so the fallback was never reached.

@@ -13,7 +13,7 @@ public class StyleProfileBuilderTests
     private static readonly DateTimeOffset Start = new(2026, 9, 1, 20, 0, 0, TimeSpan.Zero);
 
     private static FighterResultDto With(int day, StyleSnapshot style, int score = 50) =>
-        new("AL", MatchId.New(), MatchMode.Fight, Start.AddDays(day), "the thermostat", "SM", true, false, score, style);
+        new("AL", "u", MatchId.New(), MatchMode.Fight, Start.AddDays(day), "the thermostat", "SM", true, false, score, style);
 
     private static StyleSnapshot Snapshot(
         string tone = "clipped, dry",

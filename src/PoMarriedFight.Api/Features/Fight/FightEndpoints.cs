@@ -75,8 +75,8 @@ public sealed class FightEndpoints : ICarterModule
 
         var setup = new ShowSetup(request.Persona, first, second, Topic(request.Topic))
         {
-            Player1Digest = await DigestAsync(results, first, ct),
-            Player2Digest = await DigestAsync(results, second, ct),
+            Player1Digest = await DigestAsync(results, first, user.UserId(), ct),
+            Player2Digest = await DigestAsync(results, second, user.UserId(), ct),
         };
 
         var fight = await registry.CreateAsync(user.UserId(), setup, ct);
@@ -114,11 +114,11 @@ public sealed class FightEndpoints : ICarterModule
     }
 
     /// <summary>
-    /// What the host is told about how this fighter argues, drawn from every debate they have spoken in. Somebody
-    /// the room has not met gets "First fight.", which is more use to a host than silence.
+    /// What the host is told about how this fighter argues, drawn from the debates they have had with this account.
+    /// Somebody the room has not met gets "First fight.", which is more use to a host than silence.
     /// </summary>
-    private static async Task<string> DigestAsync(IFighterResultRepository results, string tag, CancellationToken ct) =>
-        StyleProfileBuilder.Build(tag, await results.ListForAsync(FighterId.From(tag), ct)).Digest;
+    private static async Task<string> DigestAsync(IFighterResultRepository results, string tag, string userId, CancellationToken ct) =>
+        StyleProfileBuilder.Build(tag, await results.ListForAsync(FighterId.From(tag), userId, ct)).Digest;
 
     private static string? Topic(string? value)
     {

@@ -18,13 +18,15 @@
         </RadzenSelectBar>
     </Actions>
     <ChildContent>
+        @if (_error is not null)
+        {
+            @* Above the list, not instead of it: a delete that failed must not take the whole history off screen. *@
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" Close="@(() => _error = null)">@_error</RadzenAlert>
+        }
+
         @if (_loading)
         {
             <LoadingRows Count="3" Label="Loading your history" />
-        }
-        else if (_error is not null)
-        {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
         }
         else if (_matches.Count == 0)
         {
