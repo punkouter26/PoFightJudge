@@ -18,13 +18,14 @@ public class FightHudTests : BunitContext
     [Fact]
     public void A_closed_microphone_says_so_rather_than_looking_the_same_as_an_open_one()
     {
-        var off = Render<MicMeter>();
-        off.Find(".mic").ClassList.Should().NotContain("mic--on");
-        off.Markup.Should().Contain("Microphone off");
+        var off = Render<LevelMeter>();
+        off.Find(".meter").ClassList.Should().NotContain("meter--on");
+        off.Find(".meter").GetAttribute("aria-label").Should().Contain("off");
 
-        var on = Render<MicMeter>(p => p.Add(m => m.Listening, true));
-        on.Find(".mic").ClassList.Should().Contain("mic--on");
-        on.Find(".mic").GetAttribute("aria-label").Should().Contain("open");
+        var on = Render<LevelMeter>(p => p.Add(m => m.Listening, true).Add(m => m.Caption, "AL speaking"));
+        on.Find(".meter").ClassList.Should().Contain("meter--on");
+        on.Find(".meter").GetAttribute("aria-label").Should().Contain("open");
+        on.Markup.Should().Contain("AL speaking", "the caption says whose voice it is showing");
     }
 
     [Fact]
@@ -50,8 +51,11 @@ public class FightHudTests : BunitContext
             .Add(s => s.Speaking, Speaker.Player2));
 
         cut.Find(".side[data-tag=SM]").ClassList.Should().Contain("side--speaking");
+        cut.Find(".side[data-tag=SM]").TextContent.Should().Contain("Your turn — talk", "the one with the floor is told to talk");
         cut.Find(".side[data-tag=AL]").ClassList.Should().NotContain("side--speaking");
-        cut.Find(".side[data-tag=AL]").TextContent.Should().Contain("waiting");
+        cut.Find(".side[data-tag=AL]").TextContent.Should().Contain("SM has the floor",
+            "the one waiting is told whose turn it is, not merely that it is not theirs");
+        cut.FindComponent<LevelMeter>().Instance.Caption.Should().Be("SM speaking");
     }
 
     [Fact]

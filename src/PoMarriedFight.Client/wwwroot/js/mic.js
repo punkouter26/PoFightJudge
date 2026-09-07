@@ -9,12 +9,84 @@ window.PoMic = (function () {
   let recorder = null;
   let chunks = [];
 
+  // The meter runs off the live stream rather than the recording, so the page can show that the microphone is
+  // working while somebody is still deciding what to say.
+  let meterContext = null;
+  let analyser = null;
+  let samples = null;
+
+  let meterFrame = 0;
+
+  function publish(value) {
+    try {
+      document.documentElement.style.setProperty("--po-mic-level", String(value));
+    } catch {
+      // No document (a worker, a test host): the meter simply does not move.
+    }
+  }
+
+  // The same custom property the live fight publishes, so one meter reads either. Painted by the browser rather
+  // than pushed from .NET: a level is sixty small changes a second and none of them is worth a round trip.
+  function pump() {
+    if (!analyser) {
+      return;
+    }
+
+    publish(level());
+    meterFrame = requestAnimationFrame(pump);
+  }
+
+  function listen() {
+    try {
+      meterContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = meterContext.createAnalyser();
+      analyser.fftSize = 1024;
+      samples = new Float32Array(analyser.fftSize);
+      meterContext.createMediaStreamSource(stream).connect(analyser);
+      meterFrame = requestAnimationFrame(pump);
+    } catch {
+      // No meter, but the recording itself is unaffected: level() answers 0 and the page simply shows no movement.
+      analyser = null;
+    }
+  }
+
   function release() {
+    if (meterFrame) {
+      cancelAnimationFrame(meterFrame);
+      meterFrame = 0;
+    }
+
+    publish(0);
+
     if (stream) {
       stream.getTracks().forEach(function (t) { t.stop(); });
       stream = null;
     }
+
+    if (meterContext) {
+      meterContext.close().catch(function () { /* already closing */ });
+      meterContext = null;
+    }
+
+    analyser = null;
+    samples = null;
     recorder = null;
+  }
+
+  /** How loud the microphone is right now, 0 to 1. Root-mean-square, so it tracks speech rather than clicks. */
+  function level() {
+    if (!analyser) {
+      return 0;
+    }
+
+    analyser.getFloatTimeDomainData(samples);
+    let sum = 0;
+    for (let i = 0; i < samples.length; i++) {
+      sum += samples[i] * samples[i];
+    }
+
+    // Speech sits well below full scale, so the reading is lifted to make an ordinary voice fill the meter.
+    return Math.min(1, Math.sqrt(sum / samples.length) * 8);
   }
 
   // Returns "" when recording started, or the DOMException name when it did not. The caller turns that name into a
@@ -41,6 +113,7 @@ window.PoMic = (function () {
         }
       };
       recorder.start();
+      listen();
       return "";
     } catch (err) {
       release();
@@ -153,5 +226,5 @@ window.PoMic = (function () {
     return window.btoa(binary);
   }
 
-  return { start: start, stop: stop, cancel: cancel, recording: recording };
+  return { start: start, stop: stop, cancel: cancel, recording: recording, level: level };
 })();

@@ -67,31 +67,37 @@
                         <RadzenFormField Text="What you say back" Variant="Variant.Outlined" class="say">
                             <ChildContent>
                                 @* Published as it is typed: a Say button that stays grey until you click elsewhere reads as broken. *@
-                                <RadzenTextArea Value="@_line" @oninput="@OnLineTyped" Name="line" Rows="3" MaxLength="600"
+                                <RadzenTextArea Value="@_line" @oninput="@OnLineTypedAsync" Name="line" Rows="3" MaxLength="600"
                                                 Placeholder="That is not what I said and you know it." aria-label="What you say back" />
                             </ChildContent>
                         </RadzenFormField>
                         <div class="ways">
-                            @if (CanRecord)
-                            {
-                                <RadzenButton Text="@(_recording ? "Stop and listen back" : "Speak it")"
-                                              Icon="@(_recording ? "stop_circle" : "mic")"
-                                              ButtonStyle="@(_recording ? ButtonStyle.Danger : ButtonStyle.Secondary)"
-                                              Variant="Variant.Filled" Disabled="@_transcribing" Click="@ToggleRecordingAsync" />
-                            }
-                            @if (CanDictate)
-                            {
-                                @* The browser's own recogniser. It has no disabled state, so it leaves the row while the server is listening back. *@
-                                <RadzenSpeechToTextButton Change="@OnDictated" Title="Dictate in the browser" StopTitle="Stop dictating"
-                                                          ButtonStyle="ButtonStyle.Base" Visible="@(!_recording && !_transcribing)" />
-                            }
                             @if (_recording)
                             {
-                                <span class="rec" role="status">Recording</span>
+                                @* The microphone opened with the turn. The meter is what says so; the button is for
+                                   somebody who has finished and does not want to wait out the pause. *@
+                                <LevelMeter Listening="true" Caption="Listening — just talk" />
+                                <RadzenButton Text="Done" Icon="check" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Filled"
+                                              Click="@StopRecordingAsync" />
                             }
                             else if (_transcribing)
                             {
-                                <span class="rec rec--wait" role="status">Listening back</span>
+                                <LevelMeter Listening="false" Caption="Writing it down" />
+                            }
+                            else
+                            {
+                                @if (CanRecord)
+                                {
+                                    <RadzenButton Text="@(_line.Trim().Length == 0 ? "Speak it" : "Speak it again")"
+                                                  Icon="mic" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Filled"
+                                                  Click="@ListenAgainAsync" />
+                                }
+                                @if (CanDictate)
+                                {
+                                    @* The browser's own recogniser, for anyone who would rather watch the words appear. *@
+                                    <RadzenSpeechToTextButton Change="@OnDictated" Title="Dictate in the browser" StopTitle="Stop dictating"
+                                                              ButtonStyle="ButtonStyle.Base" />
+                                }
                             }
                         </div>
 
@@ -108,7 +114,7 @@
 
                         <div class="go">
                             <RadzenButton Text="Say it" Icon="record_voice_over" ButtonStyle="ButtonStyle.Primary"
-                                          Size="ButtonSize.Large" Disabled="@(_line.Trim().Length == 0 || _recording || _transcribing)" Click="@SayAsync" />
+                                          Size="ButtonSize.Large" Disabled="@(_line.Trim().Length == 0 || _transcribing)" Click="@SayAsync" />
                         </div>
                     </section>
                 }

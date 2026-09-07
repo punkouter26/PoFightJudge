@@ -84,11 +84,11 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
         JSInterop.Setup<string>(MicInterop.Stop).SetResult(Clip);
         _api.TranscribeAsync(Arg.Any<TranscribeRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TranscribeResponse("I did not touch the freezer.", true)));
+        // The turn opens the microphone by itself; the only thing left to do is say when you have finished.
         var cut = await AtTheirTurnAsync();
 
-        await Button(cut, "Speak it").ClickAsync(new());
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Recording"), TimeSpan.FromSeconds(10));
-        await Button(cut, "Stop and listen back").ClickAsync(new());
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Listening"), TimeSpan.FromSeconds(10));
+        await Button(cut, "Done").ClickAsync(new());
 
         await cut.WaitForAssertionAsync(() => Typed(cut).Should().Contain("I did not touch the freezer"), TimeSpan.FromSeconds(10));
         await _api.Received(1).TranscribeAsync(Arg.Is<TranscribeRequest>(r => r.WavBase64 == Clip), Arg.Any<CancellationToken>());
@@ -104,24 +104,42 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
             .Returns(Task.FromResult(new TranscribeResponse(string.Empty, true)));
         var cut = await AtTheirTurnAsync();
 
-        await Button(cut, "Speak it").ClickAsync(new());
-        await Button(cut, "Stop and listen back").ClickAsync(new());
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Listening"), TimeSpan.FromSeconds(10));
+        await Button(cut, "Done").ClickAsync(new());
 
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Nothing was made out"), TimeSpan.FromSeconds(10));
         Typed(cut).Should().BeEmpty();
         Button(cut, "Say it").HasAttribute("disabled").Should().BeTrue("there is nothing to say yet");
+        Button(cut, "Speak it").Should().NotBeNull("and there is a way to try again");
+    }
+
+    [Fact(Timeout = 60_000)]
+    public async Task Typing_closes_the_microphone_so_a_typed_line_can_be_sent_straight_away()
+    {
+        var cut = await AtTheirTurnAsync();
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Listening"), TimeSpan.FromSeconds(10));
+
+        // Somebody who would rather type has said what they came to say. Waiting on a pause that will never come
+        // because they are not talking is a trap, so the first keystroke ends the listening.
+        await cut.Find("textarea[name=line]").InputAsync(new() { Value = "We are not doing this again." });
+
+        await cut.WaitForAssertionAsync(
+            () => Button(cut, "Say it").HasAttribute("disabled").Should().BeFalse("a typed line is ready to send"),
+            TimeSpan.FromSeconds(10));
+        cut.Markup.Should().NotContain("Listening —", "the microphone let go when they started typing");
+        await _api.DidNotReceive().TranscribeAsync(Arg.Any<TranscribeRequest>(), Arg.Any<CancellationToken>());
+        Typed(cut).Should().Be("We are not doing this again.", "nothing was transcribed over the top of it");
     }
 
     [Fact(Timeout = 60_000)]
     public async Task A_blocked_microphone_says_what_to_do_about_it()
     {
         JSInterop.Setup<string>(MicInterop.Start).SetResult("NotAllowedError");
+
         var cut = await AtTheirTurnAsync();
 
-        await Button(cut, "Speak it").ClickAsync(new());
-
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("The microphone was blocked"), TimeSpan.FromSeconds(10));
-        cut.Markup.Should().NotContain("Recording", "nothing is being recorded");
+        cut.Markup.Should().NotContain("Listening —", "nothing is being recorded");
         await _api.DidNotReceive().TranscribeAsync(Arg.Any<TranscribeRequest>(), Arg.Any<CancellationToken>());
     }
 
@@ -129,6 +147,13 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     public async Task Dictation_adds_to_what_is_already_in_the_box()
     {
         var cut = await AtTheirTurnAsync();
+
+        // The browser's recogniser and the recording want the same microphone, so it is offered once the turn has
+        // stopped listening — here by finishing a clip that had nothing in it.
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Listening"), TimeSpan.FromSeconds(10));
+        await Button(cut, "Done").ClickAsync(new());
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<RadzenSpeechToTextButton>().Should().ContainSingle(), TimeSpan.FromSeconds(10));
+
         var dictation = cut.FindComponent<RadzenSpeechToTextButton>();
 
         await cut.InvokeAsync(() => dictation.Instance.Change.InvokeAsync("You left it open"));

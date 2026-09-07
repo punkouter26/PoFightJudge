@@ -38,7 +38,7 @@ public class FightFlowTests(AppFixture app)
         await page.Locator("section.scoreboard .side[data-tag=AL]").WaitForAsync(new() { Timeout = 60_000 });
         await page.Locator("section.scoreboard .side[data-tag=SM]").WaitForAsync(new() { Timeout = 30_000 });
 
-        await page.Locator(".mic--on").WaitForAsync(new() { Timeout = 30_000 });
+        await page.Locator(".meter--on").WaitForAsync(new() { Timeout = 30_000 });
 
         // The scripted host advances on microphone frames, so captions are proof the audio path works end to end.
         await page.WaitForFunctionAsync(
@@ -91,7 +91,7 @@ public class FightFlowTests(AppFixture app)
         await TypeTagAsync(page, "player2Tag", "ZB");
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();
 
-        await page.Locator(".mic--on").WaitForAsync(new() { Timeout = 60_000 });
+        await page.Locator(".meter--on").WaitForAsync(new() { Timeout = 60_000 });
         await page.GetByRole(AriaRole.Button, new() { Name = "Stop the fight" }).ClickAsync();
 
         await page.WaitForURLAsync(u => u.Contains("/verdict/", StringComparison.Ordinal), new() { Timeout = 60_000 });
@@ -107,7 +107,7 @@ public class FightFlowTests(AppFixture app)
         var problem = page.Locator(".problem");
         await problem.WaitForAsync(new() { Timeout = 30_000 });
         (await problem.InnerTextAsync()).Should().ContainEquivalentOf("could not be joined");
-        (await page.Locator(".mic--on").CountAsync()).Should().Be(0, "there is nothing to record into");
+        (await page.Locator(".meter--on").CountAsync()).Should().Be(0, "there is nothing to record into");
 
         errors.Should().BeEmpty();
     }

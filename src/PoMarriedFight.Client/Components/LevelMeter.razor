@@ -1,0 +1,19 @@
+@* What the microphone is hearing, right now. Somebody who cannot see this cannot tell a silent room from a dead
+   microphone, and they will keep talking into either one.
+
+   The level itself is a CSS custom property published by whichever recorder is running — mic.js on a spoken turn,
+   live-audio.js during a fight — so the bar is painted by the browser rather than pushed a frame at a time. *@
+<div class="meter @(Listening ? "meter--on" : null)" role="status" aria-label="@Label">
+    <span class="lamp" aria-hidden="true"></span>
+    <span class="caption po-eyebrow">@Caption</span>
+    <div class="track" aria-hidden="true"><div class="fill"></div></div>
+</div>
+
+@code {
+    [Parameter] public bool Listening { get; set; }
+
+    /// <summary>What the meter is for, in words — it is also what a screen reader is told.</summary>
+    [Parameter] public string Caption { get; set; } = "Listening";
+
+    private string Label => Listening ? $"{Caption}. The microphone is open." : "The microphone is off";
+}

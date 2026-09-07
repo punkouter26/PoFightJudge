@@ -1,0 +1,50 @@
+.meter {
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-2);
+}
+
+.lamp {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--po-muted);
+  flex: none;
+}
+
+.meter--on .lamp {
+  background: var(--po-danger);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.caption { color: var(--po-muted); white-space: nowrap; }
+
+.track {
+  position: relative;
+  flex: 1;
+  min-width: 6rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--po-surface-3);
+  overflow: hidden;
+}
+
+/* Driven by whichever recorder is running. Off, it sits at nothing whatever the last value was. */
+.fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--po-accent) 0%, var(--po-accent) 70%, var(--po-danger) 100%);
+  transition: width 80ms linear;
+}
+
+.meter--on .fill { width: calc(var(--po-mic-level, 0) * 100%); }
+
+@keyframes pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meter--on .lamp { animation: none; }
+  .fill { transition: none; }
+}

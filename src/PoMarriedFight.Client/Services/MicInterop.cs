@@ -11,6 +11,7 @@ public sealed class MicInterop(IJSRuntime js) : IAsyncDisposable
     public const string Start = "PoMic.start";
     public const string Stop = "PoMic.stop";
     public const string Cancel = "PoMic.cancel";
+    public const string Level = "PoMic.level";
 
     /// <summary>
     /// Starts recording. Returns null when the microphone is live, or the browser's error name when it is not —
@@ -39,6 +40,22 @@ public sealed class MicInterop(IJSRuntime js) : IAsyncDisposable
         catch (JSException)
         {
             return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// How loud the microphone is right now, 0 to 1. It is read off the live stream rather than the recording, so
+    /// somebody can see that they are being heard before they have said anything worth keeping.
+    /// </summary>
+    public async Task<double> LevelAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await js.InvokeAsync<double>(Level, ct);
+        }
+        catch (JSException)
+        {
+            return 0;
         }
     }
 

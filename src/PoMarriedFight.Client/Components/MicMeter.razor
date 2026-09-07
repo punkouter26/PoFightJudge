@@ -1,9 +1,0 @@
-@* Whether the room is being heard, and how loudly. The level comes from the audio graph, not from .NET. *@
-<div class="mic @(Listening ? "mic--on" : null)" role="status" aria-label="@(Listening ? "The microphone is open" : "The microphone is off")">
-    <span class="dot" aria-hidden="true"></span>
-    <span class="po-muted label">@(Listening ? "Listening" : "Microphone off")</span>
-</div>
-
-@code {
-    [Parameter] public bool Listening { get; set; }
-}

@@ -90,26 +90,22 @@ public sealed partial class AnalysisPipeline(
         await SaveStatusAsync(matches, matchId, AnalysisStatus.Diarizing, null, null, ct);
         match = await MarkAsync(matches, match, SessionStatus.Analyzing, ct);
 
-        await using var audio = await blobs.OpenReadAsync(blobName, ct)
-            ?? throw new InvalidOperationException("The recording is missing from storage.");
-        using var buffer = new MemoryStream();
-        await audio.CopyToAsync(buffer, ct);
-        buffer.Position = 0;
 
         // The turns are read while the recording uploads, and the upload is also what buys a browser-side
         // transcript the time it needs to arrive.
         var turnsTask = matches.GetTurnsAsync(matchId, ct);
 
-        // Whatever the recording was stored as goes up as it is: the judge and the transcriber both read Opus,
-        // and decoding here would undo the point of storing it compressed.
-        var opus = OpusAudio.IsOpus(blobName);
-        var mimeType = opus ? OpusAudio.ContentType : "audio/wav";
-        var fileName = $"{matchId.Value}-players.{(opus ? OpusAudio.Extension : "wav")}";
-        var file = await files.UploadAndWaitAsync(buffer, buffer.Length, mimeType, fileName, clock, ct);
+        // Stored compressed, sent as PCM. The Files API takes an Ogg/Opus upload happily and reports it ACTIVE,
+        // and then generateContent answers 400 INVALID_ARGUMENT for it — measured against the live endpoint on
+        // 2026-09-07, under audio/ogg and audio/opus alike, where the same clip as a WAV is accepted. So the disk
+        // keeps the small version and the model gets the one it will read.
+        var buffer = await ReadRecordingAsync(blobs, blobName, ct);
+        const string MimeType = "audio/wav";
+        var file = await files.UploadAndWaitAsync(buffer, buffer.Length, MimeType, $"{matchId.Value}-players.wav", clock, ct);
 
         // The cheapest usable transcript wins. Only a fight that produced neither is worth paying to diarize.
         var (existing, source) = await ReadExistingTranscriptAsync(blobs, matchId, ct);
-        var transcript = existing ?? await transcriber.TranscribeAsync(file.Uri, mimeType, ct);
+        var transcript = existing ?? await transcriber.TranscribeAsync(file.Uri, MimeType, ct);
         var turns = await turnsTask;
         var mapped = SpeakerMapper.Map(transcript, turns);
         LogTranscribed(logger, matchId.Value, transcript.Words.Count, source, mapped.Note);
@@ -134,7 +130,7 @@ public sealed partial class AnalysisPipeline(
                     match.Side1.DisplayName,
                     match.Side2.DisplayName,
                     file.Uri,
-                    mimeType,
+                    MimeType,
                     mapped,
                     turns,
                     first,
@@ -237,6 +233,27 @@ public sealed partial class AnalysisPipeline(
         return await ReadClientTranscriptAsync(blobs, matchId, ct) is { } browser
             ? (browser, "on-device")
             : (null, "diarized");
+    }
+
+    /// <summary>
+    /// The recording, as 16-bit PCM in a WAV, whichever way it was stored. Opus is the format on disk and nothing
+    /// more: everything that reads a recording — the model, the slicer, a person listening back — wants samples.
+    /// </summary>
+    private static async Task<MemoryStream> ReadRecordingAsync(IAudioBlobStore blobs, string blobName, CancellationToken ct)
+    {
+        await using var audio = await blobs.OpenReadAsync(blobName, ct)
+            ?? throw new InvalidOperationException("The recording is missing from storage.");
+
+        using var stored = new MemoryStream();
+        await audio.CopyToAsync(stored, ct);
+
+        if (!OpusAudio.IsOpus(blobName))
+        {
+            stored.Position = 0;
+            return new MemoryStream(stored.ToArray(), writable: false);
+        }
+
+        return new MemoryStream(OpusAudio.DecodeToWav(stored.ToArray(), DebateOrchestrator.PlayerSampleRate), writable: false);
     }
 
     /// <summary>Reads one stored transcript. Anything missing or malformed is simply not there.</summary>

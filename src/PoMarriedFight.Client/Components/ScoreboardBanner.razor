@@ -3,17 +3,31 @@
     <div class="side p1 @(Speaking == Speaker.Player1 ? "side--speaking" : null)" data-tag="@Player1">
         <span class="tag po-display">@Player1</span>
         <span class="record po-muted">@Record(Player1Record)</span>
-        <span class="floor po-muted">@(Speaking == Speaker.Player1 ? "has the floor" : "waiting")</span>
+        @if (Speaking == Speaker.Player1)
+        {
+            <span class="floor floor--now po-display">Your turn — talk</span>
+        }
+        else
+        {
+            <span class="floor po-muted">@Waiting</span>
+        }
     </div>
 
     <div class="middle">
-        <MicMeter Listening="@Listening" />
+        <LevelMeter Listening="@Listening" Caption="@(Speaking is null ? "Microphone" : $"{NameOf(Speaking.Value)} speaking")" />
     </div>
 
     <div class="side p2 @(Speaking == Speaker.Player2 ? "side--speaking" : null)" data-tag="@Player2">
         <span class="tag po-display">@Player2</span>
         <span class="record po-muted">@Record(Player2Record)</span>
-        <span class="floor po-muted">@(Speaking == Speaker.Player2 ? "has the floor" : "waiting")</span>
+        @if (Speaking == Speaker.Player2)
+        {
+            <span class="floor floor--now po-display">Your turn — talk</span>
+        }
+        else
+        {
+            <span class="floor po-muted">@Waiting</span>
+        }
     </div>
 </section>
 
@@ -35,6 +49,11 @@
     /// What is worth saying about this tag. A fighter created for this fight has never argued before; one who has
     /// gets their name, unless their name is just the tag again — printing that twice says nothing.
     /// </summary>
+    /// <summary>What the side that does not have the floor is told: whose turn it is, not merely that it is not theirs.</summary>
+    private string Waiting => Speaking is null ? "waiting" : $"{NameOf(Speaking.Value)} has the floor";
+
+    private string NameOf(Speaker speaker) => speaker == Speaker.Player1 ? Player1 : Player2;
+
     private static string Record(FighterDto? fighter) =>
         fighter is null || fighter.CreatedAt == fighter.LastSeenAt ? "First fight"
         : string.Equals(fighter.DisplayName, fighter.Tag, StringComparison.Ordinal) ? "Argued here before"

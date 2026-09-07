@@ -135,6 +135,10 @@ public sealed partial class WatchPlay : IAsyncDisposable
                     _stage = Stage.WaitingForPerson;
                     _speaking = null;
                     StateHasChanged();
+
+                    // Their turn opens the microphone: pressing a button before you may speak is a step nobody
+                    // asked for, and the meter is what says it is working.
+                    await BeginListeningAsync();
                     return;
                 }
 
@@ -259,11 +263,19 @@ public sealed partial class WatchPlay : IAsyncDisposable
         }
     }
 
-    private void OnLineTyped(ChangeEventArgs e) => _line = e.Value?.ToString() ?? string.Empty;
+    private async Task OnLineTypedAsync(ChangeEventArgs e)
+    {
+        _line = e.Value?.ToString() ?? string.Empty;
+        await StopListeningAsync();
+    }
 
     /// <summary>The person's line, typed. Their spoken turn arrives with the microphone.</summary>
     private async Task SayAsync()
     {
+        // Sending is the end of the turn however the words got there, so an open microphone is let go rather than
+        // standing in the way: whoever typed this is finished, and the pause that ends a spoken turn is not coming.
+        await StopListeningAsync();
+
         var said = _line.Trim();
         if (said.Length == 0 || _stage != Stage.WaitingForPerson)
         {
@@ -367,6 +379,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         // proves the field cannot outlive the page.
         _beat?.Dispose();
         _beat = null;
+        StopLevelWatch();
         _leaving.Dispose();
         await Audio.StopAsync(CancellationToken.None);
     }

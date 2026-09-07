@@ -46,9 +46,9 @@ public sealed class AnalysisPipelineTests : IDisposable
 
     public void Dispose() => _services.Dispose();
 
-    private AnalysisPipeline Pipeline(IGeminiTranscribeClient? transcriber = null) => new(
+    private AnalysisPipeline Pipeline(IGeminiTranscribeClient? transcriber = null, IGeminiFilesClient? files = null) => new(
         _services.GetRequiredService<IServiceScopeFactory>(),
-        new FakeAnalysisClients.Files(),
+        files ?? new FakeAnalysisClients.Files(),
         transcriber ?? new FakeAnalysisClients.Transcriber(),
         _judge,
         _clock,
@@ -63,13 +63,14 @@ public sealed class AnalysisPipelineTests : IDisposable
             "the thermostat", MatchSide.Human(one), MatchSide.Human(two),
             SessionPhase.Done, SessionStatus.Analyzing, string.Empty, "The host called it for AL.", IsFake: false)
         {
-            AudioBlobName = withAudio ? IAudioBlobStore.PlayersTrack(MatchId.New()) : null,
+            // Stored the way the orchestrator stores one: Opus on disk, whatever the model is later sent.
+            AudioBlobName = withAudio ? IAudioBlobStore.PlayersTrack(MatchId.New(), OpusAudio.Extension) : null,
         };
 
         if (withAudio)
         {
-            using var wav = new MemoryStream(new byte[8_000]);
-            await _blobs.UploadAsync(match.AudioBlobName!, wav, "audio/wav", CancellationToken.None);
+            using var recording = new MemoryStream(OpusAudio.Encode(new byte[16_000 * 2], 16_000));
+            await _blobs.UploadAsync(match.AudioBlobName!, recording, OpusAudio.ContentType, CancellationToken.None);
         }
 
         await _matches.UpsertAsync(match, CancellationToken.None);
@@ -113,6 +114,42 @@ public sealed class AnalysisPipelineTests : IDisposable
         rows.Should().ContainSingle().Which.Won.Should().BeTrue();
         (await _fighterResults.ListForAsync(FighterId.From("SM"), "user-1", CancellationToken.None)).Should().ContainSingle()
             .Which.Won.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Recordings are stored in Opus. The Files API takes one and reports it ACTIVE, and then generateContent
+    /// answers 400 for it — measured against the live endpoint on 2026-09-07 — so what goes up is PCM.
+    /// </summary>
+    [Fact]
+    public async Task The_model_is_sent_samples_however_the_recording_was_stored()
+    {
+        var match = await RecordedAsync();
+        var files = new RecordingFiles();
+
+        using var pipeline = Pipeline(files: files);
+        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
+
+        var upload = files.Uploads.Should().ContainSingle().Subject;
+        upload.MimeType.Should().Be("audio/wav");
+        upload.Name.Should().EndWith(".wav");
+        upload.Bytes.Should().StartWith("RIFF"u8.ToArray(), "what goes up is a WAV, whatever is on disk");
+    }
+
+    /// <summary>A files client that keeps what it was handed, so a test can say what the model was actually sent.</summary>
+    private sealed class RecordingFiles : IGeminiFilesClient
+    {
+        public List<(string Name, string MimeType, byte[] Bytes)> Uploads { get; } = [];
+
+        public async Task<GeminiFile> UploadAsync(Stream content, long length, string mimeType, string displayName, CancellationToken ct)
+        {
+            using var copy = new MemoryStream();
+            await content.CopyToAsync(copy, ct);
+            Uploads.Add((displayName, mimeType, copy.ToArray()));
+            return new GeminiFile($"files/{displayName}", $"https://fake.invalid/{displayName}", "ACTIVE", mimeType);
+        }
+
+        public Task<GeminiFile> GetAsync(string name, CancellationToken ct) =>
+            Task.FromResult(new GeminiFile(name, $"https://fake.invalid/{name}", "ACTIVE", "audio/wav"));
     }
 
     [Fact]
