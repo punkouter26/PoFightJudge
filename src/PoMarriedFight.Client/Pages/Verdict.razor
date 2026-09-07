@@ -44,6 +44,14 @@
                     }
                 </section>
 
+                @if (_report.Highlights is { Count: > 0 } highlights)
+                {
+                    <section class="reel-section">
+                        <h2 class="po-eyebrow">Worth hearing again</h2>
+                        <HighlightReel MatchId="@_report.MatchId" Highlights="@highlights" />
+                    </section>
+                }
+
                 <section class="pair">
                     <PlayerCard Report="@_report.Player1" Won="@(_report.Overall.Overall == Speaker.Player1)" />
                     <PlayerCard Report="@_report.Player2" Won="@(_report.Overall.Overall == Speaker.Player2)" IsSecond="true" />
@@ -60,6 +68,8 @@
                                         <h3>@report.Name</h3>
                                         <TraitScores Assessment="@report.Assessment" />
                                         <p class="po-muted why">@report.Assessment.CefrJustification</p>
+                                        <h4>How the mood moved</h4>
+                                        <EmotionChart Assessment="@report.Assessment" />
                                     </div>
                                 }
                             </div>

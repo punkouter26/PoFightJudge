@@ -18,6 +18,10 @@
 
 .reasons { margin: 0; padding-left: var(--po-space-5); display: grid; gap: var(--po-space-1); }
 
+.reel-section { display: grid; gap: var(--po-space-3); }
+
+.reel-section h2 { margin: 0; }
+
 .pair { display: grid; grid-template-columns: 1fr; gap: var(--po-space-4); }
 
 .side-by-side { display: grid; grid-template-columns: 1fr; gap: var(--po-space-5); padding-top: var(--po-space-3); }

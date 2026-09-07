@@ -47,6 +47,15 @@ public class FightFlowTests(AppFixture app)
         // The show runs itself to the ruling and hands over to the verdict.
         await page.WaitForURLAsync(u => u.Contains("/verdict/", StringComparison.Ordinal), new() { Timeout = 180_000 });
 
+        // The fight is read by the offline stand-ins, so the whole report appears with no key.
+        await page.Locator("section.ruling").WaitForAsync(new() { Timeout = 180_000 });
+        (await page.Locator("section.ruling").InnerTextAsync()).Should().ContainEquivalentOf("took it");
+        (await page.Locator("article.player").CountAsync()).Should().Be(2, "both of them are reported on");
+        (await page.Locator(".trait").CountAsync()).Should().Be(20, "ten judged traits each");
+        (await page.Locator(".stat").CountAsync()).Should().BeGreaterThan(40, "every measured number reaches the page");
+        (await page.Locator(".tips li").CountAsync()).Should().Be(6, "three pieces of advice each");
+        await ShootAsync(page, "verdict");
+
         errors.Should().BeEmpty();
     }
 

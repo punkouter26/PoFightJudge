@@ -59,7 +59,7 @@
 - [x] T42 Analysis endpoints, fakes, DI
 - [ ] T41b Opus recordings (Concentus)
 - [x] T43 Verdict UI 1  (StatFormat lands here, since the tiles need it)
-- [ ] T44 Verdict UI 2 + E2E  ← CP6
+- [x] T44 Verdict UI 2 + E2E  ← CP6
 
 ## Phase G — Records + Fighter style
 - [ ] T45 Stats + style builders

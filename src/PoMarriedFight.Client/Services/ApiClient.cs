@@ -72,6 +72,9 @@ public interface IApiClient
 
     /// <summary>Sends a fight back to be read again. Throws <see cref="ApiException"/> if one is already running.</summary>
     Task RetryAnalysisAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>One highlight, cut out of the recording. Null when there is nothing there to cut.</summary>
+    Task<byte[]?> GetClipAsync(MatchId id, int index, CancellationToken ct = default);
 }
 
 /// <summary>A non-success answer from the API, carrying the problem details so a form can show the server's words.</summary>
@@ -313,6 +316,12 @@ public sealed class ApiClient(HttpClient http) : IApiClient
         {
             throw await ApiException.FromAsync(response, ct);
         }
+    }
+
+    public async Task<byte[]?> GetClipAsync(MatchId id, int index, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Fights.Clip(id, index)), ct);
+        return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync(ct) : null;
     }
 
     private static Uri Relative(string path) => new(path, UriKind.Relative);
