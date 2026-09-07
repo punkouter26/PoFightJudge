@@ -71,4 +71,4 @@
 - [x] T49 PWA
 - [x] T50 Infra as code + CI
 - [x] T51 Scripts, docs, secret seeding (ask-first)
-- [ ] T52 Verify, review, simplify, evidence  ← CP8
+- [x] T52 Verify, review, simplify, evidence  ← CP8

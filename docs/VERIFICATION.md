@@ -14,9 +14,9 @@ into kv-poshared with `SCRIPTS/seed-secrets.ps1`.
 
 | Tier | Tests | Result |
 | --- | --- | --- |
-| Unit | 587 | pass |
+| Unit | 591 | pass |
 | Integration | 21 | pass (1 skipped — the live smoke test, which needs a key) |
-| E2EAPI | 53 | pass |
+| E2EAPI | 56 | pass |
 | E2EUI | 17 | pass (1 skipped — the deployed-site smoke, which needs a deployment) |
 
 No key, no network, no cost: every AI seam has a deterministic stand-in, and the tests that talk to Google are
@@ -75,7 +75,7 @@ The two refusals are the state machine working: skipping forward is allowed, goi
 
 | # | Criterion | Evidence | Verdict |
 | --- | --- | --- | --- |
-| 1 | Build clean, all tiers pass, coverage ≥ 80 % on Api + Shared | 0 warnings; 678 tests across four tiers, all passing; **90.0 % line coverage** (Api 89.8 %, Shared 100 %) — see below | met |
+| 1 | Build clean, all tiers pass, coverage ≥ 80 % on Api + Shared | 0 warnings; 684 tests across four tiers, all passing; **90.0 % line coverage** (Api 89.8 %, Shared 100 %) — see below | met |
 | 2 | With no keys, both modes complete on the fakes with the banner up | `WatchFlowTests`, `FightFlowTests`, `WatchHardeningTests` — the whole suite runs with no key at all, and `FakeAiBannerTests` covers the banner | met |
 | 3 | Real key: WATCH text ≤ 5 s, audio ≤ 8 s | measured over HTTP: first token **1.06 s**, first audio **0.91 s**, six rounds and a ruling in 8.5 s (`docs/CP4.md`) | met |
 | 4 | Real key: the host greets both by tag within 15 s and knows a returning fighter's record | `set_players` **14 s** after connecting; `docs/screenshots/fight-live.png` from that run shows "Al and SM, ready to settle who does the dishes?" — no asking for names. The digest is asserted separately in `FightTests`: a fighter with two debates reaches the host as "2 fights … clipped", a stranger as "First fight." | met |
@@ -87,12 +87,25 @@ The two refusals are the state machine working: skipping forward is allowed, goi
 | 10 | Two unknown tags create two fighters; each gains a style snapshot; a second fight says "2 fights" | `FightTests`, `RecordsTests`, `AnalysisPipelineTests`; the browser run ends on the fighters card and one fighter's page, where the panel reads "from 1 debate" | met |
 | 11 | Both modes write result rows; both boards rank; deleting a match removes everything it produced | `RecordsTests` (per-user history, both boards, cascade), `CascadeDeleteTests`, `HistoryTests` | met |
 | 12 | History lists both kinds with their badges; the fighters page lists both tags | E2EUI `HistoryTests` (a watch and a fight, narrowed by kind, one deleted); `FightFlowTests` walks on to the card | met |
-| 13 | Production auth: `/api/*` 401, `/login` 200, FakeAuth throws, guest needs an explicit flag | `AuthTests`, `FakeAuthHandlerTests`, `GuestMiddlewareTests` | met |
+| 13 | Production auth: `/api/*` 401, `/login` 200, FakeAuth throws, guest needs an explicit flag | `AuthTests`, `FakeAuthHandlerTests`, `GuestMiddlewareTests`; and one account cannot read or delete another's — `RecordsTests` walks the profile, the roster, the board and the delete | met |
 | 14 | `/api/diag` never carries a secret value | `SecretMaskerTests` plus an E2EAPI check that no key-like value appears; the live `/api/diag` prints `"gemini": "Configured"`, never a key | met |
 | 15 | Theme persists, 390 px works, every colour pair ≥ 4.5:1 in both themes | `PaletteContrastTests` parses `app.css` and checks both themes; `ThemeAndViewportTests` drives the browser at 390 px | met |
 | 16 | No raw form control in any `.razor` file | `DesignRulesTests` greps every `.razor` for `<button`, `<input`, `<select`, `<textarea` | met |
 | 17 | The manifest is served, installable, with the icons a launcher needs | `PwaTests`: the manifest is 200, `display: standalone`, 192/512 plus a maskable icon, every icon fetched, and the worker registers and caches nothing | met |
 | 18 | `az bicep build` passes and the pipeline builds, tests and publishes | `InfraTests` compiles the templates with the real CLI and reads the workflow. **Nothing has been deployed** — the repository, the OIDC credential and the first release are yours to approve | partly |
+
+## What the review found
+
+A read of everything this phase added turned up eight things, seven of them real. The serious one was that a
+fighter's record was keyed on the tag alone: `GET /api/fighters/AB/profile` returned every result row under that
+tag — topic, opponent, score, and a line somebody actually said — whoever had argued it, and `DELETE` removed
+them. Tags are one to three characters, so the space is walkable. Every result now carries the account that
+produced it and every read filters on it; the roster of tags stays shared, which is the part that was deliberate.
+
+The others: a show could sit in Setup indefinitely with nothing nudging it; a sentence was labelled with whoever
+held the floor when it was flushed rather than when it was said; the debate clock never stopped; the escalation
+off a busy discount tier missed a timeout; a persona page kept the previous persona's name after a failed load;
+and a failed delete replaced the whole history with an alert.
 
 ## What the real key found
 
