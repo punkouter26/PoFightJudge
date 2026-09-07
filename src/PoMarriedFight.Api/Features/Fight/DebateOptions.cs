@@ -33,6 +33,13 @@ public sealed class DebateOptions
     /// <summary>Wall-clock ceiling on a live session. Bounds both memory and Gemini spend.</summary>
     public int MaxSessionSeconds { get; set; } = 900;
 
+    /// <summary>
+    /// Store the two recordings as Ogg/Opus rather than WAV. A fight is speech, and speech costs about a tenth as
+    /// much in Opus; everything that reads a recording back decodes it to PCM first, so this is a storage choice
+    /// and nothing else. Set it false to keep the WAV — useful when something needs to be listened to by hand.
+    /// </summary>
+    public bool StoreOpus { get; set; } = true;
+
     /// <summary>A session with no browser attached for this long is ended and persisted.</summary>
     public int ClientGraceSeconds { get; set; } = 30;
 

@@ -74,12 +74,10 @@ Each was a deliberate decision made while building; the commit that made it says
 | T48 | client files only | plus `GET /api/fighters/roster` (`FighterEndpoints`, `ApiRoutes`) | a page cannot show a record the API does not return, and one read beats one read per person |
 | T49 | registration in `index.html` | `wwwroot/js/pwa.js` | the app's own CSP is `script-src 'self'`, so the inline script was blocked and nothing registered — caught by `PwaTests` |
 | T50 | "workflow YAML parsed by a test" | `InfraTests` reads the workflow as text | a YAML parser is a new package, which is ask-first |
-| T41 | Opus recordings via Concentus (T41b) | still outstanding | deferred behind the UI work; recordings are WAV until it lands |
 | T39 | one judge call assessing both players | one call per player | the live endpoint refuses a response schema carrying two full assessments, and `$ref` with it |
 
 ## Still outstanding
 
-- **T41b** — Opus recordings (Concentus). WAV works; this is about size.
 - **Nothing has been deployed.** The templates compile and the workflow is written; the repository, the OIDC
   registration and the first release are yours to approve.
 - The **transcription fallback** has never run against the real service: both real fights had usable live

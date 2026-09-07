@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using PoMarriedFight.Api.Features.Storage;
 
 namespace PoMarriedFight.Api.Features.Analysis;
 
@@ -10,6 +11,20 @@ public static class WavSlicer
 {
     /// <summary>Where the data of a canonical 16-bit mono PCM WAV starts, and how its header is laid out.</summary>
     public const int HeaderBytes = 44;
+
+    /// <summary>
+    /// The bytes between two offsets of a stored recording, as a WAV in its own right. Recordings are kept in
+    /// Opus, which cannot be cut at an arbitrary offset, so an Opus recording is decoded first — the clip that
+    /// comes out is a WAV either way, because that is what a browser can be handed and play.
+    /// </summary>
+    public static byte[]? SliceRecording(byte[] recording, string? blobName, int sampleRate, double startSeconds, double endSeconds)
+    {
+        ArgumentNullException.ThrowIfNull(recording);
+        return Slice(
+            OpusAudio.IsOpus(blobName) ? OpusAudio.DecodeToWav(recording, sampleRate) : recording,
+            startSeconds,
+            endSeconds);
+    }
 
     /// <summary>
     /// The bytes between two offsets, as a WAV in its own right. A range that falls outside the recording is

@@ -1,5 +1,8 @@
+using System.Buffers.Binary;
 using PoMarriedFight.Api.Features.Analysis;
+using PoMarriedFight.Api.Features.Fight;
 using PoMarriedFight.Api.Features.Fighters;
+using PoMarriedFight.Api.Features.Storage;
 using PoMarriedFight.Shared.Models;
 
 namespace PoMarriedFight.Unit.Analysis;
@@ -148,5 +151,38 @@ public class WavSlicerTests
     {
         WavSlicer.Slice([], 0, 1).Should().BeNull();
         WavSlicer.Slice(new byte[20], 0, 1).Should().BeNull();
+    }
+
+    /// <summary>
+    /// Recordings are stored in Opus, which cannot be cut at an arbitrary offset — so a clip asked for out of one
+    /// is decoded first, and what comes back is still a WAV, because that is what a browser can play.
+    /// </summary>
+    [Fact]
+    public void A_clip_can_be_cut_out_of_an_opus_recording()
+    {
+        var pcm = new byte[16_000 * 2 * 4];
+        for (var i = 0; i < pcm.Length / 2; i++)
+        {
+            BinaryPrimitives.WriteInt16LittleEndian(pcm.AsSpan(i * 2), (short)(Math.Sin(i / 12.0) * 12_000));
+        }
+
+        var opus = OpusAudio.Encode(pcm, 16_000);
+
+        var clip = WavSlicer.SliceRecording(opus, "match/players.opus", 16_000, 1.0, 2.0);
+
+        clip.Should().NotBeNull();
+        BinaryPrimitives.ReadInt32LittleEndian(clip.AsSpan(24)).Should().Be(16_000);
+        (clip!.Length - WavSlicer.HeaderBytes).Should().BeCloseTo(16_000 * 2, (uint)(16_000 / 4), "one second of it, give or take a frame");
+    }
+
+    [Fact]
+    public void A_wav_recording_is_still_cut_without_decoding_anything()
+    {
+        var wav = WavWriter.Build(16_000, new byte[16_000 * 2 * 2]);
+
+        var clip = WavSlicer.SliceRecording(wav, "match/players.wav", 16_000, 0.5, 1.0);
+
+        clip.Should().NotBeNull();
+        (clip!.Length - WavSlicer.HeaderBytes).Should().Be(16_000);
     }
 }

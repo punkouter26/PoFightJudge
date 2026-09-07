@@ -99,11 +99,17 @@ public sealed partial class AnalysisPipeline(
         // The turns are read while the recording uploads, and the upload is also what buys a browser-side
         // transcript the time it needs to arrive.
         var turnsTask = matches.GetTurnsAsync(matchId, ct);
-        var file = await files.UploadAndWaitAsync(buffer, buffer.Length, "audio/wav", $"{matchId.Value}-players.wav", clock, ct);
+
+        // Whatever the recording was stored as goes up as it is: the judge and the transcriber both read Opus,
+        // and decoding here would undo the point of storing it compressed.
+        var opus = OpusAudio.IsOpus(blobName);
+        var mimeType = opus ? OpusAudio.ContentType : "audio/wav";
+        var fileName = $"{matchId.Value}-players.{(opus ? OpusAudio.Extension : "wav")}";
+        var file = await files.UploadAndWaitAsync(buffer, buffer.Length, mimeType, fileName, clock, ct);
 
         // The cheapest usable transcript wins. Only a fight that produced neither is worth paying to diarize.
         var (existing, source) = await ReadExistingTranscriptAsync(blobs, matchId, ct);
-        var transcript = existing ?? await transcriber.TranscribeAsync(file.Uri, "audio/wav", ct);
+        var transcript = existing ?? await transcriber.TranscribeAsync(file.Uri, mimeType, ct);
         var turns = await turnsTask;
         var mapped = SpeakerMapper.Map(transcript, turns);
         LogTranscribed(logger, matchId.Value, transcript.Words.Count, source, mapped.Note);
@@ -128,7 +134,7 @@ public sealed partial class AnalysisPipeline(
                     match.Side1.DisplayName,
                     match.Side2.DisplayName,
                     file.Uri,
-                    "audio/wav",
+                    mimeType,
                     mapped,
                     turns,
                     first,

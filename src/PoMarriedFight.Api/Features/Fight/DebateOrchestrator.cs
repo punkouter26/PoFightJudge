@@ -567,8 +567,8 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
         {
             // Both tracks stream straight from their buffers, and the caption transcript goes up with them, so the
             // pipeline finds it already there rather than paying to transcribe the show a second time.
-            var players = _playersTrack.Bytes > 0 ? UploadTrackAsync(IAudioBlobStore.PlayersTrack(id), _playersTrack, ct) : Task.FromResult<string?>(null);
-            var host = _hostTrack.Bytes > 0 ? UploadTrackAsync(IAudioBlobStore.HostTrack(id), _hostTrack, ct) : Task.FromResult<string?>(null);
+            var players = _playersTrack.Bytes > 0 ? UploadTrackAsync(id, IAudioBlobStore.PlayersTrack, _playersTrack, ct) : Task.FromResult<string?>(null);
+            var host = _hostTrack.Bytes > 0 ? UploadTrackAsync(id, IAudioBlobStore.HostTrack, _hostTrack, ct) : Task.FromResult<string?>(null);
             await Task.WhenAll(players, host, UploadCaptionTranscriptAsync(id, ct));
             blobName = await players;
         }
@@ -592,10 +592,21 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
         }
     }
 
-    private async Task<string?> UploadTrackAsync(string blobName, WavWriter track, CancellationToken ct)
+    /// <summary>
+    /// Stores one track. Opus by default — a few minutes of speech is a tenth the size — with the WAV kept when
+    /// the option says so. The name carries the format, which is how everything reading it back knows.
+    /// </summary>
+    private async Task<string?> UploadTrackAsync(MatchId id, Func<MatchId, string, string> name, WavWriter track, CancellationToken ct)
     {
+        if (_options.StoreOpus && OpusAudio.IsSupportedRate(track.SampleRate))
+        {
+            var opus = OpusAudio.Encode(track.Pcm.Span, track.SampleRate);
+            await using var encoded = new MemoryStream(opus, writable: false);
+            return await _blobs.UploadAsync(name(id, OpusAudio.Extension), encoded, OpusAudio.ContentType, ct);
+        }
+
         await using var stream = track.OpenWavStream();
-        return await _blobs.UploadAsync(blobName, stream, "audio/wav", ct);
+        return await _blobs.UploadAsync(name(id, "wav"), stream, "audio/wav", ct);
     }
 
     /// <summary>

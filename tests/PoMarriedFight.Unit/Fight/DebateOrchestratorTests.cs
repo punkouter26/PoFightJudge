@@ -187,8 +187,12 @@ public sealed class DebateOrchestratorTests : IAsyncDisposable
 
         await orchestrator.EndAsync("test", CancellationToken.None);
 
-        var track = _blobs.Blobs[IAudioBlobStore.PlayersTrack(orchestrator.Session.MatchId)];
-        track.Length.Should().BeGreaterThan(44 + (40 * 800), "the recording is what the analysis reads, so nothing may be thinned out of it");
+        // Stored as Opus, so the check is on what comes back out of it: forty frames of 400 samples each.
+        var track = _blobs.Blobs[IAudioBlobStore.PlayersTrack(orchestrator.Session.MatchId, OpusAudio.Extension)];
+        var pcm = OpusAudio.Decode(track, DebateOrchestrator.PlayerSampleRate);
+        pcm.Length.Should().BeGreaterThanOrEqualTo(40 * 800,
+            "the recording is what the analysis reads, so nothing may be thinned out of it");
+        track.Length.Should().BeLessThan(pcm.Length, "and it costs less on disk than the samples it carries");
     }
 
     [Fact]
@@ -303,7 +307,7 @@ public sealed class DebateOrchestratorTests : IAsyncDisposable
 
         await orchestrator.EndAsync("test", CancellationToken.None);
 
-        _blobs.Blobs.Should().ContainKey(IAudioBlobStore.HostTrack(orchestrator.Session.MatchId));
+        _blobs.Blobs.Should().ContainKey(IAudioBlobStore.HostTrack(orchestrator.Session.MatchId, OpusAudio.Extension));
         var transcript = JsonSerializer.Deserialize<TranscriptDto>(
             _blobs.Blobs[IAudioBlobStore.LiveTranscript(orchestrator.Session.MatchId)], JsonSerializerOptions.Web);
         transcript!.Text.Should().Contain("you never listen", "the show is transcribed once, not twice");
@@ -321,7 +325,8 @@ public sealed class DebateOrchestratorTests : IAsyncDisposable
         var stored = await _matches.GetAsync("user-1", id, CancellationToken.None);
         stored!.Status.Should().Be(SessionStatus.Analyzing);
         stored.EndedAt.Should().NotBeNull();
-        stored.AudioBlobName.Should().Be(IAudioBlobStore.PlayersTrack(id));
+        stored.AudioBlobName.Should().Be(IAudioBlobStore.PlayersTrack(id, OpusAudio.Extension),
+            "the name says which format it was stored in, which is how everything reading it back knows");
         (await _matches.GetTurnsAsync(id, CancellationToken.None)).Should().NotBeEmpty();
         (await _matches.GetAnalysisAsync(id, CancellationToken.None))!.Status.Should().Be(AnalysisStatus.Queued);
         _analysis.Queued.Should().ContainSingle().Which.Should().Be(("user-1", id));

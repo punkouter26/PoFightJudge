@@ -130,6 +130,5 @@ the wife, and `setup.ps1` started the app as a degraded Production.
 
 - **Nothing has been deployed.** The templates compile and the pipeline is written; creating the repository, the
   OIDC registration and the first release are deliberate steps that need your say-so.
-- **T41b — Opus recordings** (Concentus). Recordings are WAV; this is about size, not correctness.
 - The **transcription fallback** (`gemini-3.5-transcribe`) has not run against the real service: both real fights
   had usable live captions, which the pipeline prefers, so the fallback was never reached.

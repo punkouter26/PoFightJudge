@@ -61,6 +61,18 @@ public sealed class WavWriter(int sampleRate) : IDisposable
     }
 
     /// <summary>A readable WAV stream over the recorded buffer without copying the PCM. Call once recording has stopped.</summary>
+    /// <summary>The raw samples, for a caller that wants to encode them rather than read a WAV.</summary>
+    public ReadOnlyMemory<byte> Pcm
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return new ReadOnlyMemory<byte>(_pcm.GetBuffer(), 0, (int)_pcm.Length);
+            }
+        }
+    }
+
     public Stream OpenWavStream()
     {
         lock (_lock)

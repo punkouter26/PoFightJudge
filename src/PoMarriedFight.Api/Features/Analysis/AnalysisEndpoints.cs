@@ -106,7 +106,7 @@ public sealed class AnalysisEndpoints : ICarterModule
         await audio.CopyToAsync(buffer, ct);
 
         var highlight = highlights[index];
-        return WavSlicer.Slice(buffer.ToArray(), highlight.StartSeconds, highlight.EndSeconds) is { } clip
+        return WavSlicer.SliceRecording(buffer.ToArray(), match.AudioBlobName, DebateOrchestrator.PlayerSampleRate, highlight.StartSeconds, highlight.EndSeconds) is { } clip
             ? Results.File(clip, "audio/wav", $"{id.Value}-clip{index}.wav")
             : Results.NotFound();
     }
