@@ -62,7 +62,7 @@
 - [x] T44 Verdict UI 2 + E2E  ← CP6
 
 ## Phase G — Records + Fighter style
-- [ ] T45 Stats + style builders
+- [x] T45 Stats + style builders
 - [ ] T46 Records endpoints
 - [ ] T47 Records UI
 - [ ] T48 Fighters UI + host digest  ← CP7

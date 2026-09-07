@@ -137,3 +137,94 @@ public sealed record FighterResultDto(
 
 /// <summary>A person who has argued at least once. The tag is the identity; only the display name can be edited.</summary>
 public sealed record FighterDto(string Tag, string DisplayName, DateTimeOffset CreatedAt, DateTimeOffset LastSeenAt);
+
+/// <summary>Head-to-head with one particular opponent: who they are, and how it has gone.</summary>
+public sealed record RivalryDto(string Opponent, int Fights, int Wins, int Losses)
+{
+    public bool IsAhead => Wins > Losses;
+}
+
+/// <summary>
+/// One person's record, computed from their result rows rather than accumulated on a counter. Re-reading a fight
+/// overwrites its row, so nothing can be counted twice and a deleted fight simply stops existing.
+/// </summary>
+public sealed record FighterStatsDto(
+    string Tag,
+    string DisplayName,
+    int Fights,
+    int Wins,
+    int Losses,
+    int Draws,
+    int Watches,
+    double AverageScore,
+    int BestScore,
+    DateTimeOffset? LastFoughtAt,
+
+    /// <summary>Length of the current run: positive on a winning streak, negative on a losing one.</summary>
+    int Streak,
+
+    /// <summary>How alike their scores are, 0 to 1. One is somebody who argues the same way every time.</summary>
+    double Consistency,
+
+    /// <summary>Their last few scores, oldest first, for a line that shows where they are heading.</summary>
+    IReadOnlyList<int> Form,
+
+    IReadOnlyList<string> Badges,
+    RivalryDto? TopRival)
+{
+    public double WinRate => Fights == 0 ? 0 : (double)Wins / Fights;
+
+    public static FighterStatsDto Empty(string tag, string displayName) =>
+        new(tag, displayName, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, [], [], null);
+}
+
+/// <summary>
+/// How somebody argues, gathered from every debate they have spoken in. Empty until they have argued; thin, and
+/// honest about being thin, until they have argued a few times.
+/// </summary>
+public sealed record StyleProfileDto(
+    string Tag,
+    int Debates,
+    string Tone,
+    IReadOnlyList<string> Phrases,
+    IReadOnlyList<string> Fallacies,
+    string Opener,
+    int OpenerRepeats,
+    string Cefr,
+    IReadOnlyList<string> Emotions,
+    string BestQuote,
+    IReadOnlyList<string> Tips,
+
+    /// <summary>One line for the host to read before the fight starts. Short enough to sit in a prompt.</summary>
+    string Digest)
+{
+    /// <summary>True while there is too little here to call it a pattern.</summary>
+    public bool IsEarly => Debates < 3;
+
+    public static StyleProfileDto Empty(string tag) =>
+        new(tag, 0, string.Empty, [], [], string.Empty, 0, string.Empty, [], string.Empty, [], "First fight.");
+}
+
+/// <summary>Everything one fighter's page shows: who they are, their record, and how they argue.</summary>
+public sealed record FighterProfileDto(FighterDto Fighter, FighterStatsDto Stats, StyleProfileDto Style, IReadOnlyList<FighterResultDto> Results);
+
+/// <summary>One persona's record from the watches they have argued in.</summary>
+public sealed record ProfileRecordDto(
+    string Initials,
+    int Matches,
+    int Wins,
+    int Losses,
+    int Draws,
+    double AverageScore,
+    DateTimeOffset? LastSeenAt,
+    AdvancedStatsDto AverageStats,
+    RivalryDto? TopRival)
+{
+    public double WinRate => Matches == 0 ? 0 : (double)Wins / Matches;
+
+    public static ProfileRecordDto Empty(string initials) =>
+        new(initials, 0, 0, 0, 0, 0, null, AdvancedStatsDto.Empty, null);
+}
+
+/// <summary>One row of a leaderboard, whichever kind it is.</summary>
+public sealed record LeaderboardRowDto(string Id, string DisplayName, int Matches, int Wins, double WinRate, double AverageScore);

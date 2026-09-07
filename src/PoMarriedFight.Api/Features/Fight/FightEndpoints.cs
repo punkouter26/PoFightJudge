@@ -47,6 +47,7 @@ public sealed class FightEndpoints : ICarterModule
         ClaimsPrincipal user,
         SessionRegistry registry,
         IFighterRepository fighters,
+        IFighterResultRepository results,
         TimeProvider clock,
         CancellationToken ct)
     {
@@ -69,13 +70,13 @@ public sealed class FightEndpoints : ICarterModule
 
         // Both fighters exist from the moment the fight starts, so a record has somewhere to land even if it ends badly.
         var now = clock.GetUtcNow();
-        var one = await fighters.EnsureAsync(FighterId.From(first), now, ct);
-        var two = await fighters.EnsureAsync(FighterId.From(second), now, ct);
+        await fighters.EnsureAsync(FighterId.From(first), now, ct);
+        await fighters.EnsureAsync(FighterId.From(second), now, ct);
 
         var setup = new ShowSetup(request.Persona, first, second, Topic(request.Topic))
         {
-            Player1Digest = Digest(one),
-            Player2Digest = Digest(two),
+            Player1Digest = await DigestAsync(results, first, ct),
+            Player2Digest = await DigestAsync(results, second, ct),
         };
 
         var fight = await registry.CreateAsync(user.UserId(), setup, ct);
@@ -113,10 +114,11 @@ public sealed class FightEndpoints : ICarterModule
     }
 
     /// <summary>
-    /// What the host is told about how this fighter argues. A tag that has only just been created has no history to
-    /// describe, and saying so is more useful than saying nothing. The real digest arrives with the style profile.
+    /// What the host is told about how this fighter argues, drawn from every debate they have spoken in. Somebody
+    /// the room has not met gets "First fight.", which is more use to a host than silence.
     /// </summary>
-    private static string? Digest(Fighter fighter) => fighter.CreatedAt == fighter.LastSeenAt ? "First fight." : null;
+    private static async Task<string> DigestAsync(IFighterResultRepository results, string tag, CancellationToken ct) =>
+        StyleProfileBuilder.Build(tag, await results.ListForAsync(FighterId.From(tag), ct)).Digest;
 
     private static string? Topic(string? value)
     {
