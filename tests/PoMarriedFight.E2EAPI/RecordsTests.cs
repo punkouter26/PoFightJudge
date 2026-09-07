@@ -141,6 +141,23 @@ public class RecordsTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task The_roster_carries_each_persons_record_so_a_list_of_them_is_worth_reading()
+    {
+        var client = User("records-roster");
+        await RecordAsync("records-roster", "ro1", "ro2", score: 75);
+        await RecordAsync("records-roster", "ro1", "ro2", score: 65);
+
+        var roster = await client.GetFromJsonAsync<IReadOnlyList<FighterStatsDto>>(ApiRoutes.Fighters.RosterUrl);
+
+        var one = roster!.Single(r => string.Equals(r.Tag, "RO1", StringComparison.Ordinal));
+        one.Fights.Should().Be(2);
+        one.Wins.Should().Be(2);
+        one.Form.Should().Equal(75, 65);
+        roster.Should().Contain(r => string.Equals(r.Tag, "RO2", StringComparison.Ordinal), "somebody who has only lost is still on the roster");
+        roster.Should().BeInDescendingOrder(r => r.Fights);
+    }
+
+    [Fact]
     public async Task A_fighter_can_be_renamed_but_never_re_tagged()
     {
         var client = User("records-rename");

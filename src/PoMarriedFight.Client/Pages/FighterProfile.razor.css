@@ -1,0 +1,27 @@
+.head { display: flex; align-items: center; justify-content: space-between; gap: var(--po-space-3); flex-wrap: wrap; }
+
+.who { display: flex; align-items: center; gap: var(--po-space-2); flex-wrap: wrap; }
+
+.who .tag { font-size: var(--po-text-2xl); letter-spacing: 0.06em; }
+
+::deep .name { min-width: 12rem; }
+
+.record { display: grid; gap: var(--po-space-3); margin-block: var(--po-space-3); }
+
+.tally .big { font-size: var(--po-text-3xl); line-height: 1; }
+
+.tally .of { margin-inline-start: var(--po-space-2); font-size: var(--po-text-lg); color: var(--po-muted); }
+
+.form { display: grid; gap: var(--po-space-1); max-width: 14rem; }
+
+.facts { display: flex; flex-wrap: wrap; gap: var(--po-space-4); margin: 0; }
+
+.facts dt { font-size: var(--po-text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--po-muted); }
+
+.facts dd { margin: 0; }
+
+.badges { display: flex; flex-wrap: wrap; gap: var(--po-space-1); }
+
+.section { margin-block: var(--po-space-5) var(--po-space-3); }
+
+::deep .results { width: 100%; }

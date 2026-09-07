@@ -22,6 +22,8 @@ public sealed class FighterEndpoints : ICarterModule
 
         fighters.MapGet("/", ListAsync).Produces<IReadOnlyList<FighterDto>>();
 
+        fighters.MapGet(ApiRoutes.Fighters.RosterSegment, RosterAsync).Produces<IReadOnlyList<FighterStatsDto>>();
+
         fighters.MapGet(ApiRoutes.Fighters.ByTagSegment, GetAsync)
             .Produces<FighterDto>()
             .Produces(StatusCodes.Status404NotFound);
@@ -37,6 +39,31 @@ public sealed class FighterEndpoints : ICarterModule
         fighters.MapDelete(ApiRoutes.Fighters.ByTagSegment, DeleteAsync)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
+    }
+
+    /// <summary>
+    /// The roster with everybody's record, in one read of the result rows rather than one read per person. It is
+    /// what a list of fighters has to say to be worth looking at: a page of bare tags says nothing.
+    /// </summary>
+    private static async Task<IReadOnlyList<FighterStatsDto>> RosterAsync(
+        IFighterRepository fighters,
+        IFighterResultRepository results,
+        CancellationToken ct)
+    {
+        var roster = await fighters.ListAsync(ct);
+        var byTag = (await results.ListAllAsync(ct))
+            .GroupBy(r => r.Tag, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, IReadOnlyList<FighterResultDto> (g) => [.. g], StringComparer.OrdinalIgnoreCase);
+
+        return
+        [
+            .. roster
+                .Select(f => f.ToDto())
+                .Select(dto => FighterStatsBuilder.Build(dto, byTag.GetValueOrDefault(dto.Tag, [])))
+                .OrderByDescending(s => s.Fights)
+                .ThenByDescending(s => s.LastFoughtAt)
+                .ThenBy(s => s.Tag, StringComparer.Ordinal),
+        ];
     }
 
     /// <summary>Everything one person's page shows: who they are, their record, how they argue, and what they argued.</summary>

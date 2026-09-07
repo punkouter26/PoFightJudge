@@ -56,6 +56,20 @@ public class FightFlowTests(AppFixture app)
         (await page.Locator(".tips li").CountAsync()).Should().Be(6, "three pieces of advice each");
         await ShootAsync(page, "verdict");
 
+        // The card writes itself from the fight: both tags are on it, each with the one debate they have just had.
+        await page.GotoAsync(app.BaseUrl + "/fighters", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
+        await AppFixture.WaitForAppAsync(page, errors);
+        await page.Locator("tbody tr", new() { HasText = "AL" }).First.WaitForAsync(new() { Timeout = 30_000 });
+        (await page.Locator("tbody tr", new() { HasText = "SM" }).CountAsync()).Should().BeGreaterThan(0, "both of them are on the card");
+        (await page.Locator("tbody tr", new() { HasText = "AL" }).First.InnerTextAsync()).Should().Contain("1", "one fight each so far");
+
+        // Their own page carries what the host would be told about them, in the same words.
+        await page.Locator("tbody tr", new() { HasText = "AL" }).First.ClickAsync();
+        await page.WaitForURLAsync(u => u.Contains("/fighters/AL", StringComparison.Ordinal), new() { Timeout = 30_000 });
+        await page.Locator("section.style").WaitForAsync(new() { Timeout = 30_000 });
+        (await page.Locator("section.style").InnerTextAsync()).Should().ContainEquivalentOf("1 debate", "one fight is an anecdote and the panel says so");
+        await ShootAsync(page, "fighter-profile");
+
         errors.Should().BeEmpty();
     }
 

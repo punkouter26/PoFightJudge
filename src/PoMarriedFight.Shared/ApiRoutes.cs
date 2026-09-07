@@ -68,6 +68,11 @@ public static class ApiRoutes
         public const string ByTagSegment = "/{tag}";
         public const string ProfileSegment = "/{tag}/profile";
 
+        /// <summary>The roster with each person's record. A tag is at most three characters, so this can never be one.</summary>
+        public const string RosterSegment = "/roster";
+
+        public const string RosterUrl = $"{Base}{RosterSegment}";
+
         public static string ByTag(FighterId tag) => $"{Base}/{Uri.EscapeDataString(tag.Value)}";
 
         /// <summary>Their record and how they argue, together — what one person's page is built from.</summary>

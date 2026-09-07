@@ -1,5 +1,6 @@
 @page "/"
 @inject TimeProvider Clock
+@inject IApiClient Api
 
 <PageTitle>PoMarriedFight</PageTitle>
 
@@ -25,16 +26,82 @@
                 <h2>Replays</h2>
                 <RadzenLink Path="history" Text="All history" Icon="chevron_right" />
             </div>
-            @* The unified history grid (RadzenDataGrid over /api/matches) lands with the records slice (T47). *@
-            <EmptyState Icon="history" Title="No matches yet" Text="Your first watch or fight will show up here with its replay." />
+            @if (_matches.Count == 0)
+            {
+                <EmptyState Icon="history" Title="No matches yet" Text="Your first watch or fight will show up here with its replay." />
+            }
+            else
+            {
+                <ul class="replay-list">
+                    @foreach (var match in _matches)
+                    {
+                        <li>
+                            <RadzenLink Path="@Href(match)" class="replay">
+                                <ModeBadge Mode="@match.Mode" />
+                                <span class="topic">@match.Topic</span>
+                                <span class="who po-muted">@match.Side1.DisplayName vs @match.Side2.DisplayName</span>
+                                <span class="when po-muted">@match.StartedAt.LocalDateTime.ToString("d MMM", System.Globalization.CultureInfo.CurrentCulture)</span>
+                            </RadzenLink>
+                        </li>
+                    }
+                </ul>
+            }
         </section>
         <section class="fighters">
             <div class="section-head">
                 <h2>Top fighters</h2>
-                <RadzenLink Path="leaderboard" Text="Leaderboard" Icon="chevron_right" />
+                <RadzenLink Path="fighters" Text="All fighters" Icon="chevron_right" />
             </div>
-            @* Fighter records come from /api/fighters (T48). *@
-            <EmptyState Icon="sports_mma" Title="Nobody on the card" Text="Fighters are created the first time their tag steps up to the mic." />
+            @if (_fighters.Count == 0)
+            {
+                <EmptyState Icon="sports_mma" Title="Nobody on the card" Text="Fighters are created the first time their tag steps up to the mic." />
+            }
+            else
+            {
+                <ul class="fighter-list">
+                    @foreach (var fighter in _fighters)
+                    {
+                        <li>
+                            <RadzenLink Path="@($"fighters/{fighter.Tag}")">
+                                <span class="tag po-display">@fighter.Tag</span>
+                                <span class="po-muted">@fighter.Wins–@fighter.Losses over @fighter.Fights</span>
+                            </RadzenLink>
+                        </li>
+                    }
+                </ul>
+            }
         </section>
     </div>
 </PageShell>
+
+@code {
+    /// <summary>Enough to say what has been happening without turning the home page into the history page.</summary>
+    private const int Recent = 4;
+
+    private IReadOnlyList<MatchDto> _matches = [];
+    private IReadOnlyList<FighterStatsDto> _fighters = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Neither list is what the page is for, so neither failure is worth an error: an empty section still reads.
+        try
+        {
+            _matches = [.. (await Api.GetMatchesAsync()).Take(Recent)];
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
+        {
+        }
+
+        try
+        {
+            _fighters = [.. (await Api.GetRosterAsync()).Where(f => f.Fights > 0).Take(Recent)];
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
+        {
+        }
+    }
+
+    /// <summary>A fight has a verdict to open; a watch has only its place in the history.</summary>
+    private static string Href(MatchDto match) =>
+        match.Mode == MatchMode.Fight ? $"verdict/{match.Id.Value}" : "history";
+}

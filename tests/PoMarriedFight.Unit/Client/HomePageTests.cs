@@ -2,16 +2,26 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
+using PoMarriedFight.Client.Components;
 using PoMarriedFight.Client.Pages;
+using PoMarriedFight.Client.Services;
+using PoMarriedFight.Shared.Identifiers;
+using PoMarriedFight.Shared.Models;
 using Radzen;
 
 namespace PoMarriedFight.Unit.Client;
 
 public class HomePageTests : BunitContext
 {
+    private static readonly DateTimeOffset Night = new(2026, 9, 6, 20, 41, 0, TimeSpan.Zero);
+
+    private readonly IApiClient _api = Substitute.For<IApiClient>();
+
     public HomePageTests()
     {
         Services.AddRadzenComponents();
+        Services.AddSingleton(_api);
         Services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 9, 6, 20, 41, 0, TimeSpan.Zero)));
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
@@ -40,5 +50,29 @@ public class HomePageTests : BunitContext
 
         cut.FindAll("[role=status]").Should().HaveCount(2);
         cut.Markup.Should().Contain("No matches yet").And.Contain("Nobody on the card");
+    }
+
+    [Fact]
+    public async Task Once_there_is_a_past_the_home_page_shows_it_and_leads_back_into_it()
+    {
+        var fight = MatchId.New();
+        _api.GetMatchesAsync(Arg.Any<MatchMode?>(), Arg.Any<CancellationToken>()).Returns(
+        [
+            new(fight, "u", MatchMode.Fight, Night, Night.AddMinutes(6), "who forgot the bins",
+                MatchSide.Human("AB", "Alex"), MatchSide.Human("CD", "Sam"), SessionPhase.Done, SessionStatus.Ready, "Alex", "Close.", IsFake: false),
+        ]);
+        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            FighterStatsDto.Empty("AB", "Alex") with { Fights = 3, Wins = 2, Losses = 1 },
+            FighterStatsDto.Empty("ZZ", "Never") with { Fights = 0 },
+        ]);
+
+        var cut = Render<Home>();
+
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<ModeBadge>().Should().ContainSingle());
+        cut.Markup.Should().Contain("who forgot the bins").And.Contain("Alex vs Sam");
+        cut.Find("a.replay").GetAttribute("href").Should().Contain($"verdict/{fight.Value}", "a fight leads to its verdict");
+        cut.Markup.Should().Contain("2–1 over 3");
+        cut.Markup.Should().NotContain("Never", "somebody who has not argued is not a top fighter");
     }
 }

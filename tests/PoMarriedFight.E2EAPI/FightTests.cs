@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using PoMarriedFight.Api.Features.Auth;
+using PoMarriedFight.Api.Features.Fight;
 using PoMarriedFight.Api.Features.Fighters;
+using PoMarriedFight.Api.Features.Records;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
@@ -30,6 +32,31 @@ public class FightTests(ApiFactory factory)
         var started = await response.Content.ReadFromJsonAsync<CreateFightResponse>();
         started.Should().NotBeNull();
         return started!.MatchId;
+    }
+
+    [Fact]
+    public async Task The_host_is_told_how_each_of_them_argues_and_a_stranger_is_called_a_first_fight()
+    {
+        var client = User("fight-digest");
+        var results = factory.Services.GetRequiredService<IFighterResultRepository>();
+        var now = factory.Services.GetRequiredService<TimeProvider>().GetUtcNow();
+        var known = FighterId.From("DG1");
+
+        // Two debates behind them, so the digest is a read rather than a guess.
+        foreach (var day in new[] { -2, -1 })
+        {
+            await results.SaveAsync(
+            [
+                new FighterResultDto(known.Value, MatchId.New(), MatchMode.Fight, now.AddDays(day), "the thermostat", "DG2",
+                    true, false, 70, StyleSnapshot.Empty with { Tone = "clipped", Opener = "Look, the thing is", Cefr = "B2" }),
+            ]);
+        }
+
+        var id = await StartAsync(client, known.Value, "dg9");
+
+        var setup = factory.Services.GetRequiredService<SessionRegistry>().Get(id)!.Setup;
+        setup.Player1Digest.Should().Contain("2 fights").And.Contain("clipped");
+        setup.Player2Digest.Should().Be("First fight.", "a host told nothing about a stranger would invent them");
     }
 
     [Fact]

@@ -1,0 +1,90 @@
+@* How somebody argues, gathered from every debate they have spoken in — and honest about how little that can be. *@
+<section class="style po-card" aria-label="How they argue">
+    <header>
+        <h2 class="po-display">How they argue</h2>
+        <span class="po-chip @(Style.IsEarly ? "po-chip--muted" : null)">@Basis</span>
+    </header>
+
+    @if (Style.Debates == 0)
+    {
+        <p class="po-muted">Nothing yet. A style is read off the debates somebody has spoken in, and this one has not spoken in any.</p>
+    }
+    else
+    {
+        @if (Style.IsEarly)
+        {
+            <p class="po-muted early">This is an early read: a phrase said once is a phrase, not a habit.</p>
+        }
+
+        <dl class="traits">
+            @if (!string.IsNullOrWhiteSpace(Style.Tone))
+            {
+                <div><dt>Sounds</dt><dd>@Style.Tone</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Style.Opener))
+            {
+                <div>
+                    <dt>Opens with</dt>
+                    <dd>“@Style.Opener”@if (Style.OpenerRepeats > 1) { <span class="po-muted"> — @Style.OpenerRepeats times</span> }</dd>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Style.Cefr))
+            {
+                <div><dt>Language</dt><dd>@Style.Cefr</dd></div>
+            }
+        </dl>
+
+        @if (Style.Phrases.Count > 0)
+        {
+            <div class="group">
+                <span class="po-eyebrow">Keeps saying</span>
+                <div class="chips">@foreach (var phrase in Style.Phrases) { <span class="po-chip">@phrase</span>}</div>
+            </div>
+        }
+
+        @if (Style.Fallacies.Count > 0)
+        {
+            <div class="group">
+                <span class="po-eyebrow">Leans on</span>
+                <div class="chips">@foreach (var fallacy in Style.Fallacies) { <span class="po-chip fallacy">@fallacy</span>}</div>
+            </div>
+        }
+
+        @if (Style.Emotions.Count > 0)
+        {
+            <div class="group">
+                <span class="po-eyebrow">Usually</span>
+                <div class="chips">@foreach (var emotion in Style.Emotions) { <span class="po-chip po-chip--muted">@emotion</span>}</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Style.BestQuote))
+        {
+            <blockquote class="quote">“@Style.BestQuote”</blockquote>
+        }
+
+        @if (Style.Tips.Count > 0)
+        {
+            <div class="group">
+                <span class="po-eyebrow">What would help</span>
+                <ul class="tips">@foreach (var tip in Style.Tips) { <li>@tip</li>}</ul>
+            </div>
+        }
+
+        <p class="digest po-muted" title="This is the line the host is read before the fight starts.">
+            <RadzenIcon Icon="record_voice_over" /> @Style.Digest
+        </p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public StyleProfileDto Style { get; set; } = StyleProfileDto.Empty(string.Empty);
+
+    /// <summary>How much this is drawn from, said plainly: a read from one debate is worth less than a read from ten.</summary>
+    private string Basis => Style.Debates switch
+    {
+        0 => "no debates yet",
+        1 => "from 1 debate",
+        _ => $"from {Style.Debates} debates",
+    };
+}

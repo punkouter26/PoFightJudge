@@ -1,0 +1,25 @@
+.style { display: grid; gap: var(--po-space-3); }
+
+header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--po-space-3); }
+
+header h2 { margin: 0; font-size: var(--po-text-lg); }
+
+.early { margin: 0; font-size: var(--po-text-sm); }
+
+.traits { display: flex; flex-wrap: wrap; gap: var(--po-space-4); margin: 0; }
+
+.traits dt { font-size: var(--po-text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--po-muted); }
+
+.traits dd { margin: 0; }
+
+.group { display: grid; gap: var(--po-space-1); }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--po-space-1); }
+
+.quote { margin: 0; padding-inline-start: var(--po-space-3); border-inline-start: 3px solid var(--po-accent); font-style: italic; }
+
+.tips { margin: 0; padding-inline-start: var(--po-space-4); }
+
+.digest { display: flex; align-items: center; gap: var(--po-space-1); margin: 0; font-size: var(--po-text-sm); }
+
+.fallacy { color: var(--po-warning); border-color: var(--po-warning); }

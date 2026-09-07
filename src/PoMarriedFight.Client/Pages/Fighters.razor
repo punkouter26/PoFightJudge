@@ -1,0 +1,107 @@
+@page "/fighters"
+@using System.Globalization
+@inject IApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Fighters · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="The card" Title="Fighters"
+           Lead="Everyone who has stepped up to the microphone. A tag is the person; the name is theirs to change.">
+    <Actions>
+        <RadzenButton Text="New fight" Icon="mic" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo("fight"))" />
+    </Actions>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="3" Label="Reading the card" />
+        }
+        else if (_error is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+        }
+        else if (_roster.Count == 0)
+        {
+            <EmptyState Icon="sports_mma" Title="Nobody on the card" Text="Fighters are created the first time their tag steps up to the mic.">
+                <Action>
+                    <RadzenButton Text="Start a fight" Icon="mic" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo("fight"))" />
+                </Action>
+            </EmptyState>
+        }
+        else
+        {
+            <RadzenDataGrid Data="@_roster" TItem="FighterStatsDto" AllowSorting="true" AllowPaging="true" PageSize="20" class="roster"
+                            RowClick="@(args => Open(args.Data))" RowRender="@(args => args.Attributes["class"] = "openable")">
+                <Columns>
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Tag" Width="5.5rem" Property="@nameof(FighterStatsDto.Tag)">
+                        <Template Context="row"><span class="tag po-display">@row.Tag</span></Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Name" Property="@nameof(FighterStatsDto.DisplayName)">
+                        <Template Context="row">
+                            @if (string.Equals(row.DisplayName, row.Tag, StringComparison.Ordinal))
+                            {
+                                <span class="po-muted">no name yet</span>
+                            }
+                            else
+                            {
+                                @row.DisplayName
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fights" Width="6rem" Property="@nameof(FighterStatsDto.Fights)" />
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="W–L" Width="6rem" Sortable="false">
+                        <Template Context="row">@row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty)</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Form" Width="9rem" Sortable="false">
+                        <Template Context="row"><FormSparkline Scores="@row.Form" /></Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Last seen" Width="10rem" Property="@nameof(FighterStatsDto.LastFoughtAt)">
+                        <Template Context="row">
+                            @if (row.LastFoughtAt is { } seen)
+                            {
+                                @seen.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)
+                            }
+                            else
+                            {
+                                <span class="po-muted">never</span>
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private IReadOnlyList<FighterStatsDto> _roster = [];
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _roster = await Api.GetRosterAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Summary;
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"The card could not be read ({ex.Message}).";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Open(FighterStatsDto? row)
+    {
+        if (row is not null)
+        {
+            Nav.NavigateTo($"fighters/{row.Tag}");
+        }
+    }
+}

@@ -1,0 +1,200 @@
+@page "/fighters/{Tag}"
+@using System.Globalization
+@inject IApiClient Api
+@inject NavigationManager Nav
+@inject DialogService Dialogs
+@inject NotificationService Notifications
+
+<PageTitle>@Title · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Fighter" Title="@Title" Lead="@Lead">
+    <Actions>
+        <RadzenButton Text="All fighters" Icon="groups" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                      Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo("fighters"))" />
+    </Actions>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="4" Label="Reading their record" />
+        }
+        else if (_profile is null)
+        {
+            <EmptyState Icon="person_off" Title="No such fighter" Text="Nobody has argued under that tag." />
+        }
+        else
+        {
+            <div class="head po-card">
+                <div class="who">
+                    <span class="tag po-display">@_profile.Fighter.Tag</span>
+                    <RadzenTextBox @bind-Value="_name" Placeholder="Give them a name" MaxLength="40" aria-label="Display name" class="name" />
+                    <RadzenButton Text="Save name" Icon="save" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Flat" Size="ButtonSize.Small"
+                                  Disabled="@(!CanRename)" Click="RenameAsync" />
+                </div>
+                <RadzenButton Icon="delete" Text="Forget them" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
+                              Click="ForgetAsync" />
+            </div>
+
+            <div class="record po-card">
+                <div class="tally">
+                    <span class="big po-display">@_profile.Stats.Wins<span class="of">of @_profile.Stats.Fights</span></span>
+                    <span class="po-muted">won, @_profile.Stats.Losses lost@(_profile.Stats.Draws > 0 ? $", {_profile.Stats.Draws} drawn" : string.Empty)</span>
+                </div>
+                <div class="form">
+                    <span class="po-eyebrow">Form</span>
+                    <FormSparkline Scores="@_profile.Stats.Form" />
+                </div>
+                <dl class="facts">
+                    <div><dt>Average score</dt><dd>@_profile.Stats.AverageScore.ToString("0.#", CultureInfo.CurrentCulture)</dd></div>
+                    <div><dt>Best night</dt><dd>@_profile.Stats.BestScore</dd></div>
+                    <div><dt>Run</dt><dd>@Run</dd></div>
+                    @if (_profile.Stats.TopRival is { } rival)
+                    {
+                        <div>
+                            <dt>Argues most with</dt>
+                            <dd>@rival.Opponent <span class="po-muted">(@rival.Wins–@rival.Losses over @rival.Fights)</span></dd>
+                        </div>
+                    }
+                </dl>
+                @if (_profile.Stats.Badges.Count > 0)
+                {
+                    <div class="badges">
+                        @foreach (var badge in _profile.Stats.Badges)
+                        {
+                            <span class="po-chip po-chip--accent">@badge</span>
+                        }
+                    </div>
+                }
+            </div>
+
+            <StyleProfilePanel Style="@_profile.Style" />
+
+            <h2 class="po-display section">What they argued</h2>
+            @if (_results.Count == 0)
+            {
+                <EmptyState Icon="history" Title="Nothing on the record" Text="Their debates will appear here once one has been read." />
+            }
+            else
+            {
+                <RadzenDataGrid Data="@_results" TItem="FighterResultDto" AllowSorting="true" AllowPaging="true" PageSize="10" class="results">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="When" Width="10rem" Property="@nameof(FighterResultDto.At)">
+                            <Template Context="row">@row.At.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)</Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Kind" Width="7rem" Sortable="false">
+                            <Template Context="row"><ModeBadge Mode="@row.Mode" /></Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Against" Width="8rem" Property="@nameof(FighterResultDto.Opponent)" />
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="About" Property="@nameof(FighterResultDto.Topic)" />
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Result" Width="8rem" Sortable="false">
+                            <Template Context="row">@(row.Draw ? "Draw" : row.Won ? "Won" : "Lost") <span class="po-muted">@row.Score</span></Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            }
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private FighterProfileDto? _profile;
+    private IReadOnlyList<FighterResultDto> _results = [];
+    private string? _name;
+    private bool _loading = true;
+
+    [Parameter] public string Tag { get; set; } = string.Empty;
+
+    private string Title => _profile is null
+        ? Initials.Normalize(Tag)
+        : string.Equals(_profile.Fighter.DisplayName, _profile.Fighter.Tag, StringComparison.Ordinal)
+            ? _profile.Fighter.Tag
+            : _profile.Fighter.DisplayName;
+
+    private string Lead => _profile is null
+        ? "Nobody has argued under that tag."
+        : $"Everything {Title} has argued, counted from the debates themselves.";
+
+    /// <summary>Only a change worth saving enables the button; a blank name is a way of clearing one.</summary>
+    private bool CanRename => _profile is not null && !string.Equals(_name ?? string.Empty, _profile.Fighter.DisplayName, StringComparison.Ordinal);
+
+    private string Run => _profile!.Stats.Streak switch
+    {
+        0 => "—",
+        > 0 => $"won {_profile.Stats.Streak} in a row",
+        _ => $"lost {-_profile.Stats.Streak} in a row",
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        if (!Initials.IsValid(Tag))
+        {
+            _profile = null;
+            _loading = false;
+            return;
+        }
+
+        try
+        {
+            _profile = await Api.GetFighterProfileAsync(FighterId.From(Initials.Normalize(Tag)));
+            _results = _profile is null ? [] : [.. _profile.Results.OrderByDescending(r => r.At)];
+            _name = _profile?.Fighter.DisplayName;
+        }
+        catch (HttpRequestException)
+        {
+            _profile = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RenameAsync()
+    {
+        if (_profile is null)
+        {
+            return;
+        }
+
+        try
+        {
+            // The tag never moves: it is what every result on this page is keyed on.
+            var renamed = await Api.RenameFighterAsync(FighterId.From(_profile.Fighter.Tag), _name);
+            _profile = _profile with { Fighter = renamed };
+            _name = renamed.DisplayName;
+            Notifications.Notify(NotificationSeverity.Success, "Saved", $"{renamed.Tag} is now {renamed.DisplayName}.");
+        }
+        catch (ApiException ex)
+        {
+            Notifications.Notify(NotificationSeverity.Error, "Not saved", ex.Summary);
+        }
+    }
+
+    private async Task ForgetAsync()
+    {
+        if (_profile is null)
+        {
+            return;
+        }
+
+        var confirmed = await Dialogs.Confirm(
+            $"This clears the record of {_profile.Fighter.Tag} and everything read about how they argue. The debates themselves stay: somebody else argued in them too.",
+            "Forget this fighter?",
+            new ConfirmOptions { OkButtonText = "Forget them", CancelButtonText = "Keep them" });
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            await Api.DeleteFighterAsync(FighterId.From(_profile.Fighter.Tag));
+            Nav.NavigateTo("fighters");
+        }
+        catch (ApiException ex)
+        {
+            Notifications.Notify(NotificationSeverity.Error, "Not forgotten", ex.Summary);
+        }
+    }
+}

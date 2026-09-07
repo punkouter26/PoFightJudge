@@ -58,3 +58,26 @@ h2 {
     margin-bottom: var(--po-space-5);
   }
 }
+
+.replay-list, .fighter-list { display: grid; gap: var(--po-space-2); margin: 0; padding: 0; list-style: none; }
+
+::deep .replay {
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-3);
+  width: 100%;
+  padding: var(--po-space-2) var(--po-space-3);
+  border: 1px solid var(--po-border);
+  border-radius: var(--po-radius-md);
+  background: var(--po-surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+::deep .replay:hover { border-color: var(--po-accent); }
+
+::deep .replay .topic { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.fighter-list .tag { margin-inline-end: var(--po-space-2); letter-spacing: 0.06em; }

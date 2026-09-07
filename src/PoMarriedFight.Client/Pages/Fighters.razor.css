@@ -1,0 +1,5 @@
+::deep .roster { width: 100%; }
+
+::deep .roster .openable { cursor: pointer; }
+
+.tag { letter-spacing: 0.06em; }

@@ -65,7 +65,7 @@
 - [x] T45 Stats + style builders
 - [x] T46 Records endpoints
 - [x] T47 Records UI
-- [ ] T48 Fighters UI + host digest  ← CP7
+- [x] T48 Fighters UI + host digest  ← CP7
 
 ## Phase H — PWA, infra, docs, verification
 - [ ] T49 PWA
