@@ -26,20 +26,9 @@
                     <HostIndicator Persona="@(_snapshot?.Persona ?? HostPersonaId.Referee)" Speaking="@_hostSpeaking" />
                 </section>
 
-                <section class="floor" aria-label="Who has the floor">
-                    <div class="side p1 @(HasFloor(Speaker.Player1) ? "side--speaking" : null)">
-                        <span class="tag po-display">@Player1</span>
-                        <span class="po-muted">@(HasFloor(Speaker.Player1) ? "has the floor" : "waiting")</span>
-                    </div>
-                    <div class="mic" aria-label="Microphone level">
-                        <span class="dot @(_listening ? "dot--on" : null)" aria-hidden="true"></span>
-                        <span class="po-muted">@(_listening ? "Listening" : "Microphone off")</span>
-                    </div>
-                    <div class="side p2 @(HasFloor(Speaker.Player2) ? "side--speaking" : null)">
-                        <span class="tag po-display">@Player2</span>
-                        <span class="po-muted">@(HasFloor(Speaker.Player2) ? "has the floor" : "waiting")</span>
-                    </div>
-                </section>
+                <ScoreboardBanner Player1="@Player1" Player2="@Player2"
+                                  Player1Record="@_oneRecord" Player2Record="@_twoRecord"
+                                  Speaking="@_snapshot?.Speaking" Listening="@_listening" />
 
                 @if (_problem is not null)
                 {

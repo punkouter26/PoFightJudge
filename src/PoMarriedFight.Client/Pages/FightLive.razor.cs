@@ -18,6 +18,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 {
     private readonly CaptionLog _captions = new();
     private LiveConnection? _connection;
+    private FighterDto? _oneRecord;
+    private FighterDto? _twoRecord;
     private DebateSnapshotDto? _snapshot;
     private bool _listening;
     private bool _hostSpeaking;
@@ -31,6 +33,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     [Inject] private ILiveAudio Audio { get; set; } = default!;
 
     [Inject] private LiveConnectionFactory Connections { get; set; } = default!;
+
+    [Inject] private IApiClient Api { get; set; } = default!;
 
     [Inject] private NavigationManager Nav { get; set; } = default!;
 
@@ -47,8 +51,6 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     private string Lead => _listening
         ? "The host moderates the turns. Speak when it hands you the floor."
         : "Connecting you to the host.";
-
-    private bool HasFloor(Speaker speaker) => _snapshot?.Speaking == speaker;
 
     protected override async Task OnInitializedAsync()
     {
@@ -105,11 +107,31 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         return Task.CompletedTask;
     });
 
-    public void OnSnapshot(DebateSnapshotDto snapshot) => Dispatch(() =>
+    public void OnSnapshot(DebateSnapshotDto snapshot) => Dispatch(async () =>
     {
+        var first = _snapshot is null;
         _snapshot = snapshot;
-        return Task.CompletedTask;
+
+        // The tags are only known once the first snapshot lands, so their records are read then and not before.
+        if (first)
+        {
+            await LoadRecordsAsync(snapshot);
+        }
     });
+
+    /// <summary>What each of them has done before. Missing records are simply absent; the fight does not need them.</summary>
+    private async Task LoadRecordsAsync(DebateSnapshotDto snapshot)
+    {
+        if (FighterId.TryParse(snapshot.Player1Name, null, out var one))
+        {
+            _oneRecord = await Api.GetFighterAsync(one);
+        }
+
+        if (FighterId.TryParse(snapshot.Player2Name, null, out var two))
+        {
+            _twoRecord = await Api.GetFighterAsync(two);
+        }
+    }
 
     public void OnEnded(string matchId) => Dispatch(async () =>
     {

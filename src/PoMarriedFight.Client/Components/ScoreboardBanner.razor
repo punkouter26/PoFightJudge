@@ -1,0 +1,42 @@
+@* Who is arguing, what each of them has done before, and who has the floor right now. *@
+<section class="scoreboard" aria-label="Who is arguing">
+    <div class="side p1 @(Speaking == Speaker.Player1 ? "side--speaking" : null)" data-tag="@Player1">
+        <span class="tag po-display">@Player1</span>
+        <span class="record po-muted">@Record(Player1Record)</span>
+        <span class="floor po-muted">@(Speaking == Speaker.Player1 ? "has the floor" : "waiting")</span>
+    </div>
+
+    <div class="middle">
+        <MicMeter Listening="@Listening" />
+    </div>
+
+    <div class="side p2 @(Speaking == Speaker.Player2 ? "side--speaking" : null)" data-tag="@Player2">
+        <span class="tag po-display">@Player2</span>
+        <span class="record po-muted">@Record(Player2Record)</span>
+        <span class="floor po-muted">@(Speaking == Speaker.Player2 ? "has the floor" : "waiting")</span>
+    </div>
+</section>
+
+@code {
+    [Parameter] public string Player1 { get; set; } = "Fighter one";
+
+    [Parameter] public string Player2 { get; set; } = "Fighter two";
+
+    /// <summary>What is known about each of them, when the roster has been read.</summary>
+    [Parameter] public FighterDto? Player1Record { get; set; }
+
+    [Parameter] public FighterDto? Player2Record { get; set; }
+
+    [Parameter] public Speaker? Speaking { get; set; }
+
+    [Parameter] public bool Listening { get; set; }
+
+    /// <summary>
+    /// What is worth saying about this tag. A fighter created for this fight has never argued before; one who has
+    /// gets their name, unless their name is just the tag again — printing that twice says nothing.
+    /// </summary>
+    private static string Record(FighterDto? fighter) =>
+        fighter is null || fighter.CreatedAt == fighter.LastSeenAt ? "First fight"
+        : string.Equals(fighter.DisplayName, fighter.Tag, StringComparison.Ordinal) ? "Argued here before"
+        : fighter.DisplayName;
+}

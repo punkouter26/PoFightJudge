@@ -72,7 +72,17 @@ public class DebateSessionTests
 
         session.Player1Name.Should().Be("AB", "the tags were entered before the show and key the fighter tables");
         session.Player2Name.Should().Be("CD");
-        session.Topic.Should().Be("the dishwasher", "the topic is the one thing the host is allowed to settle out loud");
+        session.Topic.Should().Be("the thermostat", "they agreed the topic before the microphone went on; a restatement is not a rewrite");
+    }
+
+    [Fact]
+    public void With_nothing_agreed_up_front_the_host_settles_the_topic_out_loud()
+    {
+        var session = NewSession();
+
+        session.SetPlayers("who does the dishes", "Alex", "Sam", At(5));
+
+        session.Topic.Should().Be("who does the dishes");
     }
 
     [Fact]

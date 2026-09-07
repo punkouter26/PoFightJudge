@@ -38,7 +38,7 @@ public sealed class FakeLiveClient(TimeProvider clock) : IGeminiLiveClient
     /// <summary>The show, in order. Each step is a line the host says and, where the rules need one, a tool call.</summary>
     private static IReadOnlyList<(string Says, string? Tool, object? Args)> Script { get; } =
     [
-        ("(rehearsal host) Welcome, both of you. Let us hear it.", ToolDeclarations.SetPlayers, new { topic = "a rehearsal argument", player1 = "", player2 = "" }),
+        ("(rehearsal host) Welcome, both of you. Let us hear it.", ToolDeclarations.SetPlayers, new { topic = "", player1 = "", player2 = "" }),
         ("(rehearsal host) You first. Thirty seconds.", ToolDeclarations.StartTurn, new { player = "player1" }),
         ("(rehearsal host) Right, your turn.", ToolDeclarations.StartTurn, new { player = "player2" }),
         ("(rehearsal host) That is enough arguing. Questions.", ToolDeclarations.EndDebate, null),

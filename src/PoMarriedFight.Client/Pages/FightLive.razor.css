@@ -10,55 +10,6 @@
   align-items: center;
 }
 
-.floor {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--po-space-3);
-  align-items: center;
-}
-
-.side {
-  display: grid;
-  gap: var(--po-space-1);
-  justify-items: center;
-  padding: var(--po-space-4);
-  border-radius: var(--po-radius-2);
-  background: var(--po-surface-2);
-  border-top: 3px solid transparent;
-  transition: transform var(--po-dur-slow) ease, filter var(--po-dur-slow) ease;
-}
-
-.side.p1 { border-top-color: var(--po-p1); }
-
-.side.p2 { border-top-color: var(--po-p2); }
-
-.tag { font-size: var(--po-text-2xl); letter-spacing: 0.06em; }
-
-.side--speaking { transform: scale(1.03); }
-
-.floor:has(.side--speaking) .side:not(.side--speaking) { filter: saturate(0.5) brightness(0.85); }
-
-.mic {
-  display: flex;
-  gap: var(--po-space-2);
-  align-items: center;
-  justify-content: center;
-  font-size: var(--po-text-sm);
-}
-
-.dot {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 50%;
-  background: var(--po-muted);
-}
-
-/* Grows with what the microphone is actually hearing, straight from the audio graph. */
-.dot--on {
-  background: var(--po-danger);
-  box-shadow: 0 0 0 calc(var(--po-mic-level, 0) * 8px) color-mix(in oklab, var(--po-danger) 40%, transparent);
-}
-
 ::deep .problem { margin: 0; }
 
 .failure {
@@ -71,10 +22,5 @@
 
 @media (min-width: 64rem) {
   .bar { grid-template-columns: 2fr 1fr auto; }
-  .floor { grid-template-columns: 1fr auto 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .side { transition: none; }
-  .side--speaking { transform: none; }
-}

@@ -131,8 +131,15 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
             return Outcome.Fail($"Cannot set players during {Phase}.");
         }
 
-        // The tags were entered before the show and key the fighter tables, so the host never gets to rename anyone.
-        Topic = Clean(topic, MaxShortText, Topic.Length > 0 ? Topic : "an open topic");
+        // The tags were entered before the show and key the fighter tables, so the host never gets to rename anyone,
+        // and a topic they agreed before the microphone went on is theirs rather than the host's to rewrite. The host
+        // is told to restate an agreed topic, and a restatement that came back slightly different would otherwise
+        // replace what they actually typed.
+        if (setup?.HasTopic != true)
+        {
+            Topic = Clean(topic, MaxShortText, Topic.Length > 0 ? Topic : "an open topic");
+        }
+
         if (setup?.HasPlayers != true)
         {
             Player1Name = Clean(player1, MaxShortText, "Player 1");

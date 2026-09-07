@@ -80,7 +80,8 @@ window.PoLive = (function () {
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
 
-      await ctx.audioWorklet.addModule("js/pcm-worklet.js");
+      // Absolute: the fight page lives at /fight/{id}, where a relative path would resolve to /fight/js/...
+      await ctx.audioWorklet.addModule("/js/pcm-worklet.js");
       source = ctx.createMediaStreamSource(stream);
       worklet = new AudioWorkletNode(ctx, "pcm-capture", { numberOfInputs: 1, numberOfOutputs: 0 });
       worklet.port.onmessage = function (e) {
