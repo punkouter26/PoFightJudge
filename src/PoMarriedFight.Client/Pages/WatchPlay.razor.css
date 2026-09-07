@@ -149,3 +149,43 @@
   .corner.speaking { transform: none; }
   .stage.fx-slap { animation: none; outline: 3px solid var(--po-danger); }
 }
+
+.ways {
+  display: flex;
+  gap: var(--po-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rec {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--po-space-2);
+  font-family: var(--po-font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: var(--po-text-sm);
+  color: var(--po-danger);
+}
+
+.rec::before {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: po-pulse 1.1s ease-in-out infinite;
+}
+
+.rec--wait {
+  color: var(--po-muted);
+}
+
+@keyframes po-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec::before { animation: none; }
+}

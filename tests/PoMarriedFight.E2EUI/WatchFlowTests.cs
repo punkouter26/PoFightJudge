@@ -54,11 +54,24 @@ public class WatchFlowTests(AppFixture app)
         await turn.WaitForAsync(new() { Timeout = 90_000 });
         (await page.Locator("article.line").CountAsync()).Should().Be(1, "the argument stops at the person's turn rather than speaking for them");
 
-        await turn.Locator("textarea[name=line]").FillAsync("You are the one who left the freezer open, not me.");
+        // Spoken, not typed: the fake device plays the fixture, the clip goes to the transcriber, and what comes
+        // back lands in the box for the person to check before it counts.
+        await turn.GetByRole(AriaRole.Button, new() { Name = "Speak it" }).ClickAsync();
+        await turn.Locator(".rec").WaitForAsync(new() { Timeout = 10_000 });
+        await page.WaitForTimeoutAsync(1_500);
+        await turn.GetByRole(AriaRole.Button, new() { Name = "Stop and listen back" }).ClickAsync();
+
+        var line = turn.Locator("textarea[name=line]");
+        await page.WaitForFunctionAsync(
+            "() => (document.querySelector('textarea[name=line]')?.value ?? '').length > 0",
+            null,
+            new() { Timeout = 60_000 });
+        (await line.InputValueAsync()).Should().Contain("fake transcript", "the offline transcriber says so out loud");
+
         await turn.GetByRole(AriaRole.Button, new() { Name = "Say it" }).ClickAsync();
 
         await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 3", null, new() { Timeout = 60_000 });
-        (await page.Locator("article.line").Nth(1).InnerTextAsync()).Should().Contain("freezer open");
+        (await page.Locator("article.line").Nth(1).InnerTextAsync()).Should().Contain("fake transcript", "what they said is what went on the record");
 
         errors.Should().BeEmpty();
     }

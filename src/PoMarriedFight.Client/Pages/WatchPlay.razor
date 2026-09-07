@@ -73,9 +73,44 @@
                                                 Placeholder="That is not what I said and you know it." aria-label="What you say back" />
                             </ChildContent>
                         </RadzenFormField>
+                        <div class="ways">
+                            @if (CanRecord)
+                            {
+                                <RadzenButton Text="@(_recording ? "Stop and listen back" : "Speak it")"
+                                              Icon="@(_recording ? "stop_circle" : "mic")"
+                                              ButtonStyle="@(_recording ? ButtonStyle.Danger : ButtonStyle.Secondary)"
+                                              Variant="Variant.Filled" Disabled="@_transcribing" Click="@ToggleRecordingAsync" />
+                            }
+                            @if (CanDictate)
+                            {
+                                @* The browser's own recogniser. It has no disabled state, so it leaves the row while the server is listening back. *@
+                                <RadzenSpeechToTextButton Change="@OnDictated" Title="Dictate in the browser" StopTitle="Stop dictating"
+                                                          ButtonStyle="ButtonStyle.Base" Visible="@(!_recording && !_transcribing)" />
+                            }
+                            @if (_recording)
+                            {
+                                <span class="rec" role="status">Recording</span>
+                            }
+                            else if (_transcribing)
+                            {
+                                <span class="rec rec--wait" role="status">Listening back</span>
+                            }
+                        </div>
+
+                        @if (_micProblem is not null)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@_micProblem</RadzenAlert>
+                        }
+                        else if (_heardNothing)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                                Nothing was made out in that. Say it again, or type it.
+                            </RadzenAlert>
+                        }
+
                         <div class="go">
                             <RadzenButton Text="Say it" Icon="record_voice_over" ButtonStyle="ButtonStyle.Primary"
-                                          Size="ButtonSize.Large" Disabled="@(_line.Trim().Length == 0)" Click="@SayAsync" />
+                                          Size="ButtonSize.Large" Disabled="@(_line.Trim().Length == 0 || _recording || _transcribing)" Click="@SayAsync" />
                         </div>
                     </section>
                 }

@@ -23,6 +23,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
     private readonly CancellationTokenSource _leaving = new();
 
     private IReadOnlyList<ProfileDto> _cast = [];
+    private FeatureFlagsDto? _flags;
     private CancellationTokenSource? _beat;
     private Stage _stage = Stage.Arguing;
     private string? _speaking;
@@ -48,6 +49,8 @@ public sealed partial class WatchPlay : IAsyncDisposable
     [Inject] private AudioInterop Audio { get; set; } = default!;
 
     [Inject] private FxInterop Fx { get; set; } = default!;
+
+    [Inject] private MicInterop Mic { get; set; } = default!;
 
     [Inject] private TimeProvider Clock { get; set; } = default!;
 
@@ -81,11 +84,15 @@ public sealed partial class WatchPlay : IAsyncDisposable
         await RunAsync();
     }
 
-    /// <summary>Portraits for the personas on the stage. A failure here costs a face, not the match.</summary>
+    /// <summary>
+    /// Portraits for the personas on the stage, and which ways of speaking a turn are open. A failure here costs a
+    /// face and the microphone button, not the match: the line can always be typed.
+    /// </summary>
     private async Task LoadCastAsync()
     {
         try
         {
+            _flags = await Api.GetFeaturesAsync(_leaving.Token);
             _cast = await Api.GetProfilesAsync(_leaving.Token) ?? [];
         }
         catch (ApiException)
@@ -340,6 +347,9 @@ public sealed partial class WatchPlay : IAsyncDisposable
     {
         await _leaving.CancelAsync();
         DropPrefetch();
+
+        // The microphone goes first: a recording light left on after the page is gone is not something to explain.
+        await Mic.CancelAsync(CancellationToken.None);
 
         // The beat owns its own lifetime through a using in BeatAsync; disposing it again here is free and is what
         // proves the field cannot outlive the page.

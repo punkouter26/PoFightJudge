@@ -38,7 +38,7 @@
 - [x] T25 WATCH endpoints
 - [x] T26 WATCH setup UI
 - [x] T27 WATCH play UI
-- [ ] T28 SELF turn
+- [x] T28 The spoken human turn  (Radzen's RadzenSpeechToTextButton replaced the planned speech.js + SpeechRecognitionInterop)
 - [ ] T29 WATCH end-to-end hardening  ← CP4
 
 ## Phase E — FIGHT live

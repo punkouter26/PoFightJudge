@@ -35,6 +35,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         Services.AddSingleton<TimeProvider>(_clock);
         Services.AddScoped<AudioInterop>();
         Services.AddScoped<FxInterop>();
+        Services.AddScoped<MicInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
 
         _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
