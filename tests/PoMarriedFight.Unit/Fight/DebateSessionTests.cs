@@ -1,0 +1,276 @@
+using PoMarriedFight.Api.Features.Fight;
+using PoMarriedFight.Shared.Identifiers;
+using PoMarriedFight.Shared.Models;
+
+namespace PoMarriedFight.Unit.Fight;
+
+/// <summary>
+/// The debate's rules, with no clock and no I/O of its own: every timing decision is a function of the timestamps
+/// it is handed, so the whole show is reproducible from a list of moments.
+/// </summary>
+public class DebateSessionTests
+{
+    private static readonly DateTimeOffset Start = new(2026, 9, 6, 19, 0, 0, TimeSpan.Zero);
+    private static readonly MatchId Match = MatchId.New();
+
+    private static readonly DebateOptions Options = new()
+    {
+        MaxDebateSeconds = 180,
+        LongTalkerSeconds = 45,
+        SilenceSeconds = 10,
+        ProbeWindowStartSeconds = 60,
+        MaxProbeSeconds = 120,
+    };
+
+    private static readonly ShowSetup Pair = new(HostPersonaId.Referee, "AB", "CD", "the thermostat");
+
+    private static DateTimeOffset At(double seconds) => Start.AddSeconds(seconds);
+
+    private static DebateSession NewSession(ShowSetup? setup = null) => new(Options, Match, Start, setup);
+
+    /// <summary>Drives a session to the point where both players are debating.</summary>
+    private static DebateSession Debating()
+    {
+        var session = NewSession(Pair);
+        session.SetPlayers("the thermostat", "AB", "CD", At(5));
+        session.StartTurn(PlayerId.Player1, At(10));
+        return session;
+    }
+
+    [Fact]
+    public void A_show_walks_from_the_introduction_through_to_the_ruling()
+    {
+        var session = NewSession(Pair);
+        session.Phase.Should().Be(SessionPhase.Intro);
+
+        session.SetPlayers("the thermostat", "AB", "CD", At(5)).IsSuccess.Should().BeTrue();
+        session.Phase.Should().Be(SessionPhase.Setup);
+
+        session.StartTurn(PlayerId.Player1, At(10)).IsSuccess.Should().BeTrue();
+        session.Phase.Should().Be(SessionPhase.Debate);
+        session.CurrentSpeaker.Should().Be(PlayerId.Player1);
+
+        session.EndDebate(At(70)).IsSuccess.Should().BeTrue();
+        session.Phase.Should().Be(SessionPhase.Probe);
+        session.CurrentSpeaker.Should().BeNull("nobody holds the floor between the debate and the questions");
+
+        session.AskProbe(PlayerId.Player2, "Where did that number come from?", At(75)).IsSuccess.Should().BeTrue();
+        session.DeliverVerdict(new VerdictCall(PlayerId.Player1, PlayerId.Player2, PlayerId.Player1, ["clearer", "evidence", "stayed on topic"]), At(120))
+            .IsSuccess.Should().BeTrue();
+        session.Phase.Should().Be(SessionPhase.Verdict);
+
+        session.Complete(At(140));
+        session.Phase.Should().Be(SessionPhase.Done);
+    }
+
+    [Fact]
+    public void The_host_may_not_rename_the_people_whose_records_this_goes_on()
+    {
+        var session = NewSession(Pair);
+
+        session.SetPlayers("the dishwasher", "Steve", "Karen", At(5));
+
+        session.Player1Name.Should().Be("AB", "the tags were entered before the show and key the fighter tables");
+        session.Player2Name.Should().Be("CD");
+        session.Topic.Should().Be("the dishwasher", "the topic is the one thing the host is allowed to settle out loud");
+    }
+
+    [Fact]
+    public void Without_tags_up_front_the_host_supplies_the_names_it_was_given()
+    {
+        var session = NewSession();
+
+        session.SetPlayers("who does the dishes", "Alex", "Sam", At(5));
+
+        session.Player1Name.Should().Be("Alex");
+        session.Player2Name.Should().Be("Sam");
+    }
+
+    [Fact]
+    public void Steps_taken_out_of_order_are_refused_by_name_rather_than_half_applied()
+    {
+        var session = NewSession(Pair);
+
+        session.EndDebate(At(5)).Error.Should().Contain("Intro");
+
+        session.SetPlayers("t", "AB", "CD", At(5));
+        session.StartTurn(PlayerId.Player1, At(10));
+        session.EndDebate(At(60));
+        session.StartTurn(PlayerId.Player2, At(65)).Error.Should().Contain("Probe");
+        session.Phase.Should().Be(SessionPhase.Probe, "a refused step changes nothing");
+    }
+
+    [Fact]
+    public void Probing_before_the_debate_was_closed_closes_it_rather_than_failing()
+    {
+        var session = Debating();
+
+        var probe = session.AskProbe(PlayerId.Player1, "Where is the evidence?", At(60));
+
+        probe.IsSuccess.Should().BeTrue("a host that skips a step must not be left stuck in the wrong phase");
+        session.Phase.Should().Be(SessionPhase.Probe);
+    }
+
+    [Fact]
+    public void A_second_verdict_is_refused_so_a_ruling_cannot_be_overwritten()
+    {
+        var session = Debating();
+        var first = new VerdictCall(PlayerId.Player1, PlayerId.Player1, PlayerId.Player1, ["a", "b", "c"]);
+        session.DeliverVerdict(first, At(100));
+        session.Complete(At(110));
+
+        var second = session.DeliverVerdict(new VerdictCall(PlayerId.Player2, PlayerId.Player2, PlayerId.Player2, ["x"]), At(120));
+
+        second.IsSuccess.Should().BeFalse();
+        session.Verdict.Should().Be(first);
+    }
+
+    [Fact]
+    public void Someone_who_holds_the_floor_too_long_is_handed_over_once()
+    {
+        var session = Debating();
+
+        // Somebody holding the floor is by definition still talking, so their audio keeps resetting the silence clock.
+        session.NoteSpeech(At(50));
+        session.Tick(At(50)).Should().BeEmpty("the long-talker clock runs from the start of their turn");
+
+        session.NoteSpeech(At(56));
+        var nudges = session.Tick(At(56));
+
+        nudges.Should().ContainSingle().Which.Kind.Should().Be(NudgeKind.LongTalker);
+        nudges[0].Message.Should().StartWith("SYSTEM:").And.Contain("AB").And.Contain("CD", "the host is told who to hand over to");
+
+        session.NoteSpeech(At(70));
+        session.Tick(At(70)).Should().NotContain(n => n.Kind == NudgeKind.LongTalker, "one nudge per turn, not one per tick");
+
+        session.StartTurn(PlayerId.Player2, At(75));
+        session.NoteSpeech(At(130));
+        session.Tick(At(130)).Should().Contain(n => n.Kind == NudgeKind.LongTalker, "the clock restarts with the new turn");
+    }
+
+    [Fact]
+    public void Silence_is_prompted_once_and_then_pushed_past()
+    {
+        var session = Debating();
+
+        session.Tick(At(15)).Should().BeEmpty();
+        session.Tick(At(21)).Should().ContainSingle().Which.Kind.Should().Be(NudgeKind.Silence);
+        session.Tick(At(25)).Should().BeEmpty("the first prompt stands until the silence deepens");
+        session.Tick(At(31)).Should().ContainSingle().Which.Kind.Should().Be(NudgeKind.SilenceAdvance);
+
+        session.NoteSpeech(At(40));
+        session.Tick(At(51)).Should().Contain(n => n.Kind == NudgeKind.Silence, "somebody spoke, so the clock starts again");
+    }
+
+    [Fact]
+    public void The_producer_opens_the_probe_window_and_then_calls_time()
+    {
+        var session = Debating();
+
+        session.Tick(At(75)).Should().Contain(n => n.Kind == NudgeKind.ProbeWindowOpen);
+        session.Tick(At(80)).Should().NotContain(n => n.Kind == NudgeKind.ProbeWindowOpen, "the window opens once");
+
+        var capped = session.Tick(At(200));
+        capped.Should().Contain(n => n.Kind == NudgeKind.DebateCap);
+        capped.Single(n => n.Kind == NudgeKind.DebateCap).Message.Should().Contain("end_debate");
+    }
+
+    [Fact]
+    public void Questioning_that_runs_long_is_told_to_rule()
+    {
+        var session = Debating();
+        session.EndDebate(At(70));
+
+        session.Tick(At(150)).Should().NotContain(n => n.Kind == NudgeKind.ProbeCap);
+        session.Tick(At(200)).Should().Contain(n => n.Kind == NudgeKind.ProbeCap);
+    }
+
+    [Fact]
+    public void Once_the_ruling_is_in_the_producer_stops_talking()
+    {
+        var session = Debating();
+        session.DeliverVerdict(new VerdictCall(PlayerId.Player1, PlayerId.Player1, PlayerId.Player1, ["a", "b", "c"]), At(100));
+
+        session.Tick(At(400)).Should().BeEmpty("no nudge can help a show that has already been ruled on");
+    }
+
+    [Fact]
+    public void Turns_are_recorded_with_their_own_start_and_end_and_an_interruption_names_who_was_cut_off()
+    {
+        var session = Debating();
+        session.NoteInterrupt(At(55));
+        session.StartTurn(PlayerId.Player2, At(56));
+        session.EndDebate(At(90));
+
+        var talk = session.Turns.Where(t => t.Kind == TurnKind.Talk).ToList();
+        talk.Should().HaveCount(2);
+        talk[0].Speaker.Should().Be(Speaker.Player1);
+        talk[0].StartSeconds.Should().Be(10);
+        talk[0].EndSeconds.Should().Be(56, "a turn ends when the next one starts");
+        talk[1].EndSeconds.Should().Be(90, "the last turn ends when the debate does");
+
+        var interrupt = session.Turns.Should().ContainSingle(t => t.Kind == TurnKind.Interrupt).Subject;
+        interrupt.Speaker.Should().Be(Speaker.Player1, "the interruption belongs to whoever was cut off");
+        interrupt.Text.Should().Contain("AB");
+        session.Turns.Should().OnlyContain(t => t.MatchId == Match);
+    }
+
+    [Fact]
+    public void The_ruling_is_written_into_the_transcript_as_the_hosts_own_turn()
+    {
+        var session = Debating();
+
+        session.DeliverVerdict(new VerdictCall(PlayerId.Player2, PlayerId.Player1, PlayerId.Player2, ["clearer", "kinder", "right"]), At(120));
+
+        var verdict = session.Turns.Should().ContainSingle(t => t.Kind == TurnKind.Verdict).Subject;
+        verdict.Speaker.Should().Be(Speaker.Host);
+        verdict.Text.Should().Contain("clearer").And.Contain("right");
+    }
+
+    [Fact]
+    public void The_snapshot_is_what_the_room_sees_while_it_is_happening()
+    {
+        var session = Debating();
+
+        var snapshot = session.Snapshot(At(70));
+
+        snapshot.MatchId.Should().Be(Match);
+        snapshot.Phase.Should().Be(SessionPhase.Debate);
+        snapshot.Topic.Should().Be("the thermostat");
+        snapshot.Player1Name.Should().Be("AB");
+        snapshot.Speaking.Should().Be(Speaker.Player1);
+        snapshot.DebateElapsedSeconds.Should().Be(60, "the debate clock starts when the first turn does, not when the session does");
+        snapshot.DebateRemainingSeconds.Should().Be(120);
+        snapshot.SessionElapsedSeconds.Should().Be(70);
+        snapshot.Persona.Should().Be(HostPersonaId.Referee);
+        snapshot.Verdict.Should().BeNull();
+    }
+
+    [Fact]
+    public void Model_supplied_text_is_trimmed_and_capped_before_it_reaches_storage()
+    {
+        DebateSession.Clean("  spaced  ", 100, "fallback").Should().Be("spaced");
+        DebateSession.Clean("", 100, "fallback").Should().Be("fallback");
+        DebateSession.Clean(null, 100, "fallback").Should().Be("fallback");
+        DebateSession.Clean(new string('x', 500), 200, "fallback").Should().HaveLength(200);
+    }
+
+    [Theory]
+    [InlineData("player1", PlayerId.Player1)]
+    [InlineData("Player 2", PlayerId.Player2)]
+    [InlineData("p1", PlayerId.Player1)]
+    [InlineData("2", PlayerId.Player2)]
+    [InlineData("two", PlayerId.Player2)]
+    public void The_ways_a_model_might_name_a_player_are_all_understood(string spoken, PlayerId expected)
+    {
+        PlayerIdExtensions.TryParse(spoken, out var parsed).Should().BeTrue();
+        parsed.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("nobody")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void A_player_that_cannot_be_identified_is_rejected_rather_than_guessed(string? spoken) =>
+        PlayerIdExtensions.TryParse(spoken, out _).Should().BeFalse();
+}
