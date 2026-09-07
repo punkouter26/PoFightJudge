@@ -53,7 +53,7 @@
 - [x] T38 Live UI 2 + FIGHT E2E  ← CP5 (real-key Live smoke)
 
 ## Phase F — Analysis
-- [ ] T39 Analysis clients + schema
+- [x] T39 Analysis clients + schema  (PollBackoff lands here, since both clients poll)
 - [ ] T40 Metrics, mapping, highlights
 - [ ] T41 Pipeline + style snapshot
 - [ ] T42 Analysis endpoints, fakes, DI
