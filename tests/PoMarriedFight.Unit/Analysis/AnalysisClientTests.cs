@@ -144,8 +144,8 @@ public class AnalysisRequestTests
             Flagged: false,
             Note: string.Empty),
         [new TurnDto(MatchId.New(), 0, Speaker.Player1, TurnKind.Talk, string.Empty) { StartSeconds = 1, EndSeconds = 2 }],
-        new PlayerMetricsDto(3, 1, 90, 0.6, 0, 0, 0, 0, 4.5, 6, 1, 3, 1),
-        new PlayerMetricsDto(1, 0.5, 60, 0.4, 0, 0, 0, 0, 7, 8, 0.5, 1, 1),
+        Metrics(words: 3, talkShare: 0.6),
+        Metrics(words: 1, talkShare: 0.4),
         HostVerdict: "AL took it.");
 
     [Fact]
@@ -288,6 +288,16 @@ public class AnalysisRequestTests
 
         parse.Should().Throw<InvalidOperationException>().WithMessage("*no content*");
     }
+
+    /// <summary>Measurements with only the handful of numbers these tests actually read.</summary>
+    private static PlayerMetricsDto Metrics(int words, double talkShare) => new(
+        TalkSeconds: 2, TalkShare: talkShare, Turns: 1, AverageTurnSeconds: 2, LongestTurnSeconds: 2,
+        Words: words, WordsPerMinute: 90, Pauses: 0, MeanPauseSeconds: 0, LongestPauseSeconds: 0,
+        InterruptionsMade: 0, InterruptionsReceived: 0, OverlapSeconds: 0, HostInterrupts: 0,
+        FillersPer100: 0, Hedges: 0, Absolutes: 0, Questions: 0, TypeTokenRatio: 1, MeanWordLength: 4.5,
+        SyllablesPerWord: 1.2, MeanSentenceLength: 3, FleschReadingEase: 70, FleschKincaidGrade: 6,
+        TopWords: [], LongestWord: "listen", RepeatedPhrases: [], Profanity: 0,
+        FirstPersonRatio: 0, SecondPersonRatio: 0.3);
 
     private static PlayerAssessmentDto Assessment() => new(
         "B2", "clear enough", 2, ["a slip"], 6, 7, 6, [], 5, 6, 7, 80, [],

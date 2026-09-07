@@ -72,21 +72,41 @@ public sealed record HighlightDto(Speaker Speaker, string Label, string Quote, d
 /// <summary>What is served when a fight's analysis is asked for.</summary>
 public sealed record AnalysisResponse(AnalysisStatus Status, string? Error, AnalysisReportDto? Report);
 
-/// <summary>What was measured rather than judged: countable things about how one fighter talked.</summary>
+/// <summary>
+/// What was measured rather than judged: the countable facts about how one fighter talked. Every one of these comes
+/// from the transcript and the turn timeline, so the report can say what happened even if the judge call fails.
+/// </summary>
 public sealed record PlayerMetricsDto(
-    int Words,
-    double SpeakingSeconds,
-    double WordsPerMinute,
+    double TalkSeconds,
     double TalkShare,
-    int Fillers,
+    int Turns,
+    double AverageTurnSeconds,
+    double LongestTurnSeconds,
+    int Words,
+    double WordsPerMinute,
+    int Pauses,
+    double MeanPauseSeconds,
+    double LongestPauseSeconds,
+    int InterruptionsMade,
+    int InterruptionsReceived,
+    double OverlapSeconds,
+    int HostInterrupts,
     double FillersPer100,
-    int Interruptions,
+    int Hedges,
+    int Absolutes,
     int Questions,
-    double AverageWordLength,
+    double TypeTokenRatio,
+    double MeanWordLength,
+    double SyllablesPerWord,
+    double MeanSentenceLength,
+    double FleschReadingEase,
     double FleschKincaidGrade,
-    double LongestMonologueSeconds,
-    int UniqueWords,
-    double TypeTokenRatio);
+    IReadOnlyList<string> TopWords,
+    string LongestWord,
+    IReadOnlyList<string> RepeatedPhrases,
+    int Profanity,
+    double FirstPersonRatio,
+    double SecondPersonRatio);
 
 /// <summary>One transcribed word, once its speaker label has been resolved to an actual side of the fight.</summary>
 public sealed record MappedWord(string Text, Speaker Speaker, double Start, double End);
@@ -95,4 +115,8 @@ public sealed record MappedWord(string Text, Speaker Speaker, double Start, doub
 /// A transcript whose speaker labels have been resolved. <paramref name="Flagged"/> marks a mapping the pipeline is
 /// not confident in, so the report can say so rather than quietly attributing words to the wrong person.
 /// </summary>
-public sealed record MappedTranscript(IReadOnlyList<MappedWord> Words, bool Flagged, string Note);
+public sealed record MappedTranscript(IReadOnlyList<MappedWord> Words, bool Flagged, string Note)
+{
+    /// <summary>Only the words this side actually said. Every measurement is per fighter, so this is the first step of all of them.</summary>
+    public IEnumerable<MappedWord> For(Speaker speaker) => Words.Where(w => w.Speaker == speaker);
+}

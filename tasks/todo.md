@@ -54,7 +54,7 @@
 
 ## Phase F — Analysis
 - [x] T39 Analysis clients + schema  (PollBackoff lands here, since both clients poll)
-- [ ] T40 Metrics, mapping, highlights
+- [x] T40 Metrics, mapping, highlights
 - [ ] T41 Pipeline + style snapshot
 - [ ] T42 Analysis endpoints, fakes, DI
 - [ ] T41b Opus recordings (Concentus)
