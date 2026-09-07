@@ -1,0 +1,148 @@
+name: CI/CD — Build, Test & Deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      deploy_infra:
+        description: 'Re-apply infra/main.bicep before deploying'
+        type: boolean
+        default: false
+
+# One deploy at a time; never cancel a running deploy (a half-uploaded package is worse than a queue).
+concurrency:
+  group: deploy-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write   # OIDC federated credential for azure/login — no stored secret
+
+env:
+  AZURE_WEBAPP_NAME: app-pomarriedfight
+  AZURE_WEBAPP_URL: https://app-pomarriedfight.azurewebsites.net
+
+jobs:
+  build:
+    name: Build & Unit Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - name: Build (Release, warnings are errors)
+        run: dotnet build PoMarriedFight.slnx -c Release
+      # Only the Unit suite gates the pipeline. Integration needs Azurite, E2EUI needs Playwright and a microphone
+      # fixture, and E2EAPI is covered by the post-deploy smoke; all four run locally via SCRIPTS/setup.ps1.
+      - name: Unit tests
+        run: dotnet test tests/PoMarriedFight.Unit --no-build -c Release --verbosity minimal
+      - name: Publish API
+        run: dotnet publish src/PoMarriedFight.Api -c Release --no-build -o publish
+      - uses: actions/upload-artifact@v7
+        with:
+          name: webapp
+          path: publish
+          retention-days: 3
+
+  deploy:
+    name: Deploy to Azure
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ env.AZURE_WEBAPP_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          name: webapp
+          path: publish
+      # Federated credential subjects: repo:punkouter26/PoMarriedFight:ref:refs/heads/master and :environment:production
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # `github.event.before` exists only on push, so the git compare has to be skipped on a manual run — otherwise it
+      # errors, falls through to the else, and re-applies Bicep on every dispatch however the checkbox was left.
+      - name: Did infra change?
+        id: infra
+        run: |
+          if [ "${{ inputs.deploy_infra }}" = "true" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "${{ github.event.before }}" "${{ github.sha }}" -- infra/ 2>/dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            # An unknown base (first push on a branch, force push): re-apply. Bicep is idempotent.
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Provision infra (Bicep)
+        if: steps.infra.outputs.changed == 'true'
+        run: az deployment sub create --location eastus2 --template-file infra/main.bicep --name pomarriedfight-${{ github.run_id }} -o none
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: publish
+
+      # The deploy returns when the package is accepted, not when the site serves it.
+      - name: Smoke test the deployed site
+        run: |
+          set -euo pipefail
+          url="${{ env.AZURE_WEBAPP_URL }}"
+          code() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url$1" || echo 000; }
+          for attempt in $(seq 1 30); do
+            [ "$(code /api/health)" = "200" ] && { echo "health OK after ${attempt} attempt(s)"; break; }
+            [ "$attempt" = "30" ] && { echo "::error::/api/health never returned 200"; exit 1; }
+            sleep 10
+          done
+          expect() { got=$(code "$1"); [ "$got" = "$2" ] || { echo "::error::$1 returned $got, expected $2"; exit 1; }; }
+          expect /login 200                    # WASM shell served
+          expect /_framework/dotnet.js 200     # WASM runtime present (no blazor.boot.json in .NET 10)
+          expect /manifest.webmanifest 200     # installable
+          expect /api/matches 401              # the API is protected
+          expect /api/no-such-route 404        # no catch-all swallowing API routes
+          echo "Smoke test passed."
+
+      # Status codes cannot see a WASM app that failed to boot — the shell still answers 200. This drives the
+      # deployed site in a real browser: runtime started, sign-in rendered, console clean. See DeployedSiteTests.
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+      - name: Browser smoke test
+        env:
+          POMARRIEDFIGHT_SMOKE_URL: ${{ env.AZURE_WEBAPP_URL }}
+        run: |
+          set -euo pipefail
+          dotnet build tests/PoMarriedFight.E2EUI -c Release
+          pwsh tests/PoMarriedFight.E2EUI/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+          dotnet test tests/PoMarriedFight.E2EUI -c Release --no-build --verbosity minimal \
+            --filter FullyQualifiedName~DeployedSiteTests
