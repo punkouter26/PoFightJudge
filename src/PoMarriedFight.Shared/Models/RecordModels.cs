@@ -228,3 +228,6 @@ public sealed record ProfileRecordDto(
 
 /// <summary>One row of a leaderboard, whichever kind it is.</summary>
 public sealed record LeaderboardRowDto(string Id, string DisplayName, int Matches, int Wins, double WinRate, double AverageScore);
+
+/// <summary>What a fighter may change about themselves: the name, never the tag.</summary>
+public sealed record RenameFighterRequest(string? DisplayName);

@@ -63,7 +63,7 @@
 
 ## Phase G — Records + Fighter style
 - [x] T45 Stats + style builders
-- [ ] T46 Records endpoints
+- [x] T46 Records endpoints
 - [ ] T47 Records UI
 - [ ] T48 Fighters UI + host digest  ← CP7
 

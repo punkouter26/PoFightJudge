@@ -66,8 +66,12 @@ public static class ApiRoutes
     {
         public const string Base = $"{ApiPrefix}/fighters";
         public const string ByTagSegment = "/{tag}";
+        public const string ProfileSegment = "/{tag}/profile";
 
         public static string ByTag(FighterId tag) => $"{Base}/{Uri.EscapeDataString(tag.Value)}";
+
+        /// <summary>Their record and how they argue, together — what one person's page is built from.</summary>
+        public static string Profile(FighterId tag) => $"{ByTag(tag)}/profile";
     }
 
     public static class Seed
