@@ -1,0 +1,8 @@
+.tag-input { display: grid; gap: var(--po-space-2); }
+
+::deep .field { width: 100%; }
+
+.validation-message {
+  color: var(--po-danger);
+  font-size: var(--po-text-xs);
+}

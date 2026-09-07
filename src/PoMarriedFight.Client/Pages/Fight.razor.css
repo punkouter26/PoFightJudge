@@ -1,0 +1,42 @@
+.setup {
+  display: grid;
+  gap: var(--po-space-5);
+}
+
+.tags {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--po-space-4);
+}
+
+.preview {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--po-space-3);
+  align-items: center;
+}
+
+.versus {
+  justify-self: center;
+  font-size: var(--po-text-2xl);
+  color: var(--po-muted);
+  letter-spacing: 0.08em;
+}
+
+::deep .problem { margin: 0; }
+
+.go {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--po-text-sm);
+  text-align: right;
+}
+
+@media (min-width: 48rem) {
+  .tags { grid-template-columns: 1fr 1fr; }
+  .preview { grid-template-columns: 1fr auto 1fr; }
+}

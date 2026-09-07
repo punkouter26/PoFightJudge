@@ -1,0 +1,47 @@
+.fighter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "corner corner" "badge who";
+  gap: var(--po-space-3);
+  align-items: center;
+  padding: var(--po-space-4);
+}
+
+.corner {
+  grid-area: corner;
+  color: var(--po-muted);
+}
+
+.badge {
+  grid-area: badge;
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--po-radius-2);
+  font-size: var(--po-text-xl);
+  letter-spacing: 0.04em;
+  background: var(--po-surface-2);
+}
+
+.fighter.p1 { border-left: 3px solid var(--po-p1); }
+
+.fighter.p2 { border-left: 3px solid var(--po-p2); }
+
+.fighter.p1 .badge { color: var(--po-p1); }
+
+.fighter.p2 .badge { color: var(--po-p2); }
+
+.badge--empty { color: var(--po-muted); }
+
+.who { grid-area: who; display: grid; gap: var(--po-space-1); }
+
+.who h3 { margin: 0; }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--po-space-2);
+  align-items: center;
+  font-size: var(--po-text-sm);
+}

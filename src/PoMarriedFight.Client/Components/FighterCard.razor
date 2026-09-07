@@ -1,0 +1,42 @@
+@using System.Globalization
+@* Who is about to argue: their tag, and whether the room has met them before. *@
+<article class="fighter po-card @(IsSecond ? "p2" : "p1")" data-tag="@Tag">
+    <div class="corner po-eyebrow">@(IsSecond ? "Fighter two" : "Fighter one")</div>
+
+    @if (Tag.Length == 0)
+    {
+        <div class="badge badge--empty po-display" aria-hidden="true">?</div>
+        <div class="who">
+            <h3 class="po-muted">No tag yet</h3>
+            <p class="po-muted">Type a tag. It is what this fight goes on the record under.</p>
+        </div>
+    }
+    else
+    {
+        <div class="badge po-display" aria-hidden="true">@Tag</div>
+        <div class="who">
+            <h3>@(Fighter?.DisplayName ?? Tag)</h3>
+            <div class="meta">
+                @if (Fighter is null)
+                {
+                    <span class="po-chip">New fighter</span>
+                    <span class="po-muted">Nobody has argued under this tag before.</span>
+                }
+                else
+                {
+                    <span class="po-chip @(IsSecond ? "po-chip--p2" : "po-chip--p1")">@Fighter.Tag</span>
+                    <span class="po-muted">Last seen @Fighter.LastSeenAt.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</span>
+                }
+            </div>
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter] public string Tag { get; set; } = string.Empty;
+
+    /// <summary>What is already known about this tag, when the roster has been read and it is not new.</summary>
+    [Parameter] public FighterDto? Fighter { get; set; }
+
+    [Parameter] public bool IsSecond { get; set; }
+}

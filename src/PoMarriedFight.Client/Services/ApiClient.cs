@@ -55,6 +55,17 @@ public interface IApiClient
 
     /// <summary>Turns one recorded spoken turn into words. An empty answer means nothing intelligible was said.</summary>
     Task<TranscribeResponse> TranscribeAsync(TranscribeRequest request, CancellationToken ct = default);
+
+    /// <summary>Starts a live fight. Throws <see cref="ApiException"/> when the tags or the host are not usable.</summary>
+    Task<CreateFightResponse> StartFightAsync(CreateFightRequest request, CancellationToken ct = default);
+
+    Task EndFightAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>Everyone who has ever argued. Empty rather than an error, so a picker degrades to a plain box.</summary>
+    Task<IReadOnlyList<FighterDto>> GetFightersAsync(CancellationToken ct = default);
+
+    /// <summary>One fighter, or null when this tag is new.</summary>
+    Task<FighterDto?> GetFighterAsync(FighterId tag, CancellationToken ct = default);
 }
 
 /// <summary>A non-success answer from the API, carrying the problem details so a form can show the server's words.</summary>
@@ -234,6 +245,53 @@ public sealed class ApiClient(HttpClient http) : IApiClient
     {
         using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Watch.TranscribeUrl), request, ct);
         return await ReadAsync<TranscribeResponse>(response, ct);
+    }
+
+    public async Task<CreateFightResponse> StartFightAsync(CreateFightRequest request, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Fights.Base), request, ct);
+        return await ReadAsync<CreateFightResponse>(response, ct);
+    }
+
+    public async Task EndFightAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsync(Relative(ApiRoutes.Fights.End(id)), null, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await ApiException.FromAsync(response, ct);
+        }
+    }
+
+    /// <summary>
+    /// The roster, for suggesting a tag somebody has used before. A failure here is not worth showing: the tag can
+    /// always be typed, so an empty list simply means no suggestions.
+    /// </summary>
+    public async Task<IReadOnlyList<FighterDto>> GetFightersAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await http.GetAsync(Relative(ApiRoutes.Fighters.Base), ct);
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<IReadOnlyList<FighterDto>>(ct) ?? []
+                : [];
+        }
+        catch (HttpRequestException)
+        {
+            return [];
+        }
+    }
+
+    public async Task<FighterDto?> GetFighterAsync(FighterId tag, CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await http.GetAsync(Relative(ApiRoutes.Fighters.ByTag(tag)), ct);
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<FighterDto>(ct) : null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     private static Uri Relative(string path) => new(path, UriKind.Relative);

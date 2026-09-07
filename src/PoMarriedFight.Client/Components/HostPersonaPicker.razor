@@ -1,0 +1,32 @@
+@* Who runs the fight. A radio list rather than cards, so arrow keys work and a screen reader reads it as one choice. *@
+<div class="hosts">
+    <RadzenFormField Text="Who is hosting?" Variant="Variant.Outlined" class="field">
+        <ChildContent>
+            <RadzenRadioButtonList TValue="HostPersonaId"
+                                   Value="@Persona"
+                                   ValueChanged="@OnPicked"
+                                   Orientation="Orientation.Vertical"
+                                   Name="host"
+                                   class="host-list">
+                <Items>
+                    @foreach (var host in HostPersonaCatalogue.All)
+                    {
+                        <RadzenRadioButtonListItem TValue="HostPersonaId" Value="@host.Id" Text="@($"{host.Emoji} {host.Name} — {host.Tagline}")" />
+                    }
+                </Items>
+            </RadzenRadioButtonList>
+        </ChildContent>
+    </RadzenFormField>
+</div>
+
+@code {
+    [Parameter] public HostPersonaId Persona { get; set; } = HostPersonaId.Referee;
+
+    [Parameter] public EventCallback<HostPersonaId> PersonaChanged { get; set; }
+
+    private Task OnPicked(HostPersonaId picked)
+    {
+        Persona = picked;
+        return PersonaChanged.InvokeAsync(picked);
+    }
+}
