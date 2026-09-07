@@ -12,6 +12,7 @@
 
 .channel.p1 { background: linear-gradient(165deg, var(--po-p1-soft) 0%, var(--po-surface) 62%); }
 .channel.p2 { background: linear-gradient(165deg, var(--po-p2-soft) 0%, var(--po-surface) 62%); }
+.channel.accent { background: linear-gradient(165deg, var(--po-surface-3) 0%, var(--po-surface) 62%); }
 
 .badge {
   position: absolute;
@@ -32,6 +33,7 @@
 
 .channel.p1 .number { color: var(--po-p1); }
 .channel.p2 .number { color: var(--po-p2); }
+.channel.accent .number { color: var(--po-accent); }
 
 h2 {
   font-size: var(--po-text-4xl);
@@ -48,6 +50,7 @@ p {
 
 .channel.p1 ::deep .cta { background: var(--po-p1); }
 .channel.p2 ::deep .cta { background: var(--po-p2); }
+.channel.accent ::deep .cta { background: var(--po-accent); color: var(--po-accent-fg); }
 
 @media (max-width: 40rem) {
   .channel {

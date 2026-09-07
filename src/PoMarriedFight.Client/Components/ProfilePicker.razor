@@ -1,6 +1,6 @@
-@* Chooses one side of a watch: a persona from the cast, or the person at the microphone under their own tag. *@
+@* Chooses one side of an argument: a profile from the cast, or the person at the microphone under their own tag. *@
 <div class="picker">
-    <RadzenFormField Text="@(IsWife ? "Wife" : "Husband")" Variant="Variant.Outlined" class="choice">
+    <RadzenFormField Text="@Label" Variant="Variant.Outlined" class="choice">
         <ChildContent>
             <RadzenDropDown TValue="string"
                             Value="@SelectedKey"
@@ -59,6 +59,17 @@
     /// <summary>Initials this side may not take, because the other side already has them.</summary>
     [Parameter] public string? Excluded { get; set; }
 
+    /// <summary>
+    /// Offer the whole cast rather than the profiles written for this seat. On 1P there is only one thing to
+    /// choose — who you are arguing with — and which seat that leaves you is a consequence, not a question.
+    /// </summary>
+    [Parameter] public bool AnyRole { get; set; }
+
+    /// <summary>What the field is called. Defaults to the seat it fills.</summary>
+    [Parameter] public string? Caption { get; set; }
+
+    private string Label => Caption is { Length: > 0 } caption ? caption : IsWife ? "Wife" : "Husband";
+
     private string Tag { get; set; } = string.Empty;
 
     private string? TagError { get; set; }
@@ -71,7 +82,7 @@
 
     private IReadOnlyList<Choice> Choices =>
     [
-        .. Cast.Where(p => p.Persona.Role == (IsWife ? ProfileRole.Wife : ProfileRole.Husband))
+        .. Cast.Where(p => AnyRole || p.Persona.Role == (IsWife ? ProfileRole.Wife : ProfileRole.Husband))
             .Where(p => !string.Equals(p.Persona.Initials, Excluded, StringComparison.OrdinalIgnoreCase))
             .Select(p => new Choice(p.Persona.Initials, $"{p.Persona.Name ?? p.Persona.Initials} ({p.Persona.Initials})")),
         .. AllowHuman ? new[] { new Choice(HumanKey, "🎤 A person at the microphone") } : [],

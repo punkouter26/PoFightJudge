@@ -1,6 +1,6 @@
 @page "/watch/play"
 
-<PageTitle>@Headline · PoMarriedFight</PageTitle>
+<PageTitle>@Headline · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="Channel 1" Title="@Headline" Lead="@Lead">
     <Actions>
@@ -20,7 +20,6 @@
                     </div>
 
                     <div class="middle">
-                        <TensionMeter Rounds="@_rounds" Slapped="@_slapUsed" />
                         <InterjectionBar Used="@_slapUsed" Enabled="@(_stage == Stage.Arguing)" Throw="@ThrowAsync" />
                         @if (_isFake)
                         {

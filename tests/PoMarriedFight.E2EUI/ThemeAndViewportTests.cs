@@ -18,7 +18,7 @@ public class ThemeAndViewportTests(AppFixture app)
 
         await page.Locator("article.channel").First.WaitForAsync(new() { Timeout = 30_000 });
         page.Url.Should().Be(app.BaseUrl + "/");
-        (await page.Locator("article.channel").CountAsync()).Should().Be(2);
+        (await page.Locator("article.channel").CountAsync()).Should().Be(3, "CPU, 1P and 2P");
         (await page.Locator("header.topbar .user").InnerTextAsync()).Should().Contain("GUEST-");
         errors.Should().BeEmpty();
     }

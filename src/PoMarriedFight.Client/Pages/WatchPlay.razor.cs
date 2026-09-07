@@ -25,6 +25,13 @@ public sealed partial class WatchPlay : IAsyncDisposable
     private IReadOnlyList<ProfileDto> _cast = [];
     private FeatureFlagsDto? _flags;
     private CancellationTokenSource? _beat;
+
+    /// <summary>
+    /// When the line now being spoken finishes. The browser is asked the same question, but this is the answer the
+    /// app already has — and if the two disagree the longer one wins, because cutting a speaker off mid-sentence
+    /// is far worse than a moment of quiet after they finish.
+    /// </summary>
+    private DateTimeOffset? _lineEndsAt;
     private Stage _stage = Stage.Arguing;
     private string? _speaking;
     private string? _pendingInterjection;
@@ -195,7 +202,8 @@ public sealed partial class WatchPlay : IAsyncDisposable
             var audio = await Api.RoundAudioAsync(new RoundAudioRequest(ProfileId.From(side.Id), round.Text), ct);
             if (!audio.IsEmpty)
             {
-                await Audio.PlayAsync(audio, ct);
+                var speaking = await Audio.PlayAsync(audio, ct);
+                _lineEndsAt = speaking > TimeSpan.Zero ? Clock.GetUtcNow() + speaking : null;
             }
         }
         catch (ApiException)
@@ -215,8 +223,11 @@ public sealed partial class WatchPlay : IAsyncDisposable
         try
         {
             var pending = await Audio.PendingAsync(beat.Token);
-            var wait = pending > MinimumBeat ? pending : MinimumBeat;
+            var remaining = _lineEndsAt is { } ends ? ends - Clock.GetUtcNow() : TimeSpan.Zero;
+            var wait = Max(Max(pending, remaining), MinimumBeat);
             await Task.Delay(wait, Clock, beat.Token);
+
+            static TimeSpan Max(TimeSpan a, TimeSpan b) => a > b ? a : b;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -225,6 +236,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         finally
         {
             _beat = null;
+            _lineEndsAt = null;
         }
     }
 

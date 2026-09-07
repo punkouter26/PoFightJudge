@@ -43,7 +43,7 @@ public class DeployedSiteTests
         // Anonymous, so the router has to land on the sign-in page rather than on the two channels.
         await page.WaitForURLAsync("**/login**", new() { Timeout = 60_000 });
 
-        // .po-boot is the "Loading PoMarriedFight…" placeholder in index.html: still there means the runtime never started.
+        // .po-boot is the "Loading PoFightJudge…" placeholder in index.html: still there means the runtime never started.
         await page.Locator(".po-boot").WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 60_000 });
         await page.GetByRole(AriaRole.Button, new() { Name = "Sign in with Microsoft" }).WaitForAsync(new() { Timeout = 30_000 });
 

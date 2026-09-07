@@ -21,7 +21,7 @@ public class FightFlowTests(AppFixture app)
     [SkippableFact]
     public async Task Two_people_argue_in_front_of_the_host_and_it_rules_at_the_end()
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/fight", user: "e2e-fighter");
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/2p", user: "e2e-fighter");
         await using var _ = context;
 
         await TagBox(page, "player1Tag").WaitForAsync(new() { Timeout = 30_000 });
@@ -83,7 +83,7 @@ public class FightFlowTests(AppFixture app)
     [SkippableFact]
     public async Task A_fight_can_be_stopped_by_the_room_and_the_microphone_closes_with_it()
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/fight", user: "e2e-stopper");
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/2p", user: "e2e-stopper");
         await using var _ = context;
 
         await TagBox(page, "player1Tag").WaitForAsync(new() { Timeout = 30_000 });

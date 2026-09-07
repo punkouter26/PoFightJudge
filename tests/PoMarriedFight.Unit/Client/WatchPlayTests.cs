@@ -94,6 +94,38 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         cut.Markup.Should().Contain("Matthew", "the ruling names the winner rather than printing initials alone");
     }
 
+    /// <summary>
+    /// A speaker was cut off a few seconds into their line: the browser reported nothing still scheduled — it had
+    /// not finished decoding when it was asked — so the argument waited out the minimum beat and the next line's
+    /// audio stopped the one in progress. The page knows how long the line is, and waits that long.
+    /// </summary>
+    [Fact(Timeout = 60_000)]
+    public async Task A_line_is_spoken_to_the_end_before_the_next_one_starts()
+    {
+        // Nine seconds of speech, and a browser that says nothing is pending — the state that caused the bug.
+        JSInterop.Setup<double>(AudioInterop.Play, _ => true).SetResult(9.0);
+        JSInterop.Setup<double>(AudioInterop.Pending, _ => true).SetResult(0.0);
+        _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3")));
+        _simulation.Set(Matthew, Kimberly, "the thermostat");
+
+        var cut = Render<WatchPlay>();
+
+        // The next line is fetched while this one is still being spoken, on purpose — so what says whether somebody
+        // was cut off is when the next line is spoken, not when it was asked for.
+        await cut.WaitForAssertionAsync(() => Spoken().Should().Be(1), TimeSpan.FromSeconds(10));
+
+        await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
+        await Task.Delay(100);
+        Spoken().Should().Be(1, "five seconds into a nine-second line, nobody has finished talking");
+        cut.FindAll("article.line").Should().HaveCount(1);
+
+        await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
+        await cut.WaitForAssertionAsync(() => Spoken().Should().Be(2), TimeSpan.FromSeconds(10));
+
+        int Spoken() => JSInterop.Invocations[AudioInterop.Play].Count;
+    }
+
     [Fact(Timeout = 60_000)]
     public async Task History_grows_with_every_line_so_each_reply_answers_the_one_before()
     {
@@ -172,14 +204,4 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         cut.FindAll("section.verdict").Should().BeEmpty("a failed line is not a result");
     }
 
-    [Fact(Timeout = 60_000)]
-    public async Task The_tension_meter_reads_the_argument_as_it_stands()
-    {
-        _simulation.Set(Matthew, Kimberly, null);
-
-        var cut = Render<WatchPlay>();
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponents<TensionMeter>().Should().HaveCount(1), TimeSpan.FromSeconds(10));
-        await cut.WaitForAssertionAsync(() => cut.FindComponent<TensionMeter>().Instance.Value.Should().BeGreaterThan(0, "angry lines are not civil"));
-    }
 }

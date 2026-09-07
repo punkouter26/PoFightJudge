@@ -41,3 +41,15 @@
   .sides { grid-template-columns: 1fr 1fr; }
   .preview { grid-template-columns: 1fr auto 1fr; }
 }
+
+/* 1P: one dropdown for the opponent, and a card that states which seat that leaves you. */
+.you {
+  display: grid;
+  gap: var(--po-space-2);
+  align-content: start;
+}
+
+.you .seat {
+  font-size: var(--po-text-xl);
+  color: var(--po-accent-text);
+}

@@ -18,13 +18,12 @@ public class WatchHardeningTests(AppFixture app)
         await using var _ = context;
 
         await SeedAsync(page);
-        await page.GotoAsync($"{app.BaseUrl}/watch");
+        await page.GotoAsync($"{app.BaseUrl}/1p");
         await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
 
-        // The person takes the husband's side, which opens the argument: the very first turn is theirs.
-        await ChooseAsync(page, side: 0, "A person at the microphone");
-        await page.Locator("input[name=husbandTag]").FillAsync("AB");
-        await ChooseAsync(page, side: 1, "Kimberly");
+        // Arguing with a wife leaves the husband's seat, which opens the argument: the very first turn is theirs.
+        await ChooseAsync(page, side: 0, "Kimberly");
+        await page.Locator("input[name=yourTag]").FillAsync("AB");
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 
         var turn = page.Locator("section.your-turn");
@@ -52,7 +51,7 @@ public class WatchHardeningTests(AppFixture app)
         await using var _ = context;
 
         await SeedAsync(page);
-        await page.GotoAsync($"{app.BaseUrl}/watch");
+        await page.GotoAsync($"{app.BaseUrl}/cpu");
         await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
 
         await ChooseAsync(page, side: 0, "Matthew");
@@ -80,7 +79,7 @@ public class WatchHardeningTests(AppFixture app)
         await using var _ = context;
 
         await SeedAsync(page);
-        await page.GotoAsync($"{app.BaseUrl}/watch");
+        await page.GotoAsync($"{app.BaseUrl}/cpu");
         await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
         await ChooseAsync(page, side: 0, "Donald");
         await ChooseAsync(page, side: 1, "Hillary");

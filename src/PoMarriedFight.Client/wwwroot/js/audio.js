@@ -51,16 +51,18 @@ const PoAudio = (() => {
   }
 
   return {
-    /** Plays one utterance immediately, replacing whatever was playing. Resolves with its duration in seconds. */
+    /**
+     * Plays one utterance immediately, replacing whatever was playing. Resolves with its duration in seconds —
+     * once it is actually scheduled, which is the point: the caller waits out the line before moving on, and a
+     * promise that resolved before the decode finished had the speaker cut off a second into their sentence.
+     */
     async play(base64, format) {
       if (!base64) {
         return 0;
       }
       PoAudio.stop();
-      const ctx = ensureContext();
-      const buffer = await toBuffer(ctx, base64, format);
-      nextStartTime = ctx.currentTime;
-      return PoAudio.enqueue(base64, format) ? buffer.duration : 0;
+      nextStartTime = ensureContext().currentTime;
+      return await PoAudio.enqueue(base64, format);
     },
 
     /**

@@ -1,12 +1,13 @@
+@page "/cpu"
+@page "/1p"
 @page "/watch"
 @inject IApiClient Api
 @inject SimulationState Simulation
 @inject NavigationManager Nav
 
-<PageTitle>Watch · PoMarriedFight</PageTitle>
+<PageTitle>@Channel · PoFightJudge</PageTitle>
 
-<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Channel 1" Title="Watch"
-           Lead="Two of your personas argue it out in their own voices, and a judge calls it on the merits. Take a side yourself and it counts towards your record.">
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="@($"Channel {Channel}")" Title="@Channel" Lead="@Lead">
     <ChildContent>
         @if (_loading)
         {
@@ -28,8 +29,32 @@
         {
             <div class="setup">
                 <section class="sides">
-                    <ProfilePicker Cast="@_cast" IsWife="false" AllowHuman="@AllowHuman" Excluded="@_wife?.Id" Side="@_husband" SideChanged="@(s => _husband = s)" />
-                    <ProfilePicker Cast="@_cast" IsWife="true" AllowHuman="@AllowHuman" Excluded="@_husband?.Id" Side="@_wife" SideChanged="@(s => _wife = s)" />
+                    @if (IsOnePlayer)
+                    {
+                        @* One choice: who you are arguing with. Which seat that leaves you is a consequence of
+                           their role, not a second question. *@
+                        <ProfilePicker Cast="@_cast" AnyRole="true" AllowHuman="false" Caption="Who are you arguing with?"
+                                       Side="@_opponent" SideChanged="@OpponentChosenAsync" />
+                        <div class="you po-card po-card--quiet">
+                            <span class="po-eyebrow">You</span>
+                            <span class="seat po-display">@YourSeat</span>
+                            <RadzenFormField Text="Your tag" Variant="Variant.Outlined">
+                                <ChildContent>
+                                    @* Published on every keystroke, so Start answers the tag as it is typed. *@
+                                    <RadzenTextBox Value="@_tag" ValueChanged="@TagChangedAsync"
+                                                   @oninput="@(e => TagChangedAsync(e.Value?.ToString() ?? string.Empty))"
+                                                   Name="yourTag" MaxLength="@Initials.MaxLength" Placeholder="AB"
+                                                   aria-label="Your fighter tag" />
+                                </ChildContent>
+                                <Helper><span class="po-muted">1–3 letters or digits. The same tag you argue under, so this counts towards your record.</span></Helper>
+                            </RadzenFormField>
+                        </div>
+                    }
+                    else
+                    {
+                        <ProfilePicker Cast="@_cast" IsWife="false" AllowHuman="false" Excluded="@_wife?.Id" Side="@_husband" SideChanged="@(s => _husband = s)" />
+                        <ProfilePicker Cast="@_cast" IsWife="true" AllowHuman="false" Excluded="@_husband?.Id" Side="@_wife" SideChanged="@(s => _wife = s)" />
+                    }
                 </section>
 
                 <section class="preview" aria-label="The matchup">
@@ -72,20 +97,110 @@
     private List<ProfileDto> _cast = [];
     private MatchSide? _husband;
     private MatchSide? _wife;
+
+    /// <summary>1P only: the profile chosen as the opponent, and the tag the person argues under.</summary>
+    private MatchSide? _opponent;
+    private string _tag = string.Empty;
     private string _topic = string.Empty;
     private bool _loading = true;
     private string? _loadError;
     private FeatureFlagsDto? _flags;
+    private bool? _channel;
 
-    /// <summary>A person may only take a side when the server can actually transcribe their turn.</summary>
-    private bool AllowHuman => _flags?.HumanInWatch ?? false;
+    /// <summary>
+    /// Which channel this is. One screen serves both, because they are the same argument with the same cast and
+    /// the same judge — the only difference is whether one of the two seats is you.
+    /// </summary>
+    private bool IsOnePlayer => Nav.Uri.EndsWith("/1p", StringComparison.OrdinalIgnoreCase);
+
+    private string Channel => IsOnePlayer ? "1P" : "CPU vs CPU";
+
+    private string Lead => IsOnePlayer
+        ? "You take one seat and a profile takes the other. You speak your turns into the microphone, and it counts towards your record."
+        : "Two of your profiles argue it out in their own voices, three rounds each, and a judge calls it on the merits.";
+
+    /// <summary>Whether the server can transcribe a spoken turn at all; without it 1P has nothing to listen with.</summary>
+    private bool CanSpeak => _flags?.HumanInWatch ?? false;
+
+    /// <summary>Which seat the opponent's role leaves for the person. Reads as a statement, because it is one.</summary>
+    private string YourSeat => _opponent is null
+        ? "whichever side they are not"
+        : RoleOf(_opponent) == ProfileRole.Husband ? "the wife" : "the husband";
 
     /// <summary>Why the match cannot start yet, or null when it can. Doubles as the disabled reason on the button.</summary>
-    private string? Problem =>
+    private string? Problem => IsOnePlayer ? OnePlayerProblem : CpuProblem;
+
+    private string? OnePlayerProblem =>
+        !CanSpeak ? "Nothing here can transcribe a spoken turn, so 1P is off."
+        : _opponent is null ? "Pick who you are arguing with."
+        : Initials.Normalize(_tag).Length == 0 ? "Say who you are: 1–3 letters or digits."
+        : string.Equals(Initials.Normalize(_tag), _opponent.Id, StringComparison.OrdinalIgnoreCase) ? "That tag belongs to the profile you are arguing with."
+        : null;
+
+    private string? CpuProblem =>
         _husband is null || _wife is null ? "Pick both sides."
-        : _husband.IsHuman && _wife.IsHuman ? "Two people arguing is a fight, not a watch."
         : string.Equals(_husband.Id, _wife.Id, StringComparison.OrdinalIgnoreCase) ? "Both sides cannot be the same."
         : null;
+
+    /// <summary>The profile's role, which is what decides which seat is left for the person.</summary>
+    private ProfileRole RoleOf(MatchSide side) =>
+        _cast.FirstOrDefault(p => string.Equals(p.Persona.Initials, side.Id, StringComparison.OrdinalIgnoreCase))?.Persona.Role
+            ?? ProfileRole.Husband;
+
+    private Task OpponentChosenAsync(MatchSide? side)
+    {
+        _opponent = side;
+        return SeatAsync();
+    }
+
+    private Task TagChangedAsync(string value)
+    {
+        _tag = value ?? string.Empty;
+        return SeatAsync();
+    }
+
+    /// <summary>Puts the opponent in their own seat and the person in the other one.</summary>
+    private Task SeatAsync()
+    {
+        if (_opponent is null)
+        {
+            _husband = null;
+            _wife = null;
+            return Task.CompletedTask;
+        }
+
+        var tag = Initials.Normalize(_tag);
+        var you = tag.Length == 0 ? null : MatchSide.Human(tag);
+        if (RoleOf(_opponent) == ProfileRole.Husband)
+        {
+            _husband = _opponent;
+            _wife = you;
+        }
+        else
+        {
+            _wife = _opponent;
+            _husband = you;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The two channels are the same component under two routes, so moving between them keeps whatever was picked.
+    /// A seat taken by a person cannot carry into CPU, and a half-made choice is not worth keeping either way.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (_channel is { } previous && previous != IsOnePlayer)
+        {
+            _husband = null;
+            _wife = null;
+            _opponent = null;
+            _tag = string.Empty;
+        }
+
+        _channel = IsOnePlayer;
+    }
 
     protected override async Task OnInitializedAsync()
     {

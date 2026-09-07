@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "PoMarriedFight",
-  "short_name": "Fight",
+  "name": "PoFightJudge",
+  "short_name": "PoFightJudge",
   "description": "Two people on one microphone with a live host, or two personas arguing it out — and the ruling afterwards.",
   "start_url": "/",
   "scope": "/",

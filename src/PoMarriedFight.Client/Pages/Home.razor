@@ -2,7 +2,7 @@
 @inject TimeProvider Clock
 @inject IApiClient Api
 
-<PageTitle>PoMarriedFight</PageTitle>
+<PageTitle>PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Standard">
     <div class="hero">
@@ -14,10 +14,12 @@
     </div>
 
     <div class="channels">
-        <ChannelCard Number="1" Title="Watch" Icon="theaters" Href="watch" Cta="Pick the couple" Accent="ChannelCard.ChannelAccent.P1"
-                     Description="Pick a husband and a wife from your profiles. Their AI versions argue three rounds each in their own voices; a judge calls it." />
-        <ChannelCard Number="2" Title="Fight" Icon="mic" Href="fight" Cta="Start the fight" Accent="ChannelCard.ChannelAccent.P2"
-                     Description="You two, one microphone. The Referee moderates, interrupts, cross-examines and rules — then the full breakdown." />
+        <ChannelCard Number="CPU" Title="CPU vs CPU" Icon="theaters" Href="cpu" Cta="Pick the two" Accent="ChannelCard.ChannelAccent.P1"
+                     Description="Two of your profiles argue it out in their own voices, three rounds each, and a judge calls it on the merits. You watch." />
+        <ChannelCard Number="1P" Title="1P" Icon="record_voice_over" Href="1p" Cta="Take a side" Accent="ChannelCard.ChannelAccent.P2"
+                     Description="The same argument, except one side is you. A profile takes the other seat and you speak your turns into the microphone." />
+        <ChannelCard Number="2P" Title="2P" Icon="mic" Href="2p" Cta="Both of you" Accent="ChannelCard.ChannelAccent.Accent"
+                     Description="Two people, one microphone, no profiles: a judge hosts you, questions you both and rules on who argued better. Your initials keep your record." />
     </div>
 
     <div class="below">

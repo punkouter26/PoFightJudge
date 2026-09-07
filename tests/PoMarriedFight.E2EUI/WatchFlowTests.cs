@@ -13,7 +13,7 @@ public class WatchFlowTests(AppFixture app)
 
         await LoadTheCastAsync(page);
 
-        await page.GotoAsync($"{app.BaseUrl}/watch");
+        await page.GotoAsync($"{app.BaseUrl}/cpu");
         await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
 
         await ChooseAsync(page, side: 0, "Matthew");
@@ -28,7 +28,6 @@ public class WatchFlowTests(AppFixture app)
 
         (await verdict.InnerTextAsync()).Should().NotBeNullOrWhiteSpace();
         (await page.Locator("article.line").CountAsync()).Should().Be(6, "three rounds each, no slap");
-        (await page.Locator(".tension").CountAsync()).Should().Be(1, "the meter reads the argument throughout");
 
         errors.Should().BeEmpty();
     }
@@ -41,12 +40,12 @@ public class WatchFlowTests(AppFixture app)
 
         await LoadTheCastAsync(page);
 
-        await page.GotoAsync($"{app.BaseUrl}/watch");
+        await page.GotoAsync($"{app.BaseUrl}/1p");
         await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
 
+        // 1P asks one thing: who you are arguing with. Matthew is a husband, so the wife's seat is yours.
         await ChooseAsync(page, side: 0, "Matthew");
-        await ChooseAsync(page, side: 1, "A person at the microphone");
-        await page.Locator("input[name=wifeTag]").FillAsync("KD");
+        await page.Locator("input[name=yourTag]").FillAsync("KD");
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 

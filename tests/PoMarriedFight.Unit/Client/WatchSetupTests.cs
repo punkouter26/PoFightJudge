@@ -43,8 +43,17 @@ public class WatchSetupTests : BunitContext
         Persona = new CreateProfileRequest { Initials = initials, Role = role, Name = name, Likes = "a", Dislikes = "b" },
     };
 
-    private IRenderedComponent<WatchPage> RenderSetup()
+    /// <summary>
+    /// The setup screen at whichever channel it is being asked for. One component serves both: CPU is two
+    /// profiles arguing, 1P is the same argument with one seat taken by the person watching.
+    /// </summary>
+    private IRenderedComponent<WatchPage> RenderSetup(bool onePlayer = false)
     {
+        if (onePlayer)
+        {
+            Services.GetRequiredService<BunitNavigationManager>().NavigateTo("1p");
+        }
+
         var cut = Render<WatchPage>();
         cut.WaitForAssertion(() => cut.FindAll("article.speaker").Should().HaveCount(2));
         return cut;
@@ -58,17 +67,72 @@ public class WatchSetupTests : BunitContext
     }
 
     [Fact]
-    public void The_cast_is_offered_per_role_and_a_person_may_take_a_side()
+    public void The_cast_is_offered_per_role_on_both_channels()
     {
         var cut = RenderSetup();
 
         var husbandPicker = cut.FindComponents<ProfilePicker>().Single(p => !p.Instance.IsWife);
-        var wifePicker = cut.FindComponents<ProfilePicker>().Single(p => p.Instance.IsWife);
 
         husbandPicker.Instance.Cast.Should().HaveCount(3, "the picker filters by role itself");
-        husbandPicker.Instance.AllowHuman.Should().BeTrue();
-        wifePicker.Instance.AllowHuman.Should().BeTrue();
         cut.Markup.Should().Contain("Nobody yet", "neither side is chosen yet");
+    }
+
+    /// <summary>
+    /// CPU is two profiles arguing and nothing else: taking a seat is what 1P is for, so the option to be one of
+    /// the two is not offered here at all.
+    /// </summary>
+    [Fact]
+    public void Nobody_can_take_a_seat_on_the_channel_that_is_two_profiles_arguing()
+    {
+        var cut = RenderSetup();
+
+        cut.FindComponents<ProfilePicker>().Should().OnlyContain(p => !p.Instance.AllowHuman);
+        cut.Markup.Should().Contain("CPU vs CPU");
+    }
+
+    /// <summary>
+    /// 1P asks one question — who are you arguing with — over the whole cast, and states which seat that leaves
+    /// you. Nobody picks a side twice, and "a person at the microphone" is not one of the choices: you are the
+    /// person, and the only thing left to say is what you argue under.
+    /// </summary>
+    [Fact]
+    public void One_player_asks_only_who_you_are_arguing_with()
+    {
+        var cut = RenderSetup(onePlayer: true);
+
+        var picker = cut.FindComponents<ProfilePicker>().Should().ContainSingle().Subject;
+        picker.Instance.AnyRole.Should().BeTrue("husbands and wives are both somebody to argue with");
+        picker.Instance.AllowHuman.Should().BeFalse("you are the person; that is the channel");
+        picker.Instance.Cast.Should().HaveCount(3);
+        cut.Markup.Should().Contain("1P").And.Contain("Who are you arguing with?");
+        cut.FindAll("input[name=yourTag]").Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData("MAH", "the wife")]
+    [InlineData("KSH", "the husband")]
+    public async Task The_seat_you_take_is_whichever_one_your_opponent_leaves(string opponent, string seat)
+    {
+        var cut = RenderSetup(onePlayer: true);
+
+        await ChooseOpponentAsync(cut, opponent);
+
+        cut.Find(".you .seat").TextContent.Should().Contain(seat);
+    }
+
+    [Fact]
+    public async Task One_player_will_not_start_until_you_say_who_you_are()
+    {
+        var cut = RenderSetup(onePlayer: true);
+
+        cut.Markup.Should().Contain("Pick who you are arguing with.");
+
+        await ChooseOpponentAsync(cut, "MAH");
+        cut.Markup.Should().Contain("Say who you are");
+        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+
+        await TypeTagAsync(cut, "KD");
+        StartButton(cut).HasAttribute("disabled").Should().BeFalse();
     }
 
     [Fact]
@@ -76,7 +140,7 @@ public class WatchSetupTests : BunitContext
     {
         _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, HumanInWatch: false, true));
 
-        var cut = RenderSetup();
+        var cut = RenderSetup(onePlayer: true);
 
         cut.FindComponents<ProfilePicker>().Should().OnlyContain(p => !p.Instance.AllowHuman);
     }
@@ -97,35 +161,31 @@ public class WatchSetupTests : BunitContext
     }
 
     [Fact]
-    public async Task The_same_side_twice_is_blocked_and_so_are_two_people()
+    public async Task The_same_profile_cannot_argue_with_itself()
     {
         var cut = RenderSetup();
 
         await ChooseAsync(cut, wife: false, MatchSide.Persona("MAH", "Matthew"));
         await ChooseAsync(cut, wife: true, MatchSide.Persona("MAH", "Matthew"));
-        cut.Markup.Should().Contain("Both sides cannot be the same.");
-        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
 
-        await ChooseAsync(cut, wife: false, MatchSide.Human("AB"));
-        await ChooseAsync(cut, wife: true, MatchSide.Human("CD"));
-        cut.Markup.Should().Contain("Two people arguing is a fight, not a watch.");
+        cut.Markup.Should().Contain("Both sides cannot be the same.");
         StartButton(cut).HasAttribute("disabled").Should().BeTrue();
     }
 
     [Fact]
     public async Task Starting_carries_the_matchup_and_the_topic_to_the_play_screen()
     {
+        var cut = RenderSetup(onePlayer: true);
         var nav = Services.GetRequiredService<BunitNavigationManager>();
-        var cut = RenderSetup();
 
-        await ChooseAsync(cut, wife: false, MatchSide.Persona("MAH", "Matthew"));
-        await ChooseAsync(cut, wife: true, MatchSide.Human("KD", "Kim"));
+        await ChooseOpponentAsync(cut, "MAH");
+        await TypeTagAsync(cut, "KD");
         await cut.Find("input[name=topic]").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "the thermostat" });
         await StartButton(cut).ClickAsync(new());
 
         _simulation.IsReady.Should().BeTrue();
-        _simulation.Husband!.Id.Should().Be("MAH");
-        _simulation.Wife!.IsHuman.Should().BeTrue();
+        _simulation.Husband!.Id.Should().Be("MAH", "the profile keeps its own seat");
+        _simulation.Wife!.IsHuman.Should().BeTrue("which leaves the other one for you");
         _simulation.Human!.Id.Should().Be("KD", "the person's tag is what the debate is recorded under");
         _simulation.Topic.Should().Be("the thermostat");
         nav.Uri.Should().EndWith("watch/play");
@@ -141,6 +201,17 @@ public class WatchSetupTests : BunitContext
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("No cast yet"));
         cut.Markup.Should().Contain("Go to profiles");
     }
+
+    /// <summary>Chooses the opponent on 1P, where there is only one picker.</summary>
+    private static async Task ChooseOpponentAsync(IRenderedComponent<WatchPage> cut, string initials)
+    {
+        var picker = cut.FindComponents<ProfilePicker>().Single();
+        var persona = Cast().Single(p => string.Equals(p.Persona.Initials, initials, StringComparison.Ordinal));
+        await cut.InvokeAsync(() => picker.Instance.SideChanged.InvokeAsync(MatchSide.Persona(initials, persona.Persona.Name)));
+    }
+
+    private static async Task TypeTagAsync(IRenderedComponent<WatchPage> cut, string tag) =>
+        await cut.Find("input[name=yourTag]").InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = tag });
 
     private static IElement StartButton(IRenderedComponent<WatchPage> cut) =>
         cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal));
