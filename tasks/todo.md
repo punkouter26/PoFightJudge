@@ -70,5 +70,5 @@
 ## Phase H — PWA, infra, docs, verification
 - [x] T49 PWA
 - [x] T50 Infra as code + CI
-- [ ] T51 Scripts, docs, secret seeding (ask-first)
+- [x] T51 Scripts, docs, secret seeding (ask-first)
 - [ ] T52 Verify, review, simplify, evidence  ← CP8

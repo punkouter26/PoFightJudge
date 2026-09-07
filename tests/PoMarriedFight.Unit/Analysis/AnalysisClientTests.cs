@@ -255,6 +255,22 @@ public class AnalysisRequestTests
     }
 
     [Fact]
+    public void A_busy_discount_tier_is_escalated_rather_than_waited_out_forever()
+    {
+        var discounted = GeminiJudgeClient.BuildAssessmentRequest(Request(), first: true, Models);
+
+        var standard = GeminiJudgeClient.WithoutServiceTier(discounted);
+
+        standard.Should().NotBeNull("the same request at full price is the escalation");
+        JsonDocument.Parse(standard!).RootElement.TryGetProperty("service_tier", out _).Should().BeFalse();
+        JsonDocument.Parse(standard!).RootElement.GetProperty("contents").GetArrayLength()
+            .Should().Be(JsonDocument.Parse(discounted).RootElement.GetProperty("contents").GetArrayLength(),
+                "nothing else about the request changes");
+
+        GeminiJudgeClient.WithoutServiceTier(standard!).Should().BeNull("there is nothing left to escalate to");
+    }
+
+    [Fact]
     public void Nobody_is_waiting_on_this_in_real_time_so_it_runs_at_the_cheaper_tier()
     {
         var body = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentRequest(Request(), first: true, Models)).RootElement;

@@ -24,10 +24,13 @@ public sealed class CaptionLog
             return;
         }
 
-        // Still being spoken by whoever spoke last: this is the same line, longer.
-        if (_lines.Count > 0 && _lines[^1] is { Final: false } open && open.Speaker == caption.Speaker)
+        // The line to extend is this speaker's own last line, if they have not finished it — not simply the last
+        // line in the log. A live session interleaves: the host's transcript grows while a player is still being
+        // transcribed, and looking only at the end of the log printed each of them again every time it grew.
+        var open = LastLineOf(caption.Speaker);
+        if (open >= 0 && !_lines[open].Final)
         {
-            _lines[^1] = caption;
+            _lines[open] = caption;
         }
         else
         {
@@ -41,4 +44,18 @@ public sealed class CaptionLog
     }
 
     public void Clear() => _lines.Clear();
+
+    /// <summary>Where this speaker last appears, or -1 if they have not spoken yet.</summary>
+    private int LastLineOf(Speaker speaker)
+    {
+        for (var i = _lines.Count - 1; i >= 0; i--)
+        {
+            if (_lines[i].Speaker == speaker)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 }

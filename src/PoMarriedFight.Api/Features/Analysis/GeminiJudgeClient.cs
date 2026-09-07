@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -43,8 +44,11 @@ public interface IGeminiJudgeClient
 /// prefix is still worth caching. The ruling stays separate: it is cheap, it needs no audio, and folding it back in
 /// is what overran the output ceiling when this was one monolithic call.
 /// </remarks>
-public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOptions models) : IGeminiJudgeClient
+public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOptions models, ILogger<GeminiJudgeClient> logger) : IGeminiJudgeClient
 {
+    private const string ServiceTierField = "service_tier";
+
+
     /// <summary>Serializer for the stored report JSON (enums as strings so the blob is readable and stable).</summary>
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -83,11 +87,40 @@ public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOpt
     private async Task<T> PostAsync<T>(string body, CancellationToken ct)
         where T : class
     {
+        try
+        {
+            return await SendAsync<T>(body, ct);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.ServiceUnavailable && WithoutServiceTier(body) is { } standard)
+        {
+            // The discount tier is a price for work nobody is waiting on, not a promise of capacity: when it is
+            // busy it says so, and it says so for as long as it is busy — five patient retries over half a minute
+            // were all refused on 2026-09-07, and the fight was left with no report at all. Paying full price for
+            // the rare analysis that lands during a spike is the better end of that trade.
+            LogFlexBusy(logger, ex);
+            return await SendAsync<T>(standard, ct);
+        }
+    }
+
+    private async Task<T> SendAsync<T>(string body, CancellationToken ct)
+        where T : class
+    {
         using var http = factory.CreateClient(GeminiHttpClients.Analysis);
         using var content = new StringContent(body, Encoding.UTF8, "application/json");
         using var response = await http.PostAsync(new Uri($"v1beta/models/{models.Judge}:generateContent", UriKind.Relative), content, ct);
         await GeminiHttp.EnsureSuccessAsync(response, "judge.generateContent", ct);
         return Parse<T>(await response.Content.ReadAsStringAsync(ct));
+    }
+
+    /// <summary>The same request at the standard tier, or null when it was never asking for a discount.</summary>
+    public static string? WithoutServiceTier(string body)
+    {
+        if (JsonNode.Parse(body) is not JsonObject request || !request.Remove(ServiceTierField))
+        {
+            return null;
+        }
+
+        return request.ToJsonString();
     }
 
     /// <summary>
@@ -139,7 +172,7 @@ public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOpt
         // Nobody is waiting on this call in real time — the client polls — so it runs at the discounted tier.
         if (!string.IsNullOrWhiteSpace(options.JudgeServiceTier))
         {
-            body["service_tier"] = options.JudgeServiceTier;
+            body[ServiceTierField] = options.JudgeServiceTier;
         }
 
         return body.ToJsonString();
@@ -267,4 +300,7 @@ public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOpt
             return null;
         }
     }
+
+    [LoggerMessage(EventId = 5301, Level = LogLevel.Warning, Message = "The judge's discount tier is busy; the same request goes again at the standard tier.")]
+    private static partial void LogFlexBusy(ILogger logger, Exception ex);
 }

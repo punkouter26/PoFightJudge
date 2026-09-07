@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Coverage for the two projects the criterion names: the API and the shared contracts. The exclusions are the ones
+  SPEC §8 lists — a host builder, a service-registration extension and a deliberate stand-in are all configuration
+  rather than logic, and counting them measures how much wiring there is rather than how much is tested.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>[PoMarriedFight.Client]*,[PoMarriedFight.TestSupport]*</Exclude>
+          <!-- obj/ is what the source generators emit (logging, OpenAPI XML comments, mapping): a thousand lines
+               this solution did not write, which would otherwise be most of what the report says is untested. -->
+          <ExcludeByFile>**/obj/**,**/Program.cs,**/*ServiceExtensions.cs,**/Fakes/*.cs</ExcludeByFile>
+          <!-- No ExcludeByAttribute. Naming any of them drops the whole Api assembly from the report — this
+               solution leans on source generators (LoggerMessage, GeneratedRegex), and coverlet excludes what they
+               emit by default in any case. Measured on 2026-09-07: with the element, the Api is simply absent. -->
+          <SkipAutoProps>true</SkipAutoProps>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

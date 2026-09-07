@@ -160,6 +160,39 @@ public class CaptionLogTests
         log.Lines[0].Speaker.Should().Be(Speaker.Player1, "the interrupted line is left where it was");
     }
 
+    /// <summary>
+    /// A real fight on 2026-09-07 printed the host's greeting twice and one player's line twice. Live sessions
+    /// interleave: the host's transcript grows while a player is still being transcribed, so the line to extend is
+    /// not always the last one in the log.
+    /// </summary>
+    [Fact]
+    public void A_line_that_grows_while_somebody_else_is_talking_still_grows_rather_than_repeating()
+    {
+        var log = new CaptionLog();
+
+        log.Add(new CaptionDto(Speaker.Host, "Al and SM,", false));
+        log.Add(new CaptionDto(Speaker.Player1, "Hi Puck.", false));
+        log.Add(new CaptionDto(Speaker.Host, "Al and SM, ready to settle this?", false));
+        log.Add(new CaptionDto(Speaker.Player1, "Hi Puck. I am Alex.", true));
+
+        log.Lines.Should().HaveCount(2, "two people spoke, so there are two lines");
+        log.Lines[0].Text.Should().Be("Al and SM, ready to settle this?");
+        log.Lines[1].Text.Should().Be("Hi Puck. I am Alex.");
+    }
+
+    [Fact]
+    public void A_finished_line_is_never_reopened_by_what_somebody_says_next()
+    {
+        var log = new CaptionLog();
+
+        log.Add(new CaptionDto(Speaker.Player1, "you never listen", true));
+        log.Add(new CaptionDto(Speaker.Host, "one at a time", false));
+        log.Add(new CaptionDto(Speaker.Player1, "and another thing", false));
+
+        log.Lines.Should().HaveCount(3);
+        log.Lines[0].Text.Should().Be("you never listen");
+    }
+
     [Fact]
     public void Empty_captions_are_not_lines()
     {
