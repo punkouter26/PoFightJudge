@@ -19,6 +19,11 @@
   <!-- Radzen's theme stylesheet is injected by <RadzenTheme> in App.razor; app.css bridges its variables onto the --po-* tokens. -->
   <link rel="stylesheet" href="css/app.css" />
   <link rel="stylesheet" href="PoMarriedFight.Client.styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Fight" />
 </head>
 <body>
   <div id="app">
@@ -31,5 +36,7 @@
   <!-- MSAL bridge for Production Entra ID sign-in (defines window.AuthenticationService); inert in Dev/Test. -->
   <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
   <script src="_framework/blazor.webassembly.js"></script>
+  <!-- Install-only worker: it caches nothing (see sw.js). Registered from a file, not inline: the CSP is script-src 'self'. -->
+  <script src="js/pwa.js"></script>
 </body>
 </html>

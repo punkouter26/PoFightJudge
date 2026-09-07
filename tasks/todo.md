@@ -68,7 +68,7 @@
 - [x] T48 Fighters UI + host digest  ← CP7
 
 ## Phase H — PWA, infra, docs, verification
-- [ ] T49 PWA
+- [x] T49 PWA
 - [ ] T50 Infra as code + CI
 - [ ] T51 Scripts, docs, secret seeding (ask-first)
 - [ ] T52 Verify, review, simplify, evidence  ← CP8
