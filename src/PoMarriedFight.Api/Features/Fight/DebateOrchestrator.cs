@@ -476,11 +476,11 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
         var result = call.Name switch
         {
             ToolDeclarations.SetPlayers => Session.SetPlayers(Arg("topic"), Arg("player1"), Arg("player2"), now),
-            ToolDeclarations.StartTurn => PlayerIdExtensions.TryParse(Arg("player"), out var speaking)
+            ToolDeclarations.StartTurn => Session.TryResolvePlayer(Arg("player"), out var speaking)
                 ? Session.StartTurn(speaking, now)
                 : Outcome.Fail("Unknown player; use 'player1' or 'player2'."),
             ToolDeclarations.EndDebate => Session.EndDebate(now),
-            ToolDeclarations.AskProbe => PlayerIdExtensions.TryParse(Arg("player"), out var questioned)
+            ToolDeclarations.AskProbe => Session.TryResolvePlayer(Arg("player"), out var questioned)
                 ? Session.AskProbe(questioned, Arg("question"), now)
                 : Outcome.Fail("Unknown player; use 'player1' or 'player2'."),
             ToolDeclarations.DeliverVerdict => DeliverVerdict(Arg("winner_logic"), Arg("winner_correct"), Arg("overall"), ArgList("reasons"), now),

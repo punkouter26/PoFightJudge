@@ -90,12 +90,23 @@ public class WatchAiParsingTests
     }
 
     [Fact]
+    public void The_word_the_judge_uses_for_a_draw_never_reaches_the_rest_of_the_app()
+    {
+        var drawn = WatchAi.ParseVerdict($$"""{"winner":"{{WatchRules.NoWinner}}","verdict":"Even.","husbandScore":50,"wifeScore":50}""", "MAH", "KSH");
+
+        drawn.Winner.Should().BeEmpty("a draw is an empty winner everywhere past the parser");
+        WatchAi.NormalizeWinner(WatchRules.NoWinner, "MAH", "KSH").Should().BeEmpty();
+    }
+
+    [Fact]
     public void The_schemas_constrain_the_answer_to_the_vocabulary_the_game_understands()
     {
         WatchAi.ArgumentSchema["properties"]!["mood"]!["enum"]!.AsArray().Select(m => m!.GetValue<string>()).Should().BeEquivalentTo(WatchRules.Moods);
 
         var judge = WatchAi.JudgeSchema("MAH", "KSH");
-        judge["properties"]!["winner"]!["enum"]!.AsArray().Select(w => w!.GetValue<string>()).Should().BeEquivalentTo(["MAH", "KSH", string.Empty]);
+        var winners = judge["properties"]!["winner"]!["enum"]!.AsArray().Select(w => w!.GetValue<string>()).ToList();
+        winners.Should().BeEquivalentTo(["MAH", "KSH", WatchRules.NoWinner]);
+        winners.Should().NotContain(string.Empty, "Gemini rejects a schema with an empty enum value, and the whole ruling fails with it");
         judge["properties"]!["husbandScore"]!["maximum"]!.GetValue<int>().Should().Be(100);
     }
 }

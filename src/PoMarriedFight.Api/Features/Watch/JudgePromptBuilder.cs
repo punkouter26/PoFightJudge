@@ -36,9 +36,10 @@ public static class JudgePromptBuilder
         argument quality is genuinely even, and goes to whoever raised the more relevant
         concrete point last.
 
-        Respond with a JSON object carrying the winner's initials, a two or three sentence
-        verdict naming the specific strengths that won it and the specific fallacies or
-        evasions that lost it, and a 0-100 score for each spouse.
+        Respond with a JSON object carrying the winner's initials — or NEITHER if the two
+        were genuinely even — a two or three sentence verdict naming the specific strengths
+        that won it and the specific fallacies or evasions that lost it, and a 0-100 score
+        for each spouse.
         """;
 
     public static GeminiPrompt Build(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds)

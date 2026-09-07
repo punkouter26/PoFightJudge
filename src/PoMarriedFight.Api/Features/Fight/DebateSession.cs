@@ -151,8 +151,56 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         return Outcome.Ok;
     }
 
+    /// <summary>
+    /// Which of the two a tool call means. The declarations ask for "player1" or "player2", but a host that has
+    /// been calling somebody AL all night reaches for AL — and a refused tool call is a turn of the show wasted on
+    /// an error message, so their own tags count as well.
+    /// </summary>
+    public bool TryResolvePlayer(string? value, out PlayerId id)
+    {
+        if (PlayerIdExtensions.TryParse(value, out id))
+        {
+            return true;
+        }
+
+        var cleaned = (value ?? string.Empty).Trim();
+        if (cleaned.Length > 0 && !string.Equals(Player1Name, Player2Name, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(cleaned, Player1Name, StringComparison.OrdinalIgnoreCase))
+            {
+                id = PlayerId.Player1;
+                return true;
+            }
+
+            if (string.Equals(cleaned, Player2Name, StringComparison.OrdinalIgnoreCase))
+            {
+                id = PlayerId.Player2;
+                return true;
+            }
+        }
+
+        id = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Moves a show out of Intro when the host has plainly moved past it. Both fighters were named in the request
+    /// that started the fight, so Intro is not waiting to learn who they are — it is waiting for the host to say
+    /// so, and a host that has gone on to ask a question has said everything it is going to say. Without this the
+    /// session sits in Intro refusing every call, which is what a real fight did.
+    /// </summary>
+    private void MoveOnFromIntro(DateTimeOffset now)
+    {
+        if (Phase is SessionPhase.Intro && setup?.HasPlayers == true)
+        {
+            Phase = SessionPhase.Setup;
+            NoteSpeech(now);
+        }
+    }
+
     public Outcome StartTurn(PlayerId player, DateTimeOffset now)
     {
+        MoveOnFromIntro(now);
         if (Phase is SessionPhase.Setup)
         {
             Phase = SessionPhase.Debate;
@@ -171,6 +219,17 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 
     public Outcome EndDebate(DateTimeOffset now)
     {
+        MoveOnFromIntro(now);
+
+        // A host that never called start_turn is no reason for a show to be unendable. It happens: the two of them
+        // simply start arguing, the host follows the argument rather than the script, and by the time it wants to
+        // move on the session is still formally in Setup. Refusing leaves the fight stuck there for as long as the
+        // socket lives — which is what a real one did, for eight minutes, while the host asked eleven times.
+        if (Phase is SessionPhase.Setup)
+        {
+            StartTurn(PlayerId.Player1, now);
+        }
+
         if (Phase is not SessionPhase.Debate)
         {
             return Outcome.Fail($"Cannot end the argument during {Phase}.");
@@ -186,8 +245,11 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 
     public Outcome AskProbe(PlayerId player, string question, DateTimeOffset now)
     {
-        // A host that skips straight to questions must not be left stuck in the wrong phase.
-        if (Phase is SessionPhase.Debate)
+        MoveOnFromIntro(now);
+
+        // A host that skips straight to questions must not be left stuck in the wrong phase — from Setup as well
+        // as from the debate, because a question is just as clear a statement that the argument is over.
+        if (Phase is SessionPhase.Setup or SessionPhase.Debate)
         {
             EndDebate(now);
         }

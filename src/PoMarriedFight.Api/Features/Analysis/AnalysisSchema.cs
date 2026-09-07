@@ -16,10 +16,6 @@ public static class AnalysisSchema
         ("overall", Overall()));
 
     /// <summary>Both assessments in one response — the shape of the single call that carries the audio.</summary>
-    public static JsonObject BothAssessments() => Obj(
-        ("player1", PlayerAssessment()),
-        ("player2", PlayerAssessment()));
-
     public static JsonObject Overall() => Obj(
         ("winnerLogic", Enum("player1", "player2")),
         ("winnerCorrect", Enum("player1", "player2")),

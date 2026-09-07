@@ -36,13 +36,16 @@ public sealed class WatchAi(IGeminiText gemini, GeminiModelOptions models) : IWa
         ["required"] = new JsonArray("line", "mood"),
     };
 
-    /// <summary>The winner is an enum of exactly the two sides plus a draw, so the judge cannot name someone who was not in the match.</summary>
+    /// <summary>
+    /// The winner is an enum of exactly the two sides plus <see cref="WatchRules.NoWinner"/>, so the judge cannot
+    /// name somebody who was not in the match. The draw is a word, not a blank: an empty enum value is rejected.
+    /// </summary>
     public static JsonObject JudgeSchema(string husbandInitials, string wifeInitials) => new()
     {
         ["type"] = "object",
         ["properties"] = new JsonObject
         {
-            ["winner"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(husbandInitials, wifeInitials, string.Empty) },
+            ["winner"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(husbandInitials, wifeInitials, WatchRules.NoWinner) },
             ["verdict"] = new JsonObject { ["type"] = "string" },
             ["husbandScore"] = new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 100 },
             ["wifeScore"] = new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 100 },

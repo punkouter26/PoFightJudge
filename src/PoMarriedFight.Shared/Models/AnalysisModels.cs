@@ -45,9 +45,6 @@ public sealed record OverallVerdictDto(Speaker WinnerLogic, Speaker WinnerCorrec
 /// <summary>The judge's structured output, before names and measurements are attached to it.</summary>
 public sealed record JudgeOutputDto(PlayerAssessmentDto Player1, PlayerAssessmentDto Player2, JudgeOverallDto Overall);
 
-/// <summary>Both assessments from the one call that carries the recording; the ruling follows separately.</summary>
-public sealed record BothAssessmentsDto(PlayerAssessmentDto Player1, PlayerAssessmentDto Player2);
-
 public sealed record JudgeOverallDto(string WinnerLogic, string WinnerCorrect, string Overall, IReadOnlyList<string> Reasons, string Summary);
 
 public sealed record PlayerReportDto(string Name, PlayerMetricsDto Metrics, PlayerAssessmentDto Assessment);

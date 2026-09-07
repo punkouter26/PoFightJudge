@@ -9,10 +9,18 @@ namespace PoMarriedFight.Api.Features.Ai;
 /// </summary>
 public sealed partial class GeminiRetryHandler(TimeProvider clock, ILogger<GeminiRetryHandler> logger) : DelegatingHandler
 {
-    public const int MaxAttempts = 3;
+    public const int MaxAttempts = 5;
 
-    private static readonly TimeSpan BaseDelay = TimeSpan.FromMilliseconds(400);
-    private static readonly TimeSpan MaxDelay = TimeSpan.FromSeconds(20);
+    /// <summary>
+    /// Deliberately patient. This handler is the analysis client's alone, and nobody is waiting on it in real time
+    /// — the browser polls a status endpoint — so the whole budget is ten minutes. The judge runs on the flex
+    /// tier, which answers "this model is currently experiencing high demand" under load; a real fight was lost
+    /// that way on 2026-09-07, three attempts inside two seconds and then a failed report. Four waits of 2, 4, 8
+    /// and 16 seconds cost half a minute in the worst case and save the analysis.
+    /// </summary>
+    private static readonly TimeSpan BaseDelay = TimeSpan.FromSeconds(2);
+
+    private static readonly TimeSpan MaxDelay = TimeSpan.FromSeconds(60);
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -67,11 +75,17 @@ public sealed partial class GeminiRetryHandler(TimeProvider clock, ILogger<Gemin
     }
 
     /// <summary>Exponential with full jitter, so concurrent analyses do not retry in lockstep.</summary>
+    /// <summary>
+    /// Half the window, then a random share of the other half. Full jitter — a random share of the whole window —
+    /// spreads a crowd just as well but allows a retry after almost no wait at all, which is no use against a model
+    /// that has just said it is busy. This keeps the spread and guarantees the pause.
+    /// </summary>
     private static TimeSpan Backoff(int attempt)
     {
         var window = BaseDelay * Math.Pow(2, attempt - 1);
         var capped = window < MaxDelay ? window : MaxDelay;
-        return TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * capped.TotalMilliseconds);
+        var half = capped.TotalMilliseconds / 2;
+        return TimeSpan.FromMilliseconds(half + (Random.Shared.NextDouble() * half));
     }
 
     [LoggerMessage(EventId = 5101, Level = LogLevel.Warning, Message = "Gemini {Path} returned {Status} (attempt {Attempt}); retrying in {Delay:F0}ms")]

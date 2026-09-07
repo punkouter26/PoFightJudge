@@ -10,6 +10,13 @@ namespace PoMarriedFight.Api.Features.Watch;
 public static class WatchRules
 {
     /// <summary>
+    /// What the judge says when neither side won. It is a word rather than a blank because a response schema may
+    /// not carry an empty enum value — Gemini answers 400 "enum[2]: cannot be empty" and the whole ruling fails.
+    /// It never leaves the parser: <c>WatchAi.NormalizeWinner</c> turns it back into an empty winner.
+    /// </summary>
+    public const string NoWinner = "NEITHER";
+
+    /// <summary>
     /// Rules for an ordinary AI-versus-AI turn. Anchoring the line on the speaker's own personality is what keeps two
     /// generated characters distinguishable from each other.
     /// </summary>

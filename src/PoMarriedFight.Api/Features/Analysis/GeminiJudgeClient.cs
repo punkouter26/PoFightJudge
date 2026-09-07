@@ -28,12 +28,21 @@ public interface IGeminiJudgeClient
 
 
 /// <summary>
-/// The post-show analyst. Two calls: one carries the audio and returns both player assessments, then a small
-/// text-only call rules on them. It was briefly three — an assessment per player — which sent the same recording
-/// twice and, because the two went out concurrently, never hit the shared prefix cache that split was meant to buy.
-/// The ruling stays separate: it is cheap, it needs no audio, and folding it back in is what overran the output
-/// ceiling when this was one monolithic call.
+/// The post-show analyst. Three calls: one assessment per player, then a small text-only call that rules on them.
 /// </summary>
+/// <remarks>
+/// The two assessments were one call until 2026-09-07, when the first real-key fight came back with
+/// <c>400 INVALID_ARGUMENT</c> from every judge request. Bisecting the schema against the live endpoint found a
+/// complexity ceiling on <c>responseSchema</c>: one player assessment (27 properties) is accepted, and the same
+/// schema with a second player carrying 14 of them is not. The documentation says only that "very large or deeply
+/// nested schemas may be rejected", and <c>$ref</c> is rejected outright by this API, so there is no way to declare
+/// the assessment once and use it twice. One player per call is what fits.
+///
+/// The calls go out in order rather than together. They share a long identical prefix — the instructions, the
+/// recording and the session data — and only the trailing task line differs, so the second one arrives while that
+/// prefix is still worth caching. The ruling stays separate: it is cheap, it needs no audio, and folding it back in
+/// is what overran the output ceiling when this was one monolithic call.
+/// </remarks>
 public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOptions models) : IGeminiJudgeClient
 {
     /// <summary>Serializer for the stored report JSON (enums as strings so the blob is readable and stable).</summary>
@@ -43,8 +52,8 @@ public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOpt
     };
 
     /// <summary>
-    /// Output ceiling for one assessment. Two of them share a response, so that call is given twice this or the
-    /// second one truncates — which is what the repair below exists to survive rather than to rely on.
+    /// Output ceiling for one call. Each assessment is a call of its own, so this covers one player; the repair
+    /// below exists to survive a truncation rather than to rely on one.
     /// </summary>
     public const int MaxOutputTokens = 8192;
 
@@ -58,10 +67,14 @@ public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOpt
 
     public async Task<JudgeOutputDto> JudgeAsync(JudgeRequest request, CancellationToken ct)
     {
-        // One pass over the recording assesses both sides; the ruling then needs only the two scorelines.
-        var both = await PostAsync<BothAssessmentsDto>(BuildAssessmentsRequest(request, models), ct);
-        var overall = await RuleAsync(request, both.Player1, both.Player2, ct);
-        return new JudgeOutputDto(both.Player1, both.Player2, overall);
+        ArgumentNullException.ThrowIfNull(request);
+
+        // One player at a time — the schema for both at once is refused — and in order, so the second call finds
+        // the shared prefix warm. The ruling then needs only the two scorelines.
+        var player1 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models), ct);
+        var player2 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models), ct);
+        var overall = await RuleAsync(request, player1, player2, ct);
+        return new JudgeOutputDto(player1, player2, overall);
     }
 
     private Task<JudgeOverallDto> RuleAsync(JudgeRequest request, PlayerAssessmentDto p1, PlayerAssessmentDto p2, CancellationToken ct) =>
@@ -77,17 +90,19 @@ public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOpt
         return Parse<T>(await response.Content.ReadAsStringAsync(ct));
     }
 
-    /// <summary>Both assessments: instructions, the audio, the shared session data, then the task. The only call that pays for audio.</summary>
-    public static string BuildAssessmentsRequest(JudgeRequest request, GeminiModelOptions options) => Request(
+    /// <summary>
+    /// One player's assessment: instructions, the audio, the shared session data, then the task. Everything before
+    /// the task is identical between the two calls, which is what makes the prefix worth caching.
+    /// </summary>
+    public static string BuildAssessmentRequest(JudgeRequest request, bool first, GeminiModelOptions options) => Request(
         new JsonArray(
             Text(Instructions),
             File(request),
             Text(SessionData(request)),
-            Text(AssessmentsTask(request))),
-        AnalysisSchema.BothAssessments(),
+            Text(AssessmentTask(request, first))),
+        AnalysisSchema.PlayerAssessment(),
         options,
-        // Two assessments share one response, so the ceiling has to cover both or the second one truncates.
-        MaxOutputTokens * 2);
+        MaxOutputTokens);
 
     /// <summary>The ruling. Text only — the audio said everything it had to say in the assessments.</summary>
     public static string BuildOverallRequest(JudgeRequest request, PlayerAssessmentDto p1, PlayerAssessmentDto p2, GeminiModelOptions options) => Request(
@@ -169,12 +184,14 @@ public sealed class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOpt
         return sb.ToString();
     }
 
-    private static string AssessmentsTask(JudgeRequest r) =>
+    /// <summary>The one line that differs between the two assessment calls: which player is being assessed.</summary>
+    private static string AssessmentTask(JudgeRequest r, bool first) =>
         $"""
-        TASK: assess BOTH players and return one object with a "player1" and a "player2" assessment.
-        Judge each player on their own merits — this is two separate verdicts in one response, not a comparison.
-        Fill player1 for {r.Player1Name} and player2 for {r.Player2Name}. Every quote must be words that player
-        actually said; never attribute one player's words to the other.
+        TASK: assess {(first ? r.Player1Name : r.Player2Name)} — the one labelled {(first ? "player1" : "player2")}
+        in the transcript — and return that one assessment.
+        Judge them on their own merits; this is a verdict on one person, not a comparison with the other.
+        Every quote must be words {(first ? r.Player1Name : r.Player2Name)} actually said; never attribute the
+        other player's words to them.
         """;
 
     private static string RulingTask(JudgeRequest r, PlayerAssessmentDto p1, PlayerAssessmentDto p2)

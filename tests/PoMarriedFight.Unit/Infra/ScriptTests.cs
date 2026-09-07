@@ -114,6 +114,10 @@ public class ScriptTests
         Setup.Should().Contain("dotnet dev-certs https --check --trust", "Azurite will not speak HTTPS without it, and the SDK will not send a token without HTTPS");
         Setup.Should().Contain("azurite.ps1").And.Contain("playwright.ps1");
         Setup.Should().Contain("dotnet test PoMarriedFight.slnx");
+
+        // --no-launch-profile drops ASPNETCORE_ENVIRONMENT with the rest of launchSettings, and the app that comes
+        // up is a degraded Production one. The variable has to be set, and an --environment argument does not do it.
+        Setup.Should().Contain("$env:ASPNETCORE_ENVIRONMENT = 'Development'");
     }
 
     [Fact]

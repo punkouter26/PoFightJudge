@@ -143,6 +143,13 @@ public static class WatchTurns
     public static bool IsHusband(string? speaker) => string.Equals(speaker, Husband, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Whether this is a side of a watch at all. There are only two, and everything downstream treats "not the
+    /// husband" as the wife — so a speaker that is neither has to be refused rather than quietly become one of them.
+    /// </summary>
+    public static bool IsSpeaker(string? speaker) =>
+        IsHusband(speaker) || string.Equals(speaker, Wife, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Whose turn it is next. The husband opens and the two alternate; a slap is the one exception, because the
     /// slapped speaker reacts instead of the turn passing over.
     /// </summary>

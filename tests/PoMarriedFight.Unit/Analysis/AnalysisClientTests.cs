@@ -64,12 +64,20 @@ public class AnalysisSchemaTests
         }
     }
 
+    /// <summary>
+    /// The live endpoint refuses a response schema that carries two full assessments (measured 2026-09-07: one
+    /// player is accepted, one player plus fourteen of the other's fields is not), so a schema that asks for both
+    /// is a request that always fails. This is the shape of the thing the ceiling allows.
+    /// </summary>
     [Fact]
-    public void The_call_that_carries_the_audio_asks_for_both_sides_at_once()
+    public void One_assessment_is_asked_for_at_a_time_because_two_are_more_than_the_schema_may_carry()
     {
-        var both = AnalysisSchema.BothAssessments();
+        var assessment = AnalysisSchema.PlayerAssessment();
+        var properties = assessment["properties"]!.AsObject();
 
-        both["properties"]!.AsObject().Select(p => p.Key).Should().BeEquivalentTo(["player1", "player2"]);
+        properties.Should().NotContainKey("player1").And.NotContainKey("player2", "a call answers for one person");
+        properties.Select(p => p.Key).Should().Contain(["cefr", "claims", "coachingTips"]);
+        assessment["type"]!.GetValue<string>().Should().Be("OBJECT", "the whole response is one player's assessment");
     }
 }
 
@@ -191,7 +199,7 @@ public class AnalysisRequestTests
     [Fact]
     public void The_recording_is_paid_for_once_and_the_ruling_needs_none_of_it()
     {
-        var assessments = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentsRequest(Request(), Models)).RootElement;
+        var assessments = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentRequest(Request(), first: true, Models)).RootElement;
         var ruling = JsonDocument.Parse(GeminiJudgeClient.BuildOverallRequest(Request(), Assessment(), Assessment(), Models)).RootElement;
 
         Audio(assessments).Should().Be(1, "the recording is uploaded once and read once");
@@ -202,9 +210,29 @@ public class AnalysisRequestTests
     }
 
     [Fact]
+    public void The_two_assessments_differ_only_in_the_player_they_name()
+    {
+        var one = GeminiJudgeClient.BuildAssessmentRequest(Request(), first: true, Models);
+        var two = GeminiJudgeClient.BuildAssessmentRequest(Request(), first: false, Models);
+
+        // Everything before the task — the instructions, the recording and the session data — is byte for byte the
+        // same, which is the whole point of sending them in that order.
+        var first = JsonDocument.Parse(one).RootElement.GetProperty("contents")[0].GetProperty("parts");
+        var second = JsonDocument.Parse(two).RootElement.GetProperty("contents")[0].GetProperty("parts");
+
+        for (var i = 0; i < 3; i++)
+        {
+            second[i].GetRawText().Should().Be(first[i].GetRawText());
+        }
+
+        first[3].GetProperty("text").GetString().Should().Contain("TASK: assess AL").And.NotContain("TASK: assess SM");
+        second[3].GetProperty("text").GetString().Should().Contain("TASK: assess SM");
+    }
+
+    [Fact]
     public void Every_request_starts_with_the_same_words_so_the_shared_prefix_can_be_cached()
     {
-        var assessments = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentsRequest(Request(), Models)).RootElement;
+        var assessments = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentRequest(Request(), first: true, Models)).RootElement;
         var ruling = JsonDocument.Parse(GeminiJudgeClient.BuildOverallRequest(Request(), Assessment(), Assessment(), Models)).RootElement;
 
         First(assessments).Should().Be(GeminiJudgeClient.Instructions);
@@ -215,13 +243,13 @@ public class AnalysisRequestTests
     }
 
     [Fact]
-    public void The_call_that_answers_for_two_people_is_given_room_for_two_answers()
+    public void Each_call_is_given_room_for_the_one_answer_it_asks_for()
     {
-        var assessments = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentsRequest(Request(), Models)).RootElement;
+        var assessments = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentRequest(Request(), first: true, Models)).RootElement;
         var ruling = JsonDocument.Parse(GeminiJudgeClient.BuildOverallRequest(Request(), Assessment(), Assessment(), Models)).RootElement;
 
         assessments.GetProperty("generationConfig").GetProperty("maxOutputTokens").GetInt32()
-            .Should().Be(GeminiJudgeClient.MaxOutputTokens * 2);
+            .Should().Be(GeminiJudgeClient.MaxOutputTokens);
         ruling.GetProperty("generationConfig").GetProperty("maxOutputTokens").GetInt32()
             .Should().Be(GeminiJudgeClient.MaxOutputTokens);
     }
@@ -229,7 +257,7 @@ public class AnalysisRequestTests
     [Fact]
     public void Nobody_is_waiting_on_this_in_real_time_so_it_runs_at_the_cheaper_tier()
     {
-        var body = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentsRequest(Request(), Models)).RootElement;
+        var body = JsonDocument.Parse(GeminiJudgeClient.BuildAssessmentRequest(Request(), first: true, Models)).RootElement;
 
         body.GetProperty("service_tier").GetString().Should().Be(Models.JudgeServiceTier);
         body.GetProperty("generationConfig").GetProperty("thinkingConfig").GetProperty("thinkingLevel").GetString()

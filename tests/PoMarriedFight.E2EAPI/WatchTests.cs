@@ -122,6 +122,21 @@ public class WatchTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task A_speaker_who_is_neither_side_is_refused_rather_than_quietly_becoming_the_wife()
+    {
+        using var client = User("watch-speaker");
+        var (husband, wife) = await CastAsync(client, "09");
+
+        // The husband's own initials name a persona, not a side. Everything downstream reads "not the husband" as
+        // the wife, so an unrecognised speaker would quietly generate the wrong side's line — and the statistics
+        // built from "whose line was this" would then count nothing at all.
+        var response = await client.PostAsJsonAsync(ApiRoutes.Watch.GenerateRoundUrl, new GenerateRoundRequest(husband, wife, [], husband.Id));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadFromJsonAsync<HttpValidationProblemDetails>())!.Errors.Keys.Should().Contain("speaker");
+    }
+
+    [Fact]
     public async Task Two_people_are_a_fight_and_the_same_side_twice_is_neither()
     {
         using var client = User("watch-sides");

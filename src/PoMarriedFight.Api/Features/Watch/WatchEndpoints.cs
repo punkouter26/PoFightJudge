@@ -44,6 +44,11 @@ public sealed class WatchEndpoints : ICarterModule
         }
 
         var (husband, wife) = sides.Value;
+        if (!WatchTurns.IsSpeaker(request.Speaker))
+        {
+            return Problem("speaker", $"A watch has two sides: \"{WatchRound.Husband}\" or \"{WatchRound.Wife}\".");
+        }
+
         var speakingHusband = string.Equals(request.Speaker, WatchRound.Husband, StringComparison.OrdinalIgnoreCase);
         var speaker = speakingHusband ? husband : wife;
         if (speaker.IsHuman)

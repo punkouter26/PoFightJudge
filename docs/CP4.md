@@ -39,9 +39,33 @@ run, so they cannot drift from what the app does.
 - `ProfilePicker` held a NUL byte in the sentinel that marks the human side, in place of the space its own comment
   described.
 
-## Outstanding
+## The real-key leg — measured 2026-09-07
 
-The real-key leg of this checkpoint has **not** run: time to first token and time to first audio against the live
-Gemini endpoints. No key is configured on this machine — no environment variable, no user secrets — and copying the
-secrets out of Key Vault is an ask-first step that belongs to T51. The measurement is carried there rather than
-recorded as done here.
+The Gemini secrets were seeded from `SCRIPTS/seed-secrets.ps1` (approved that day), and the app was run in
+Development against the real endpoints: `/api/diag` reports `fakeAi: false` with Gemini, Fish Audio and Azure
+Speech all `Configured`. A whole watch was then driven over HTTP — six generated rounds, the audio for one of
+them, and the judge — with `MAH` against `KSH` on the thermostat.
+
+| Measurement | Target | Measured |
+| --- | --- | --- |
+| Round, time to first token (`generate-round-stream`) | ≤ 5 s | **1.06 s** |
+| Round, whole line (`generate-round`) | — | 0.84–1.47 s across six rounds |
+| First audio (`round-audio`, mp3 through the routing chain) | ≤ 8 s | **0.91 s** |
+| The judge (`verdict`, including persistence) | — | 1.08 s |
+| Six rounds and a ruling, end to end | — | **8.5 s** |
+
+The ruling was a genuine draw — 25–25, neither side named — with the advanced statistics computed from the
+transcript (word dominance 49.4, lexical complexity 50.9, one logical fallacy) and the match persisted.
+
+### The bug this leg found
+
+The judge's response schema declared `winner` as an enum of the two initials plus an empty string for a draw.
+Gemini rejects that outright:
+
+```
+400 GenerateContentRequest.generation_config.response_schema.properties[winner].enum[2]: cannot be empty
+```
+
+So **every** real-key verdict failed with a 500 while the fakes, which never see a schema, passed. The draw is now
+the word `NEITHER` (`WatchRules.NoWinner`), which the parser turns back into an empty winner before anything else
+sees it, and `WatchAiTests` asserts both halves. Fixed in `fix: a draw the judge can actually say`.

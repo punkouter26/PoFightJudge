@@ -161,5 +161,22 @@ if (-not $Apply) {
 # A single-page app: the WASM client redeems the code itself, so the URI belongs to the SPA platform, not Web.
 $all = @($uris + $RedirectUri | Where-Object { $_ } | Select-Object -Unique)
 $body = @{ spa = @{ redirectUris = $all } } | ConvertTo-Json -Depth 4 -Compress
-az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/$($app.id)" --headers 'Content-Type=application/json' --body $body | Out-Null
+
+# Through a file. Passed inline, Windows takes the braces and quotes apart before az sees them, and Graph answers
+# "Unable to read JSON request payload" — which this script used to report as a success.
+$bodyFile = New-TemporaryFile
+try {
+    Set-Content -Path $bodyFile.FullName -Value $body -Encoding utf8NoBOM
+    az rest --method PATCH `
+        --uri "https://graph.microsoft.com/v1.0/applications/$($app.id)" `
+        --headers 'Content-Type=application/json' `
+        --body "@$($bodyFile.FullName)" | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Graph refused the change (exit $LASTEXITCODE). The redirect URI was NOT added; add $RedirectUri to $($app.name) by hand."
+    }
+} finally {
+    Remove-Item $bodyFile.FullName -Force -ErrorAction SilentlyContinue
+}
+
 Write-Ok "added $RedirectUri"

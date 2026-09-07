@@ -95,4 +95,39 @@ public class GeminiRetryHandlerTests
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         _inner.Requests.Should().ContainSingle();
     }
+
+    [Fact]
+    public async Task A_model_under_load_is_given_time_rather_than_hammered()
+    {
+        // "High demand, try again later" answered by a handler that waits milliseconds loses the analysis. Nobody
+        // is waiting on this call in real time, so the wait is measured in seconds.
+        _inner.Enqueue(HttpStatusCode.ServiceUnavailable, "high demand");
+        _inner.Enqueue(HttpStatusCode.OK, """{"ok":true}""");
+
+        using var sut = new GeminiRetryHandler(_clock, NullLogger<GeminiRetryHandler>.Instance) { InnerHandler = _inner };
+#pragma warning disable RS0030 // Banned API — a delegating handler under test needs a client built over it.
+        using var client = new HttpClient(sut, disposeHandler: false) { BaseAddress = new Uri("https://gemini.test/") };
+#pragma warning restore RS0030
+        var request = new HttpRequestMessage(HttpMethod.Post, "v1beta/judge");
+        var send = client.SendAsync(request);
+
+        // Advance in small steps and count what the wait actually cost: the delay is the thing under test.
+        var advanced = TimeSpan.Zero;
+        var step = TimeSpan.FromMilliseconds(250);
+        for (var spins = 0; !send.IsCompleted && spins < 400; spins++)
+        {
+            await Task.Delay(5);
+            if (!send.IsCompleted)
+            {
+                _clock.Advance(step);
+                advanced += step;
+            }
+        }
+
+        (await send).StatusCode.Should().Be(HttpStatusCode.OK);
+        _inner.Requests.Should().HaveCount(2);
+        advanced.Should().BeGreaterThanOrEqualTo(TimeSpan.FromSeconds(1),
+            "a busy model is given a real pause — jitter spreads the crowd, it does not excuse retrying immediately");
+        request.Dispose();
+    }
 }

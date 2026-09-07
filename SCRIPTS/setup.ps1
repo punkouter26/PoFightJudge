@@ -146,7 +146,11 @@ if ($Run) {
 
     if (-not $port) { $port = 5000 + (Get-Random -Maximum 1000) }
 
-    Write-Host "Starting https://localhost:$port ..." -ForegroundColor Cyan
+    # --no-launch-profile skips launchSettings.json, and with it ASPNETCORE_ENVIRONMENT: the app comes up as
+    # Production, refuses the fakes, and logs PRODUCTION DEGRADED. The variable is what the host reads — passing
+    # --environment as an argument does not reach it.
+    $env:ASPNETCORE_ENVIRONMENT = 'Development'
+    Write-Host "Starting https://localhost:$port (Development) ..." -ForegroundColor Cyan
     dotnet run --project src/PoMarriedFight.Api -c Release --no-build --no-launch-profile --urls "https://localhost:$port"
 } else {
     Write-Host ''

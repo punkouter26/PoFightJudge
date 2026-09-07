@@ -11,6 +11,13 @@ public class FightFlowTests(AppFixture app)
 {
     private static readonly string ShotsDirectory = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "docs", "screenshots");
 
+    /// <summary>
+    /// How long the show is given to reach its ruling. The scripted host runs the whole thing in well under a
+    /// minute; a real one is paced for people — the debate phase alone may last three minutes by design (SPEC §12
+    /// #6), and the probe and the verdict follow it. Three minutes is the fake's budget, not the show's.
+    /// </summary>
+    private static int RulingTimeout => AppFixture.RealMode ? 480_000 : 180_000;
+
     [SkippableFact]
     public async Task Two_people_argue_in_front_of_the_host_and_it_rules_at_the_end()
     {
@@ -45,10 +52,10 @@ public class FightFlowTests(AppFixture app)
         await ShootAsync(page, "fight-live");
 
         // The show runs itself to the ruling and hands over to the verdict.
-        await page.WaitForURLAsync(u => u.Contains("/verdict/", StringComparison.Ordinal), new() { Timeout = 180_000 });
+        await page.WaitForURLAsync(u => u.Contains("/verdict/", StringComparison.Ordinal), new() { Timeout = RulingTimeout });
 
-        // The fight is read by the offline stand-ins, so the whole report appears with no key.
-        await page.Locator("section.ruling").WaitForAsync(new() { Timeout = 180_000 });
+        // With no key the fight is read by the offline stand-ins; with one, this is the real analysis pipeline.
+        await page.Locator("section.ruling").WaitForAsync(new() { Timeout = RulingTimeout });
         (await page.Locator("section.ruling").InnerTextAsync()).Should().ContainEquivalentOf("took it");
         (await page.Locator("article.player").CountAsync()).Should().Be(2, "both of them are reported on");
         (await page.Locator(".trait").CountAsync()).Should().Be(20, "ten judged traits each");

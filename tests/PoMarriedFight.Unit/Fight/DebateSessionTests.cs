@@ -101,13 +101,17 @@ public class DebateSessionTests
     {
         var session = NewSession(Pair);
 
-        session.EndDebate(At(5)).Error.Should().Contain("Intro");
-
+        // Skipping forward is allowed — a host that has moved on has moved on — but going back is not: the debate
+        // is over once the questions start, and a refused step must leave the show exactly where it was.
         session.SetPlayers("t", "AB", "CD", At(5));
         session.StartTurn(PlayerId.Player1, At(10));
         session.EndDebate(At(60));
+
         session.StartTurn(PlayerId.Player2, At(65)).Error.Should().Contain("Probe");
         session.Phase.Should().Be(SessionPhase.Probe, "a refused step changes nothing");
+
+        session.SetPlayers("something else", "ZZ", "YY", At(70)).Error.Should().Contain("Probe");
+        session.Player1Name.Should().Be("AB", "and nothing it refused was half applied");
     }
 
     [Fact]
@@ -119,6 +123,78 @@ public class DebateSessionTests
 
         probe.IsSuccess.Should().BeTrue("a host that skips a step must not be left stuck in the wrong phase");
         session.Phase.Should().Be(SessionPhase.Probe);
+    }
+
+    /// <summary>
+    /// A real fight on 2026-09-07 sat in Setup for eight minutes: the host called set_players, never called
+    /// start_turn, then asked to end the argument eleven times and was refused eleven times while the two of them
+    /// talked over it. The phases exist to shape a show, not to trap one.
+    /// </summary>
+    [Fact]
+    public void Ending_an_argument_the_host_never_formally_started_moves_the_show_on_rather_than_refusing()
+    {
+        var session = NewSession(Pair);
+        session.SetPlayers("the thermostat", "AB", "CD", At(5));
+        session.Phase.Should().Be(SessionPhase.Setup);
+
+        var ended = session.EndDebate(At(90));
+
+        ended.IsSuccess.Should().BeTrue("a host asking to end has plainly decided the argument is over");
+        session.Phase.Should().Be(SessionPhase.Probe);
+    }
+
+    [Fact]
+    public void A_question_asked_before_the_debate_was_ever_started_lands_in_the_probe()
+    {
+        var session = NewSession(Pair);
+        session.SetPlayers("the thermostat", "AB", "CD", At(5));
+
+        var probe = session.AskProbe(PlayerId.Player1, "Where is the evidence?", At(90));
+
+        probe.IsSuccess.Should().BeTrue();
+        session.Phase.Should().Be(SessionPhase.Probe);
+    }
+
+    [Fact]
+    public void A_host_that_names_somebody_by_their_tag_is_understood()
+    {
+        var session = NewSession(Pair);
+        session.SetPlayers("the thermostat", "AB", "CD", At(5));
+
+        session.TryResolvePlayer("player2", out var byPosition).Should().BeTrue();
+        byPosition.Should().Be(PlayerId.Player2);
+
+        session.TryResolvePlayer("cd", out var byTag).Should().BeTrue("the host has been calling them CD all night");
+        byTag.Should().Be(PlayerId.Player2);
+
+        session.TryResolvePlayer("the loud one", out _).Should().BeFalse("a guess would put words in the wrong mouth");
+    }
+
+    /// <summary>
+    /// A real fight on 2026-09-07 asked its first question during Intro and was refused, and the show never left
+    /// that phase. Both fighters were named in the request that started it, so Intro was waiting for the host to
+    /// make introductions, not to learn anything.
+    /// </summary>
+    [Fact]
+    public void A_question_asked_before_the_introductions_carries_the_show_past_them()
+    {
+        var session = NewSession(Pair);
+        session.Phase.Should().Be(SessionPhase.Intro);
+
+        var probe = session.AskProbe(PlayerId.Player2, "What is your evidence?", At(40));
+
+        probe.IsSuccess.Should().BeTrue();
+        session.Phase.Should().Be(SessionPhase.Probe);
+    }
+
+    [Fact]
+    public void A_show_that_never_learned_who_is_arguing_still_refuses_to_move()
+    {
+        // No setup: nobody was named up front, so set_players is the only way the show can start.
+        var session = NewSession();
+
+        session.EndDebate(At(30)).IsSuccess.Should().BeFalse("who is arguing is genuinely not known yet");
+        session.Phase.Should().Be(SessionPhase.Intro);
     }
 
     [Fact]
