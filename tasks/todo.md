@@ -43,7 +43,7 @@
 
 ## Phase E — FIGHT live
 - [x] T30 Fighter domain + repositories  (pulled ahead of T25: a person in WATCH needs a fighter result)
-- [ ] T31 Gemini Live client
+- [x] T31 Gemini Live client  (LiveOptions replaces the planned GeminiOptions; model ids already live in GeminiModelOptions)
 - [ ] T32 Debate state machine + host personas
 - [ ] T33 Orchestrator
 - [ ] T34 Registry, hub, fight endpoints
