@@ -1,0 +1,11 @@
+.stat {
+  display: grid;
+  gap: var(--po-space-1);
+  padding: var(--po-space-3);
+  border-radius: var(--po-radius-2);
+  background: var(--po-surface-2);
+}
+
+.value { font-size: var(--po-text-xl); font-variant-numeric: tabular-nums; }
+
+.hint { font-size: var(--po-text-xs); }

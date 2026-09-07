@@ -66,6 +66,12 @@ public interface IApiClient
 
     /// <summary>One fighter, or null when this tag is new.</summary>
     Task<FighterDto?> GetFighterAsync(FighterId tag, CancellationToken ct = default);
+
+    /// <summary>How the reading of a fight is going, and the report once there is one.</summary>
+    Task<AnalysisResponse> GetAnalysisAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>Sends a fight back to be read again. Throws <see cref="ApiException"/> if one is already running.</summary>
+    Task RetryAnalysisAsync(MatchId id, CancellationToken ct = default);
 }
 
 /// <summary>A non-success answer from the API, carrying the problem details so a form can show the server's words.</summary>
@@ -291,6 +297,21 @@ public sealed class ApiClient(HttpClient http) : IApiClient
         catch (HttpRequestException)
         {
             return null;
+        }
+    }
+
+    public async Task<AnalysisResponse> GetAnalysisAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Fights.Analysis(id)), ct);
+        return await ReadAsync<AnalysisResponse>(response, ct);
+    }
+
+    public async Task RetryAnalysisAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsync(Relative(ApiRoutes.Fights.AnalysisRetry(id)), null, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await ApiException.FromAsync(response, ct);
         }
     }
 

@@ -1,0 +1,42 @@
+@using PoMarriedFight.Client.Stats
+@* One fighter as the report saw them: how they came across, and the line that was worth keeping. *@
+<article class="player po-card @(IsSecond ? "p2" : "p1")" data-tag="@Report.Name">
+    <header>
+        <span class="tag po-display">@Report.Name</span>
+        @if (Won)
+        {
+            <span class="po-chip po-chip--accent">Took it</span>
+        }
+        <span class="po-chip">@Report.Assessment.Cefr</span>
+    </header>
+
+    <p class="tone">@string.Join(", ", Report.Assessment.ToneDescriptors)</p>
+
+    <blockquote class="best">
+        <p>@Report.Assessment.BestMomentQuote</p>
+        <footer class="po-muted">their best moment</footer>
+    </blockquote>
+
+    <dl class="headline">
+        <div>
+            <dt class="po-eyebrow">Share of the room</dt>
+            <dd class="po-display">@StatFormat.Percent(Report.Metrics.TalkShare)</dd>
+        </div>
+        <div>
+            <dt class="po-eyebrow">Pace</dt>
+            <dd class="po-display">@StatFormat.Number(Report.Metrics.WordsPerMinute)</dd>
+        </div>
+        <div>
+            <dt class="po-eyebrow">Facts right</dt>
+            <dd class="po-display">@Report.Assessment.CorrectnessPercent%</dd>
+        </div>
+    </dl>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public PlayerReportDto Report { get; set; } = default!;
+
+    [Parameter] public bool Won { get; set; }
+
+    [Parameter] public bool IsSecond { get; set; }
+}

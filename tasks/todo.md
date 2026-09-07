@@ -58,7 +58,7 @@
 - [x] T41 Pipeline + style snapshot  (the fakes and DI came with it, so T42 is only the endpoints)
 - [x] T42 Analysis endpoints, fakes, DI
 - [ ] T41b Opus recordings (Concentus)
-- [ ] T43 Verdict UI 1
+- [x] T43 Verdict UI 1  (StatFormat lands here, since the tiles need it)
 - [ ] T44 Verdict UI 2 + E2E  ← CP6
 
 ## Phase G — Records + Fighter style

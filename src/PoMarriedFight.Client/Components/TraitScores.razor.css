@@ -1,0 +1,18 @@
+.traits { display: grid; gap: var(--po-space-2); }
+
+.trait {
+  display: grid;
+  grid-template-columns: 8rem 1fr 2rem;
+  gap: var(--po-space-3);
+  align-items: center;
+}
+
+.label { font-size: var(--po-text-sm); }
+
+::deep .bar { height: 0.5rem; width: 100%; }
+
+.score { text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 40rem) {
+  .trait { grid-template-columns: 6rem 1fr 2rem; }
+}
