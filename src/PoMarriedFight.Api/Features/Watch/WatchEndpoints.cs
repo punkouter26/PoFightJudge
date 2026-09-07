@@ -285,9 +285,12 @@ public sealed class WatchEndpoints : ICarterModule
 
             if (side.IsHuman)
             {
-                // The person's own record and, from T41, the style snapshot distilled from what they said here.
+                // Their own record, and what this debate says about how they argue. A watch has no judge report per
+                // side, so the snapshot is built from their own lines: what they repeat, how they open, their best.
+                var spoken = match.Rounds.Where(r => string.Equals(r.Speaker, SpeakerOf(side, match), StringComparison.Ordinal)).Select(r => r.Text);
+                var style = FightStyleSnapshotExtractor.FromSpokenLines(spoken);
                 await fighters.EnsureAsync(FighterId.From(side.Id), now, ct);
-                await fighterResults.SaveAsync([new FighterResultDto(side.Id, match.Id, MatchMode.Watch, now, match.Topic ?? string.Empty, opponent.Id, won, draw, score, StyleSnapshot.Empty)], ct);
+                await fighterResults.SaveAsync([new FighterResultDto(side.Id, match.Id, MatchMode.Watch, now, match.Topic ?? string.Empty, opponent.Id, won, draw, score, style)], ct);
             }
             else
             {
@@ -300,6 +303,10 @@ public sealed class WatchEndpoints : ICarterModule
             await watchResults.SaveAsync(personaRows, ct);
         }
     }
+
+    /// <summary>Which speaker this side argued as, so their own lines can be picked out of the transcript.</summary>
+    private static string SpeakerOf(MatchSide side, WatchMatch match) =>
+        string.Equals(match.Husband.Id, side.Id, StringComparison.Ordinal) ? WatchTurns.Husband : WatchTurns.Wife;
 
     private static IEnumerable<(MatchSide Side, MatchSide Opponent, AdvancedStats Stats)> Sides(WatchMatch match) =>
     [
