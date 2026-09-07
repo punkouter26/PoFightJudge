@@ -37,7 +37,12 @@
   display: grid;
   gap: var(--po-space-2);
   padding: var(--po-space-4);
-  max-width: 42rem;
+  max-width: 48rem;
+}
+
+/* The timeline's own column sizing leaves the content half the page; the argument wants the width. */
+::deep .transcript .rz-timeline-item-content {
+  flex: 1 1 auto;
 }
 
 .line header {

@@ -33,19 +33,18 @@
                     </div>
                 </section>
 
-                @if (_rounds.Count == 0 && _error is null)
+                @* Only while a line is actually being worked out: a person waiting to speak is not the page loading. *@
+                @if (_rounds.Count == 0 && _error is null && _stage == Stage.Arguing)
                 {
                     <LoadingRows Count="2" Label="Working out how to start" />
                 }
 
-                <RadzenTimeline Orientation="Orientation.Vertical" LinePosition="LinePosition.Center" class="transcript" aria-label="The argument so far">
+                <RadzenTimeline Orientation="Orientation.Vertical" LinePosition="LinePosition.Left" class="transcript" aria-label="The argument so far" aria-live="polite">
                     <Items>
                         @foreach (var round in _rounds)
                         {
-                            <RadzenTimelineItem PointStyle="@(WatchTurns.IsHusband(round.Speaker) ? PointStyle.Primary : PointStyle.Secondary)">
-                                <PointContent>
-                                    <RadzenIcon Icon="@(WatchTurns.IsHusband(round.Speaker) ? "man" : "woman")" />
-                                </PointContent>
+                            @* A plain dot in the side's own colour: blue for the husband, red for the wife, matching the card borders. *@
+                            <RadzenTimelineItem PointStyle="@(WatchTurns.IsHusband(round.Speaker) ? PointStyle.Info : PointStyle.Danger)">
                                 <ChildContent>
                                     <article class="line po-card @(WatchTurns.IsHusband(round.Speaker) ? "p1" : "p2")"
                                              data-speaker="@round.Speaker" data-mood="@round.Mood">

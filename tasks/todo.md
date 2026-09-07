@@ -39,7 +39,7 @@
 - [x] T26 WATCH setup UI
 - [x] T27 WATCH play UI
 - [x] T28 The spoken human turn  (Radzen's RadzenSpeechToTextButton replaced the planned speech.js + SpeechRecognitionInterop)
-- [ ] T29 WATCH end-to-end hardening  ← CP4
+- [x] T29 WATCH end-to-end hardening  ← CP4 (fakes green; the real-key timing run is carried to T51, see docs/CP4.md)
 
 ## Phase E — FIGHT live
 - [x] T30 Fighter domain + repositories  (pulled ahead of T25: a person in WATCH needs a fighter result)
