@@ -1,0 +1,129 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Security.Claims;
+using Carter;
+using PoMarriedFight.Api.Features.Auth;
+using PoMarriedFight.Api.Features.Fighters;
+using PoMarriedFight.Api.Features.Records;
+using PoMarriedFight.Api.Hubs;
+using PoMarriedFight.Shared;
+using PoMarriedFight.Shared.Identifiers;
+using PoMarriedFight.Shared.Models;
+
+namespace PoMarriedFight.Api.Features.Fight;
+
+/// <summary>
+/// Starting, watching and stopping a fight. The tags are validated here and never trusted from the model again: a
+/// fight goes on both fighters' records, and the record is keyed by the tag.
+/// </summary>
+public sealed class FightEndpoints : ICarterModule
+{
+    public void AddRoutes(IEndpointRouteBuilder app)
+    {
+        var fights = app.MapGroup(ApiRoutes.Fights.Base).RequireAuthorization().WithTags("Fights");
+
+        fights.MapPost("/", StartAsync)
+            .Produces<CreateFightResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        fights.MapGet(ApiRoutes.Fights.ByIdSegment, GetAsync)
+            .Produces<DebateSnapshotDto>()
+            .Produces<MatchDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        fights.MapPost(ApiRoutes.Fights.EndSegment, EndAsync)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // The hub is part of this feature, so it is mapped with it rather than by hand in the host.
+        app.MapHub<LiveHub>(ApiRoutes.Hubs.Live);
+    }
+
+    [SuppressMessage(
+        "Reliability",
+        "CA2000:Dispose objects before losing scope",
+        Justification = "The registry owns a running fight for its whole life and disposes it when the fight ends; the request that started it must not.")]
+    private static async Task<IResult> StartAsync(
+        CreateFightRequest? request,
+        ClaimsPrincipal user,
+        SessionRegistry registry,
+        IFighterRepository fighters,
+        TimeProvider clock,
+        CancellationToken ct)
+    {
+        if (request is null)
+        {
+            return Problem("A fight needs two tags and a host.");
+        }
+
+        if (!HostPersonaCatalogue.IsKnown(request.Persona))
+        {
+            return Problem("There is no such host.");
+        }
+
+        var first = Initials.Normalize(request.Player1Tag);
+        var second = Initials.Normalize(request.Player2Tag);
+        if (!Initials.ArePair(first, second))
+        {
+            return Problem("Both fighters need their own tag — 1 to 3 letters or digits, and not the same as each other.");
+        }
+
+        // Both fighters exist from the moment the fight starts, so a record has somewhere to land even if it ends badly.
+        var now = clock.GetUtcNow();
+        var one = await fighters.EnsureAsync(FighterId.From(first), now, ct);
+        var two = await fighters.EnsureAsync(FighterId.From(second), now, ct);
+
+        var setup = new ShowSetup(request.Persona, first, second, Topic(request.Topic))
+        {
+            Player1Digest = Digest(one),
+            Player2Digest = Digest(two),
+        };
+
+        var fight = await registry.CreateAsync(user.UserId(), setup, ct);
+        return Results.Created(ApiRoutes.Fights.ById(fight.Session.MatchId), new CreateFightResponse(fight.Session.MatchId));
+    }
+
+    /// <summary>A running fight answers with its snapshot; a finished one with what was stored.</summary>
+    private static async Task<IResult> GetAsync(
+        MatchId id,
+        ClaimsPrincipal user,
+        SessionRegistry registry,
+        IMatchRepository matches,
+        TimeProvider clock,
+        CancellationToken ct)
+    {
+        var userId = user.UserId();
+        if (registry.Get(id, userId) is { } live)
+        {
+            return Results.Ok(live.Session.Snapshot(clock.GetUtcNow()));
+        }
+
+        var stored = await matches.GetAsync(userId, id, ct);
+        return stored is null ? Results.NotFound() : Results.Ok(stored);
+    }
+
+    private static async Task<IResult> EndAsync(MatchId id, ClaimsPrincipal user, SessionRegistry registry, CancellationToken ct)
+    {
+        if (registry.Get(id, user.UserId()) is null)
+        {
+            return Results.NotFound();
+        }
+
+        await registry.EndAsync(id, "ended through the API", ct);
+        return Results.NoContent();
+    }
+
+    /// <summary>
+    /// What the host is told about how this fighter argues. A tag that has only just been created has no history to
+    /// describe, and saying so is more useful than saying nothing. The real digest arrives with the style profile.
+    /// </summary>
+    private static string? Digest(Fighter fighter) => fighter.CreatedAt == fighter.LastSeenAt ? "First fight." : null;
+
+    private static string? Topic(string? value)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        return trimmed.Length == 0 ? null : DebateSession.Clean(trimmed, DebateSession.MaxShortText, string.Empty);
+    }
+
+    private static IResult Problem(string detail) =>
+        Results.Problem(detail, statusCode: StatusCodes.Status400BadRequest, title: "The fight could not be started.");
+}

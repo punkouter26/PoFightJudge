@@ -46,7 +46,7 @@
 - [x] T31 Gemini Live client  (LiveOptions replaces the planned GeminiOptions; model ids already live in GeminiModelOptions)
 - [x] T32 Debate state machine + host personas
 - [x] T33 Orchestrator  (IAnalysisQueue is named IAnalysisIntake: the suffix is reserved for collections)
-- [ ] T34 Registry, hub, fight endpoints
+- [x] T34 Registry, hub, fight endpoints
 - [ ] T35 Browser audio
 - [ ] T36 Fight setup UI
 - [ ] T37 Fight live UI
