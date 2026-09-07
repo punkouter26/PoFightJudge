@@ -11,6 +11,7 @@ using PoMarriedFight.Api.Features.Auth;
 using PoMarriedFight.Api.Features.Fighters;
 using PoMarriedFight.Api.Features.Profiles;
 using PoMarriedFight.Api.Features.Records;
+using PoMarriedFight.Api.Features.Storage;
 using PoMarriedFight.Api.Features.Watch;
 using PoMarriedFight.Shared.Configuration;
 using PoMarriedFight.TestSupport;
@@ -190,6 +191,10 @@ internal sealed class HostFactory : WebApplicationFactory<Program>
             services.AddSingleton<IMatchRepository, InMemoryMatchRepository>();
             services.RemoveAll<IWatchAudioStore>();
             services.AddSingleton<IWatchAudioStore, InMemoryWatchAudioStore>();
+
+            // A fight's recording and its transcripts, so the analysis has something real to read without Azure.
+            services.RemoveAll<IAudioBlobStore>();
+            services.AddSingleton<IAudioBlobStore, InMemoryAudioBlobStore>();
             services.Configure<HealthCheckServiceOptions>(o =>
             {
                 foreach (var registration in o.Registrations.Where(r => string.Equals(r.Name, "storage", StringComparison.Ordinal)).ToList())

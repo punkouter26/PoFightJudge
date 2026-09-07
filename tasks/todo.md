@@ -56,7 +56,7 @@
 - [x] T39 Analysis clients + schema  (PollBackoff lands here, since both clients poll)
 - [x] T40 Metrics, mapping, highlights
 - [x] T41 Pipeline + style snapshot  (the fakes and DI came with it, so T42 is only the endpoints)
-- [ ] T42 Analysis endpoints, fakes, DI
+- [x] T42 Analysis endpoints, fakes, DI
 - [ ] T41b Opus recordings (Concentus)
 - [ ] T43 Verdict UI 1
 - [ ] T44 Verdict UI 2 + E2E  ← CP6

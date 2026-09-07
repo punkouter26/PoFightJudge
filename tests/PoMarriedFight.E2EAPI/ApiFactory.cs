@@ -7,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PoMarriedFight.Api.Features.Fighters;
 using PoMarriedFight.Api.Features.Profiles;
 using PoMarriedFight.Api.Features.Records;
+using PoMarriedFight.Api.Features.Storage;
 using PoMarriedFight.Api.Features.Watch;
 using PoMarriedFight.Shared.Configuration;
 using PoMarriedFight.TestSupport;
@@ -49,6 +50,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IMatchRepository, InMemoryMatchRepository>();
             services.RemoveAll<IWatchAudioStore>();
             services.AddSingleton<IWatchAudioStore, InMemoryWatchAudioStore>();
+
+            // A fight's recording and its transcripts, so the analysis has something real to read without Azure.
+            services.RemoveAll<IAudioBlobStore>();
+            services.AddSingleton<IAudioBlobStore, InMemoryAudioBlobStore>();
 
             // No storage account in this host: the storage probe would make /api/health depend on Azurite, and the
             // stores above never touch it, so the check has nothing real to report here.
