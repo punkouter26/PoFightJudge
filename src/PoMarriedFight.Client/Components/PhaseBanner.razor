@@ -1,0 +1,31 @@
+@* Where the fight has got to, in words rather than an enum name. *@
+<div class="phase" data-phase="@Phase.ToString().ToLowerInvariant()" role="status">
+    <span class="po-eyebrow">@Headline</span>
+    <span class="po-muted detail">@Detail</span>
+</div>
+
+@code {
+    [Parameter] public SessionPhase Phase { get; set; } = SessionPhase.Intro;
+
+    [Parameter] public string? Topic { get; set; }
+
+    private string Headline => Phase switch
+    {
+        SessionPhase.Intro => "Getting started",
+        SessionPhase.Setup => "Ready",
+        SessionPhase.Debate => "Arguing",
+        SessionPhase.Probe => "Questions",
+        SessionPhase.Verdict => "The ruling",
+        _ => "Finished",
+    };
+
+    private string Detail => Phase switch
+    {
+        SessionPhase.Intro => "The host is asking who you are and what this is about.",
+        SessionPhase.Setup => string.IsNullOrWhiteSpace(Topic) ? "About to hand over the floor." : $"About to argue about {Topic}.",
+        SessionPhase.Debate => "Wait to be given the floor. The host will cut in if one of you runs long.",
+        SessionPhase.Probe => "One at a time now. Answer the question you were actually asked.",
+        SessionPhase.Verdict => "Both of you stop talking.",
+        _ => "That is that.",
+    };
+}

@@ -49,7 +49,7 @@
 - [x] T34 Registry, hub, fight endpoints
 - [x] T35 Browser audio  (PoLive lives in live-audio.js, apart from the watch playback in audio.js)
 - [x] T36 Fight setup UI
-- [ ] T37 Fight live UI
+- [x] T37 Fight live UI
 - [ ] T38 Live UI 2 + FIGHT E2E  ← CP5 (real-key Live smoke)
 
 ## Phase F — Analysis

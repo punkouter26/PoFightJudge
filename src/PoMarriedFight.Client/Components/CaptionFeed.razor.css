@@ -1,0 +1,29 @@
+.captions {
+  display: grid;
+  gap: var(--po-space-3);
+  max-height: 26rem;
+  overflow-y: auto;
+  padding-right: var(--po-space-2);
+}
+
+.caption {
+  display: grid;
+  gap: var(--po-space-1);
+  padding: var(--po-space-3);
+  border-radius: var(--po-radius-2);
+  background: var(--po-surface-2);
+  border-left: 3px solid var(--po-muted);
+}
+
+.caption p { margin: 0; }
+
+.caption.p1 { border-left-color: var(--po-p1); }
+
+.caption.p2 { border-left-color: var(--po-p2); }
+
+.caption.host { border-left-color: var(--po-accent); }
+
+/* Still being said: dimmed until the sentence is closed. */
+.caption--live p { opacity: 0.75; }
+
+.empty { margin: 0; }

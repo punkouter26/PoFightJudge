@@ -1,0 +1,23 @@
+.host {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: center;
+  padding: var(--po-space-2) var(--po-space-3);
+  border-radius: var(--po-radius-pill, 999px);
+  background: var(--po-surface-2);
+}
+
+.face { font-size: var(--po-text-lg); }
+
+.name { font-family: var(--po-font-display); letter-spacing: 0.04em; }
+
+.state { font-size: var(--po-text-xs); }
+
+/* Driven by the audio graph: the ring grows with the host's own level. */
+.host--speaking {
+  box-shadow: 0 0 0 calc(2px + (var(--po-host-level, 0) * 6px)) color-mix(in oklab, var(--po-accent) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .host--speaking { box-shadow: 0 0 0 3px var(--po-accent); }
+}

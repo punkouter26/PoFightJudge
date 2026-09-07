@@ -1,0 +1,17 @@
+.phase {
+  display: grid;
+  gap: var(--po-space-1);
+  padding: var(--po-space-3) var(--po-space-4);
+  border-radius: var(--po-radius-2);
+  background: var(--po-surface-2);
+  border-left: 3px solid var(--po-muted);
+}
+
+.phase[data-phase="debate"] { border-left-color: var(--po-p1); }
+
+.phase[data-phase="probe"] { border-left-color: var(--po-warning); }
+
+.phase[data-phase="verdict"],
+.phase[data-phase="done"] { border-left-color: var(--po-accent); }
+
+.detail { font-size: var(--po-text-sm); }

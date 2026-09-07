@@ -1,0 +1,60 @@
+@page "/fight/{MatchIdText}"
+
+<PageTitle>Live · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="Channel 2" Title="@Title" Lead="@Lead">
+    <Actions>
+        <RadzenButton Text="Stop the fight" Icon="stop_circle" ButtonStyle="ButtonStyle.Danger"
+                      Variant="Variant.Outlined" Disabled="@(_ending || _snapshot is null)" Click="@StopAsync" />
+    </Actions>
+    <ChildContent>
+        @if (_fatal is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                <div class="failure">
+                    <span>@_fatal</span>
+                    <RadzenButton Text="Start another" Icon="mic" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined" Click="@(() => Nav.NavigateTo("fight"))" />
+                </div>
+            </RadzenAlert>
+        }
+        else
+        {
+            <div class="stage">
+                <section class="bar" aria-label="Where the fight is">
+                    <PhaseBanner Phase="@Phase" Topic="@_snapshot?.Topic" />
+                    <DebateTimer ElapsedSeconds="@(_snapshot?.DebateElapsedSeconds ?? 0)" RemainingSeconds="@(_snapshot?.DebateRemainingSeconds ?? 0)" />
+                    <HostIndicator Persona="@(_snapshot?.Persona ?? HostPersonaId.Referee)" Speaking="@_hostSpeaking" />
+                </section>
+
+                <section class="floor" aria-label="Who has the floor">
+                    <div class="side p1 @(HasFloor(Speaker.Player1) ? "side--speaking" : null)">
+                        <span class="tag po-display">@Player1</span>
+                        <span class="po-muted">@(HasFloor(Speaker.Player1) ? "has the floor" : "waiting")</span>
+                    </div>
+                    <div class="mic" aria-label="Microphone level">
+                        <span class="dot @(_listening ? "dot--on" : null)" aria-hidden="true"></span>
+                        <span class="po-muted">@(_listening ? "Listening" : "Microphone off")</span>
+                    </div>
+                    <div class="side p2 @(HasFloor(Speaker.Player2) ? "side--speaking" : null)">
+                        <span class="tag po-display">@Player2</span>
+                        <span class="po-muted">@(HasFloor(Speaker.Player2) ? "has the floor" : "waiting")</span>
+                    </div>
+                </section>
+
+                @if (_problem is not null)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="true" Close="@(() => _problem = null)" class="problem">@_problem</RadzenAlert>
+                }
+
+                @if (_reconnecting)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                        The connection dropped. Keep talking — this keeps trying for as long as the page is open.
+                    </RadzenAlert>
+                }
+
+                <CaptionFeed Log="@_captions" Player1Name="@Player1" Player2Name="@Player2" HostName="@HostName" />
+            </div>
+        }
+    </ChildContent>
+</PageShell>

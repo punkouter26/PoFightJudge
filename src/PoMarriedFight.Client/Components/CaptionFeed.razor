@@ -1,0 +1,41 @@
+@* What is being said, as it is said. A log region so a screen reader reads new lines without stealing focus. *@
+<section class="captions" role="log" aria-live="polite" aria-label="What is being said">
+    @if (Log.Lines.Count == 0)
+    {
+        <p class="po-muted empty">Nothing said yet.</p>
+    }
+    else
+    {
+        @foreach (var line in Log.Lines)
+        {
+            <article class="caption @CssFor(line.Speaker) @(line.Final ? null : "caption--live")" data-speaker="@line.Speaker">
+                <span class="who po-eyebrow">@NameFor(line.Speaker)</span>
+                <p>@line.Text</p>
+            </article>
+        }
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public CaptionLog Log { get; set; } = new();
+
+    [Parameter] public string Player1Name { get; set; } = "Fighter one";
+
+    [Parameter] public string Player2Name { get; set; } = "Fighter two";
+
+    [Parameter] public string HostName { get; set; } = "The host";
+
+    private string NameFor(Speaker speaker) => speaker switch
+    {
+        Speaker.Player1 => Player1Name,
+        Speaker.Player2 => Player2Name,
+        _ => HostName,
+    };
+
+    private static string CssFor(Speaker speaker) => speaker switch
+    {
+        Speaker.Player1 => "p1",
+        Speaker.Player2 => "p2",
+        _ => "host",
+    };
+}

@@ -1,0 +1,16 @@
+.timer {
+  display: grid;
+  gap: var(--po-space-2);
+  min-width: 10rem;
+}
+
+::deep .bar { height: 0.5rem; width: 100%; }
+
+.numbers {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: baseline;
+  justify-content: center;
+}
+
+.left { font-size: var(--po-text-2xl); font-variant-numeric: tabular-nums; }

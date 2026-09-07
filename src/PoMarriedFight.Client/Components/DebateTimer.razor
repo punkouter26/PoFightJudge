@@ -1,0 +1,21 @@
+@* How much arguing time is left. Counts down, because that is the number that changes behaviour. *@
+<div class="timer" role="timer" aria-label="@($"{RemainingSeconds} seconds of arguing left")">
+    <RadzenProgressBar Value="@Percent" Max="100" ShowValue="false"
+                       ProgressBarStyle="@(RemainingSeconds <= 15 ? ProgressBarStyle.Danger : ProgressBarStyle.Info)" class="bar" />
+    <div class="numbers">
+        <span class="left po-display">@Clock</span>
+        <span class="po-muted">left</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ElapsedSeconds { get; set; }
+
+    [Parameter] public int RemainingSeconds { get; set; }
+
+    private int Total => Math.Max(1, ElapsedSeconds + RemainingSeconds);
+
+    private double Percent => Math.Clamp(100.0 * RemainingSeconds / Total, 0, 100);
+
+    private string Clock => $"{RemainingSeconds / 60}:{RemainingSeconds % 60:00}";
+}
