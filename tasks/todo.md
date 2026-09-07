@@ -45,7 +45,7 @@
 - [x] T30 Fighter domain + repositories  (pulled ahead of T25: a person in WATCH needs a fighter result)
 - [x] T31 Gemini Live client  (LiveOptions replaces the planned GeminiOptions; model ids already live in GeminiModelOptions)
 - [x] T32 Debate state machine + host personas
-- [ ] T33 Orchestrator
+- [x] T33 Orchestrator  (IAnalysisQueue is named IAnalysisIntake: the suffix is reserved for collections)
 - [ ] T34 Registry, hub, fight endpoints
 - [ ] T35 Browser audio
 - [ ] T36 Fight setup UI
