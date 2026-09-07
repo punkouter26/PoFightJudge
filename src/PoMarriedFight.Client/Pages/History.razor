@@ -1,0 +1,148 @@
+@page "/history"
+@using System.Globalization
+@inject IApiClient Api
+@inject NavigationManager Nav
+@inject DialogService Dialogs
+
+<PageTitle>History · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="On the record" Title="History"
+           Lead="Every argument you have been part of, both kinds, newest first.">
+    <Actions>
+        <RadzenSelectBar @bind-Value="_mode" TValue="MatchMode?" Change="@(_ => LoadAsync())" Size="ButtonSize.Small">
+            <Items>
+                <RadzenSelectBarItem Text="All" Value="@((MatchMode?)null)" />
+                <RadzenSelectBarItem Text="Watches" Value="@((MatchMode?)MatchMode.Watch)" />
+                <RadzenSelectBarItem Text="Fights" Value="@((MatchMode?)MatchMode.Fight)" />
+            </Items>
+        </RadzenSelectBar>
+    </Actions>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="3" Label="Loading your history" />
+        }
+        else if (_error is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+        }
+        else if (_matches.Count == 0)
+        {
+            <EmptyState Icon="history" Title="Nothing yet" Text="Argue with somebody and it will show up here.">
+                <Action>
+                    <RadzenButton Text="Start a fight" Icon="mic" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo("fight"))" />
+                </Action>
+            </EmptyState>
+        }
+        else
+        {
+            <RadzenDataGrid Data="@_matches" TItem="MatchDto" AllowSorting="true" AllowPaging="true" PageSize="15" class="history">
+                <Columns>
+                    <RadzenDataGridColumn TItem="MatchDto" Title="When" Width="11rem" Property="@nameof(MatchDto.StartedAt)">
+                        <Template Context="match">@match.StartedAt.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Kind" Width="7rem" Sortable="false">
+                        <Template Context="match"><ModeBadge Mode="@match.Mode" /></Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Who" Sortable="false">
+                        <Template Context="match">@match.Side1.DisplayName <span class="po-muted">vs</span> @match.Side2.DisplayName</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchDto" Title="About" Property="@nameof(MatchDto.Topic)" />
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Result" Width="9rem" Sortable="false">
+                        <Template Context="match">
+                            @if (match.IsDraw)
+                            {
+                                <span class="po-muted">Nobody</span>
+                            }
+                            else
+                            {
+                                <strong>@match.Winner</strong>
+                            }
+                            @if (match.IsFake)
+                            {
+                                <span class="po-chip" title="Argued with no key, so nothing here was really judged.">rehearsal</span>
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchDto" Title="" Width="9rem" Sortable="false">
+                        <Template Context="match">
+                            <div class="row-actions">
+                                @if (match.Mode == MatchMode.Fight)
+                                {
+                                    <RadzenButton Text="Open" Icon="description" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
+                                                  Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo($"verdict/{match.Id.Value}"))" />
+                                }
+                                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
+                                              title="@($"Delete {match.Topic}")" aria-label="@($"Delete {match.Topic}")" Click="@(() => ConfirmAsync(match))" />
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private IReadOnlyList<MatchDto> _matches = [];
+    private MatchMode? _mode;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _matches = [.. await Api.GetMatchesAsync(_mode)];
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Summary;
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"Your history could not be loaded ({ex.Message}).";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    /// <summary>
+    /// Deleting takes the recording and both sides' records with it, so it is worth asking first — this is the one
+    /// destructive thing on the page.
+    /// </summary>
+    private async Task ConfirmAsync(MatchDto match)
+    {
+        var confirmed = await Dialogs.Confirm(
+            $"This removes the recording, the transcript and both sides' records of {match.Side1.DisplayName} against {match.Side2.DisplayName}. It cannot be undone.",
+            "Delete this argument?",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Keep it" });
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            await Api.DeleteMatchAsync(match.Id);
+
+            // A new list rather than a removal: the grid is bound to the instance, and it re-reads when it changes.
+            _matches = [.. _matches.Where(m => m.Id != match.Id)];
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Summary;
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"It could not be deleted ({ex.Message}).";
+        }
+    }
+}

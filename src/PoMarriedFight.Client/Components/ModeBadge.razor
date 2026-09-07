@@ -1,0 +1,13 @@
+@* Which kind of argument this was: two personas and maybe a person, or two people on one microphone. *@
+<span class="mode po-chip @(Mode == MatchMode.Fight ? "mode--fight" : "mode--watch")" title="@Title">
+    <RadzenIcon Icon="@(Mode == MatchMode.Fight ? "mic" : "theaters")" />
+    @(Mode == MatchMode.Fight ? "Fight" : "Watch")
+</span>
+
+@code {
+    [Parameter] public MatchMode Mode { get; set; }
+
+    private string Title => Mode == MatchMode.Fight
+        ? "Two people on one microphone, with a live host."
+        : "Personas arguing it out, judged at the end.";
+}

@@ -1,0 +1,64 @@
+@page "/leaderboard"
+@using System.Globalization
+@inject IApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Leaderboard · PoMarriedFight</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Standings" Title="Leaderboard"
+           Lead="Two boards, because two different things are being ranked: personas that were written, and people who turned up.">
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="4" Label="Counting up" />
+        }
+        else
+        {
+            @* A board is a document: both tabs stay in the page so a reader can flick between them without a re-fetch. *@
+            <RadzenTabs RenderMode="TabRenderMode.Client">
+                <Tabs>
+                    <RadzenTabsItem Text="The cast">
+                        <Board Rows="_cast" Empty="Nobody in the cast has argued twice yet." OnOpen="@(id => Nav.NavigateTo($"profiles/{id}/record"))" />
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Fighters">
+                        <Board Rows="_fighters" Empty="No one has argued twice on the microphone yet." />
+                    </RadzenTabsItem>
+                </Tabs>
+            </RadzenTabs>
+
+            <p class="po-muted note">Anybody with fewer than @LeaderboardRules.MinimumMatches arguments is left off: one win from one night is not the top of anything.</p>
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private IReadOnlyList<LeaderboardRowDto> _cast = [];
+    private IReadOnlyList<LeaderboardRowDto> _fighters = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _cast = await Api.GetLeaderboardAsync(MatchMode.Watch);
+            _fighters = await Api.GetLeaderboardAsync(MatchMode.Fight);
+        }
+        catch (ApiException)
+        {
+            // A board that cannot be counted is an empty board; the page still says what it is for.
+        }
+        catch (HttpRequestException)
+        {
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    /// <summary>The cut-off the server applies, repeated here so the page can explain the gap rather than look wrong.</summary>
+    private static class LeaderboardRules
+    {
+        public const int MinimumMatches = 2;
+    }
+}

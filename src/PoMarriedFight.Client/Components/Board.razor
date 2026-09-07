@@ -1,0 +1,53 @@
+@using System.Globalization
+@* One leaderboard, whichever kind. Rank is the row's place in the order the server returned, not a stored number. *@
+
+@if (Rows.Count == 0)
+{
+    <EmptyState Icon="leaderboard" Title="Nothing to rank" Text="@Empty" />
+}
+else
+{
+    <RadzenDataGrid Data="@_ranked" TItem="Placed" AllowSorting="false" class="board"
+                    RowClick="@(args => Open(args.Data))"
+                    RowRender="@(args => args.Attributes["class"] = OnOpen.HasDelegate ? "openable" : string.Empty)">
+        <Columns>
+            <RadzenDataGridColumn TItem="Placed" Title="#" Width="3.5rem" Property="@nameof(Placed.Rank)" />
+            <RadzenDataGridColumn TItem="Placed" Title="Who">
+                <Template Context="placed">@placed.Row.DisplayName</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Placed" Title="Won" Width="7rem">
+                <Template Context="placed">@placed.Row.Wins of @placed.Row.Matches</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Placed" Title="Win rate" Width="12rem">
+                <Template Context="placed">
+                    <RadzenProgressBar Value="@(placed.Row.WinRate * 100)" ShowValue="false" Mode="ProgressBarMode.Determinate" class="rate" />
+                    <span class="rate-value">@((placed.Row.WinRate * 100).ToString("0", CultureInfo.CurrentCulture))%</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Placed" Title="Average score" Width="9rem">
+                <Template Context="placed">@placed.Row.AverageScore.ToString("0.#", CultureInfo.CurrentCulture)</Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private IReadOnlyList<Placed> _ranked = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<LeaderboardRowDto> Rows { get; set; } = [];
+
+    /// <summary>What to say when nobody qualifies, in the words of whichever board this is.</summary>
+    [Parameter] public string Empty { get; set; } = "Nobody has argued enough to be ranked.";
+
+    /// <summary>Set only when there is somewhere for a row to lead; without it the rows are not clickable.</summary>
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+
+    protected override void OnParametersSet() =>
+        _ranked = [.. Rows.Select((row, index) => new Placed(index + 1, row))];
+
+    private Task Open(Placed? placed) =>
+        placed is not null && OnOpen.HasDelegate ? OnOpen.InvokeAsync(placed.Row.Id) : Task.CompletedTask;
+
+    /// <summary>A row with the place it came in, so the grid does not have to search the list for every cell.</summary>
+    public sealed record Placed(int Rank, LeaderboardRowDto Row);
+}

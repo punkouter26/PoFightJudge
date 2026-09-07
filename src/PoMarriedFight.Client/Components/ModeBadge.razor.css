@@ -1,0 +1,5 @@
+.mode { display: inline-flex; gap: var(--po-space-1); align-items: center; }
+
+.mode--fight { color: var(--po-p2); }
+
+.mode--watch { color: var(--po-p1); }

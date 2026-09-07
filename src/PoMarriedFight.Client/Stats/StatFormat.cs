@@ -67,6 +67,29 @@ public static class StatFormat
     }
 
     /// <summary>The one-to-ten judgements, which read as bars rather than numbers.</summary>
+    /// <summary>
+    /// The WATCH measurements, which are a different set from the fight's: they are the judge's read of a persona
+    /// rather than anything measured off a waveform. Described here so both kinds of number live in one place.
+    /// </summary>
+    public static IReadOnlyList<Stat> Describe(AdvancedStatsDto stats)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+
+        return
+        [
+            new("Passive aggression", Number(stats.PassiveAggressionIndex), "How much was meant rather than said.", StatGroup.Manner),
+            new("Old grievances", Number(stats.HistoricalGrievanceRate), "How often something from years ago came up.", StatGroup.Manner),
+            new("Blame", Number(stats.BlameMetric), "How much of it was the other one's fault.", StatGroup.Manner),
+            new("Fallacies", Count(stats.LogicalFallacyCount), "Arguments that did not follow.", StatGroup.Words),
+            new("Volume", Number(stats.VolumeScore), "How loudly it was put.", StatGroup.Floor),
+            new("Share of words", Number(stats.WordCountDominance), "How much of the talking they did.", StatGroup.Floor),
+            new("Volatility", Number(stats.EmotionalVolatility), "How far the mood swung.", StatGroup.Manner),
+            new("Deflection", Number(stats.DeflectionCoefficient), "How often the question was answered with another one.", StatGroup.Manner),
+            new("Vocabulary", Number(stats.LexicalComplexity), "How elaborate the words were.", StatGroup.Words),
+            new("Sorry to insults", Number(stats.ApologyToInsultRatio), "Apologies against the other thing.", StatGroup.Words),
+        ];
+    }
+
     public static IReadOnlyList<(string Label, int Score, string Hint)> Traits(PlayerAssessmentDto assessment)
     {
         ArgumentNullException.ThrowIfNull(assessment);

@@ -75,6 +75,25 @@ public interface IApiClient
 
     /// <summary>One highlight, cut out of the recording. Null when there is nothing there to cut.</summary>
     Task<byte[]?> GetClipAsync(MatchId id, int index, CancellationToken ct = default);
+
+    /// <summary>Everything the signed-in person has been part of, newest first.</summary>
+    Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default);
+
+    Task DeleteMatchAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>The board for one mode. Empty rather than an error, because a board is never the point of the page.</summary>
+    Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default);
+
+    /// <summary>One persona's record across the watches it has argued in.</summary>
+    Task<ProfileRecordDto?> GetProfileRecordAsync(ProfileId id, CancellationToken ct = default);
+
+    /// <summary>One person's page: their record, how they argue, and what they argued.</summary>
+    Task<FighterProfileDto?> GetFighterProfileAsync(FighterId tag, CancellationToken ct = default);
+
+    /// <summary>Changes a fighter's display name. The tag never changes.</summary>
+    Task<FighterDto> RenameFighterAsync(FighterId tag, string? displayName, CancellationToken ct = default);
+
+    Task DeleteFighterAsync(FighterId tag, CancellationToken ct = default);
 }
 
 /// <summary>A non-success answer from the API, carrying the problem details so a form can show the server's words.</summary>
@@ -322,6 +341,58 @@ public sealed class ApiClient(HttpClient http) : IApiClient
     {
         using var response = await http.GetAsync(Relative(ApiRoutes.Fights.Clip(id, index)), ct);
         return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync(ct) : null;
+    }
+
+    public async Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default)
+    {
+        var path = mode is null ? ApiRoutes.Matches.Base : $"{ApiRoutes.Matches.Base}?mode={mode}";
+        using var response = await http.GetAsync(Relative(path), ct);
+        return await ReadAsync<IReadOnlyList<MatchDto>>(response, ct);
+    }
+
+    public async Task DeleteMatchAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.DeleteAsync(Relative(ApiRoutes.Matches.ById(id)), ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await ApiException.FromAsync(response, ct);
+        }
+    }
+
+    public async Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default)
+    {
+        var url = mode == MatchMode.Watch ? ApiRoutes.Leaderboard.WatchUrl : ApiRoutes.Leaderboard.FightUrl;
+        using var response = await http.GetAsync(Relative(url), ct);
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<IReadOnlyList<LeaderboardRowDto>>(ct) ?? []
+            : [];
+    }
+
+    public async Task<ProfileRecordDto?> GetProfileRecordAsync(ProfileId id, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Profiles.Record(id)), ct);
+        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<ProfileRecordDto>(ct) : null;
+    }
+
+    public async Task<FighterProfileDto?> GetFighterProfileAsync(FighterId tag, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Fighters.Profile(tag)), ct);
+        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<FighterProfileDto>(ct) : null;
+    }
+
+    public async Task<FighterDto> RenameFighterAsync(FighterId tag, string? displayName, CancellationToken ct = default)
+    {
+        using var response = await http.PutAsJsonAsync(Relative(ApiRoutes.Fighters.ByTag(tag)), new RenameFighterRequest(displayName), ct);
+        return await ReadAsync<FighterDto>(response, ct);
+    }
+
+    public async Task DeleteFighterAsync(FighterId tag, CancellationToken ct = default)
+    {
+        using var response = await http.DeleteAsync(Relative(ApiRoutes.Fighters.ByTag(tag)), ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await ApiException.FromAsync(response, ct);
+        }
     }
 
     private static Uri Relative(string path) => new(path, UriKind.Relative);

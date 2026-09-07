@@ -1,0 +1,7 @@
+.form { display: flex; gap: var(--po-space-2); align-items: center; color: var(--po-accent); }
+
+.line { width: 5rem; height: 1.5rem; }
+
+.last { color: var(--po-text); font-variant-numeric: tabular-nums; }
+
+.none { font-size: var(--po-text-xs); }

@@ -39,6 +39,9 @@ public sealed class AppFixture : IAsyncLifetime
 
     public IBrowser? Browser { get; private set; }
 
+    /// <summary>The running host's services, so a test can put a finished argument in the store without arguing one.</summary>
+    public IServiceProvider Services => _factory?.Services ?? throw new InvalidOperationException("The host has not started.");
+
     public string Unavailable { get; private set; } = "Playwright has not started.";
 
     public string BaseUrl { get; private set; } = string.Empty;

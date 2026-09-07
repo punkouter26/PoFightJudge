@@ -1,0 +1,7 @@
+::deep .board { width: 100%; }
+
+::deep .board .openable { cursor: pointer; }
+
+::deep .rate { display: inline-block; width: 6rem; vertical-align: middle; }
+
+.rate-value { margin-inline-start: var(--po-space-2); font-variant-numeric: tabular-nums; }

@@ -1,0 +1,44 @@
+@* The last few scores, as a shape. The direction is the point, not the digits. *@
+<div class="form" role="img" aria-label="@Label">
+    @if (Scores.Count == 0)
+    {
+        <span class="po-muted none">No form yet</span>
+    }
+    else
+    {
+        <svg viewBox="0 0 100 24" preserveAspectRatio="none" class="line" aria-hidden="true">
+            <polyline points="@Points" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+        </svg>
+        <span class="last po-display">@Scores[^1]</span>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<int> Scores { get; set; } = [];
+
+    private string Label => Scores.Count == 0
+        ? "No form yet"
+        : $"Recent scores: {string.Join(", ", Scores)}";
+
+    /// <summary>
+    /// Drawn by hand rather than with a chart library: it is eight numbers in a table cell, and a chart that
+    /// measures the DOM to lay itself out is the wrong tool for that.
+    /// </summary>
+    private string Points
+    {
+        get
+        {
+            if (Scores.Count == 1)
+            {
+                return $"0,{Y(Scores[0])} 100,{Y(Scores[0])}";
+            }
+
+            var step = 100.0 / (Scores.Count - 1);
+            return string.Join(' ', Scores.Select((s, i) => string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"{i * step:0.#},{Y(s):0.#}")));
+        }
+    }
+
+    private static double Y(int score) => 22 - (Math.Clamp(score, 0, 100) / 100.0 * 20);
+}
