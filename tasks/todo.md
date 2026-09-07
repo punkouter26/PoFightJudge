@@ -47,7 +47,7 @@
 - [x] T32 Debate state machine + host personas
 - [x] T33 Orchestrator  (IAnalysisQueue is named IAnalysisIntake: the suffix is reserved for collections)
 - [x] T34 Registry, hub, fight endpoints
-- [ ] T35 Browser audio
+- [x] T35 Browser audio  (PoLive lives in live-audio.js, apart from the watch playback in audio.js)
 - [ ] T36 Fight setup UI
 - [ ] T37 Fight live UI
 - [ ] T38 Live UI 2 + FIGHT E2E  ← CP5 (real-key Live smoke)
