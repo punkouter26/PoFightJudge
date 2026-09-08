@@ -1,4 +1,4 @@
-@inject HttpClient Http
+@inject IApiClient Api
 
 @if (_show)
 {
@@ -15,8 +15,10 @@
     {
         try
         {
-            var flags = await Http.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url);
-            _show = flags?.UseFakeAi == true;
+            // Through the typed client: the banner renders on the sign-in page, before there is a token, and the
+            // feature-flag call is the one that travels on the anonymous HttpClient.
+            var flags = await Api.GetFeaturesAsync();
+            _show = flags.UseFakeAi;
         }
         catch (HttpRequestException)
         {

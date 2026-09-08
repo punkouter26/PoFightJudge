@@ -169,8 +169,13 @@ public sealed class ApiException : Exception
     }
 }
 
-public sealed class ApiClient(HttpClient http) : IApiClient
+public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
 {
+    // The authorized client carries the MSAL token in Production; the anonymous one is for the calls made before
+    // anyone is signed in (the feature flags the sign-in page and the banner read).
+    private readonly HttpClient http = clients.CreateClient(HttpClients.Api);
+    private readonly HttpClient anonymous = clients.CreateClient(HttpClients.Anonymous);
+
     public async Task<AuthMeDto> GetMeAsync(CancellationToken ct = default) =>
         await http.GetFromJsonAsync<AuthMeDto>(ApiRoutes.Auth.Me, ct) ?? AuthMeDto.Anonymous;
 
@@ -188,7 +193,7 @@ public sealed class ApiClient(HttpClient http) : IApiClient
     }
 
     public async Task<FeatureFlagsDto> GetFeaturesAsync(CancellationToken ct = default) =>
-        await http.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url, ct) ?? new FeatureFlagsDto(false, false, false, false);
+        await anonymous.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url, ct) ?? new FeatureFlagsDto(false, false, false, false);
 
     public Task<HealthReportDto?> GetHealthDetailsAsync(CancellationToken ct = default) =>
         http.GetFromJsonAsync<HealthReportDto>(ApiRoutes.Health.DetailsUrl, ct);

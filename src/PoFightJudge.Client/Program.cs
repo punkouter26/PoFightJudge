@@ -17,6 +17,9 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 var baseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+// No token handler on this one: it carries the calls a signed-out browser makes (the feature flags on the sign-in
+// page). In Production the authorized client below throws AccessTokenNotAvailableException before the request leaves.
+builder.Services.AddHttpClient(HttpClients.Anonymous, c => c.BaseAddress = baseAddress);
 builder.Services.AddRadzenComponents();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddHotKeys2();
@@ -71,5 +74,6 @@ namespace PoFightJudge.Client
     public static class HttpClients
     {
         public const string Api = "PoFightJudge.Api";
+        public const string Anonymous = "PoFightJudge.Anonymous";
     }
 }
