@@ -82,6 +82,15 @@ public interface IApiClient
     /// <summary>Everything the signed-in person has been part of, newest first.</summary>
     Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default);
 
+    /// <summary>One match, or null when it is not this account's. What a replay opens on.</summary>
+    Task<MatchDto?> GetMatchAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>What was said in one match, in order. Empty when there is nothing stored.</summary>
+    Task<IReadOnlyList<TurnDto>> GetMatchTurnsAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>One stored round, ready to hand to the player. Null when that round was never spoken.</summary>
+    Task<TtsAudioDto?> GetRoundAudioAsync(MatchId id, int roundIndex, CancellationToken ct = default);
+
     Task DeleteMatchAsync(MatchId id, CancellationToken ct = default);
 
     /// <summary>The board for one mode. Empty rather than an error, because a board is never the point of the page.</summary>
@@ -362,6 +371,39 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         var path = mode is null ? ApiRoutes.Matches.Base : $"{ApiRoutes.Matches.Base}?mode={mode}";
         using var response = await http.GetAsync(Relative(path), ct);
         return await ReadAsync<IReadOnlyList<MatchDto>>(response, ct);
+    }
+
+    public async Task<MatchDto?> GetMatchAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Matches.ById(id)), ct);
+        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<MatchDto>(ct) : null;
+    }
+
+    public async Task<IReadOnlyList<TurnDto>> GetMatchTurnsAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Matches.Turns(id)), ct);
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<IReadOnlyList<TurnDto>>(ct) ?? []
+            : [];
+    }
+
+    /// <summary>
+    /// The archived round comes back as bytes with its own content type, because the container is private and a
+    /// replay cannot be a blob URL. The player wants base64 and a format name, so the conversion happens here rather
+    /// than in a page: the format is whatever the server actually stored, not whatever was asked for at the time.
+    /// </summary>
+    public async Task<TtsAudioDto?> GetRoundAudioAsync(MatchId id, int roundIndex, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Audio.Round(id, roundIndex)), ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var bytes = await response.Content.ReadAsByteArrayAsync(ct);
+        var mime = response.Content.Headers.ContentType?.MediaType;
+        var format = string.Equals(mime, "audio/mpeg", StringComparison.OrdinalIgnoreCase) ? "mp3" : "pcm";
+        return bytes.Length == 0 ? null : new TtsAudioDto(Convert.ToBase64String(bytes), format);
     }
 
     public async Task DeleteMatchAsync(MatchId id, CancellationToken ct = default)

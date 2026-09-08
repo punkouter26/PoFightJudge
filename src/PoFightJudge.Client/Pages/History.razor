@@ -74,6 +74,11 @@
                                     <RadzenButton Text="Open" Icon="description" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
                                                   Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo($"verdict/{match.Id.Value}"))" />
                                 }
+                                else
+                                {
+                                    <RadzenButton Text="Replay" Icon="play_arrow" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
+                                                  Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo($"watch/replay/{match.Id.Value}"))" />
+                                }
                                 <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
                                               title="@($"Delete {match.Topic}")" aria-label="@($"Delete {match.Topic}")" Click="@(() => ConfirmAsync(match))" />
                             </div>

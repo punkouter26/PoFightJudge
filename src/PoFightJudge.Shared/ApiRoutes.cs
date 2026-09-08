@@ -139,7 +139,12 @@ public static class ApiRoutes
         public const string Base = $"{ApiPrefix}/matches";
         public const string ByIdSegment = "/{id}";
 
+        /// <summary>What was actually said, in order — the transcript a WATCH replay is built from.</summary>
+        public const string TurnsSegment = "/{id}/turns";
+
         public static string ById(MatchId id) => $"{Base}/{id.Value}";
+
+        public static string Turns(MatchId id) => $"{ById(id)}/turns";
     }
 
     public static class Leaderboard

@@ -1,0 +1,76 @@
+.replay {
+  display: grid;
+  gap: var(--po-space-5);
+}
+
+.card {
+  display: grid;
+  gap: var(--po-space-2);
+  padding: var(--po-space-5);
+}
+
+.who {
+  display: flex;
+  gap: var(--po-space-3);
+  align-items: baseline;
+  font-family: var(--po-font-display);
+  font-size: var(--po-text-xl);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.side.p1 { color: var(--po-p1); }
+
+.side.p2 { color: var(--po-p2); }
+
+.outcome {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: center;
+  margin: 0;
+}
+
+.card .verdict {
+  margin: 0;
+  color: var(--po-muted);
+  line-height: 1.5;
+}
+
+::deep .transcript {
+  width: 100%;
+}
+
+/* Same as the live page: the timeline's own column sizing leaves the content half the page, and the argument wants the width. */
+::deep .transcript .rz-timeline-item-content {
+  flex: 1 1 auto;
+}
+
+.line {
+  display: grid;
+  gap: var(--po-space-2);
+  padding: var(--po-space-4);
+  max-width: 48rem;
+}
+
+.line header {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.line .name {
+  font-family: var(--po-font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.line p {
+  margin: 0;
+  font-size: var(--po-text-lg);
+  line-height: 1.5;
+}
+
+.line.p1 { border-left: 3px solid var(--po-p1); }
+
+.line.p2 { border-left: 3px solid var(--po-p2); }

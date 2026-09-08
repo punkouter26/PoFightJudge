@@ -105,5 +105,5 @@
 
     /// <summary>A fight has a verdict to open; a watch has only its place in the history.</summary>
     private static string Href(MatchDto match) =>
-        match.Mode == MatchMode.Fight ? $"verdict/{match.Id.Value}" : "history";
+        match.Mode == MatchMode.Fight ? $"verdict/{match.Id.Value}" : $"watch/replay/{match.Id.Value}";
 }

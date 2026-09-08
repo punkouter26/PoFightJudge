@@ -262,4 +262,36 @@ public class RecordsTests(ApiFactory factory)
         (await anonymous.GetAsync(ApiRoutes.Leaderboard.FightUrl)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await anonymous.GetAsync(ApiRoutes.Fighters.Base)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    /// <summary>
+    /// A watch is stored as its lines, and the replay page is the only thing that reads them back. Without this the
+    /// audio written for every round is write-only.
+    /// </summary>
+    [Fact]
+    public async Task A_watch_can_be_read_back_line_by_line()
+    {
+        var client = User("records-turns");
+        var id = await RecordAsync("records-turns", "tu1", "tu2", mode: MatchMode.Watch);
+        var matches = factory.Services.GetRequiredService<IMatchRepository>();
+        await matches.SaveTurnsAsync(id,
+        [
+            new TurnDto(id, 0, Speaker.Player1, TurnKind.Round, "You never load it properly.") { Mood = "clipped", AudioBlobName = "a", AudioFormat = "mp3" },
+            new TurnDto(id, 1, Speaker.Player2, TurnKind.Round, "I load it exactly as the manual says.") { Mood = "flat" },
+        ]);
+
+        var turns = await client.GetFromJsonAsync<IReadOnlyList<TurnDto>>(ApiRoutes.Matches.Turns(id));
+
+        turns!.Should().HaveCount(2).And.BeInAscendingOrder(t => t.Index);
+        turns[0].Text.Should().Be("You never load it properly.");
+        turns[0].Mood.Should().Be("clipped");
+    }
+
+    [Fact]
+    public async Task Somebody_elses_lines_cannot_be_read_back()
+    {
+        var theirs = User("records-turns-stranger");
+        var id = await RecordAsync("records-turns-owner", "tv1", "tv2", mode: MatchMode.Watch);
+
+        (await theirs.GetAsync(ApiRoutes.Matches.Turns(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }

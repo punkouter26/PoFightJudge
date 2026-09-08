@@ -1,0 +1,103 @@
+@page "/watch/replay/{MatchIdText}"
+
+<PageTitle>@Title · PoFightJudge</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Replay" Title="@Title" Lead="@Lead">
+    <Actions>
+        @if (_turns.Count > 0)
+        {
+            <RadzenButton Text="@(_playingAll ? "Stop" : "Play it back")" Icon="@(_playingAll ? "stop" : "play_arrow")"
+                          ButtonStyle="ButtonStyle.Primary" Variant="Variant.Filled" Click="@PlayAllAsync" />
+        }
+        <RadzenButton Text="History" Icon="history" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                      Click="@(() => Nav.NavigateTo("history"))" />
+    </Actions>
+    <ChildContent>
+        @if (_error is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+        }
+
+        @if (_loading)
+        {
+            <LoadingRows Count="3" Label="Finding the argument" />
+        }
+        else if (_match is not null)
+        {
+            <div class="replay">
+                <section class="card po-card">
+                    <div class="who">
+                        <span class="side p1">@_match.Side1.DisplayName</span>
+                        <span class="po-muted">vs</span>
+                        <span class="side p2">@_match.Side2.DisplayName</span>
+                    </div>
+                    <p class="outcome">
+                        @if (_match.IsDraw)
+                        {
+                            <span class="po-muted">The judge called neither of them.</span>
+                        }
+                        else
+                        {
+                            <span><strong>@_match.Winner</strong> took it.</span>
+                        }
+                        @if (_match.IsFake)
+                        {
+                            <span class="po-chip" title="Argued with no key, so nothing here was really judged.">rehearsal</span>
+                        }
+                    </p>
+                    @if (_match.Verdict is { Length: > 0 } verdict)
+                    {
+                        <p class="verdict">@verdict</p>
+                    }
+                </section>
+
+                @if (_turns.Count == 0)
+                {
+                    <EmptyState Icon="voice_over_off" Title="Nothing was kept"
+                                Text="This one finished before any of its lines were stored, so there is nothing to play back." />
+                }
+                else
+                {
+                    <RadzenTimeline Orientation="Orientation.Vertical" LinePosition="LinePosition.Left" class="transcript" aria-label="What was said">
+                        <Items>
+                            @foreach (var turn in _turns)
+                            {
+                                <RadzenTimelineItem PointStyle="@(turn.Speaker == Speaker.Player1 ? PointStyle.Info : PointStyle.Danger)">
+                                    <ChildContent>
+                                        <article class="line po-card @(turn.Speaker == Speaker.Player1 ? "p1" : "p2")"
+                                                 data-speaker="@turn.Speaker" data-mood="@turn.Mood">
+                                            <header>
+                                                <span class="name">@NameOf(turn.Speaker)</span>
+                                                @if (turn.Mood is { Length: > 0 })
+                                                {
+                                                    <span class="po-chip">@turn.Mood</span>
+                                                }
+                                                @if (turn.AudioBlobName is not null)
+                                                {
+                                                    <RadzenButton Icon="@(_speaking == turn.Index ? "graphic_eq" : "volume_up")"
+                                                                  ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                                                                  Disabled="@(_speaking == turn.Index)"
+                                                                  title="@($"Hear this line again")" aria-label="@($"Hear line {turn.Index + 1} again")"
+                                                                  Click="@(() => PlayOneAsync(turn.Index))" />
+                                                }
+                                            </header>
+                                            <p>@turn.Text</p>
+                                        </article>
+                                    </ChildContent>
+                                </RadzenTimelineItem>
+                            }
+                        </Items>
+                    </RadzenTimeline>
+                }
+            </div>
+        }
+        else
+        {
+            <EmptyState Icon="search_off" Title="Not here" Text="This argument is not one of yours, or it has been deleted.">
+                <Action>
+                    <RadzenButton Text="Back to history" Icon="history" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo("history"))" />
+                </Action>
+            </EmptyState>
+        }
+    </ChildContent>
+</PageShell>

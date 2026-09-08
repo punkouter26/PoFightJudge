@@ -23,6 +23,10 @@ public sealed class HistoryEndpoints : ICarterModule
             .Produces<MatchDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        matches.MapGet(ApiRoutes.Matches.TurnsSegment, GetTurnsAsync)
+            .Produces<IReadOnlyList<TurnDto>>()
+            .Produces(StatusCodes.Status404NotFound);
+
         matches.MapDelete(ApiRoutes.Matches.ByIdSegment, DeleteAsync)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
@@ -37,6 +41,21 @@ public sealed class HistoryEndpoints : ICarterModule
 
     private static async Task<IResult> GetAsync(MatchId id, ClaimsPrincipal user, IMatchRepository matches, CancellationToken ct) =>
         await matches.GetAsync(user.UserId(), id, ct) is { } match ? Results.Ok(match) : Results.NotFound();
+
+    /// <summary>
+    /// The lines of one debate, in the order they were said. Ownership is checked against the match first: the turns
+    /// table is partitioned by match rather than by user, so it cannot answer "is this mine?" on its own.
+    /// </summary>
+    private static async Task<IResult> GetTurnsAsync(MatchId id, ClaimsPrincipal user, IMatchRepository matches, CancellationToken ct)
+    {
+        if (await matches.GetAsync(user.UserId(), id, ct) is null)
+        {
+            return Results.NotFound();
+        }
+
+        var turns = await matches.GetTurnsAsync(id, ct);
+        return Results.Ok(turns.OrderBy(t => t.Index).ToList());
+    }
 
     /// <summary>
     /// Deleting a debate takes everything it produced with it: the turns, the recording, the transcripts, and both

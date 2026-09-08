@@ -75,3 +75,15 @@
 
 ## Phase I — From manual testing
 - [x] T53 Fighter personas: a 2P fighter becomes a CPU/1P persona, read from their fights (seat chosen at 2P setup)
+
+## Phase J — From the feature review (2026-09-08)
+- [x] T54 WATCH replay: `GET /api/matches/{id}/turns` and a replay page for stored round audio
+- [ ] T55 Rate limits the client can see: 429 + `Retry-After` becomes a toast and a countdown
+- [ ] T56 Run it back: rematch from a finished match, and setup remembers the last pair
+- [ ] T57 Share a verdict: an opt-in, revocable read-only link
+- [ ] T58 Head to head: two combatants side by side, from the rivalry data already computed
+- [ ] T59 Take the clip: download a highlight
+- [ ] T60 Keyboard: a command palette and the shortcuts HotKeys2 was added for
+- [ ] T61 History that scales: search, filters and server-side paging
+- [ ] T62 An error that does not lose the page: ErrorBoundary and a degraded banner
+- [ ] T63 Before the bell: a microphone check, and a reconnect the fighters can see
