@@ -1,6 +1,7 @@
 @using PoFightJudge.Client.Stats
 @using PoFightJudge.Shared.Identifiers
 @inject IApiClient Api
+@inject SaveInterop Save
 @* The moments worth hearing again, cut out of the recording on demand. *@
 <div class="reel">
     @if (Highlights.Count == 0)
@@ -18,15 +19,20 @@
                 </header>
                 <blockquote><p>“@highlight.Quote”</p></blockquote>
 
-                @if (_playing.TryGetValue(index, out var clip))
-                {
-                    <audio controls autoplay src="@clip" class="player" aria-label="@($"{highlight.Label} clip")"></audio>
-                }
-                else
-                {
-                    <RadzenButton Text="Hear it" Icon="play_arrow" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
-                                  Disabled="@(_loading == index)" Click="@(() => PlayAsync(index))" />
-                }
+                <div class="ways">
+                    @if (_playing.TryGetValue(index, out var clip))
+                    {
+                        <audio controls autoplay src="@clip" class="player" aria-label="@($"{highlight.Label} clip")"></audio>
+                    }
+                    else
+                    {
+                        <RadzenButton Text="Hear it" Icon="play_arrow" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                                      Disabled="@(_loading == index)" Click="@(() => PlayAsync(index))" />
+                    }
+                    <RadzenButton Text="Save it" Icon="download" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                                  title="@($"Save the {highlight.Label} clip")" aria-label="@($"Save the {highlight.Label} clip")"
+                                  Disabled="@(_loading == index)" Click="@(() => SaveAsync(index, highlight))" />
+                </div>
             </article>
         }
     }
@@ -42,9 +48,45 @@
 
     [Parameter] public IReadOnlyList<HighlightDto> Highlights { get; set; } = [];
 
+    /// <summary>What the fight was about, so a saved clip lands with a name that says which argument it is from.</summary>
+    [Parameter] public string Topic { get; set; } = string.Empty;
+
     private readonly Dictionary<int, string> _playing = [];
     private int? _loading;
     private string? _problem;
+
+    /// <summary>
+    /// Saving takes the same route as playing, for the same reason: the bytes have to be fetched with the caller's
+    /// credentials before the browser can be handed anything, so a download link would get a 401 in Production.
+    /// </summary>
+    private async Task SaveAsync(int index, HighlightDto highlight)
+    {
+        if (_loading is not null)
+        {
+            return;
+        }
+
+        _loading = index;
+        _problem = null;
+        try
+        {
+            var clip = await FetchAsync(index);
+            if (clip is null)
+            {
+                return;
+            }
+
+            var name = SaveInterop.FileName(Topic, highlight.Label, "wav");
+            if (!await Save.FileAsync(name, "audio/wav", clip))
+            {
+                _problem = "This browser would not save the clip. Play it and use the player's own menu instead.";
+            }
+        }
+        finally
+        {
+            _loading = null;
+        }
+    }
 
     /// <summary>
     /// The clip is fetched rather than linked: the recording lives in a private container and the route carries the
@@ -61,26 +103,40 @@
         _problem = null;
         try
         {
-            var clip = await Api.GetClipAsync(MatchId, index);
-            if (clip is null || clip.Length == 0)
+            if (await FetchAsync(index) is { } clip)
             {
-                _problem = "That moment could not be cut out of the recording.";
-                return;
+                _playing[index] = $"data:audio/wav;base64,{Convert.ToBase64String(clip)}";
             }
-
-            _playing[index] = $"data:audio/wav;base64,{Convert.ToBase64String(clip)}";
-        }
-        catch (ApiException ex)
-        {
-            _problem = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _problem = $"The clip could not be fetched ({ex.Message}).";
         }
         finally
         {
             _loading = null;
+        }
+    }
+
+    /// <summary>One clip's bytes, or null with the reason already on screen. Shared by hearing it and saving it.</summary>
+    private async Task<byte[]?> FetchAsync(int index)
+    {
+        try
+        {
+            var clip = await Api.GetClipAsync(MatchId, index);
+            if (clip is null || clip.Length == 0)
+            {
+                _problem = "That moment could not be cut out of the recording.";
+                return null;
+            }
+
+            return clip;
+        }
+        catch (ApiException ex)
+        {
+            _problem = ex.Summary;
+            return null;
+        }
+        catch (HttpRequestException ex)
+        {
+            _problem = $"The clip could not be fetched ({ex.Message}).";
+            return null;
         }
     }
 }

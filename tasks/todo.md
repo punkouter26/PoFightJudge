@@ -82,7 +82,7 @@
 - [x] T56 Run it back: rematch from a finished match, and setup remembers the last pair
 - [x] T57 Share a verdict: an opt-in, revocable read-only link
 - [x] T58 Head to head: two combatants side by side, from the rivalry data already computed
-- [ ] T59 Take the clip: download a highlight
+- [x] T59 Take the clip: download a highlight
 - [ ] T60 Keyboard: a command palette and the shortcuts HotKeys2 was added for
 - [ ] T61 History that scales: search, filters and server-side paging
 - [ ] T62 An error that does not lose the page: ErrorBoundary and a degraded banner

@@ -15,3 +15,15 @@ blockquote { margin: 0; }
 blockquote p { margin: 0; font-size: var(--po-text-lg); }
 
 .player { width: 100%; }
+
+.ways {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* The player takes the row it is given; the save button sits beside it rather than under it. */
+.ways .player {
+  flex: 1 1 14rem;
+}
