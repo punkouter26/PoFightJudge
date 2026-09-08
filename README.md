@@ -1,4 +1,4 @@
-# PoMarriedFight
+# PoFightJudge
 
 One app, two ways to have a married-couple fight and get judged.
 
@@ -30,7 +30,7 @@ Or by hand:
 ```powershell
 ./SCRIPTS/azurite.ps1                        # Azurite (OAuth + HTTPS on 12000/12002) + Seq (5341)
 az login                                     # DefaultAzureCredential reads kv-poshared and Storage with this
-dotnet run --project src/PoMarriedFight.Api  # https://localhost:5001
+dotnet run --project src/PoFightJudge.Api  # https://localhost:5001
 ```
 
 **With no Gemini key it still works.** Every AI seam has a deterministic stand-in — the rounds, the voices, the live
@@ -40,21 +40,21 @@ so with a banner. The fakes are refused outright in Production.
 ## Test
 
 ```powershell
-dotnet test tests/PoMarriedFight.Unit          # no Docker, no network
-dotnet test tests/PoMarriedFight.Integration   # Testcontainers.Azurite (Docker)
-dotnet test tests/PoMarriedFight.E2EAPI        # the real API in process, with the fakes
-dotnet test tests/PoMarriedFight.E2EUI         # Playwright Chromium with a fake microphone playing a real argument
+dotnet test tests/PoFightJudge.Unit          # no Docker, no network
+dotnet test tests/PoFightJudge.Integration   # Testcontainers.Azurite (Docker)
+dotnet test tests/PoFightJudge.E2EAPI        # the real API in process, with the fakes
+dotnet test tests/PoFightJudge.E2EUI         # Playwright Chromium with a fake microphone playing a real argument
 ```
 
-`dotnet test PoMarriedFight.slnx` runs all four. A pre-commit hook runs `dotnet format --verify-no-changes` and the
+`dotnet test PoFightJudge.slnx` runs all four. A pre-commit hook runs `dotnet format --verify-no-changes` and the
 Unit tier.
 
 ## How it is put together
 
 ```
-src/PoMarriedFight.Shared   contracts, route table, config keys, value objects — the API and the client share one truth
-src/PoMarriedFight.Api      minimal API, vertical slices under Features/, SignalR hub for the live fight
-src/PoMarriedFight.Client   Blazor WebAssembly, Radzen, one set of design tokens
+src/PoFightJudge.Shared   contracts, route table, config keys, value objects — the API and the client share one truth
+src/PoFightJudge.Api      minimal API, vertical slices under Features/, SignalR hub for the live fight
+src/PoFightJudge.Client   Blazor WebAssembly, Radzen, one set of design tokens
 infra/                      Bicep: resource group, storage, F1 Linux plan, web app, role assignments
 ```
 
@@ -71,13 +71,13 @@ Two rules run through all of it:
 
 ## Secrets
 
-Configuration keys are `PoMarriedFight:*`; the same values live in Key Vault as `PoMarriedFight--*`. Nothing is ever
+Configuration keys are `PoFightJudge:*`; the same values live in Key Vault as `PoFightJudge--*`. Nothing is ever
 committed.
 
 ```powershell
 ./SCRIPTS/seed-secrets.ps1          # prints what it would copy into kv-poshared; writes nothing
 ./SCRIPTS/seed-secrets.ps1 -Apply   # carries it out
-dotnet user-secrets set "PoMarriedFight:GeminiApiKey" <value> --project src/PoMarriedFight.Api   # or just locally
+dotnet user-secrets set "PoFightJudge:GeminiApiKey" <value> --project src/PoFightJudge.Api   # or just locally
 ```
 
 ## Deploy

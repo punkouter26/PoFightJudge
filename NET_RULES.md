@@ -17,7 +17,7 @@ Authoritative rules for `Po{Name}` .NET solutions. Deviations must be recorded i
 
 - **2.1 Endpoints** — Map via `IEndpointRouteBuilder` + `MapGroup()`. Auto-document with `Microsoft.AspNetCore.OpenApi` and serve via Scalar UI.
 - **2.2 Dev/Test Auth** — Use `FakeAuthHandler` reading `X-Fake-User` and `X-Fake-Roles` headers. MUST throw `InvalidOperationException` in Production.
-- **2.3 Secrets & Identity** — Resource Group `PoShared` (or `Po{Name}`). Authenticate via System-Assigned Managed Identity / `DefaultAzureCredential` + Azure Key Vault in Azure. Secrets in committed `appsettings*.json` are strictly forbidden; local development may use `dotnet user-secrets` for values that cannot come from Key Vault (PoMarriedFight uses neither: Key Vault via `az login` locally, see CLAUDE.md).
+- **2.3 Secrets & Identity** — Resource Group `PoShared` (or `Po{Name}`). Authenticate via System-Assigned Managed Identity / `DefaultAzureCredential` + Azure Key Vault in Azure. Secrets in committed `appsettings*.json` are strictly forbidden; local development may use `dotnet user-secrets` for values that cannot come from Key Vault (PoFightJudge uses neither: Key Vault via `az login` locally, see CLAUDE.md).
 - **2.4 Health & Diagnostics**
   - `/health`: Native .NET health status for external dependencies.
   - `/diag`: Real-time operational summary. Must strictly redact all secrets, tokens, and connection strings.

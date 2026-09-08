@@ -1,0 +1,165 @@
+@page "/verdict/{MatchIdText}"
+@using PoFightJudge.Client.Stats
+
+<PageTitle>The ruling · PoFightJudge</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="After the fight" Title="@Title" Lead="@Lead">
+    <ChildContent>
+        @if (_problem is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                <div class="failure">
+                    <span>@_problem</span>
+                    <RadzenButton Text="Read it again" Icon="refresh" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
+                                  Disabled="@_retrying" Click="@RetryAsync" />
+                </div>
+            </RadzenAlert>
+        }
+        else if (_report is null)
+        {
+            <section class="waiting" aria-live="polite">
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+                <p>@Waiting</p>
+                <p class="po-muted">This takes a minute or so. The page keeps itself up to date.</p>
+            </section>
+        }
+        else
+        {
+            <div class="verdict">
+                <section class="ruling po-card">
+                    <span class="po-eyebrow po-eyebrow--accent">The ruling</span>
+                    <h2 class="po-display">@WinnerLine</h2>
+                    <p class="summary">@_report.Overall.Summary</p>
+                    <ul class="reasons">
+                        @foreach (var reason in _report.Overall.Reasons)
+                        {
+                            <li>@reason</li>
+                        }
+                    </ul>
+                    @if (_report.SpeakerMappingFlagged)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                            Who said what is not certain here. @_report.SpeakerMappingNote
+                        </RadzenAlert>
+                    }
+                </section>
+
+                @if (_report.Highlights is { Count: > 0 } highlights)
+                {
+                    <section class="reel-section">
+                        <h2 class="po-eyebrow">Worth hearing again</h2>
+                        <HighlightReel MatchId="@_report.MatchId" Highlights="@highlights" />
+                    </section>
+                }
+
+                <section class="pair">
+                    <PlayerCard Report="@_report.Player1" Won="@(_report.Overall.Overall == Speaker.Player1)" />
+                    <PlayerCard Report="@_report.Player2" Won="@(_report.Overall.Overall == Speaker.Player2)" IsSecond="true" />
+                </section>
+
+                @* All tabs rendered, not just the selected one: a report is a document, so find-in-page and printing should reach every part of it. *@
+                <RadzenTabs @bind-SelectedIndex="_tab" RenderMode="TabRenderMode.Client" class="detail">
+                    <Tabs>
+                        <RadzenTabsItem Text="How they argued">
+                            <div class="side-by-side">
+                                @foreach (var (side, report) in Sides)
+                                {
+                                    <div class="column">
+                                        <h3>@report.Name</h3>
+                                        <TraitScores Assessment="@report.Assessment" />
+                                        <p class="po-muted why">@report.Assessment.CefrJustification</p>
+                                        <h4>How the mood moved</h4>
+                                        <EmotionChart Assessment="@report.Assessment" />
+                                    </div>
+                                }
+                            </div>
+                        </RadzenTabsItem>
+
+                        <RadzenTabsItem Text="What they claimed">
+                            <div class="side-by-side">
+                                @foreach (var (side, report) in Sides)
+                                {
+                                    <div class="column">
+                                        <h3>@report.Name</h3>
+                                        @if (report.Assessment.Claims.Count == 0 && report.Assessment.Fallacies.Count == 0)
+                                        {
+                                            <p class="po-muted">Nothing checkable was said.</p>
+                                        }
+                                        else
+                                        {
+                                            <RadzenDataGrid Data="@report.Assessment.Claims" AllowPaging="false" AllowSorting="true" class="claims" TItem="ClaimDto">
+                                                <Columns>
+                                                    <RadzenDataGridColumn TItem="ClaimDto" Property="@nameof(ClaimDto.Claim)" Title="Claim" />
+                                                    <RadzenDataGridColumn TItem="ClaimDto" Property="@nameof(ClaimDto.Verdict)" Title="True?" Width="7rem" />
+                                                    <RadzenDataGridColumn TItem="ClaimDto" Property="@nameof(ClaimDto.Note)" Title="Why" />
+                                                </Columns>
+                                            </RadzenDataGrid>
+
+                                            @if (report.Assessment.Fallacies.Count > 0)
+                                            {
+                                                <h4>Where the logic slipped</h4>
+                                                <ul class="fallacies">
+                                                    @foreach (var fallacy in report.Assessment.Fallacies)
+                                                    {
+                                                        <li><strong>@fallacy.Name</strong> — “@fallacy.Quote”</li>
+                                                    }
+                                                </ul>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </RadzenTabsItem>
+
+                        <RadzenTabsItem Text="How they talked">
+                            <div class="side-by-side">
+                                @foreach (var (side, report) in Sides)
+                                {
+                                    <div class="column">
+                                        <h3>@report.Name</h3>
+                                        @foreach (var group in Enum.GetValues<StatGroup>())
+                                        {
+                                            <h4>@GroupName(group)</h4>
+                                            <div class="stats">
+                                                @foreach (var stat in StatFormat.Describe(report.Metrics).Where(s => s.Group == group))
+                                                {
+                                                    <StatTile Stat="@stat" />
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </RadzenTabsItem>
+
+                        <RadzenTabsItem Text="What to do about it">
+                            <div class="side-by-side">
+                                @foreach (var (side, report) in Sides)
+                                {
+                                    <div class="column">
+                                        <h3>@report.Name</h3>
+                                        <ol class="tips">
+                                            @foreach (var tip in report.Assessment.CoachingTips)
+                                            {
+                                                <li>@tip</li>
+                                            }
+                                        </ol>
+                                        <blockquote class="worst">
+                                            <p>@report.Assessment.WorstMomentQuote</p>
+                                            <footer class="po-muted">their weakest line</footer>
+                                        </blockquote>
+                                    </div>
+                                }
+                            </div>
+                        </RadzenTabsItem>
+                    </Tabs>
+                </RadzenTabs>
+
+                <footer class="after">
+                    <span class="po-muted">Read in @StatFormat.Number(_report.AnalysisSeconds) seconds.</span>
+                    <RadzenButton Text="Fight again" Icon="mic" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo("fight"))" />
+                </footer>
+            </div>
+        }
+    </ChildContent>
+</PageShell>

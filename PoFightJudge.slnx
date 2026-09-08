@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PoFightJudge.Shared/PoFightJudge.Shared.csproj" />
+    <Project Path="src/PoFightJudge.Api/PoFightJudge.Api.csproj" />
+    <Project Path="src/PoFightJudge.Client/PoFightJudge.Client.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PoFightJudge.TestSupport/PoFightJudge.TestSupport.csproj" />
+    <Project Path="tests/PoFightJudge.Unit/PoFightJudge.Unit.csproj" />
+    <Project Path="tests/PoFightJudge.Integration/PoFightJudge.Integration.csproj" />
+    <Project Path="tests/PoFightJudge.E2EAPI/PoFightJudge.E2EAPI.csproj" />
+    <Project Path="tests/PoFightJudge.E2EUI/PoFightJudge.E2EUI.csproj" />
+  </Folder>
+</Solution>

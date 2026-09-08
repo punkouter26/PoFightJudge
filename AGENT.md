@@ -20,7 +20,7 @@ This file is the operating detail that lives in neither.
 | Auth | FakeAuth (`X-Fake-User`) + guest cookie | the same | Entra ID, JWT bearer |
 | Storage | Azurite over HTTPS with OAuth, ports 12000/12002 | in-memory repositories | Azure Storage, managed identity |
 | Secrets | Key Vault via `az login`, or user-secrets | none needed | Key Vault via managed identity |
-| AI | real when a key is present, deterministic fakes when not | fakes, unless `POMARRIEDFIGHT_E2E_REAL=1` | **real only** — the fakes refuse to register |
+| AI | real when a key is present, deterministic fakes when not | fakes, unless `POFIGHTJUDGE_E2E_REAL=1` | **real only** — the fakes refuse to register |
 | Logs | console + Seq (5341) | console | Serilog → Application Insights |
 
 `Test` is its own environment name, used by `ApiFactory` and by the E2EUI host. Anything that must never happen in
@@ -28,7 +28,7 @@ Production is written as `!environment.IsProduction()`, never as `IsDevelopment(
 
 ## Configuration
 
-Keys are `PoMarriedFight:*` in configuration and `PoMarriedFight--*` in Key Vault; `SecretManager` maps one to the
+Keys are `PoFightJudge:*` in configuration and `PoFightJudge--*` in Key Vault; `SecretManager` maps one to the
 other. Every key has a constant in `Shared/Configuration/ConfigKeys.cs`, and that is where a new one goes — the
 host, the tests and the Bicep app settings all read the same name from there.
 
@@ -91,6 +91,6 @@ seven of which no test on the stand-ins could have seen.
 ## Costs
 
 The four test tiers spend nothing: every AI seam has a deterministic stand-in, and the tests that talk to Google
-skip unless a variable says otherwise — `GEMINI_API_KEY` for the live smoke, `POMARRIEDFIGHT_E2E_REAL=1` for a
-browser fight against the real service, `POMARRIEDFIGHT_SMOKE_URL` for the deployed-site check. Those are worth
+skip unless a variable says otherwise — `GEMINI_API_KEY` for the live smoke, `POFIGHTJUDGE_E2E_REAL=1` for a
+browser fight against the real service, `POFIGHTJUDGE_SMOKE_URL` for the deployed-site check. Those are worth
 running when the wire format or a schema changes, and not otherwise.

@@ -1,11 +1,11 @@
-# PoMarriedFight — Specification
+# PoFightJudge — Specification
 
 Status: DRAFT v1 for approval (2026-09-06). Interview answers and research are recorded here; the capability
 breakdown is in [CAPABILITY-MAP.md](CAPABILITY-MAP.md).
 
 ## 1. Objective
 
-**PoMarriedFight** is one Blazor WebAssembly app with two ways to have a married-couple fight and get judged:
+**PoFightJudge** is one Blazor WebAssembly app with two ways to have a married-couple fight and get judged:
 
 - **WATCH** — pick a husband profile and a wife profile, give a topic, and watch the AI versions argue: three rounds
   each, spoken in each character's voice, a SLAP heckle available once per match, then a Gemini judge names the winner
@@ -98,7 +98,7 @@ viewport and a laptop, with every screen built from Radzen components.
 | Gemini transport | Raw `HttpClient` / `ClientWebSocket` with `x-goog-api-key`; no Google SDK (it exposes neither Live nor Interactions) |
 | Storage | Azure.Data.Tables 12.12.0, Azure.Storage.Blobs 12.29.2, Azure.Identity 1.21.0 — **endpoint + `DefaultAzureCredential` only, no connection strings anywhere**. Local: Azurite `--oauth basic` over HTTPS (dev cert) on **12000 blob / 12001 queue / 12002 table** |
 | Auth | Development/Test: `FakeAuthHandler` (`X-Fake-User`) + `GuestMiddleware` (cookie); Production: Entra ID — `Microsoft.Identity.Web` 4.14.2 JWT bearer (`ValidAudiences = [clientId, api://clientId]`), `Microsoft.Authentication.WebAssembly.Msal` with tenant-specific authority. `FakeAuthHandler` throws in Production |
-| Secrets | `kv-poshared` (RG `PoShared`), prefix **`PoMarriedFight--`** → `PoMarriedFight:*`; `KeyVault:Uri` from `appsettings.Development.json` / App Service setting. No `UserSecretsId` |
+| Secrets | `kv-poshared` (RG `PoShared`), prefix **`PoFightJudge--`** → `PoFightJudge:*`; `KeyVault:Uri` from `appsettings.Development.json` / App Service setting. No `UserSecretsId` |
 | Telemetry | Shared App Insights component in `PoShared` via `APPLICATIONINSIGHTS_CONNECTION_STRING`; 10 % trace sampling, health probes filtered |
 | Tests | xunit 2.9.3, xunit.runner.visualstudio 3.1.5, NSubstitute 6.2.0, **AwesomeAssertions 9.6.0**, bunit 2.9.0, Xunit.SkippableFact 1.5.85, Microsoft.AspNetCore.Mvc.Testing 10.0.x, Microsoft.Extensions.TimeProvider.Testing 10.x, **Microsoft.Extensions.Diagnostics.Testing 10.9.0** (FakeLogger), **Verify.Xunit 31.12.5** (prompt snapshots), **Bogus 35.6.5**, Testcontainers.Azurite 4.14.0, Microsoft.Playwright 1.62.0, coverlet.collector 10.0.1 + **ReportGenerator 5.5.11** (80 % gate) |
 | Libraries (selected 2026-09-06) | **Carter 10.0.0** (endpoint modules), **FluentValidation 12.1.1** + **Blazored.FluentValidation 2.2.0** (shared validators), **Vogen 8.0.7** (ids), **Riok.Mapperly 4.3.1** (mapping), **Microsoft.FeatureManagement.AspNetCore 4.7.0**, **Microsoft.Extensions.Caching.Hybrid 10.9.0**, **AspNetCore.HealthChecks.Uris 9.0.0**, **Serilog.Sinks.Seq 9.1.0** (dev), **Concentus 2.2.2** (Opus recordings), **SixLabors.ImageSharp 3.1.x** (faces; 4.x needs a paid licence key), **Blazored.LocalStorage 4.5.0**, **Toolbelt.Blazor.HotKeys2 6.2.1**, **Humanizer.Core 3.0.10**; analyzers **Meziantou 3.0.217**, **VS.Threading 18.7.23**, **BannedApiAnalyzers 5.6.0**, AnalysisLevel=latest-all; **Husky.Net 0.9.1** hooks; WASM AOT + trimming on publish |
@@ -109,35 +109,35 @@ viewport and a laptop, with every screen built from Radzen components.
 ```powershell
 ./SCRIPTS/setup.ps1                      # prereqs, Azurite (OAuth+HTTPS), az login + secret presence check, restore, build, test, Playwright
 ./SCRIPTS/azurite.ps1 [-Down] [-Wipe]    # local storage emulator on 12000/12001/12002
-dotnet build PoMarriedFight.slnx -c Release          # 0 warnings — TreatWarningsAsErrors
-dotnet format PoMarriedFight.slnx --verify-no-changes # lint (CI gate)
-dotnet test tests/PoMarriedFight.Unit                # fast, no Docker
-dotnet test tests/PoMarriedFight.Integration         # Testcontainers.Azurite (Docker)
-dotnet test tests/PoMarriedFight.E2EAPI              # WebApplicationFactory + fakes, no Docker
-dotnet test tests/PoMarriedFight.E2EUI               # Playwright Chromium, self-hosted Kestrel, fake mic WAV
-dotnet test PoMarriedFight.slnx --collect:"XPlat Code Coverage"
-dotnet run --project src/PoMarriedFight.Api          # https://localhost:5001 (serves the WASM client)
+dotnet build PoFightJudge.slnx -c Release          # 0 warnings — TreatWarningsAsErrors
+dotnet format PoFightJudge.slnx --verify-no-changes # lint (CI gate)
+dotnet test tests/PoFightJudge.Unit                # fast, no Docker
+dotnet test tests/PoFightJudge.Integration         # Testcontainers.Azurite (Docker)
+dotnet test tests/PoFightJudge.E2EAPI              # WebApplicationFactory + fakes, no Docker
+dotnet test tests/PoFightJudge.E2EUI               # Playwright Chromium, self-hosted Kestrel, fake mic WAV
+dotnet test PoFightJudge.slnx --collect:"XPlat Code Coverage"
+dotnet run --project src/PoFightJudge.Api          # https://localhost:5001 (serves the WASM client)
 az bicep build --file infra/main.bicep               # infra lint
 ```
 
-Opt-in real-key checks: `GEMINI_API_KEY` (or KV) enables `GeminiLiveSmokeTests`; `POMARRIEDFIGHT_E2E_REAL=1` drives
-the E2EUI fight against the real host; `POMARRIEDFIGHT_SMOKE_URL` points `DeployedSiteTests` at a live site.
+Opt-in real-key checks: `GEMINI_API_KEY` (or KV) enables `GeminiLiveSmokeTests`; `POFIGHTJUDGE_E2E_REAL=1` drives
+the E2EUI fight against the real host; `POFIGHTJUDGE_SMOKE_URL` points `DeployedSiteTests` at a live site.
 
 ## 4. Project structure
 
 ```
-PoMarriedFight.slnx  Directory.Build.props  Directory.Packages.props  global.json  docker-compose.yml  .editorconfig
+PoFightJudge.slnx  Directory.Build.props  Directory.Packages.props  global.json  docker-compose.yml  .editorconfig
 README.md  CLAUDE.md  AGENT.md  NET_RULES.md  SPEC.md  CAPABILITY-MAP.md  tasks/plan.md  tasks/todo.md
 SCRIPTS/setup.ps1  SCRIPTS/azurite.ps1  SCRIPTS/seed-secrets.ps1
 infra/main.bicep  infra/resources.bicep  infra/storage-role.bicep  infra/keyvault-access.bicep
 .github/workflows/deploy.yml
 
-src/PoMarriedFight.Shared/
+src/PoFightJudge.Shared/
   ApiRoutes.cs  Configuration/ConfigKeys.cs  Identifiers/{ProfileId,MatchId}.cs  SelfPlayer.cs
   Models/{ProfileModels,WatchModels,FightModels,LiveModels,AnalysisModels,MetricsModels,RecordModels,
           HostPersonaModels,AuthModels,HealthModels,DiagModels,FeatureFlagsDto}.cs
   Json/SharedJsonContext.cs
-src/PoMarriedFight.Api/
+src/PoFightJudge.Api/
   Program.cs  Common/{DependencyInjection,SecretManager,SecretMasker,Outcome,ForwardedHeadersConfig,
                       GlobalExceptionHandler,SecurityHeadersMiddleware,AzuriteStorageScopedCredential,StorageBootstrap}.cs
   Features/Auth/          FakeAuthHandler, FakeAuthOptions, GuestMiddleware, ClaimsPrincipalExtensions, AuthEndpoints
@@ -165,7 +165,7 @@ src/PoMarriedFight.Api/
                           ProfileStatsBuilder, HistoryEndpoints, LeaderboardEndpoints
   Features/Storage/       StorageEntities, AudioBlobStore
   Hubs/LiveHub.cs
-src/PoMarriedFight.Client/
+src/PoFightJudge.Client/
   Program.cs  App.razor  _Imports.razor  Layout/MainLayout.razor
   Pages/{Home,Login,Authentication,Health,Profiles,ProfileRecord,Fighters,FighterProfile,Watch,WatchPlay,Fight,FightLive,
          Verdict,History,Leaderboard,NotFound}.razor(+.css)
@@ -176,18 +176,18 @@ src/PoMarriedFight.Client/
   Services/{ApiClient,LiveConnection,AudioInterop,MicInterop,SpeechRecognitionInterop,ThemeInterop,TelemetryService}.cs
   wwwroot/index.html  wwwroot/manifest.webmanifest  wwwroot/sw.js  wwwroot/css/app.css  wwwroot/icons/*
   wwwroot/js/{audio,pcm-worklet,mic,speech,theme,frame}.js  wwwroot/images/profiles/*.png
-tests/PoMarriedFight.TestSupport/   FakeLiveSocket, ScriptedShow, FakeAnalysisClients, InMemoryRepositories, FakeHttpHandler
-tests/PoMarriedFight.Unit/          mirrors Features/* + Client/
-tests/PoMarriedFight.Integration/   AzuriteFixture (Testcontainers), repositories, blob store, TTS cache, cascade delete, fighter auto-create
-tests/PoMarriedFight.E2EAPI/        ApiFactory (fakes), auth/health/profiles/fighters/watch/fight/analysis/history/leaderboard
-tests/PoMarriedFight.E2EUI/         AppFixture (Kestrel + fakes), WatchFlow, FightFlow, ProfileFlow, ThemeAndViewport,
+tests/PoFightJudge.TestSupport/   FakeLiveSocket, ScriptedShow, FakeAnalysisClients, InMemoryRepositories, FakeHttpHandler
+tests/PoFightJudge.Unit/          mirrors Features/* + Client/
+tests/PoFightJudge.Integration/   AzuriteFixture (Testcontainers), repositories, blob store, TTS cache, cascade delete, fighter auto-create
+tests/PoFightJudge.E2EAPI/        ApiFactory (fakes), auth/health/profiles/fighters/watch/fight/analysis/history/leaderboard
+tests/PoFightJudge.E2EUI/         AppFixture (Kestrel + fakes), WatchFlow, FightFlow, ProfileFlow, ThemeAndViewport,
                                     DeployedSite; fixtures/debate-60s.wav
 ```
 
 ## 5. Code style + conventions
 
 ```csharp
-namespace PoMarriedFight.Api.Features.Fight;
+namespace PoFightJudge.Api.Features.Fight;
 
 /// <summary>Drives one fight through its phases. Pure state; no I/O, no timers.</summary>
 public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTimeOffset startedAt, ShowSetup setup)
@@ -238,7 +238,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 | `Analysis` | status, `ReportJson` (`AnalysisReportDto`), error | `Analyses` table: PK matchId, RK `"analysis"` |
 | `WatchResult` | one row per profile per WATCH match: `Won`, `Opponent`, `Topic`, `At`, `UserId`, `AdvancedStats` (10 values) | `WatchResults` table: PK profile initials, RK matchId |
 | `FightResult` | one row per fighter per FIGHT match: `Won`, `WonLogic`, `WonCorrect`, `Opponent`, `Topic`, `At`, `UserId`, scores (logic, clarity, persuasiveness, evidence, rebuttal, confidence, politeness, aggression, listening), metrics (wpm, fillers/100, talk share, interruptions made), fallacies count, and a **`FightStyleSnapshot`** (tone descriptors, ≤ 3 repeated phrases, fallacy names, opener = first 12 words of the fighter's first turn, CEFR, emotion profile, best-moment quote ≤ 120 chars, ≤ 3 coaching tips) | `FightResults` table: PK fighter tag, RK matchId — re-analysis replaces, delete removes |
-| Blobs | `audio/{matchId}/players.wav`, `audio/{matchId}/host.wav`, `audio/{matchId}/live-transcript.json`, `audio/{matchId}/{roundIndex}.{mp3|pcm}`, `faces/{initials}.png`, `tts-cache/{sha256}.{mp3|pcm}` | containers `pomarriedfight-audio`, `-faces`, `-ttscache` |
+| Blobs | `audio/{matchId}/players.wav`, `audio/{matchId}/host.wav`, `audio/{matchId}/live-transcript.json`, `audio/{matchId}/{roundIndex}.{mp3|pcm}`, `faces/{initials}.png`, `tts-cache/{sha256}.{mp3|pcm}` | containers `pofightjudge-audio`, `-faces`, `-ttscache` |
 
 Records, leaderboards, rivalries, badges and form are **derived on read** (`ProfileStatsBuilder` over `WatchResults`,
 `FighterStatsBuilder` over `FightResults`); nothing is accumulated, so delete and re-analysis stay correct.
@@ -353,7 +353,7 @@ multi-instance (F1 is single instance by design).
 10. Starting a fight with two unknown tags creates two `Fighter` rows; after the analysis each has one `FightResult` with a populated `FightStyleSnapshot`; `GET /api/fighters/{tag}` returns a style profile whose fallacy counts, phrases and opener match the report; after a second fight the host digest reports "2 fights" (integration + E2EAPI tests).
 11. WATCH verdict writes two `WatchResult` rows; FIGHT analysis writes two `FightResult` rows; `/api/leaderboard/watch` ranks profiles and `/api/leaderboard/fight` ranks fighters; deleting a match removes its rows and blobs and the fighter's profile no longer reflects it (integration test).
 12. History lists a WATCH match and a FIGHT match with correct Mode badges; opening each shows replay / verdict; the Fighters page lists both tags with records (E2EUI).
-13. Production configuration: unauthenticated `/api/*` → 401; `/login` 200; `FakeAuth` registration throws (unit test); guest requires an explicit `PoMarriedFight:Auth:AllowFakeAuth`.
+13. Production configuration: unauthenticated `/api/*` → 401; `/login` 200; `FakeAuth` registration throws (unit test); guest requires an explicit `PoFightJudge:Auth:AllowFakeAuth`.
 14. `/api/diag` never contains a secret value (regex test against key/connection-string patterns).
 15. Dark/light toggle persists across reload; every page usable at 390 px; every text colour pair ≥ 4.5:1 in both themes (`PaletteContrastTests`).
 16. No raw `<button>`, `<input>`, `<select>`, `<textarea>` in any `.razor` file except `InputFile` (grep test in Unit).

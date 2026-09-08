@@ -29,7 +29,7 @@ moved out of memory and a SignalR backplane. Changing this off F1 starts billing
 ])
 param appServicePlanSku string = 'F1'
 
-@description('Key Vault in PoShared holding the PoMarriedFight--* secrets')
+@description('Key Vault in PoShared holding the PoFightJudge--* secrets')
 param keyVaultName string
 
 @description('Shared Application Insights component in PoShared')
@@ -119,7 +119,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       linuxFxVersion: 'DOTNETCORE|10.0'
       // The publish folder carries two runtimeconfig.json files (API + WASM client), so Oryx cannot infer the
       // startup DLL and falls back to its placeholder site (every route 404). Name it explicitly.
-      appCommandLine: 'dotnet PoMarriedFight.Api.dll'
+      appCommandLine: 'dotnet PoFightJudge.Api.dll'
       alwaysOn: !isFreePlan
       webSocketsEnabled: true
       ftpsState: 'Disabled'
@@ -140,11 +140,11 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         // Endpoints, not connection strings: DefaultAzureCredential is the only storage credential there is.
         {
-          name: 'PoMarriedFight__TableStorageEndpoint'
+          name: 'PoFightJudge__TableStorageEndpoint'
           value: storageAccount.properties.primaryEndpoints.table
         }
         {
-          name: 'PoMarriedFight__BlobStorageEndpoint'
+          name: 'PoFightJudge__BlobStorageEndpoint'
           value: storageAccount.properties.primaryEndpoints.blob
         }
         {
@@ -170,7 +170,7 @@ module storageRoles 'storage-role.bicep' = {
   }
 }
 
-// Secret get/list on kv-poshared; without it the host cannot load PoMarriedFight--* and comes up degraded.
+// Secret get/list on kv-poshared; without it the host cannot load PoFightJudge--* and comes up degraded.
 module keyVaultAccess 'keyvault-access.bicep' = {
   name: 'keyvault-access'
   scope: resourceGroup(sharedResourceGroupName)

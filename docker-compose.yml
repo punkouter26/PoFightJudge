@@ -1,4 +1,4 @@
-# Local dependencies for PoMarriedFight.
+# Local dependencies for PoFightJudge.
 #
 # azurite — runs with `--oauth basic` over HTTPS on purpose: the solution authenticates to Storage exclusively with
 # DefaultAzureCredential and has no connection-string code path (BannedSymbols.txt makes that a build error). The Azure
@@ -11,7 +11,7 @@
 services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
-    container_name: pomarriedfight-azurite
+    container_name: pofightjudge-azurite
     restart: unless-stopped
     command: >
       azurite
@@ -38,7 +38,7 @@ services:
       start_period: 5s
   seq:
     image: datalust/seq:latest
-    container_name: pomarriedfight-seq
+    container_name: pofightjudge-seq
     restart: unless-stopped
     environment:
       - ACCEPT_EULA=Y

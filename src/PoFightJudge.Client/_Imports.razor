@@ -1,0 +1,25 @@
+@using System.Net.Http
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@using Microsoft.AspNetCore.Components.WebAssembly.Http
+@using Microsoft.JSInterop
+@using Radzen
+@using Radzen.Blazor
+@using PoFightJudge.Client
+@using PoFightJudge.Client.Components
+@using PoFightJudge.Client.Layout
+@using PoFightJudge.Client.Services
+@using PoFightJudge.Client.Shared
+@using PoFightJudge.Shared
+@using PoFightJudge.Shared.Configuration
+@using PoFightJudge.Shared.Identifiers
+@using PoFightJudge.Shared.Models
+
+@* Every page requires a signed-in (or guest) user unless it opts out with [AllowAnonymous]: AuthorizeRouteView enforces
+   attributes only, so the client-side fallback policy alone would not redirect. *@
+@attribute [Authorize]

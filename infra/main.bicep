@@ -6,14 +6,14 @@ param location string = 'eastus2'
 @description('App Service Plan SKU. Left at F1 (Free) unless somebody deliberately opts into a billed tier; see resources.bicep for what each one buys.')
 param appServicePlanSku string = 'F1'
 
-// Naming: Po{Solution}. Everything app-specific lives in the PoMarriedFight resource group; Key Vault,
+// Naming: Po{Solution}. Everything app-specific lives in the PoFightJudge resource group; Key Vault,
 // App Insights and Log Analytics stay in PoShared and are referenced as existing, the same layout every
 // other Po* app uses.
-var resourceGroupName = 'PoMarriedFight'
+var resourceGroupName = 'PoFightJudge'
 var sharedResourceGroupName = 'PoShared'
-var storageAccountName = 'stpomarriedfight'
-var webAppName = 'app-pomarriedfight'
-var appServicePlanName = 'asp-pomarriedfight-f1'
+var storageAccountName = 'stpofightjudge'
+var webAppName = 'app-pofightjudge'
+var appServicePlanName = 'asp-pofightjudge-f1'
 var keyVaultName = 'kv-poshared'
 var appInsightsName = 'poappideinsights8f9c9a4e'
 

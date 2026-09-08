@@ -1,8 +1,8 @@
-# PoMarriedFight — Capability Map
+# PoFightJudge — Capability Map
 
 Status: DRAFT for approval (2026-09-06). Companion to [SPEC.md](SPEC.md).
 
-PoMarriedFight merges two working apps — **PoMarriedLife** (AI couple argument simulator) and **PoArgueJudge**
+PoFightJudge merges two working apps — **PoMarriedLife** (AI couple argument simulator) and **PoArgueJudge**
 (live voice debate host + speech analysis) — into one fresh solution. Each capability below is independently
 buildable and testable; the build order respects the dependency graph so every checkpoint is a running app.
 
@@ -10,7 +10,7 @@ buildable and testable; the build order respects the dependency graph so every c
 
 | # | Capability | What it delivers | Ported from | Tested by |
 |---|---|---|---|---|
-| C0 | **Foundation** | `PoMarriedFight.slnx`, `Shared` (ApiRoutes, ConfigKeys, ids, DTOs), Api host (Key Vault, Serilog, env-split auth, degraded mode, `/api/health`, `/api/diag`, `/api/features`), Client shell (tokens, `PageShell`, theme, nav, Login, Home, Health), Table/Blob clients (identity-only), Azurite-over-OAuth script, 5 test projects, CI skeleton | Both (PoMarriedLife's token/CSS + Azurite model; PoArgueJudge's Program structure + security headers) | Unit (secret manager, validator, palette contrast), E2EAPI (health/auth/401), E2EUI (shell boots, theme persists, 390 px) |
+| C0 | **Foundation** | `PoFightJudge.slnx`, `Shared` (ApiRoutes, ConfigKeys, ids, DTOs), Api host (Key Vault, Serilog, env-split auth, degraded mode, `/api/health`, `/api/diag`, `/api/features`), Client shell (tokens, `PageShell`, theme, nav, Login, Home, Health), Table/Blob clients (identity-only), Azurite-over-OAuth script, 5 test projects, CI skeleton | Both (PoMarriedLife's token/CSS + Azurite model; PoArgueJudge's Program structure + security headers) | Unit (secret manager, validator, palette contrast), E2EAPI (health/auth/401), E2EUI (shell boots, theme persists, 390 px) |
 | C1 | **Profiles** | `Profile` aggregate (WATCH persona: initials-as-id, role, traits, sliders, voice settings, face pic), repository, CRUD + face upload + AI generate endpoints, seed endpoint, Profiles page + edit dialog | PoMarriedLife | Unit (aggregate, normalisation), Integration (repo round-trip), E2EAPI (CRUD), E2EUI (create profile) |
 | C2 | **AI core** | Gemini REST clients per latency class (`fast`, `tts`, `stream`) with resilience, retry handler, `GeminiModelOptions`, `AiLatencyTracker`, **fakes** (Dev/Test only) + "USING FAKE AI" banner | Both | Unit (retry predicate, model option resolution, fake determinism) |
 | C3 | **Voice (TTS)** | Fish Audio, Azure Speech, Gemini TTS providers; `RoutingTtsService` (fast-first chain), `TtsAudio` wire format (mp3/pcm), sentence chunking + NDJSON stream, content-addressed blob `TtsCache` | PoMarriedLife | Unit (routing/fallback matrix, chunker, cache key), Integration (blob cache) |

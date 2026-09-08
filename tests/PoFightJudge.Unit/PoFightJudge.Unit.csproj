@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/PoFightJudge.Api/PoFightJudge.Api.csproj" />
+    <ProjectReference Include="../../src/PoFightJudge.Client/PoFightJudge.Client.csproj" />
+    <ProjectReference Include="../../src/PoFightJudge.Shared/PoFightJudge.Shared.csproj" />
+    <ProjectReference Include="../PoFightJudge.TestSupport/PoFightJudge.TestSupport.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="bunit" />
+    <PackageReference Include="Xunit.SkippableFact" />
+    <PackageReference Include="Verify.Xunit" />
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+  </ItemGroup>
+</Project>

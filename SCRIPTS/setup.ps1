@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    First-run setup for PoMarriedFight on a new machine.
+    First-run setup for PoFightJudge on a new machine.
 
 .DESCRIPTION
     Walks a clean clone to a running app:
@@ -9,7 +9,7 @@
       1. Prerequisites (.NET 10 SDK, Docker Desktop, Azure CLI) — installed via winget when missing
       2. The ASP.NET Core development certificate, which Azurite needs before it will speak HTTPS
       3. Azurite (OAuth + HTTPS, ports 12000/12002) and Seq (5341) via docker compose
-      4. az login, and a check that the PoMarriedFight--* secrets exist in kv-poshared — names only, never values
+      4. az login, and a check that the PoFightJudge--* secrets exist in kv-poshared — names only, never values
       5. Restore, build (Release), Playwright's Chromium, and the whole test suite
       6. -Run: starts the API
 
@@ -45,7 +45,7 @@ function Install-WingetPackage($Id, $Display) {
     winget install --id $Id --accept-package-agreements --accept-source-agreements --silent
 }
 
-Write-Host '=== PoMarriedFight setup ===' -ForegroundColor Cyan
+Write-Host '=== PoFightJudge setup ===' -ForegroundColor Cyan
 
 # ── 1. Prerequisites ────────────────────────────────────────────────────────────
 if (-not (Test-Command winget)) { throw 'winget is required (install App Installer from the Microsoft Store).' }
@@ -93,14 +93,14 @@ Write-Ok "az login as $account"
 
 # Names only. A value printed to a console is a value in a scrollback buffer.
 $required = @(
-    'PoMarriedFight--GeminiApiKey',
-    'PoMarriedFight--AzureAd--TenantId',
-    'PoMarriedFight--AzureAd--ClientId'
+    'PoFightJudge--GeminiApiKey',
+    'PoFightJudge--AzureAd--TenantId',
+    'PoFightJudge--AzureAd--ClientId'
 )
 $optional = @(
-    'PoMarriedFight--FishAudioApiKey',
-    'PoMarriedFight--AzureSpeechKey',
-    'PoMarriedFight--AzureSpeechRegion'
+    'PoFightJudge--FishAudioApiKey',
+    'PoFightJudge--AzureSpeechKey',
+    'PoFightJudge--AzureSpeechRegion'
 )
 
 $names = az keyvault secret list --vault-name kv-poshared --query '[].name' -o tsv 2>$null
@@ -112,7 +112,7 @@ if (-not $names) {
             Write-Ok "secret $name"
         } else {
             $key = $name.Replace('--', ':')
-            Write-Todo "secret $name is missing. Locally: dotnet user-secrets set `"$key`" <value> --project src/PoMarriedFight.Api"
+            Write-Todo "secret $name is missing. Locally: dotnet user-secrets set `"$key`" <value> --project src/PoFightJudge.Api"
             Write-Host '      Or copy them all across: ./SCRIPTS/seed-secrets.ps1 prints the plan, -Apply carries it out' -ForegroundColor DarkGray
         }
     }
@@ -123,16 +123,16 @@ if (-not $names) {
 }
 
 # ── 5. Build and test ───────────────────────────────────────────────────────────
-dotnet restore PoMarriedFight.slnx
-dotnet build PoMarriedFight.slnx -c Release --no-restore
+dotnet restore PoFightJudge.slnx
+dotnet build PoFightJudge.slnx -c Release --no-restore
 Write-Ok 'Build (Release, warnings are errors)'
 
 if (-not $SkipTests) {
     # Playwright's browser is a download, not a package reference; the UI tier skips with a message without it.
-    $playwright = Get-ChildItem tests/PoMarriedFight.E2EUI/bin/Release -Recurse -Filter playwright.ps1 -ErrorAction SilentlyContinue | Select-Object -First 1
+    $playwright = Get-ChildItem tests/PoFightJudge.E2EUI/bin/Release -Recurse -Filter playwright.ps1 -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($playwright) { & $playwright.FullName install chromium | Out-Null; Write-Ok 'Playwright Chromium' }
 
-    dotnet test PoMarriedFight.slnx -c Release --no-build
+    dotnet test PoFightJudge.slnx -c Release --no-build
     Write-Ok 'All four test tiers'
 }
 
@@ -151,9 +151,9 @@ if ($Run) {
     # --environment as an argument does not reach it.
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     Write-Host "Starting https://localhost:$port (Development) ..." -ForegroundColor Cyan
-    dotnet run --project src/PoMarriedFight.Api -c Release --no-build --no-launch-profile --urls "https://localhost:$port"
+    dotnet run --project src/PoFightJudge.Api -c Release --no-build --no-launch-profile --urls "https://localhost:$port"
 } else {
     Write-Host ''
     Write-Host 'Ready. Start the app with:' -ForegroundColor Cyan
-    Write-Host '  dotnet run --project src/PoMarriedFight.Api' -ForegroundColor White
+    Write-Host '  dotnet run --project src/PoFightJudge.Api' -ForegroundColor White
 }

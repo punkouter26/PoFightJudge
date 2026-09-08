@@ -9,8 +9,8 @@ into kv-poshared with `SCRIPTS/seed-secrets.ps1`.
 
 ## The suite, on the stand-ins
 
-`dotnet build PoMarriedFight.slnx -c Release` → 0 warnings, 0 errors (warnings are errors here).
-`dotnet test PoMarriedFight.slnx`:
+`dotnet build PoFightJudge.slnx -c Release` → 0 warnings, 0 errors (warnings are errors here).
+`dotnet test PoFightJudge.slnx`:
 
 | Tier | Tests | Result |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ into kv-poshared with `SCRIPTS/seed-secrets.ps1`.
 | E2EUI | 17 | pass (1 skipped — the deployed-site smoke, which needs a deployment) |
 
 No key, no network, no cost: every AI seam has a deterministic stand-in, and the tests that talk to Google are
-opt-in (`GEMINI_API_KEY`, `POMARRIEDFIGHT_E2E_REAL=1`, `POMARRIEDFIGHT_SMOKE_URL`) and skip themselves otherwise.
+opt-in (`GEMINI_API_KEY`, `POFIGHTJUDGE_E2E_REAL=1`, `POFIGHTJUDGE_SMOKE_URL`) and skip themselves otherwise.
 
 ## Coverage
 
@@ -28,8 +28,8 @@ opt-in (`GEMINI_API_KEY`, `POMARRIEDFIGHT_E2E_REAL=1`, `POMARRIEDFIGHT_SMOKE_URL
 
 | | Covered | Total | |
 | --- | --- | --- | --- |
-| `PoMarriedFight.Api` | 4468 | 4977 | **89.8 %** |
-| `PoMarriedFight.Shared` | 112 | 112 | **100 %** |
+| `PoFightJudge.Api` | 4468 | 4977 | **89.8 %** |
+| `PoFightJudge.Shared` | 112 | 112 | **100 %** |
 | both | 4580 | 5089 | **90.0 %** |
 
 Excluded, per SPEC §8: `Program.cs`, `*ServiceExtensions.cs` and `Fakes/` — wiring and stand-ins rather than
@@ -52,7 +52,7 @@ never boots. Rebuild (`dotnet build --no-incremental`) before running the browse
 
 ## The real fight, end to end
 
-`POMARRIEDFIGHT_E2E_REAL=1 dotnet test tests/PoMarriedFight.E2EUI --filter FightFlowTests` — a whole fight in a real
+`POFIGHTJUDGE_E2E_REAL=1 dotnet test tests/PoFightJudge.E2EUI --filter FightFlowTests` — a whole fight in a real
 browser against live Gemini: two tags, the fixture recording played into the microphone, the Referee running the
 show, and the full analysis afterwards. **Passed in 3 m 29 s.**
 

@@ -6,13 +6,13 @@ is the short version for a working session.
 ## Commands
 
 ```powershell
-dotnet build PoMarriedFight.slnx -c Release       # warnings are errors; this must be clean
-dotnet test PoMarriedFight.slnx                   # Unit, Integration (Docker), E2EAPI, E2EUI (Playwright)
-dotnet test tests/PoMarriedFight.Unit             # the fast tier, and what the pre-commit hook runs
-dotnet format PoMarriedFight.slnx                 # the hook verifies this, so run it before committing
+dotnet build PoFightJudge.slnx -c Release       # warnings are errors; this must be clean
+dotnet test PoFightJudge.slnx                   # Unit, Integration (Docker), E2EAPI, E2EUI (Playwright)
+dotnet test tests/PoFightJudge.Unit             # the fast tier, and what the pre-commit hook runs
+dotnet format PoFightJudge.slnx                 # the hook verifies this, so run it before committing
 ./SCRIPTS/setup.ps1                               # clean machine → running app
 ./SCRIPTS/azurite.ps1                             # just the emulator (and -Down -Wipe to throw it away)
-dotnet run --project src/PoMarriedFight.Api       # https://localhost:5001
+dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
 ```
 
 ## Working rules

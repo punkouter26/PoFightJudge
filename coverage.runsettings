@@ -10,7 +10,7 @@
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
           <Format>cobertura</Format>
-          <Exclude>[PoMarriedFight.Client]*,[PoMarriedFight.TestSupport]*</Exclude>
+          <Exclude>[PoFightJudge.Client]*,[PoFightJudge.TestSupport]*</Exclude>
           <!-- obj/ is what the source generators emit (logging, OpenAPI XML comments, mapping): a thousand lines
                this solution did not write, which would otherwise be most of what the report says is untested. -->
           <ExcludeByFile>**/obj/**,**/Program.cs,**/*ServiceExtensions.cs,**/Fakes/*.cs</ExcludeByFile>

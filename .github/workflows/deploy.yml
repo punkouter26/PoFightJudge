@@ -22,8 +22,8 @@ permissions:
   id-token: write   # OIDC federated credential for azure/login — no stored secret
 
 env:
-  AZURE_WEBAPP_NAME: app-pomarriedfight
-  AZURE_WEBAPP_URL: https://app-pomarriedfight.azurewebsites.net
+  AZURE_WEBAPP_NAME: app-pofightjudge
+  AZURE_WEBAPP_URL: https://app-pofightjudge.azurewebsites.net
 
 jobs:
   build:
@@ -41,13 +41,13 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
           restore-keys: nuget-${{ runner.os }}-
       - name: Build (Release, warnings are errors)
-        run: dotnet build PoMarriedFight.slnx -c Release
+        run: dotnet build PoFightJudge.slnx -c Release
       # Only the Unit suite gates the pipeline. Integration needs Azurite, E2EUI needs Playwright and a microphone
       # fixture, and E2EAPI is covered by the post-deploy smoke; all four run locally via SCRIPTS/setup.ps1.
       - name: Unit tests
-        run: dotnet test tests/PoMarriedFight.Unit --no-build -c Release --verbosity minimal
+        run: dotnet test tests/PoFightJudge.Unit --no-build -c Release --verbosity minimal
       - name: Publish API
-        run: dotnet publish src/PoMarriedFight.Api -c Release --no-build -o publish
+        run: dotnet publish src/PoFightJudge.Api -c Release --no-build -o publish
       - uses: actions/upload-artifact@v7
         with:
           name: webapp
@@ -71,7 +71,7 @@ jobs:
         with:
           name: webapp
           path: publish
-      # Federated credential subjects: repo:punkouter26/PoMarriedFight:ref:refs/heads/master and :environment:production
+      # Federated credential subjects: repo:punkouter26/PoFightJudge:ref:refs/heads/master and :environment:production
       - uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -96,7 +96,7 @@ jobs:
 
       - name: Provision infra (Bicep)
         if: steps.infra.outputs.changed == 'true'
-        run: az deployment sub create --location eastus2 --template-file infra/main.bicep --name pomarriedfight-${{ github.run_id }} -o none
+        run: az deployment sub create --location eastus2 --template-file infra/main.bicep --name pofightjudge-${{ github.run_id }} -o none
 
       - name: Deploy to App Service
         uses: azure/webapps-deploy@v3
@@ -139,10 +139,10 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
       - name: Browser smoke test
         env:
-          POMARRIEDFIGHT_SMOKE_URL: ${{ env.AZURE_WEBAPP_URL }}
+          POFIGHTJUDGE_SMOKE_URL: ${{ env.AZURE_WEBAPP_URL }}
         run: |
           set -euo pipefail
-          dotnet build tests/PoMarriedFight.E2EUI -c Release
-          pwsh tests/PoMarriedFight.E2EUI/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
-          dotnet test tests/PoMarriedFight.E2EUI -c Release --no-build --verbosity minimal \
+          dotnet build tests/PoFightJudge.E2EUI -c Release
+          pwsh tests/PoFightJudge.E2EUI/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+          dotnet test tests/PoFightJudge.E2EUI -c Release --no-build --verbosity minimal \
             --filter FullyQualifiedName~DeployedSiteTests

@@ -1,13 +1,13 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    Copies the secrets this solution needs into kv-poshared under PoMarriedFight--*, and adds the site's redirect
+    Copies the secrets this solution needs into kv-poshared under PoFightJudge--*, and adds the site's redirect
     URI to the Entra app registration it signs in with.
 
 .DESCRIPTION
-    PoMarriedFight is a merge of two apps that already have their secrets in kv-poshared, so nothing here is new
+    PoFightJudge is a merge of two apps that already have their secrets in kv-poshared, so nothing here is new
     material — it is the same values under this solution's prefix, which is what the host reads
-    (PoMarriedFight--GeminiApiKey becomes PoMarriedFight:GeminiApiKey in configuration).
+    (PoFightJudge--GeminiApiKey becomes PoFightJudge:GeminiApiKey in configuration).
 
     THIS SCRIPT DOES NOTHING UNTIL YOU PASS -Apply. Run it once to read the plan, then again to carry it out.
 
@@ -15,14 +15,14 @@
     is read into a temporary file with `az keyvault secret download` and set with `--file`. Only names and
     decisions appear on screen.
 
-    An existing PoMarriedFight--* secret is left alone unless -Force is given: overwriting a key somebody has
+    An existing PoFightJudge--* secret is left alone unless -Force is given: overwriting a key somebody has
     already rotated is not a copy, it is a regression.
 
 .PARAMETER Apply
     Actually write. Without it the script reads the vault and prints what it would do.
 
 .PARAMETER Force
-    Overwrite PoMarriedFight--* secrets that already exist.
+    Overwrite PoFightJudge--* secrets that already exist.
 
 .PARAMETER SkipRedirectUri
     Do not touch the Entra app registration.
@@ -45,18 +45,18 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$SiteUrl = 'https://app-pomarriedfight.azurewebsites.net'
+$SiteUrl = 'https://app-pofightjudge.azurewebsites.net'
 $RedirectUri = "$SiteUrl/authentication/login-callback"
 
 # Verified against kv-poshared on 2026-09-07: these source names exist. The first source that is present wins, so
 # the Gemini key comes from PoArgueJudge (the same key both apps use) and falls back to PoMarriedLife.
 $Plan = @(
-    @{ Target = 'PoMarriedFight--GeminiApiKey';        Sources = @('PoArgueJudge--GeminiApiKey', 'PoMarriedLife--GeminiApiKey'); Required = $true }
-    @{ Target = 'PoMarriedFight--AzureAd--TenantId';   Sources = @('PoArgueJudge--AzureAd--TenantId', 'PoMarriedLife--AzureAd--TenantId'); Required = $true }
-    @{ Target = 'PoMarriedFight--AzureAd--ClientId';   Sources = @('PoArgueJudge--AzureAd--ClientId', 'PoMarriedLife--AzureAd--ClientId'); Required = $true }
-    @{ Target = 'PoMarriedFight--FishAudioApiKey';     Sources = @('PoMarriedLife--FishAudioApiKey'); Required = $false }
-    @{ Target = 'PoMarriedFight--AzureSpeechKey';      Sources = @('PoMarriedLife--AzureSpeechKey'); Required = $false }
-    @{ Target = 'PoMarriedFight--AzureSpeechRegion';   Sources = @('PoMarriedLife--AzureSpeechRegion'); Required = $false }
+    @{ Target = 'PoFightJudge--GeminiApiKey';        Sources = @('PoArgueJudge--GeminiApiKey', 'PoMarriedLife--GeminiApiKey'); Required = $true }
+    @{ Target = 'PoFightJudge--AzureAd--TenantId';   Sources = @('PoArgueJudge--AzureAd--TenantId', 'PoMarriedLife--AzureAd--TenantId'); Required = $true }
+    @{ Target = 'PoFightJudge--AzureAd--ClientId';   Sources = @('PoArgueJudge--AzureAd--ClientId', 'PoMarriedLife--AzureAd--ClientId'); Required = $true }
+    @{ Target = 'PoFightJudge--FishAudioApiKey';     Sources = @('PoMarriedLife--FishAudioApiKey'); Required = $false }
+    @{ Target = 'PoFightJudge--AzureSpeechKey';      Sources = @('PoMarriedLife--AzureSpeechKey'); Required = $false }
+    @{ Target = 'PoFightJudge--AzureSpeechRegion';   Sources = @('PoMarriedLife--AzureSpeechRegion'); Required = $false }
 )
 
 function Write-Plan($Message) { Write-Host "  $Message" -ForegroundColor Gray }
@@ -67,7 +67,7 @@ function Write-Todo($Message) { Write-Host "TODO: $Message" -ForegroundColor Yel
 $account = az account show --query user.name -o tsv 2>$null
 if (-not $account) { throw 'Not signed in to Azure. Run az login first.' }
 
-Write-Host '=== PoMarriedFight secrets ===' -ForegroundColor Cyan
+Write-Host '=== PoFightJudge secrets ===' -ForegroundColor Cyan
 Write-Host "Vault: $Vault   Signed in as: $account" -ForegroundColor Cyan
 if (-not $Apply) { Write-Host 'DRY RUN — nothing will be written. Re-run with -Apply to carry this out.' -ForegroundColor Yellow }
 Write-Host ''
@@ -92,7 +92,7 @@ foreach ($entry in $Plan) {
 
     if (($existing -contains $target) -and -not $Force) {
         Write-Skipped "$target already exists — left alone (pass -Force to overwrite)."
-        if ($target -eq 'PoMarriedFight--AzureAd--ClientId') {
+        if ($target -eq 'PoFightJudge--AzureAd--ClientId') {
             $clientId = az keyvault secret show --vault-name $Vault --name $target --query value -o tsv
         }
         continue
@@ -109,7 +109,7 @@ foreach ($entry in $Plan) {
         az keyvault secret download --vault-name $Vault --name $source --file $temp.FullName --overwrite | Out-Null
         az keyvault secret set --vault-name $Vault --name $target --file $temp.FullName -o none
         Write-Ok "$target  (from $source)"
-        if ($target -eq 'PoMarriedFight--AzureAd--ClientId') { $clientId = (Get-Content $temp.FullName -Raw).Trim() }
+        if ($target -eq 'PoFightJudge--AzureAd--ClientId') { $clientId = (Get-Content $temp.FullName -Raw).Trim() }
     } finally {
         # Overwrite before deleting: a secret left in free space is still a secret.
         if (Test-Path $temp.FullName) {
@@ -131,7 +131,7 @@ if ($SkipRedirectUri) {
 Write-Host ''
 if (-not $clientId) {
     if (-not $Apply) {
-        Write-Plan "Then add $RedirectUri to the app registration named by PoMarriedFight--AzureAd--ClientId."
+        Write-Plan "Then add $RedirectUri to the app registration named by PoFightJudge--AzureAd--ClientId."
     } else {
         Write-Todo 'No client id was resolved, so the redirect URI was not touched.'
     }

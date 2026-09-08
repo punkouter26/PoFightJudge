@@ -1,0 +1,89 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@layout MainLayout
+@inject IApiClient Api
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
+@inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment Env
+
+<PageTitle>Sign in · PoFightJudge</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Narrow">
+    <div class="login po-card">
+        <div class="po-eyebrow po-eyebrow--accent">Tonight's card</div>
+        <h1>Who's fighting?</h1>
+        <p class="po-muted">Sign in to pick a couple to watch, or step up to the mic with your own.</p>
+
+        <div class="buttons">
+            @if (Env.IsProduction() || _flags is not { DevGuestEnabled: true })
+            {
+                <RadzenButton Text="Sign in with Microsoft" Icon="login" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
+                              Click="SignInWithMicrosoft" Disabled="@(!Env.IsProduction())" />
+            }
+            @if (_flags is { DevGuestEnabled: true })
+            {
+                <RadzenButton Text="Continue as Guest (Dev)" Icon="person" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large"
+                              Click="ContinueAsGuestAsync" IsBusy="@_busy" BusyText="Signing in…" />
+            }
+        </div>
+
+        @if (_error is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+        }
+        @if (!Env.IsProduction() && _flags is { DevGuestEnabled: false })
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+                Guest sign-in is off. Set <code>FeatureManagement:DevGuestEnabled</code> and <code>PoFightJudge:Auth:AllowFakeAuth</code> in Development.
+            </RadzenAlert>
+        }
+    </div>
+</PageShell>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private FeatureFlagsDto? _flags;
+    private bool _busy;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _flags = await Api.GetFeaturesAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "The API is not answering. Is it running?";
+        }
+    }
+
+    private void SignInWithMicrosoft() =>
+        Nav.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(SafeReturnUrl())}");
+
+    private async Task ContinueAsGuestAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            await Api.GuestSignInAsync();
+            (AuthState as ApiAuthStateProvider)?.NotifyChanged();
+            Nav.NavigateTo(SafeReturnUrl());
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Guest sign-in failed. Is the API running in Development?";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>Only same-origin relative paths are honoured, so a crafted link cannot bounce a user elsewhere.</summary>
+    private string SafeReturnUrl() =>
+        ReturnUrl is { Length: > 1 } url && url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) ? url : "/";
+}

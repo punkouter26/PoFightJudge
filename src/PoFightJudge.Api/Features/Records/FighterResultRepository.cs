@@ -1,0 +1,97 @@
+using Azure.Data.Tables;
+using PoFightJudge.Api.Common;
+using PoFightJudge.Api.Features.Storage;
+using PoFightJudge.Shared.Identifiers;
+using PoFightJudge.Shared.Models;
+
+namespace PoFightJudge.Api.Features.Records;
+
+/// <summary>
+/// A person's results, one row per debate they spoke in, from either mode. Nothing here is a running total: a record
+/// and a style profile are computed from these rows on read, so re-analysing a debate overwrites its row instead of
+/// counting twice, and deleting a debate takes back what it contributed.
+/// </summary>
+public interface IFighterResultRepository
+{
+    Task SaveAsync(IEnumerable<FighterResultDto> results, CancellationToken ct = default);
+
+    /// <summary>
+    /// One person's results as far as one account is concerned, newest first — the input to their record and style
+    /// profile. The roster is shared; what was argued about is not, so the account is part of the question.
+    /// </summary>
+    Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, string userId, CancellationToken ct = default);
+
+    /// <summary>Every result this account produced, for the leaderboard.</summary>
+    Task<IReadOnlyList<FighterResultDto>> ListAllAsync(string userId, CancellationToken ct = default);
+
+    /// <summary>Every result for this tag, whoever ran the debate. Only for deciding whether a fighter is still anybody's.</summary>
+    Task<IReadOnlyList<FighterResultDto>> ListForAnyoneAsync(FighterId tag, CancellationToken ct = default);
+
+    Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> tags, CancellationToken ct = default);
+
+    /// <summary>Removes everything one person ever recorded, for when the fighter itself is deleted.</summary>
+    Task DeleteForFighterAsync(FighterId tag, CancellationToken ct = default);
+}
+
+public sealed class FighterResultRepository(TableServiceClient tables) : IFighterResultRepository
+{
+    private TableClient Table => tables.GetTableClient(TableNames.FighterResults);
+
+    public Task SaveAsync(IEnumerable<FighterResultDto> results, CancellationToken ct = default) =>
+        StorageBootstrap.WithTableAsync(tables, TableNames.FighterResults, async token =>
+        {
+            // Each person is their own partition, so this is not one transaction; every row is idempotent on
+            // (tag, match), which is what makes a retried verdict or a re-run analysis safe.
+            foreach (var result in results)
+            {
+                await Table.UpsertEntityAsync(FighterResultEntity.From(result), TableUpdateMode.Replace, token);
+            }
+        }, ct);
+
+    public Task<IReadOnlyList<FighterResultDto>> ListForAsync(FighterId tag, string userId, CancellationToken ct = default) =>
+        QueryAsync(TableClient.CreateQueryFilter($"PartitionKey eq {tag.Value} and UserId eq {userId}"), ct);
+
+    public Task<IReadOnlyList<FighterResultDto>> ListAllAsync(string userId, CancellationToken ct = default) =>
+        QueryAsync(TableClient.CreateQueryFilter($"UserId eq {userId}"), ct);
+
+    public Task<IReadOnlyList<FighterResultDto>> ListForAnyoneAsync(FighterId tag, CancellationToken ct = default) =>
+        QueryAsync(TableClient.CreateQueryFilter($"PartitionKey eq {tag.Value}"), ct);
+
+    public Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> tags, CancellationToken ct = default) =>
+        StorageBootstrap.WithTableAsync(tables, TableNames.FighterResults, async token =>
+        {
+            foreach (var tag in tags.Where(t => !string.IsNullOrEmpty(t)).Distinct(StringComparer.Ordinal))
+            {
+                await Table.DeleteEntityAsync(tag, matchId.Value, cancellationToken: token);
+            }
+        }, ct);
+
+    public Task DeleteForFighterAsync(FighterId tag, CancellationToken ct = default) =>
+        StorageBootstrap.WithTableAsync(tables, TableNames.FighterResults, async token =>
+        {
+            var keys = new List<string>();
+            await foreach (var entity in Table.QueryAsync<FighterResultEntity>(TableClient.CreateQueryFilter($"PartitionKey eq {tag.Value}"), select: ["RowKey"], cancellationToken: token))
+            {
+                keys.Add(entity.RowKey);
+            }
+
+            foreach (var batch in keys.Chunk(100))
+            {
+                await Table.SubmitTransactionAsync(
+                    batch.Select(k => new TableTransactionAction(TableTransactionActionType.Delete, new TableEntity(tag.Value, k) { ETag = Azure.ETag.All })),
+                    token);
+            }
+        }, ct);
+
+    private Task<IReadOnlyList<FighterResultDto>> QueryAsync(string? filter, CancellationToken ct) =>
+        StorageBootstrap.WithTableAsync<IReadOnlyList<FighterResultDto>>(tables, TableNames.FighterResults, async token =>
+        {
+            var results = new List<FighterResultDto>();
+            await foreach (var entity in Table.QueryAsync<FighterResultEntity>(filter, cancellationToken: token))
+            {
+                results.Add(entity.ToDto());
+            }
+
+            return [.. results.OrderByDescending(r => r.At)];
+        }, ct);
+}

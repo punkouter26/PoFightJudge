@@ -1,4 +1,4 @@
-# PoMarriedFight — Implementation Plan (Phase 2)
+# PoFightJudge — Implementation Plan (Phase 2)
 
 On approval: this file is copied verbatim to `tasks/plan.md` and §7 to `tasks/todo.md` (the first commit).
 Then, per your standing rules: **top-50 library list → your picks → top-10 usage examples → the picks are folded
@@ -33,10 +33,10 @@ Nothing is written before you reply **approved**.
 | A8 | **Analysis pipeline ported intact** (Files API → live-caption transcript preferred → `gemini-3.5-transcribe` fallback → `SpeakerMapper` → `SpeechMetrics` → two-call judge on flex → `HighlightFinder`), plus one new step: `FightStyleSnapshotExtractor` builds each fighter's snapshot from the report + turns and the pipeline writes two `FightResult` rows (replacing `SavePlayerRecordsAsync`). | PoArgueJudge `AnalysisPipeline`, `GeminiJudgeClient`, `AnalysisSchema`. |
 | A9 | **WATCH engine ported intact**: `RoundPromptBuilder` (system/user split, husband-first stable ordering — `ArgumentPromptCacheOrderingTests` comes with it), `AttitudeSelector`, `Interjections` (SLAP), `JudgePromptBuilder`, `ArgueScoreCalculator`, client-driven round loop (`generate-round[-stream]`, `round-audio[-stream]` NDJSON, `verdict`, `transcribe`) behind the `ai-per-user` limiter, prefetch of round N+1, SELF turn. `IGeminiService` is split into `IGeminiText` (transport) + `IWatchAi` (prompts/parsing) so the fake sits at the WATCH seam. Model defaults: rounds `gemini-3.1-flash-lite`, judge/profile `gemini-3.7-flash`, TTS `gemini-3.1-flash-tts-preview`. | PoMarriedLife `GeminiService` (1066 lines → 3 files), `InteractiveGameEndpoints`, `Game.razor.cs`. |
 | A10 | **Voice chain ported intact**: `RoutingTtsService` (profile Fish → Azure → default Fish → Gemini when `PreferFastVoice`), `TtsAudio(Base64, Format)`, `SentenceChunker` + `TtsChunk` stream, `BlobTtsCache` keyed on (text, provider, voice, prosody, format), per-operation resilience (`gemini-fast` 8 s/20 s, `gemini-tts` 45 s/100 s, Azure 10 s/22 s, Fish 25 s/55 s, unguarded `gemini-stream`). | PoMarriedLife `Features/Ai`. |
-| A11 | **Auth exactly as both repos**: default scheme `FakeAuth` outside Production (needs `PoMarriedFight:Auth:AllowFakeAuth`), JWT bearer with dual `ValidAudiences` in Production; `GuestMiddleware` cookie; client `GuestAwareMsalAuthStateProvider` derives from MSAL's `RemoteAuthenticationService`; tenant-specific authority; hub token via `access_token` query; `FallbackPolicy = RequireAuthenticatedUser`. | PoMarriedLife `Client/Program.cs`, PoArgueJudge `AuthServiceExtensions`. |
+| A11 | **Auth exactly as both repos**: default scheme `FakeAuth` outside Production (needs `PoFightJudge:Auth:AllowFakeAuth`), JWT bearer with dual `ValidAudiences` in Production; `GuestMiddleware` cookie; client `GuestAwareMsalAuthStateProvider` derives from MSAL's `RemoteAuthenticationService`; tenant-specific authority; hub token via `access_token` query; `FallbackPolicy = RequireAuthenticatedUser`. | PoMarriedLife `Client/Program.cs`, PoArgueJudge `AuthServiceExtensions`. |
 | A12 | **UI system = PoMarriedLife's tokens + PoArgueJudge's guards.** `app.css` tokens (`--po-space/text/radius/shadow/dur`, `color-scheme` + `light-dark()`, `:root[data-theme]` pin, 3 breakpoints, `.po-card`, Radzen bridge), `PageShell` widths, `RadzenDataGrid`/`RadzenTabs`/`RadzenChart`/`RadzenNotification`/`RadzenDialog` everywhere; `PaletteContrastTests` parses the CSS; a Unit grep test forbids raw form controls. Dark default. The exact layout comes from `/design` (Phase 3) — the component *names* below are stable, their arrangement is not. | SPEC §5; NET_RULES §3. |
 | A13 | **Tests**: 5 projects (`TestSupport`, `Unit`, `Integration`, `E2EAPI`, `E2EUI`). `ApiFactory` = `WebApplicationFactory<Program>` under env `Test` with in-memory repos + fakes; `AppFixture` = Kestrel on port 0 + `UseStaticWebAssets` + Chromium fake mic (`fixtures/debate-60s.wav` copied from PoArgueJudge); `AzuriteFixture` = compose-or-Testcontainers. Coverage via coverlet, target ≥ 80 % on Api + Shared excluding `Program.cs`, `*ServiceExtensions.cs`, `Fakes/`. | PoArgueJudge `tests/`. |
-| A14 | **Infra = PoArgueJudge's Bicep renamed** (RG `PoMarriedFight`, `asp-pomarriedfight-f1` West US 2, `app-pomarriedfight`, `stpomarriedfight` East US 2 keys-off, roles, KV access-policy `add`, `appCommandLine: dotnet PoMarriedFight.Api.dll`) + `deploy.yml` (build → Unit → publish → OIDC → Bicep-if-changed → deploy → curl smoke → browser smoke). App settings carry `PoMarriedFight__TableStorageEndpoint/BlobStorageEndpoint`. Deploy, KV writes, Entra redirect URI, GitHub repo + OIDC app are **ask-first**. | SPEC §9. |
+| A14 | **Infra = PoArgueJudge's Bicep renamed** (RG `PoFightJudge`, `asp-pofightjudge-f1` West US 2, `app-pofightjudge`, `stpofightjudge` East US 2 keys-off, roles, KV access-policy `add`, `appCommandLine: dotnet PoFightJudge.Api.dll`) + `deploy.yml` (build → Unit → publish → OIDC → Bicep-if-changed → deploy → curl smoke → browser smoke). App settings carry `PoFightJudge__TableStorageEndpoint/BlobStorageEndpoint`. Deploy, KV writes, Entra redirect URI, GitHub repo + OIDC app are **ask-first**. | SPEC §9. |
 | A15 | **Git**: `git init` in T01, `master` only, local identity `punkouter26 <punkouter26@gmail.com>`, one commit per task (`T12: Profile aggregate + repository`), never push without asking. | PoArgueJudge CLAUDE.md rule; your global config is empty. |
 
 ## 2. Dependency graph
@@ -86,18 +86,18 @@ T11 ─ T49 PWA ─ T50 infra ─ T51 scripts/docs/secrets ─ T52 verify+simpli
 
 - **Manifest = blast radius.** A task edits only the files it lists. `.razor` + `.razor.css` + `.razor.cs` of one component count as **one** file. Each task lists ≤ 5 implementation files; its **test files** and **one** `Shared/Models/*.cs` file are additional. T01 (skeleton) is exempt.
 - TDD: tests listed under each task are written first (RED), then the minimum code (GREEN), full suite, build, commit.
-- Ported code keeps its origin's structure and comments unless the SPEC says otherwise; namespaces become `PoMarriedFight.*`.
-- Verification command is given per task; "suite" = `dotnet build PoMarriedFight.slnx && dotnet test PoMarriedFight.slnx`.
+- Ported code keeps its origin's structure and comments unless the SPEC says otherwise; namespaces become `PoFightJudge.*`.
+- Verification command is given per task; "suite" = `dotnet build PoFightJudge.slnx && dotnet test PoFightJudge.slnx`.
 
 ## 6. Tasks
 
 ### Phase A — Foundation (C0)
 
 **T01 — Solution skeleton** *(skeleton; manifest exempt)*
-- Files: `PoMarriedFight.slnx`, `global.json` (10.0.400, latestFeature), `Directory.Build.props` (from PoArgueJudge), `Directory.Packages.props` (PoArgueJudge's set + MessagePack, Radzen 11.3.2, Serilog sinks, OpenTelemetry/Azure Monitor, Http.Resilience, MinVer), `tests/Directory.Build.props`, `.editorconfig`, `.gitignore`, `docker-compose.yml` (OAuth+HTTPS Azurite on 12000–12002), `SCRIPTS/azurite.ps1`, 8 `.csproj` files (Shared, Api, Client, TestSupport, Unit, Integration, E2EAPI, E2EUI) with references, empty `Program.cs` stubs that compile, `NET_RULES.md` (copied), `README.md` (stub), `tasks/plan.md`, `tasks/todo.md`, `git init` + local identity.
+- Files: `PoFightJudge.slnx`, `global.json` (10.0.400, latestFeature), `Directory.Build.props` (from PoArgueJudge), `Directory.Packages.props` (PoArgueJudge's set + MessagePack, Radzen 11.3.2, Serilog sinks, OpenTelemetry/Azure Monitor, Http.Resilience, MinVer), `tests/Directory.Build.props`, `.editorconfig`, `.gitignore`, `docker-compose.yml` (OAuth+HTTPS Azurite on 12000–12002), `SCRIPTS/azurite.ps1`, 8 `.csproj` files (Shared, Api, Client, TestSupport, Unit, Integration, E2EAPI, E2EUI) with references, empty `Program.cs` stubs that compile, `NET_RULES.md` (copied), `README.md` (stub), `tasks/plan.md`, `tasks/todo.md`, `git init` + local identity.
 - Tests: none (a `SolutionTests.Every_project_builds` placeholder in Unit).
 - Accept: `dotnet build -c Release` 0 warnings; `dotnet test` green (1 test); `git log` shows the first commit.
-- Verify: `dotnet build PoMarriedFight.slnx -c Release && dotnet test PoMarriedFight.slnx`
+- Verify: `dotnet build PoFightJudge.slnx -c Release && dotnet test PoFightJudge.slnx`
 
 **T02 — Shared contracts**
 - Files: `Shared/ApiRoutes.cs`, `Shared/Configuration/ConfigKeys.cs`, `Shared/Identifiers/ProfileId.cs`, `Shared/Identifiers/MatchId.cs`, `Shared/SelfPlayer.cs`; Shared model: `Models/FightModels.cs` (`Initials`, `FighterId` helpers, enums `SessionPhase/SessionStatus/Speaker/TurnKind/MatchMode`).
@@ -105,7 +105,7 @@ T11 ─ T49 PWA ─ T50 infra ─ T51 scripts/docs/secrets ─ T52 verify+simpli
 - Deps: T01. Verify: suite.
 
 **T03 — Api host bootstrap + secrets + degraded mode**
-- Files: `Api/Program.cs`, `Api/Common/SecretManager.cs` (`PoMarriedFight--` → `:`), `Api/Common/Outcome.cs`, `Api/Features/Diagnostics/StartupHealthState.cs`, `Api/Features/Diagnostics/StartupSecretValidator.cs`; `Api/appsettings.json` + `appsettings.Development.json` (no secrets; KV uri; Azurite endpoints; model defaults; Debate/Analysis sections).
+- Files: `Api/Program.cs`, `Api/Common/SecretManager.cs` (`PoFightJudge--` → `:`), `Api/Common/Outcome.cs`, `Api/Features/Diagnostics/StartupHealthState.cs`, `Api/Features/Diagnostics/StartupSecretValidator.cs`; `Api/appsettings.json` + `appsettings.Development.json` (no secrets; KV uri; Azurite endpoints; model defaults; Debate/Analysis sections).
 - Tests: `SecretManagerTests`, `StartupSecretValidatorTests` (degraded only in Production; lists missing keys), `OutcomeTests`.
 - Deps: T02. Verify: suite; `dotnet run` answers `/api/nope` → 404 JSON.
 
@@ -359,7 +359,7 @@ T11 ─ T49 PWA ─ T50 infra ─ T51 scripts/docs/secrets ─ T52 verify+simpli
 - Accept: bicep compiles; workflow validated. **No deploy** without your go. Deps: T49.
 
 **T51 — Scripts, docs, secret seeding (ask-first execution)**
-- Files: `SCRIPTS/setup.ps1`, `SCRIPTS/seed-secrets.ps1` (copies `PoMarriedLife--*` → `PoMarriedFight--*`, adds the Entra redirect URI; prints the plan and asks `-WhatIf` first), `README.md`, `CLAUDE.md`, `AGENT.md` (identity, env matrix, flags, deviations table).
+- Files: `SCRIPTS/setup.ps1`, `SCRIPTS/seed-secrets.ps1` (copies `PoMarriedLife--*` → `PoFightJudge--*`, adds the Entra redirect URI; prints the plan and asks `-WhatIf` first), `README.md`, `CLAUDE.md`, `AGENT.md` (identity, env matrix, flags, deviations table).
 - Accept: `setup.ps1` runs clean on this machine; you approve and I run `seed-secrets.ps1`; `/api/diag` then shows real providers. Deps: T50.
 
 **T52 — Verify, review, simplify, evidence**
@@ -369,7 +369,7 @@ T11 ─ T49 PWA ─ T50 infra ─ T51 scripts/docs/secrets ─ T52 verify+simpli
 ## 7. tasks/todo.md (checklist)
 
 ```
-# PoMarriedFight — TODO (one commit per task; tick when merged to master)
+# PoFightJudge — TODO (one commit per task; tick when merged to master)
 
 ## Pre-build
 - [ ] Library selection (top-50 → picks → top-10 examples → tasks updated)
@@ -447,7 +447,7 @@ T11 ─ T49 PWA ─ T50 infra ─ T51 scripts/docs/secrets ─ T52 verify+simpli
 ## 8. Verification (end-to-end)
 
 1. `./SCRIPTS/setup.ps1` on a clean clone → Azurite up, build clean, all tiers run.
-2. `dotnet test PoMarriedFight.slnx --collect:"XPlat Code Coverage"` → ≥ 80 % Api+Shared (exclusions per A13).
+2. `dotnet test PoFightJudge.slnx --collect:"XPlat Code Coverage"` → ≥ 80 % Api+Shared (exclusions per A13).
 3. No keys: `dotnet run` → banner, WATCH J1 and FIGHT J2 complete (E2EUI `WatchFlowTests`, `FightFlowTests`).
 4. Real key (`az login` + seeded KV): WATCH ttft/first-audio log; FIGHT greeting-by-tag ≤ 15 s, interrupt at 45 ± 5 s on the fixture, analysis ≤ 45 s; second fight → digest “2 fights”.
 5. Playwright 390 px + theme persistence; `PaletteContrastTests`; raw-control grep test.
@@ -482,7 +482,7 @@ Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0 · NetAnalyzers `AnalysisLevel=l
 | T27/T37 | HotKeys2: `Space` SLAP, `Esc` cancel, `E` end fight, `?` shortcut sheet (`RadzenDialog`) |
 | T30 | `Shared/Validators/CreateFightRequestValidator` (distinct tags, persona known, topic ≤ 200) |
 | T33 | `DebateOrchestratorTests` assert `[LoggerMessage]` events with `FakeLogger` (tool call ok/fail, nudge kinds, persist failure) |
-| **T41b (new)** — Opus recordings | Files: `Api/Features/Storage/OpusAudio.cs` (Concentus encode PCM16 → Ogg/Opus, decode → PCM), `DebateOrchestrator.cs` (persist tracks as `.opus`, WAV kept when `Audio:StoreOpus=false`), `AnalysisPipeline.cs` (uploads `audio/ogg`), `WavSlicer.cs` (decode Opus before slicing), `AudioBlobStore.cs` (content types). Tests: `OpusAudioTests` (round-trip length ± 20 ms, size ≤ 15 % of WAV), pipeline + clip tests on Opus input. Deps: T42. Guarded by `PoMarriedFight:Audio:StoreOpus` (default true) |
+| **T41b (new)** — Opus recordings | Files: `Api/Features/Storage/OpusAudio.cs` (Concentus encode PCM16 → Ogg/Opus, decode → PCM), `DebateOrchestrator.cs` (persist tracks as `.opus`, WAV kept when `Audio:StoreOpus=false`), `AnalysisPipeline.cs` (uploads `audio/ogg`), `WavSlicer.cs` (decode Opus before slicing), `AudioBlobStore.cs` (content types). Tests: `OpusAudioTests` (round-trip length ± 20 ms, size ≤ 15 % of WAV), pipeline + clip tests on Opus input. Deps: T42. Guarded by `PoFightJudge:Audio:StoreOpus` (default true) |
 | T45/T46 | `HybridCache` (30 s) around leaderboard + fighter profile reads; invalidated by tag on analysis completion / delete |
 | T47/T48 | Humanizer for relative times, counts, ordinals |
 | T50 | CI: `reportgenerator -reporttypes:Html;MarkdownSummary` + `-minimumCoverageThresholds` line ≥ 80 (fails the job); publish with `-p:Aot=true`; `dotnet tool restore` |

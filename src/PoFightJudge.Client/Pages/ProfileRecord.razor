@@ -1,0 +1,109 @@
+@page "/profiles/{Initials}/record"
+@using System.Globalization
+@using PoFightJudge.Client.Stats
+@inject IApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@Name · Record</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Cast record" Title="@Name"
+           Lead="Everything this persona has argued, counted from the results rather than kept on a tally.">
+    <Actions>
+        <RadzenButton Text="Leaderboard" Icon="leaderboard" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                      Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo("leaderboard"))" />
+    </Actions>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="3" Label="Adding it up" />
+        }
+        else if (_record is null)
+        {
+            <EmptyState Icon="person_off" Title="No such persona" Text="Nobody in the cast goes by those initials." />
+        }
+        else if (_record.Matches == 0)
+        {
+            <EmptyState Icon="hourglass_empty" Title="Never argued" Text="@($"{Name} has not been in an argument yet.")">
+                <Action>
+                    <RadzenButton Text="Set one up" Icon="tv" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo("watch"))" />
+                </Action>
+            </EmptyState>
+        }
+        else
+        {
+            <div class="record po-card">
+                <div class="tally">
+                    <div class="big po-display">@_record.Wins<span class="of">of @_record.Matches</span></div>
+                    <div class="po-muted">won, @_record.Losses lost@(_record.Draws > 0 ? $", {_record.Draws} drawn" : string.Empty)</div>
+                </div>
+                <RadzenProgressBar Value="@(_record.WinRate * 100)" ShowValue="false" Mode="ProgressBarMode.Determinate" class="rate"
+                                   aria-label="@($"Wins {(_record.WinRate * 100).ToString("0", CultureInfo.CurrentCulture)} per cent of the time")" />
+                <dl class="facts">
+                    <div><dt>Average score</dt><dd>@_record.AverageScore.ToString("0.#", CultureInfo.CurrentCulture)</dd></div>
+                    @if (_record.LastSeenAt is { } seen)
+                    {
+                        <div><dt>Last argued</dt><dd>@seen.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</dd></div>
+                    }
+                    @if (_record.TopRival is { } rival)
+                    {
+                        <div>
+                            <dt>Argues most with</dt>
+                            <dd>@rival.Opponent <span class="po-muted">(@rival.Wins–@rival.Losses over @rival.Fights)</span></dd>
+                        </div>
+                    }
+                </dl>
+            </div>
+
+            <h2 class="po-display section">How they argue, on average</h2>
+            <div class="stats">
+                @foreach (var stat in StatFormat.Describe(_record.AverageStats))
+                {
+                    <StatTile Stat="@stat" />
+                }
+            </div>
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private ProfileRecordDto? _record;
+    private ProfileDto? _profile;
+    private bool _loading = true;
+
+    [Parameter] public string Initials { get; set; } = string.Empty;
+
+    /// <summary>The persona's own name when it is known, and the initials when the persona has since been deleted.</summary>
+    private string Name => _profile?.Persona.Name is { Length: > 0 } name ? name : Initials.ToUpperInvariant();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+
+        // Everything about the last persona goes, including their name: a page that says "no such persona" under
+        // somebody else's heading is worse than one that says nothing.
+        _profile = null;
+        _record = null;
+
+        if (!ProfileId.TryParse(Initials, CultureInfo.InvariantCulture, out var id))
+        {
+            _loading = false;
+            return;
+        }
+
+        try
+        {
+            // The record survives the persona: results are keyed on initials, so a deleted persona still has a past.
+            _profile = await Api.GetProfileAsync(id);
+            _record = await Api.GetProfileRecordAsync(id);
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
+        {
+            _profile = null;
+            _record = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,327 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PoFightJudge global styles — the "Broadcast" system (SPEC §14).
+
+   Every value downstream resolves through a design token below: colour, space,
+   radius, shadow, type and motion. Nothing hardcodes a hex, a rem gap or a
+   duration outside this block.
+
+   Theming is `color-scheme` + light-dark(), never two palettes:
+     :root                     color-scheme: dark   → dark is the default
+     html[data-theme="light"]  color-scheme: light  → user pinned light
+   Each colour token is ONE light-dark(light, dark) declaration; theme.js stamps
+   data-theme before first paint. There is deliberately no OS-preference media
+   query (DesignRulesTests enforces it) — the toggle is the only switch.
+
+   BREAKPOINTS — three, and only three (media queries cannot read custom
+   properties, so they are written literally; DesignRulesTests checks them):
+     40rem (640px)  phone → large phone
+     48rem (768px)  tablet
+     64rem (1024px) desktop / nav switch
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: dark;
+
+  /* ── Type ── */
+  --po-font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --po-font-body: "Barlow", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --po-font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+
+  --po-text-2xs: 0.6875rem;  /* 11px — the floor */
+  --po-text-xs: 0.75rem;     /* 12px */
+  --po-text-sm: 0.875rem;    /* 14px */
+  --po-text-md: 1rem;        /* 16px */
+  --po-text-lg: 1.125rem;    /* 18px */
+  --po-text-xl: clamp(1.25rem, 1.2vw + 1rem, 1.5rem);
+  --po-text-2xl: clamp(1.75rem, 2.2vw + 1.1rem, 2.25rem);
+  --po-text-3xl: clamp(2.25rem, 3.5vw + 1.2rem, 3.25rem);
+  --po-text-4xl: clamp(3rem, 5vw + 1.4rem, 4.5rem);
+
+  /* ── Space (4px base) ── */
+  --po-space-0: 0;
+  --po-space-1: 0.25rem;
+  --po-space-2: 0.5rem;
+  --po-space-3: 0.75rem;
+  --po-space-4: 1rem;
+  --po-space-5: 1.5rem;
+  --po-space-6: 2rem;
+  --po-space-7: 3rem;
+  --po-space-8: 4rem;
+
+  /* ── Radius: broadcast chrome is square-ish ── */
+  --po-radius-xs: 3px;
+  --po-radius-sm: 4px;
+  --po-radius-md: 6px;
+  --po-radius-lg: 10px;
+  --po-radius-pill: 999px;
+
+  /* ── Elevation ── */
+  --po-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --po-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --po-shadow-3: 0 18px 48px rgba(0, 0, 0, 0.45);
+
+  /* ── Motion ── */
+  --po-dur-fast: 120ms;
+  --po-dur-base: 220ms;
+  --po-dur-slow: 420ms;
+  --po-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --po-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ── Page widths (PageShell) ── */
+  --po-page-narrow: 46rem;
+  --po-page-standard: 75rem;   /* 1200px — the hi-fi Home/Verdict column */
+  --po-page-wide: 86rem;       /* 1376px — the live stage */
+  --po-page-gutter: var(--po-space-6);
+
+  /* ── Surfaces ── */
+  --po-bg: light-dark(#f4f1ea, #0b0d12);
+  --po-bg-elev: light-dark(#ece8df, #10131a);
+  --po-surface: light-dark(#ffffff, #151923);
+  --po-surface-2: light-dark(#f5f2eb, #1c2230);
+  --po-surface-3: light-dark(#e9e5dc, #232a3a);
+  --po-scrim: light-dark(rgba(20, 22, 28, 0.55), rgba(0, 0, 0, 0.7));
+
+  /* ── Ink ── */
+  --po-fg: light-dark(#15171d, #eef0f4);
+  --po-fg-invert: light-dark(#ffffff, #0b0d12);
+  --po-muted: light-dark(#545c6b, #98a1b3);          /* AA on every surface */
+  --po-muted-soft: light-dark(#8b93a3, #5e6778);     /* dots and rules only — never text */
+
+  /* ── Lines ── */
+  --po-border: light-dark(#b9b3a6, #40495d);        /* ≥ 1.9:1 on --po-surface in both themes */
+  --po-border-strong: light-dark(#8b8578, #525c73);
+  --po-rule: light-dark(rgba(21, 23, 29, 0.08), rgba(255, 255, 255, 0.08));
+
+  /* ── Brand & status. FILL tokens; each has an AA-safe *-text twin for words. ── */
+  --po-accent: light-dark(#ffcc33, #ffcc33);
+  --po-accent-fg: light-dark(#0b0d12, #0b0d12);
+  --po-accent-text: light-dark(#7a5a00, #ffcc33);
+  --po-accent-soft: light-dark(rgba(255, 204, 51, 0.18), rgba(255, 204, 51, 0.16));
+  --po-p1: light-dark(#0a5d7a, #3fa9f5);
+  --po-p1-soft: light-dark(rgba(10, 93, 122, 0.14), rgba(63, 169, 245, 0.17));
+  --po-p2: light-dark(#a5004e, #ff4f8b);
+  --po-p2-soft: light-dark(rgba(165, 0, 78, 0.12), rgba(255, 79, 139, 0.17));
+  --po-danger: light-dark(#b3261e, #ff5a5a);
+  --po-danger-fg: light-dark(#ffffff, #1a0a0b);
+  --po-success: light-dark(#16704a, #4ade80);
+  --po-warning: light-dark(#8a5e04, #facc15);
+  --po-focus: light-dark(#0b5fa5, #7cc7ff);
+  --po-live: light-dark(#b3261e, #ff5a5a);
+
+  /* ── Radzen bridge ──
+     Radzen's own stylesheet is injected by <RadzenTheme> after this file, so the
+     bridge sits on html:root (higher specificity than Radzen's :root) and maps
+     the library's variables onto ours. Grids, tabs, charts, inputs and dialogs
+     then inherit the palette in both themes without a second colour system. */
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html:root {
+  --rz-primary: var(--po-accent);
+  --rz-primary-light: var(--po-accent);
+  --rz-primary-lighter: var(--po-accent-soft);
+  --rz-primary-dark: var(--po-accent);
+  --rz-on-primary: var(--po-accent-fg);
+  --rz-on-primary-light: var(--po-accent-fg);
+  --rz-secondary: var(--po-p1);
+  --rz-on-secondary: var(--po-fg-invert);
+  --rz-info: var(--po-p1);
+  --rz-success: var(--po-success);
+  --rz-warning: var(--po-warning);
+  --rz-danger: var(--po-danger);
+  --rz-on-danger: var(--po-danger-fg);
+  --rz-text-color: var(--po-fg);
+  --rz-text-secondary-color: var(--po-muted);
+  --rz-text-tertiary-color: var(--po-muted);
+  --rz-text-title-color: var(--po-fg);
+  --rz-text-contrast-color: var(--po-fg-invert);
+  --rz-body-background-color: var(--po-bg);
+  --rz-base-background-color: var(--po-surface);
+  --rz-panel-background-color: var(--po-surface);
+  --rz-card-background-color: var(--po-surface);
+  --rz-input-background-color: var(--po-surface-2);
+  --rz-dialog-background-color: var(--po-surface);
+  --rz-menu-background-color: transparent;
+  --rz-border-color: var(--po-border);
+  --rz-input-border-color: var(--po-border);
+  --rz-border-radius: var(--po-radius-md);
+  --rz-input-border-radius: var(--po-radius-sm);
+  --rz-button-border-radius: var(--po-radius-sm);
+  --rz-body-font-family: var(--po-font-body);
+  --rz-text-font-family: var(--po-font-body);
+  --rz-input-font-family: var(--po-font-body);
+  --rz-series-1: var(--po-p1);
+  --rz-series-2: var(--po-p2);
+  --rz-series-3: var(--po-accent);
+  --rz-series-4: var(--po-success);
+}
+
+/* ── Theme resolution / box model ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--po-bg);
+  color: var(--po-fg);
+  font-family: var(--po-font-body);
+  font-size: var(--po-text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--po-font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+p { margin: 0; text-wrap: pretty; }
+
+a { color: var(--po-accent-text); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--po-fg); }
+
+/* ── Pre-Blazor boot line (index.html) ── */
+.po-boot {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--po-muted);
+  font-family: var(--po-font-display);
+  font-size: var(--po-text-lg);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ── Cards: one card, five modifiers ── */
+.po-card {
+  background: var(--po-surface);
+  border: 1px solid var(--po-border);
+  border-radius: var(--po-radius-md);
+  padding: var(--po-space-4);
+}
+
+.po-card--sm { padding: var(--po-space-3); }
+.po-card--flush { padding: 0; overflow: hidden; }
+.po-card--quiet { border-color: var(--po-rule); }
+.po-card--stretch { display: flex; flex-direction: column; height: 100%; }
+.po-card--lift { transition: transform var(--po-dur-base) var(--po-ease), box-shadow var(--po-dur-base) var(--po-ease); }
+.po-card--lift:hover, .po-card--lift:focus-within { transform: translateY(-2px); box-shadow: var(--po-shadow-2); }
+.po-card--p1 { border-color: color-mix(in srgb, var(--po-p1) 45%, var(--po-border)); }
+.po-card--p2 { border-color: color-mix(in srgb, var(--po-p2) 45%, var(--po-border)); }
+
+/* ── Typography helpers ── */
+.po-eyebrow {
+  font-size: var(--po-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--po-muted);
+}
+
+.po-eyebrow--accent { color: var(--po-accent-text); }
+.po-muted { color: var(--po-muted); }
+.po-display { font-family: var(--po-font-display); font-weight: 700; text-transform: uppercase; line-height: 1; }
+.po-num { font-variant-numeric: tabular-nums; }
+.po-p1 { color: var(--po-p1); }
+.po-p2 { color: var(--po-p2); }
+
+/* The fighter/profile tag in display type — TagMark's one style. */
+.po-tag {
+  font-family: var(--po-font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* ── Chips (RadzenBadge is used for status; this is the broadcast strip label) ── */
+.po-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--po-space-2);
+  padding: var(--po-space-1) var(--po-space-3);
+  border-radius: var(--po-radius-pill);
+  font-size: var(--po-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--po-surface-2);
+  color: var(--po-fg);
+}
+
+.po-chip--accent { background: var(--po-accent); color: var(--po-accent-fg); }
+.po-chip--live { background: var(--po-live); color: var(--po-danger-fg); }
+.po-chip--p1 { background: var(--po-p1); color: var(--po-fg-invert); }
+.po-chip--p2 { background: var(--po-p2); color: var(--po-fg-invert); }
+.po-chip--muted { color: var(--po-muted); }
+.po-chip--live::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; }
+
+/* ── Radzen: things the variable bridge cannot reach ── */
+.rz-layout, .rz-body { background: var(--po-bg) !important; color: var(--po-fg) !important; }
+.rz-card { box-shadow: none !important; border: 1px solid var(--po-border) !important; }
+.rz-button { font-family: var(--po-font-display) !important; font-weight: 700 !important; letter-spacing: 0.06em; text-transform: uppercase; }
+.rz-menu { border: 0 !important; box-shadow: none !important; }
+.rz-navigation-item-link { font-family: var(--po-font-body) !important; }
+.rz-notification-item { background: var(--po-surface) !important; color: var(--po-fg) !important; border: 1px solid var(--po-border) !important; }
+.rz-dialog { background: var(--po-surface) !important; border: 1px solid var(--po-border) !important; }
+.rz-dialog-titlebar { background: var(--po-surface) !important; color: var(--po-fg) !important; }
+.rz-popup, .rz-dropdown-panel, .rz-autocomplete-panel, .rz-tooltip-content {
+  background: var(--po-surface) !important;
+  color: var(--po-fg) !important;
+  border: 1px solid var(--po-border) !important;
+  box-shadow: var(--po-shadow-2) !important;
+}
+
+/* ── Focus visibility (keyboard users): one token-driven ring app-wide ── */
+:focus-visible, .rz-button:focus-visible, .rz-navigation-item-link:focus-visible {
+  outline: 2px solid var(--po-focus);
+  outline-offset: 2px;
+  border-radius: var(--po-radius-sm);
+}
+
+:focus:not(:focus-visible) { outline: none; }
+
+/* ── Touch targets ── */
+.rz-button, .rz-navigation-item-link { min-height: 44px; }
+
+/* ── Blazor error UI ── */
+#blazor-error-ui {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: var(--po-space-3) var(--po-space-4);
+  background: var(--po-danger);
+  color: var(--po-danger-fg);
+  font-weight: 600;
+}
+
+#blazor-error-ui a { color: inherit; }
+
+/* ── Motion: one switch turns it all off ── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --po-dur-fast: 0ms;
+    --po-dur-base: 0ms;
+    --po-dur-slow: 0ms;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

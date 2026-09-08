@@ -45,7 +45,7 @@ Both fighters are created the moment a fight starts, so a record has somewhere t
 answers out loud, and the wire format this whole phase was written against is confirmed. It is the only test that
 can say so, and until now it had never run.
 
-Then a whole fight in a browser against live Gemini (`POMARRIEDFIGHT_E2E_REAL=1`), passing in 3 m 29 s:
+Then a whole fight in a browser against live Gemini (`POFIGHTJUDGE_E2E_REAL=1`), passing in 3 m 29 s:
 
 | Measurement | Target | Measured |
 | --- | --- | --- |

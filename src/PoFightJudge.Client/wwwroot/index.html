@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0b0d12" />
+  <title>PoFightJudge</title>
+  <base href="/" />
+  <!-- Theme is stamped before the first stylesheet paints, or the OS palette renders and then snaps (see js/theme.js). -->
+  <script src="js/theme.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/mic.js"></script>
+  <script src="js/live-audio.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" />
+  <!-- Radzen's theme stylesheet is injected by <RadzenTheme> in App.razor; app.css bridges its variables onto the --po-* tokens. -->
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="PoFightJudge.Client.styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Fight" />
+</head>
+<body>
+  <div id="app">
+    <div class="po-boot">Loading PoFightJudge…</div>
+  </div>
+  <div id="blazor-error-ui" role="alert">
+    An unhandled error has occurred. <a href="." class="reload">Reload</a>
+  </div>
+  <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+  <!-- MSAL bridge for Production Entra ID sign-in (defines window.AuthenticationService); inert in Dev/Test. -->
+  <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
+  <script src="_framework/blazor.webassembly.js"></script>
+  <!-- Install-only worker: it caches nothing (see sw.js). Registered from a file, not inline: the CSP is script-src 'self'. -->
+  <script src="js/pwa.js"></script>
+</body>
+</html>
