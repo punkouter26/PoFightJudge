@@ -186,6 +186,42 @@ public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults,
                 .OrderByDescending(m => m.StartedAt),
         ]);
 
+    /// <summary>
+    /// The same narrowing the real repository does, in the same order, so a test over this exercises the shape of
+    /// the answer rather than a second implementation of the rules.
+    /// </summary>
+    public Task<MatchPageDto> PageAsync(string userId, MatchQuery query, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var sane = query.Sane();
+        var found = _matches.Values
+            .Where(m => string.Equals(m.UserId, userId, StringComparison.Ordinal))
+            .Where(m => sane.Mode is null || m.Mode == sane.Mode)
+            .Where(m => sane.From is null || m.StartedAt >= sane.From)
+            .Where(m => sane.To is null || m.StartedAt <= sane.To)
+            .Where(m => Matches(m, sane.Text))
+            .OrderByDescending(m => m.StartedAt)
+            .ToList();
+
+        return Task.FromResult(new MatchPageDto([.. found.Skip(sane.Skip).Take(sane.Take)], found.Count, sane.Skip, sane.Take));
+    }
+
+    private static bool Matches(MatchDto match, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+
+        var needle = text.Trim();
+        return match.Topic.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side1.DisplayName.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side2.DisplayName.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side1.Id.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side2.Id.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Winner.Contains(needle, StringComparison.OrdinalIgnoreCase);
+    }
+
     public Task SaveTurnsAsync(MatchId id, IEnumerable<TurnDto> turns, CancellationToken ct = default)
     {
         var stored = _turns.GetOrAdd(id.Value, _ => []);

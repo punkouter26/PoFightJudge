@@ -4,13 +4,14 @@
 @inject NavigationManager Nav
 @inject DialogService Dialogs
 @inject SetupMemory Memory
+@implements IDisposable
 
 <PageTitle>History · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="On the record" Title="History"
            Lead="Every argument you have been part of, both kinds, newest first.">
     <Actions>
-        <RadzenSelectBar @bind-Value="_mode" TValue="MatchMode?" Change="@(_ => LoadAsync())" Size="ButtonSize.Small">
+        <RadzenSelectBar @bind-Value="_mode" TValue="MatchMode?" Change="@(_ => NarrowAsync())" Size="ButtonSize.Small">
             <Items>
                 <RadzenSelectBarItem Text="All" Value="@((MatchMode?)null)" />
                 <RadzenSelectBarItem Text="Watches" Value="@((MatchMode?)MatchMode.Watch)" />
@@ -19,6 +20,33 @@
         </RadzenSelectBar>
     </Actions>
     <ChildContent>
+        @* Narrowing happens on the server: the browser never holds the whole history, only the page it is showing. *@
+        <section class="narrow" aria-label="Narrow the list">
+            <RadzenFormField Text="Search" Variant="Variant.Outlined" class="find">
+                <ChildContent>
+                    <RadzenTextBox Value="@_text" @oninput="@OnTextTyped" Name="find" MaxLength="80"
+                                   Placeholder="a topic, a name or a tag" aria-label="Search your history" />
+                </ChildContent>
+            </RadzenFormField>
+            <RadzenFormField Text="From" Variant="Variant.Outlined">
+                <ChildContent>
+                    <RadzenDatePicker @bind-Value="_from" Change="@(_ => NarrowAsync())" Name="from" DateFormat="d MMM yyyy"
+                                      AllowClear="true" ShowTime="false" aria-label="Earliest date" />
+                </ChildContent>
+            </RadzenFormField>
+            <RadzenFormField Text="To" Variant="Variant.Outlined">
+                <ChildContent>
+                    <RadzenDatePicker @bind-Value="_to" Change="@(_ => NarrowAsync())" Name="to" DateFormat="d MMM yyyy"
+                                      AllowClear="true" ShowTime="false" aria-label="Latest date" />
+                </ChildContent>
+            </RadzenFormField>
+            @if (IsNarrowed)
+            {
+                <RadzenButton Text="Clear" Icon="close" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
+                              Size="ButtonSize.Small" Click="@ClearAsync" />
+            }
+        </section>
+
         @if (_error is not null)
         {
             @* Above the list, not instead of it: a delete that failed must not take the whole history off screen. *@
@@ -28,6 +56,14 @@
         @if (_loading)
         {
             <LoadingRows Count="3" Label="Loading your history" />
+        }
+        else if (_matches.Count == 0 && IsNarrowed)
+        {
+            <EmptyState Icon="search_off" Title="Nothing matches that" Text="Try a different word, or a wider stretch of time.">
+                <Action>
+                    <RadzenButton Text="Clear the search" Icon="close" ButtonStyle="ButtonStyle.Primary" Click="@ClearAsync" />
+                </Action>
+            </EmptyState>
         }
         else if (_matches.Count == 0)
         {
@@ -39,7 +75,9 @@
         }
         else
         {
-            <RadzenDataGrid Data="@_matches" TItem="MatchDto" AllowSorting="true" AllowPaging="true" PageSize="15" class="history">
+            @* Count and PageSize come from the server: the grid is showing one page of a list it has never seen. *@
+            <RadzenDataGrid Data="@_matches" TItem="MatchDto" AllowSorting="true" AllowPaging="true"
+                            Count="@_total" PageSize="@MatchQuery.DefaultTake" LoadData="@OnPageAsync" class="history">
                 <Columns>
                     <RadzenDataGridColumn TItem="MatchDto" Title="When" Width="11rem" Property="@nameof(MatchDto.StartedAt)">
                         <Template Context="match">@match.StartedAt.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)</Template>
@@ -95,12 +133,33 @@
 </PageShell>
 
 @code {
+    /// <summary>How long to wait after the last keystroke before asking. Short enough to feel live, long enough that
+    /// typing a word is one request rather than five.</summary>
+    private static readonly TimeSpan TypingPause = TimeSpan.FromMilliseconds(300);
+
+    private readonly CancellationTokenSource _leaving = new();
     private IReadOnlyList<MatchDto> _matches = [];
     private MatchMode? _mode;
+    private string _text = string.Empty;
+    private DateTime? _from;
+    private DateTime? _to;
+    private int _skip;
+    private int _total;
+    private CancellationTokenSource? _typing;
     private bool _loading = true;
     private string? _error;
 
+    /// <summary>Whether anything has been asked of the list. Decides which empty state is the true one.</summary>
+    private bool IsNarrowed => _text.Trim().Length > 0 || _from is not null || _to is not null;
+
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    public void Dispose()
+    {
+        _leaving.Cancel();
+        _leaving.Dispose();
+        _typing?.Dispose();
+    }
 
     private async Task LoadAsync()
     {
@@ -108,7 +167,17 @@
         _error = null;
         try
         {
-            _matches = [.. await Api.GetMatchesAsync(_mode)];
+            // The To date is a day, and somebody who picks it means the end of it rather than midnight at its start.
+            var page = await Api.GetMatchPageAsync(
+                new MatchQuery(_mode, _text, _from, _to?.Date.AddDays(1).AddTicks(-1), _skip, MatchQuery.DefaultTake),
+                _leaving.Token);
+
+            _matches = page.Matches;
+            _total = page.Total;
+        }
+        catch (OperationCanceledException)
+        {
+            // Left the page, or a newer keystroke replaced this request.
         }
         catch (ApiException ex)
         {
@@ -122,6 +191,57 @@
         {
             _loading = false;
         }
+    }
+
+    /// <summary>Any change to what is being asked for starts again at the first page: page four of a new search is nowhere.</summary>
+    private Task NarrowAsync()
+    {
+        _skip = 0;
+        return LoadAsync();
+    }
+
+    /// <summary>
+    /// Typing is debounced rather than sent per keystroke. The pause is cancelled by the next letter, so a word typed
+    /// at speed is one request; nothing is dropped, because the last letter always wins.
+    /// </summary>
+    private async Task OnTextTyped(ChangeEventArgs e)
+    {
+        _text = e.Value?.ToString() ?? string.Empty;
+
+        var previous = _typing;
+        _typing = CancellationTokenSource.CreateLinkedTokenSource(_leaving.Token);
+        if (previous is not null)
+        {
+            await previous.CancelAsync();
+            previous.Dispose();
+        }
+
+        try
+        {
+            await Task.Delay(TypingPause, _typing.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await NarrowAsync();
+        StateHasChanged();
+    }
+
+    private Task ClearAsync()
+    {
+        _text = string.Empty;
+        _from = null;
+        _to = null;
+        return NarrowAsync();
+    }
+
+    /// <summary>The grid asking for a page. Only the offset changes; everything else is already what it is.</summary>
+    private Task OnPageAsync(LoadDataArgs args)
+    {
+        _skip = args.Skip ?? 0;
+        return LoadAsync();
     }
 
     /// <summary>

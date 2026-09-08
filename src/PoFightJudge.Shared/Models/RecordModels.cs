@@ -308,3 +308,31 @@ public sealed record HeadToHeadDto(
     /// <summary>True when neither has been in a fight with the other; the page says so rather than showing zeroes.</summary>
     public bool NeverMet => Meetings == 0;
 }
+
+/// <summary>
+/// How a history list is narrowed. Every part is optional; all of them together are an AND. The text runs over the
+/// topic, both sides and the winner, because those are the four things somebody remembers about an argument.
+/// </summary>
+public sealed record MatchQuery(
+    MatchMode? Mode = null,
+    string? Text = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    int Skip = 0,
+    int Take = MatchQuery.DefaultTake)
+{
+    public const int DefaultTake = 15;
+
+    /// <summary>A ceiling on what one request can ask for, so a hand-written URL cannot pull the whole table.</summary>
+    public const int MaxTake = 100;
+
+    /// <summary>The same query with its numbers forced into range: a negative skip and a take of a million are both refusals.</summary>
+    public MatchQuery Sane() => this with
+    {
+        Skip = Math.Max(0, Skip),
+        Take = Math.Clamp(Take, 1, MaxTake),
+    };
+}
+
+/// <summary>One page of history, and how much there is behind it.</summary>
+public sealed record MatchPageDto(IReadOnlyList<MatchDto> Matches, int Total, int Skip, int Take);

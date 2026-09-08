@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -82,6 +83,9 @@ public interface IApiClient
 
     /// <summary>Everything the signed-in person has been part of, newest first.</summary>
     Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default);
+
+    /// <summary>One page of history, narrowed. What the history screen reads; the whole list is never fetched.</summary>
+    Task<MatchPageDto> GetMatchPageAsync(MatchQuery query, CancellationToken ct = default);
 
     /// <summary>One match, or null when it is not this account's. What a replay opens on.</summary>
     Task<MatchDto?> GetMatchAsync(MatchId id, CancellationToken ct = default);
@@ -404,11 +408,41 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync(ct) : null;
     }
 
-    public async Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default)
+    /// <summary>
+    /// The convenience over the paged route, for the places that want the newest few and nothing else — Home's
+    /// replay strip and the palette. It asks for one page rather than the whole history.
+    /// </summary>
+    public async Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default) =>
+        (await GetMatchPageAsync(new MatchQuery(mode), ct)).Matches;
+
+    public async Task<MatchPageDto> GetMatchPageAsync(MatchQuery query, CancellationToken ct = default)
     {
-        var path = mode is null ? ApiRoutes.Matches.Base : $"{ApiRoutes.Matches.Base}?mode={mode}";
-        using var response = await http.GetAsync(Relative(path), ct);
-        return await ReadAsync<IReadOnlyList<MatchDto>>(response, ct);
+        ArgumentNullException.ThrowIfNull(query);
+        var sane = query.Sane();
+
+        var parts = new List<string> { $"skip={sane.Skip}", $"take={sane.Take}" };
+        if (sane.Mode is { } mode)
+        {
+            parts.Add($"mode={mode}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(sane.Text))
+        {
+            parts.Add($"q={Uri.EscapeDataString(sane.Text.Trim())}");
+        }
+
+        if (sane.From is { } from)
+        {
+            parts.Add($"from={Uri.EscapeDataString(from.ToString("O", CultureInfo.InvariantCulture))}");
+        }
+
+        if (sane.To is { } to)
+        {
+            parts.Add($"to={Uri.EscapeDataString(to.ToString("O", CultureInfo.InvariantCulture))}");
+        }
+
+        using var response = await http.GetAsync(Relative($"{ApiRoutes.Matches.Base}?{string.Join("&", parts)}"), ct);
+        return await ReadAsync<MatchPageDto>(response, ct);
     }
 
     public async Task<MatchDto?> GetMatchAsync(MatchId id, CancellationToken ct = default)

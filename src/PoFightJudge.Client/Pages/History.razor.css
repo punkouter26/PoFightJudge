@@ -1,3 +1,16 @@
 ::deep .history { width: 100%; }
 
 .row-actions { display: flex; gap: var(--po-space-1); justify-content: flex-end; }
+
+.narrow {
+  display: flex;
+  gap: var(--po-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--po-space-4);
+}
+
+/* The search box takes the room; the two dates sit at their natural width beside it. */
+.narrow .find {
+  flex: 1 1 16rem;
+}

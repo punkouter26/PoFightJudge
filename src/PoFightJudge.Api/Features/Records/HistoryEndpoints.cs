@@ -17,7 +17,7 @@ public sealed class HistoryEndpoints : ICarterModule
     {
         var matches = app.MapGroup(ApiRoutes.Matches.Base).RequireAuthorization().WithTags("Records");
 
-        matches.MapGet("/", ListAsync).Produces<IReadOnlyList<MatchDto>>();
+        matches.MapGet("/", ListAsync).Produces<MatchPageDto>();
 
         matches.MapGet(ApiRoutes.Matches.ByIdSegment, GetAsync)
             .Produces<MatchDto>()
@@ -32,12 +32,25 @@ public sealed class HistoryEndpoints : ICarterModule
             .Produces(StatusCodes.Status404NotFound);
     }
 
-    private static async Task<IReadOnlyList<MatchDto>> ListAsync(
+    /// <summary>
+    /// One page of history. The parameters are separate rather than a bound object because they arrive as a query
+    /// string, and the record that carries them clamps its own numbers — a hand-written take of a million is a
+    /// refusal rather than a table scan.
+    /// </summary>
+    private static async Task<MatchPageDto> ListAsync(
         ClaimsPrincipal user,
         IMatchRepository matches,
         MatchMode? mode,
+        string? q,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        int? skip,
+        int? take,
         CancellationToken ct) =>
-        await matches.ListAsync(user.UserId(), mode, ct);
+        await matches.PageAsync(
+            user.UserId(),
+            new MatchQuery(mode, q, from, to, skip ?? 0, take ?? MatchQuery.DefaultTake),
+            ct);
 
     private static async Task<IResult> GetAsync(MatchId id, ClaimsPrincipal user, IMatchRepository matches, CancellationToken ct) =>
         await matches.GetAsync(user.UserId(), id, ct) is { } match ? Results.Ok(match) : Results.NotFound();

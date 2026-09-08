@@ -84,6 +84,6 @@
 - [x] T58 Head to head: two combatants side by side, from the rivalry data already computed
 - [x] T59 Take the clip: download a highlight
 - [x] T60 Keyboard: a command palette and the shortcuts HotKeys2 was added for
-- [ ] T61 History that scales: search, filters and server-side paging
+- [x] T61 History that scales: search, filters and server-side paging
 - [ ] T62 An error that does not lose the page: ErrorBoundary and a degraded banner
 - [ ] T63 Before the bell: a microphone check, and a reconnect the fighters can see

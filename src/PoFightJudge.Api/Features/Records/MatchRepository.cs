@@ -20,6 +20,9 @@ public interface IMatchRepository
     /// <summary>One user's history, newest first.</summary>
     Task<IReadOnlyList<MatchDto>> ListAsync(string userId, MatchMode? mode = null, CancellationToken ct = default);
 
+    /// <summary>One page of one user's history, narrowed by <paramref name="query"/> and newest first.</summary>
+    Task<MatchPageDto> PageAsync(string userId, MatchQuery query, CancellationToken ct = default);
+
     Task SaveTurnsAsync(MatchId id, IEnumerable<TurnDto> turns, CancellationToken ct = default);
 
     Task<IReadOnlyList<TurnDto>> GetTurnsAsync(MatchId id, CancellationToken ct = default);
@@ -60,6 +63,75 @@ public sealed class MatchRepository(TableServiceClient tables) : IMatchRepositor
             // Newest first. Sorted here rather than by row key: the id is random, so only the timestamp orders a list.
             return [.. matches.OrderByDescending(m => m.StartedAt)];
         }, ct);
+
+    /// <summary>
+    /// The mode and the date range are pushed into the table's own filter, so a narrowed history reads fewer rows.
+    /// The text and the ordering cannot be: Table Storage has no contains, and the row key is a random id — only the
+    /// timestamp orders this list, and it is not the key. So the partition is still read and then sorted here.
+    ///
+    /// Paging on top of that is what keeps the answer small. It does not make the read small; the fix for that is a
+    /// row key that starts with the timestamp, which is a rewrite of every stored match and not this task.
+    /// </summary>
+    public Task<MatchPageDto> PageAsync(string userId, MatchQuery query, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var sane = query.Sane();
+
+        return StorageBootstrap.WithTableAsync(tables, TableNames.Matches, async token =>
+        {
+            var matches = new List<MatchDto>();
+            await foreach (var entity in Table(TableNames.Matches).QueryAsync<MatchEntity>(Filter(userId, sane), cancellationToken: token))
+            {
+                matches.Add(entity.ToDto());
+            }
+
+            var found = matches.Where(m => Matches(m, sane.Text)).OrderByDescending(m => m.StartedAt).ToList();
+            return new MatchPageDto([.. found.Skip(sane.Skip).Take(sane.Take)], found.Count, sane.Skip, sane.Take);
+        }, ct);
+    }
+
+    /// <summary>Everything the table itself can answer: whose it is, which mode, and when.</summary>
+    private static string Filter(string userId, MatchQuery query)
+    {
+        var clauses = new List<string> { TableClient.CreateQueryFilter($"PartitionKey eq {userId}") };
+
+        if (query.Mode is { } mode)
+        {
+            clauses.Add(TableClient.CreateQueryFilter($"Mode eq {mode.ToString()}"));
+        }
+
+        if (query.From is { } from)
+        {
+            clauses.Add(TableClient.CreateQueryFilter($"StartedAt ge {from}"));
+        }
+
+        if (query.To is { } to)
+        {
+            clauses.Add(TableClient.CreateQueryFilter($"StartedAt le {to}"));
+        }
+
+        return string.Join(" and ", clauses);
+    }
+
+    /// <summary>
+    /// The four things somebody remembers about an argument: what it was about, who was in it, and who took it.
+    /// Case-insensitive because nobody types a tag the way it is stored.
+    /// </summary>
+    private static bool Matches(MatchDto match, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+
+        var needle = text.Trim();
+        return match.Topic.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side1.DisplayName.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side2.DisplayName.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side1.Id.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Side2.Id.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || match.Winner.Contains(needle, StringComparison.OrdinalIgnoreCase);
+    }
 
     public Task SaveTurnsAsync(MatchId id, IEnumerable<TurnDto> turns, CancellationToken ct = default) =>
         StorageBootstrap.WithTableAsync(tables, TableNames.Turns, async token =>

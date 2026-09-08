@@ -32,8 +32,12 @@ public class HistoryPageTests : BunitContext
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         JSInterop.Mode = JSRuntimeMode.Loose;
-        _api.GetMatchesAsync(Arg.Any<MatchMode?>(), Arg.Any<CancellationToken>()).Returns(_ => Both());
+        _api.GetMatchPageAsync(Arg.Any<MatchQuery>(), Arg.Any<CancellationToken>()).Returns(_ => Page(Both()));
     }
+
+    /// <summary>One page holding everything given to it: the tests are about the screen, not about paging arithmetic.</summary>
+    private static MatchPageDto Page(IReadOnlyList<MatchDto> matches) =>
+        new(matches, matches.Count, 0, MatchQuery.DefaultTake);
 
     private IReadOnlyList<MatchDto> Both() =>
     [
@@ -58,7 +62,7 @@ public class HistoryPageTests : BunitContext
             builder.CloseComponent();
         });
 
-        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+        cut.WaitForAssertion(() => cut.FindAll(".history tbody tr").Should().HaveCount(2));
         return cut;
     }
 
@@ -86,12 +90,13 @@ public class HistoryPageTests : BunitContext
     {
         var cut = RenderHistory();
         _api.ClearReceivedCalls();
-        _api.GetMatchesAsync(MatchMode.Fight, Arg.Any<CancellationToken>()).Returns([Both()[1]]);
+        _api.GetMatchPageAsync(Arg.Is<MatchQuery>(q => q.Mode == MatchMode.Fight), Arg.Any<CancellationToken>())
+            .Returns(Page([Both()[1]]));
 
         await cut.FindAll("button").First(b => b.TextContent.Contains("Fights", StringComparison.Ordinal)).ClickAsync(new());
 
-        await _api.Received(1).GetMatchesAsync(MatchMode.Fight, Arg.Any<CancellationToken>());
-        await cut.WaitForAssertionAsync(() => cut.FindAll("tbody tr").Should().HaveCount(1));
+        await _api.Received(1).GetMatchPageAsync(Arg.Is<MatchQuery>(q => q.Mode == MatchMode.Fight), Arg.Any<CancellationToken>());
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".history tbody tr").Should().HaveCount(1));
     }
 
     [Fact]
@@ -105,7 +110,7 @@ public class HistoryPageTests : BunitContext
         await clicked;
 
         await _api.DidNotReceive().DeleteMatchAsync(_watch, Arg.Any<CancellationToken>());
-        cut.FindAll("tbody tr").Should().HaveCount(2);
+        cut.FindAll(".history tbody tr").Should().HaveCount(2);
     }
 
     [Fact]
@@ -118,7 +123,7 @@ public class HistoryPageTests : BunitContext
         await clicked;
 
         await _api.Received(1).DeleteMatchAsync(_watch, Arg.Any<CancellationToken>());
-        await cut.WaitForAssertionAsync(() => cut.FindAll("tbody tr").Should().HaveCount(1));
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".history tbody tr").Should().HaveCount(1));
         cut.Markup.Should().NotContain("the thermostat");
     }
 
@@ -134,7 +139,7 @@ public class HistoryPageTests : BunitContext
     [Fact]
     public async Task Nobody_who_has_never_argued_is_shown_an_empty_table()
     {
-        _api.GetMatchesAsync(Arg.Any<MatchMode?>(), Arg.Any<CancellationToken>()).Returns([]);
+        _api.GetMatchPageAsync(Arg.Any<MatchQuery>(), Arg.Any<CancellationToken>()).Returns(Page([]));
 
         var cut = Render<History>();
 

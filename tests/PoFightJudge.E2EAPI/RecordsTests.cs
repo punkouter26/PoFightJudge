@@ -61,11 +61,11 @@ public class RecordsTests(ApiFactory factory)
         var id = await RecordAsync("records-mine", "ha1", "ha2");
         await RecordAsync("records-theirs", "ha3", "ha4");
 
-        var history = await mine.GetFromJsonAsync<IReadOnlyList<MatchDto>>(ApiRoutes.Matches.Base);
+        var history = await mine.GetFromJsonAsync<MatchPageDto>(ApiRoutes.Matches.Base);
 
-        history!.Select(m => m.Id).Should().Contain(id);
-        history.Should().OnlyContain(m => string.Equals(m.UserId, "records-mine", StringComparison.Ordinal));
-        (await theirs.GetFromJsonAsync<IReadOnlyList<MatchDto>>(ApiRoutes.Matches.Base))!.Should().NotContain(m => m.Id == id);
+        history!.Matches.Select(m => m.Id).Should().Contain(id);
+        history.Matches.Should().OnlyContain(m => string.Equals(m.UserId, "records-mine", StringComparison.Ordinal));
+        (await theirs.GetFromJsonAsync<MatchPageDto>(ApiRoutes.Matches.Base))!.Matches.Should().NotContain(m => m.Id == id);
     }
 
     [Fact]
@@ -75,9 +75,9 @@ public class RecordsTests(ApiFactory factory)
         await RecordAsync("records-modes", "mo1", "mo2", mode: MatchMode.Fight);
         await RecordAsync("records-modes", "mo3", "mo4", mode: MatchMode.Watch);
 
-        var fights = await client.GetFromJsonAsync<IReadOnlyList<MatchDto>>($"{ApiRoutes.Matches.Base}?mode={MatchMode.Fight}");
+        var fights = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?mode={MatchMode.Fight}");
 
-        fights!.Should().OnlyContain(m => m.Mode == MatchMode.Fight).And.NotBeEmpty();
+        fights!.Matches.Should().OnlyContain(m => m.Mode == MatchMode.Fight).And.NotBeEmpty();
     }
 
     [Fact]
@@ -405,5 +405,70 @@ public class RecordsTests(ApiFactory factory)
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await client.GetAsync(ApiRoutes.Fighters.Versus(FighterId.From("HU1"), FighterId.From("HU1"))))
             .StatusCode.Should().Be(HttpStatusCode.NotFound, "nobody argues with themselves");
+    }
+
+    /// <summary>
+    /// History used to answer with every match a person had ever had, on every load, with no way to narrow it. The
+    /// page is what keeps the answer small; the search is what makes a long history usable at all.
+    /// </summary>
+    [Fact]
+    public async Task History_comes_back_a_page_at_a_time()
+    {
+        var client = User("records-paging");
+        for (var i = 0; i < 5; i++)
+        {
+            await RecordAsync("records-paging", $"p{i}a", $"p{i}b");
+        }
+
+        var first = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?skip=0&take=2");
+        var second = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?skip=2&take=2");
+
+        first!.Matches.Should().HaveCount(2);
+        first.Total.Should().Be(5, "the count is of everything behind the page, not of the page");
+        second!.Matches.Should().HaveCount(2);
+        second.Matches.Should().NotIntersectWith(first.Matches);
+    }
+
+    [Fact]
+    public async Task A_hand_written_take_cannot_pull_the_whole_table()
+    {
+        var client = User("records-take");
+        await RecordAsync("records-take", "tk1", "tk2");
+
+        var page = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?take=100000");
+
+        page!.Take.Should().BeLessThanOrEqualTo(MatchQuery.MaxTake);
+    }
+
+    [Fact]
+    public async Task History_can_be_searched_by_topic_by_name_and_by_tag()
+    {
+        var client = User("records-search");
+        var id = await RecordAsync("records-search", "se1", "se2");
+
+        var byTopic = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?q=thermo");
+        var byTag = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?q=se2");
+        var byNothing = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?q=zzzznothing");
+
+        byTopic!.Matches.Should().Contain(m => m.Id == id);
+        byTag!.Matches.Should().Contain(m => m.Id == id, "a tag is how somebody looks for their own arguments");
+        byNothing!.Matches.Should().BeEmpty();
+        byNothing.Total.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task History_can_be_narrowed_to_a_stretch_of_time()
+    {
+        var client = User("records-dates");
+        var id = await RecordAsync("records-dates", "dt1", "dt2");
+        var now = factory.Services.GetRequiredService<TimeProvider>().GetUtcNow();
+
+        var inside = await client.GetFromJsonAsync<MatchPageDto>(
+            $"{ApiRoutes.Matches.Base}?from={Uri.EscapeDataString(now.AddDays(-1).ToString("O"))}");
+        var after = await client.GetFromJsonAsync<MatchPageDto>(
+            $"{ApiRoutes.Matches.Base}?from={Uri.EscapeDataString(now.AddDays(1).ToString("O"))}");
+
+        inside!.Matches.Should().Contain(m => m.Id == id);
+        after!.Matches.Should().NotContain(m => m.Id == id);
     }
 }
