@@ -5,6 +5,7 @@
 
 <div class="shell">
     <FakeAiBanner />
+    <ConnectionBanner />
     <header class="topbar">
         <a class="brand" href="">
             <span class="mark" aria-hidden="true">
@@ -36,7 +37,22 @@
         </div>
     </header>
     <main class="content" id="main">
-        @Body
+        @* One unhandled render exception used to drop the whole app to index.html's error strip, which offers a
+           reload and loses whatever was in progress. The boundary keeps the shell, the nav and the banner. *@
+        <ErrorBoundary @ref="_boundary" @key="_attempt">
+            <ChildContent>@Body</ChildContent>
+            <ErrorContent>
+                <section class="broke po-card" role="alert">
+                    <h1 class="po-display">That did not go well</h1>
+                    <p>Something on this page stopped working. The rest of the app is fine.</p>
+                    <div class="ways">
+                        <RadzenButton Text="Try that again" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Click="@Recover" />
+                        <RadzenButton Text="Go home" Icon="home" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                                      Click="@(() => GoHome())" />
+                    </div>
+                </section>
+            </ErrorContent>
+        </ErrorBoundary>
     </main>
     @* Global keys. Both render nothing until they are asked for, so they cost a listener each. *@
     <CommandPalette />
@@ -49,6 +65,29 @@
 
 @code {
     private bool _signingOut;
+
+    private ErrorBoundary? _boundary;
+
+    /// <summary>
+    /// Bumped on every recovery so the boundary is a new component each time. Recover() alone re-renders the same
+    /// children, which throw again immediately if whatever broke them is still there — the key makes it a fresh start.
+    /// </summary>
+    private int _attempt;
+
+    /// <summary>Navigating away is its own recovery: the boundary is latched until something resets it.</summary>
+    protected override void OnParametersSet() => _boundary?.Recover();
+
+    private void Recover()
+    {
+        _attempt++;
+        _boundary?.Recover();
+    }
+
+    private void GoHome()
+    {
+        Recover();
+        Nav.NavigateTo("");
+    }
 
     private async Task SignOutAsync()
     {

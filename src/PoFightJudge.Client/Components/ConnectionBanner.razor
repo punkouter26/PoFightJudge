@@ -1,0 +1,53 @@
+@implements IDisposable
+@inject ConnectionState Connection
+@inject IApiClient Api
+
+@* Nothing while everything is answering, which is nearly always. *@
+@if (!Connection.IsReachable)
+{
+    <div class="banner down" role="status" aria-live="polite">
+        <RadzenIcon Icon="cloud_off" />
+        <span>The server is not answering. Nothing you do will be saved until it does.</span>
+        <RadzenButton Text="@(_checking ? "Checking…" : "Check again")" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
+                      Size="ButtonSize.Small" Disabled="@_checking" Click="@CheckAsync" />
+    </div>
+}
+else if (Connection.IsDegraded)
+{
+    <div class="banner degraded" role="status" aria-live="polite">
+        <RadzenIcon Icon="warning" />
+        <span>The server is up but not configured to do anything. An argument cannot be started right now.</span>
+        <RadzenLink Path="health" Text="What is wrong" />
+    </div>
+}
+
+@code {
+    private bool _checking;
+
+    protected override void OnInitialized() => Connection.Changed += OnChanged;
+
+    public void Dispose() => Connection.Changed -= OnChanged;
+
+    private void OnChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// One real request rather than a ping of our own: the health route is the thing that says whether the app can
+    /// work, and the handler on the client updates the state from whatever comes back.
+    /// </summary>
+    private async Task CheckAsync()
+    {
+        _checking = true;
+        try
+        {
+            await Api.GetHealthDetailsAsync();
+        }
+        catch (HttpRequestException)
+        {
+            // Still down. The handler has already counted it; the banner stays.
+        }
+        finally
+        {
+            _checking = false;
+        }
+    }
+}

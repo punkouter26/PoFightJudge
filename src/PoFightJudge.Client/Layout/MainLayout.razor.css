@@ -131,3 +131,28 @@
     font-size: var(--po-text-lg);
   }
 }
+
+/* What is left when a page has thrown. Deliberately plain: it is the last thing standing. */
+.broke {
+  display: grid;
+  gap: var(--po-space-3);
+  padding: var(--po-space-6);
+  max-width: 40rem;
+  margin: var(--po-space-6) auto;
+}
+
+.broke h1 {
+  margin: 0;
+  font-size: var(--po-text-2xl);
+}
+
+.broke p {
+  margin: 0;
+  color: var(--po-muted);
+}
+
+.broke .ways {
+  display: flex;
+  gap: var(--po-space-3);
+  flex-wrap: wrap;
+}

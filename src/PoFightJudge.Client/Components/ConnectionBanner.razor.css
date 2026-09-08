@@ -1,0 +1,24 @@
+.banner {
+  display: flex;
+  gap: var(--po-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--po-space-2) var(--po-space-4);
+  font-size: var(--po-text-sm);
+}
+
+.down {
+  background: var(--po-danger);
+  color: var(--po-bg);
+}
+
+.degraded {
+  background: var(--po-accent);
+  color: var(--po-on-accent);
+}
+
+/* The two banners sit above everything, in the same place the fake-AI one does. */
+.banner ::deep a,
+.banner ::deep .rz-button {
+  color: inherit;
+}

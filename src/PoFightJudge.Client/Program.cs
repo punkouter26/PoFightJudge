@@ -34,6 +34,8 @@ builder.Services.AddScoped(sp => new LiveConnectionFactory(sp, new Uri(builder.H
 builder.Services.AddScoped<SimulationState>();
 builder.Services.AddScoped<SetupMemory>();
 builder.Services.AddScoped<SaveInterop>();
+builder.Services.AddScoped<ConnectionState>();
+builder.Services.AddScoped<ConnectionWatchHandler>();
 // The same rules the API enforces, for <FluentValidationValidator> (registered explicitly: no assembly scanning under trimming).
 builder.Services.AddScoped<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
 
@@ -53,12 +55,14 @@ if (builder.HostEnvironment.IsProduction())
     });
     builder.Services.AddScoped<BaseAddressAuthorizationMessageHandler>();
     builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = baseAddress)
+        .AddHttpMessageHandler<ConnectionWatchHandler>()
         .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
     builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClients.Api));
 }
 else
 {
-    builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = baseAddress);
+    builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = baseAddress)
+        .AddHttpMessageHandler<ConnectionWatchHandler>();
     builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClients.Api));
     builder.Services.AddScoped<ApiAuthStateProvider>();
     builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<ApiAuthStateProvider>());
