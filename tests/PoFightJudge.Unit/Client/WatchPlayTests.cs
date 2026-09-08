@@ -204,4 +204,36 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         cut.FindAll("section.verdict").Should().BeEmpty("a failed line is not a result");
     }
 
+    /// <summary>
+    /// The AI routes are limited per user. Before this the page showed "The API answered 429 Too Many Requests." and
+    /// a Try again that fired straight back into the same limit — a button that could only fail while it was pressed.
+    /// </summary>
+    [Fact(Timeout = 60_000)]
+    public async Task A_throttled_round_says_how_long_to_wait_and_will_not_be_retried_until_it_is_up()
+    {
+        _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
+            .Returns<Task<GenerateRoundResponse>>(_ => throw new ApiException(429, "That was a lot of arguing at once. Give it a moment.")
+            {
+                RetryAfter = TimeSpan.FromSeconds(5),
+            });
+        _simulation.Set(Matthew, Kimberly, "the thermostat");
+
+        var cut = Render<WatchPlay>();
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Give it a moment"), TimeSpan.FromSeconds(10));
+        var button = cut.FindAll(".problem button").Single();
+        button.TextContent.Should().Contain("5s");
+        button.HasAttribute("disabled").Should().BeTrue("retrying inside the window can only hit the same limit again");
+
+        // The window passes a second at a time, exactly as it does in front of somebody.
+        for (var second = 0; second < 6; second++)
+        {
+            await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(1)));
+        }
+
+        await cut.WaitForAssertionAsync(
+            () => cut.FindAll(".problem button").Single().HasAttribute("disabled").Should().BeFalse(),
+            TimeSpan.FromSeconds(10));
+        cut.FindAll(".problem button").Single().TextContent.Should().Contain("Try again").And.NotContain("Try again in");
+    }
 }

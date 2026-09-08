@@ -132,7 +132,9 @@
                     <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
                         <div class="failure">
                             <span>@_error</span>
-                            <RadzenButton Text="Try again" Icon="refresh" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined" Click="@RetryAsync" />
+                            <RadzenButton Text="@(RetrySeconds > 0 ? $"Try again in {RetrySeconds}s" : "Try again")"
+                                          Icon="refresh" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
+                                          Disabled="@(RetrySeconds > 0)" Click="@RetryAsync" />
                         </div>
                     </RadzenAlert>
                 }

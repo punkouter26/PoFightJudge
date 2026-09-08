@@ -230,14 +230,18 @@ public class WatchTests(ApiFactory factory)
         var body = new TranscribeRequest(Convert.ToBase64String(wav));
 
         var codes = new List<HttpStatusCode>();
+        TimeSpan? retryAfter = null;
         for (var i = 0; i <= WatchServiceExtensions.PermitsPerWindow; i++)
         {
             using var response = await client.PostAsJsonAsync(ApiRoutes.Watch.TranscribeUrl, body);
             codes.Add(response.StatusCode);
+            retryAfter ??= response.Headers.RetryAfter?.Delta;
         }
 
         codes.Take(WatchServiceExtensions.PermitsPerWindow).Should().AllSatisfy(c => c.Should().Be(HttpStatusCode.OK));
         codes[^1].Should().Be(HttpStatusCode.TooManyRequests, "every call here costs money at a provider, so one client cannot spend everyone's budget");
+        retryAfter.Should().NotBeNull("a throttled client that is not told when to come back can only guess, and guesses badly")
+            .And.BeLessThanOrEqualTo(WatchServiceExtensions.Window);
 
         using var other = User($"watch-calm-{Guid.NewGuid():N}");
         (await other.PostAsJsonAsync(ApiRoutes.Watch.TranscribeUrl, body)).StatusCode

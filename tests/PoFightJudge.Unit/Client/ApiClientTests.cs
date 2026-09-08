@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using PoFightJudge.Client;
@@ -49,5 +50,45 @@ public class ApiClientTests
                 : JsonContent.Create(new HealthReportDto("Test", HealthState.Ok, DateTimeOffset.UnixEpoch, []));
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = body });
         }
+    }
+
+    /// <summary>
+    /// The AI routes are limited per user, and SPEC §11 promises the client turns that into a wait rather than a
+    /// dead button. Nothing read the header before this, so a throttle surfaced as "The API answered 429".
+    /// </summary>
+    [Fact]
+    public async Task A_throttle_is_read_as_a_wait_rather_than_as_a_fault()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(42));
+
+        var thrown = await ApiException.FromAsync(response, CancellationToken.None);
+
+        thrown.Status.Should().Be(429);
+        thrown.IsThrottled.Should().BeTrue();
+        thrown.RetryAfter.Should().Be(TimeSpan.FromSeconds(42));
+        thrown.Summary.Should().NotContain("429", "a status line is not something to show anybody");
+    }
+
+    [Fact]
+    public async Task A_throttle_with_nothing_to_say_still_reads_as_a_throttle()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+
+        var thrown = await ApiException.FromAsync(response, CancellationToken.None);
+
+        thrown.IsThrottled.Should().BeTrue();
+        thrown.RetryAfter.Should().BeNull("the page falls back to a window of its own rather than inventing one here");
+    }
+
+    [Fact]
+    public async Task Every_other_failure_carries_no_wait()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.InternalServerError);
+
+        var thrown = await ApiException.FromAsync(response, CancellationToken.None);
+
+        thrown.IsThrottled.Should().BeFalse();
+        thrown.RetryAfter.Should().BeNull();
     }
 }

@@ -39,6 +39,15 @@ public sealed partial class WatchPlay : IAsyncDisposable
     private bool _isFake;
     private string _line = string.Empty;
     private string? _error;
+
+    /// <summary>
+    /// When a throttled call may be tried again. The AI routes are limited per user, and a Try again that fires
+    /// straight back into the same 429 reads as a broken button — so the button waits, visibly, and says how long.
+    /// </summary>
+    private DateTimeOffset? _retryAt;
+
+    /// <summary>Held so the loop that counts it down is observed rather than dropped on the floor.</summary>
+    private Task? _countdown;
     private VerdictResponse? _verdict;
 
     private enum Stage
@@ -66,7 +75,14 @@ public sealed partial class WatchPlay : IAsyncDisposable
     /// <summary>The side a real person is arguing, when there is one.</summary>
     private MatchSide? Person => Simulation.Human;
 
+    /// <summary>What to wait when a 429 arrives without a header to say. One window of the server's limit.</summary>
+    private static readonly TimeSpan DefaultThrottleWait = TimeSpan.FromSeconds(30);
+
     private string Headline => Simulation.Topic.Length == 0 ? "The argument" : Simulation.Topic;
+
+    /// <summary>Whole seconds left of a throttle, or zero when there is nothing to wait for.</summary>
+    private int RetrySeconds =>
+        _retryAt is { } at && at > Clock.GetUtcNow() ? (int)Math.Ceiling((at - Clock.GetUtcNow()).TotalSeconds) : 0;
 
     private string Lead =>
         _stage == Stage.Done ? "The judge has ruled. The match is on the record."
@@ -174,7 +190,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         }
         catch (ApiException ex)
         {
-            return Failed(ex.Summary);
+            return Failed(ex);
         }
         catch (HttpRequestException ex)
         {
@@ -306,7 +322,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         }
         catch (ApiException ex)
         {
-            Failed(ex.Summary);
+            Failed(ex);
         }
         catch (HttpRequestException ex)
         {
@@ -349,6 +365,47 @@ public sealed partial class WatchPlay : IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// The same, for an answer from the API. A throttle is held apart from a fault: it carries a wait, and until that
+    /// wait is up there is nothing to try again.
+    /// </summary>
+    private bool Failed(ApiException ex)
+    {
+        if (ex.IsThrottled)
+        {
+            StartCountdown(ex.RetryAfter ?? DefaultThrottleWait);
+        }
+
+        return Failed(ex.Summary);
+    }
+
+    /// <summary>Ticks once a second so the wait counts down on screen, and clears itself when the window is up.</summary>
+    private void StartCountdown(TimeSpan wait)
+    {
+        _retryAt = Clock.GetUtcNow() + wait;
+        _countdown = CountDownAsync();
+    }
+
+    private async Task CountDownAsync()
+    {
+        while (!_leaving.IsCancellationRequested && RetrySeconds > 0)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), Clock, _leaving.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            StateHasChanged();
+        }
+
+        _retryAt = null;
+        StateHasChanged();
+    }
+
     private MatchSide SideOf(string speaker) =>
         WatchTurns.IsHusband(speaker) ? Simulation.Husband! : Simulation.Wife!;
 
@@ -379,6 +436,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         // proves the field cannot outlive the page.
         _beat?.Dispose();
         _beat = null;
+        _countdown = null;
         StopLevelWatch();
         _leaving.Dispose();
         await Audio.StopAsync(CancellationToken.None);

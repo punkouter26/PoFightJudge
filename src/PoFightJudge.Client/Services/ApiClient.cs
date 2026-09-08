@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using PoFightJudge.Shared;
@@ -140,6 +141,15 @@ public sealed class ApiException : Exception
 
     public string Title { get; }
 
+    /// <summary>
+    /// How long the server asked us to wait, from a 429's <c>Retry-After</c>. Null when it did not say — which is
+    /// every status but that one, and a throttle from something in front of the API that does not set the header.
+    /// </summary>
+    public TimeSpan? RetryAfter { get; init; }
+
+    /// <summary>True when this was the per-user AI limit rather than a fault: the same request will work later.</summary>
+    public bool IsThrottled => Status == 429;
+
     /// <summary>Field → messages, from a validation problem; empty otherwise.</summary>
     public IReadOnlyDictionary<string, string[]> Errors { get; }
 
@@ -159,6 +169,22 @@ public sealed class ApiException : Exception
             {
                 // A non-JSON body (a proxy page, an empty 500): the status line below is all we have.
             }
+        }
+
+        // A throttle is not a fault, and "The API answered 429 Too Many Requests." is not something to show anybody.
+        // The wait comes from the header as a delta; some servers send a date instead, so both forms are read.
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            // Only the delta form: turning the date form into a wait needs a clock, and a static factory has none.
+            // Our own limiter sends the delta, and a page falls back to a window of its own when there is nothing.
+            var wait = response.Headers.RetryAfter?.Delta;
+            return new ApiException(
+                (int)response.StatusCode,
+                problem?.Title ?? "That was a lot of arguing at once. Give it a moment.",
+                problem?.Errors)
+            {
+                RetryAfter = wait,
+            };
         }
 
         var title = problem?.Title ?? problem?.Detail ?? $"The API answered {(int)response.StatusCode} {response.ReasonPhrase}.";

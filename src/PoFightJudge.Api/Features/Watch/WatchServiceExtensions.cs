@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using PoFightJudge.Api.Features.Auth;
@@ -29,6 +30,16 @@ public static class WatchServiceExtensions
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            // A throttled client that is not told when to come back can only guess. The fixed-window limiter knows
+            // how long is left in the window, so say so; the client turns it into a countdown rather than a retry loop.
+            options.OnRejected = (context, _) =>
+            {
+                var after = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var window) ? window : Window;
+                context.HttpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(after.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+                return ValueTask.CompletedTask;
+            };
+
             options.AddPolicy(AiPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
                 // Anonymous callers cannot reach these routes at all (the fallback policy), so a null id only
                 // happens in tests; bucketing them together is the safe reading.
