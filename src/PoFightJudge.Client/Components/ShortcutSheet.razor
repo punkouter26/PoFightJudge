@@ -1,0 +1,81 @@
+@using Toolbelt.Blazor.HotKeys2
+@implements IAsyncDisposable
+@inject HotKeys HotKeys
+
+@* ? anywhere except inside something being typed into. Nothing renders until it is asked for. *@
+@if (_open)
+{
+    <div class="scrim" @onclick="Close">
+        <div class="sheet po-card" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" @onclick:stopPropagation="true">
+            <header>
+                <h2 class="po-display">Keys</h2>
+                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                              title="Close" aria-label="Close" Click="@Close" />
+            </header>
+            <dl>
+                @foreach (var (keys, what) in Shortcuts)
+                {
+                    <div>
+                        <dt><kbd>@keys</kbd></dt>
+                        <dd>@what</dd>
+                    </div>
+                }
+            </dl>
+        </div>
+    </div>
+}
+
+@code {
+    private HotKeysContext? _keys;
+    private bool _open;
+
+    /// <summary>
+    /// Written out rather than read back from the hot-key contexts: the contexts live on the components that own
+    /// them, and half of them are not mounted while this is being read.
+    /// </summary>
+    private static IEnumerable<(string Keys, string What)> Shortcuts =>
+    [
+        ("Ctrl + K", "Go to — anywhere in the app"),
+        ("?", "This list"),
+        ("S", "Slap, while a watch is being argued"),
+        ("Esc", "Close whatever is open"),
+    ];
+
+    protected override void OnInitialized() =>
+        // Shift+/ is a question mark on the layouts this is written for. Excluded from anything being typed into,
+        // because a question mark in a topic is a question mark, not a shortcut.
+        _keys = HotKeys.CreateContext()
+            .Add(ModCode.Shift, Code.Slash, Toggle, new() { Description = "Keyboard shortcuts", Exclude = Exclude.Default })
+            .Add(Code.Escape, CloseIfOpen, new() { Description = "Close the shortcuts", Exclude = Exclude.None });
+
+    private void Toggle()
+    {
+        _open = !_open;
+        StateHasChanged();
+    }
+
+    private ValueTask CloseIfOpen()
+    {
+        if (_open)
+        {
+            Close();
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    private void Close()
+    {
+        _open = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_keys is not null)
+        {
+            await _keys.DisposeAsync();
+            _keys = null;
+        }
+    }
+}

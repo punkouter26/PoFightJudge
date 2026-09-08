@@ -9,6 +9,7 @@ using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 using Radzen;
 using Radzen.Blazor;
+using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 namespace PoFightJudge.Unit.Client;
 
@@ -27,6 +28,8 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     public HumanTurnTests()
     {
         Services.AddRadzenComponents();
+        // The play screen binds S to the slap, so its hot-key context needs a home.
+        Services.AddHotKeys2();
         Services.AddSingleton(_api);
         Services.AddSingleton(_simulation);
         Services.AddSingleton<TimeProvider>(_clock);

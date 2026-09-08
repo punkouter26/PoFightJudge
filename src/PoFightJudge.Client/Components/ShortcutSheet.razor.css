@@ -1,0 +1,59 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: var(--po-space-4);
+  background: rgb(0 0 0 / 55%);
+}
+
+.sheet {
+  width: min(28rem, 100%);
+  display: grid;
+  gap: var(--po-space-3);
+  padding: var(--po-space-5);
+}
+
+.sheet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet h2 {
+  margin: 0;
+  font-size: var(--po-text-xl);
+}
+
+dl {
+  margin: 0;
+  display: grid;
+  gap: var(--po-space-3);
+}
+
+dl > div {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: var(--po-space-3);
+  align-items: baseline;
+}
+
+dt {
+  margin: 0;
+}
+
+dd {
+  margin: 0;
+  color: var(--po-muted);
+}
+
+kbd {
+  font-family: inherit;
+  font-size: var(--po-text-sm);
+  padding: 0.15em 0.45em;
+  border: 1px solid var(--po-border);
+  border-radius: 4px;
+  background: var(--po-surface-2);
+  white-space: nowrap;
+}

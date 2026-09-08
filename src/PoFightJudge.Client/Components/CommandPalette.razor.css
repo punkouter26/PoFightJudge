@@ -1,0 +1,50 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding: 12vh var(--po-space-4) var(--po-space-4);
+  background: rgb(0 0 0 / 55%);
+}
+
+.palette {
+  width: min(38rem, 100%);
+  display: grid;
+  gap: var(--po-space-3);
+  padding: var(--po-space-4);
+}
+
+::deep .query input,
+::deep .query {
+  width: 100%;
+}
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--po-space-1);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.results li {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: center;
+}
+
+::deep .result {
+  flex: 1 1 auto;
+  justify-content: flex-start;
+}
+
+.hint,
+.keys,
+.none {
+  margin: 0;
+  font-size: var(--po-text-sm);
+}
