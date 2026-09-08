@@ -377,4 +377,33 @@ public class RecordsTests(ApiFactory factory)
         body.Should().NotContain("AudioBlobName").And.NotContain("audio");
         body.Should().NotContain("Metrics").And.NotContain("metrics");
     }
+
+    [Fact]
+    public async Task Two_people_can_be_looked_at_side_by_side()
+    {
+        var client = User("records-h2h");
+        await RecordAsync("records-h2h", "hh1", "hh2", score: 70);
+        await RecordAsync("records-h2h", "hh1", "hh2", score: 45, oneWon: false);
+        await RecordAsync("records-h2h", "hh1", "hh3", score: 90);
+
+        var h2h = await client.GetFromJsonAsync<HeadToHeadDto>(
+            ApiRoutes.Fighters.Versus(FighterId.From("HH1"), FighterId.From("HH2")));
+
+        h2h!.Meetings.Should().Be(2, "the fight against HH3 belongs to a different series");
+        h2h.Wins.Should().Be(1);
+        h2h.Losses.Should().Be(1);
+        h2h.Recent.Should().HaveCount(2).And.AllSatisfy(m => m.OpponentScore.Should().BePositive());
+    }
+
+    [Fact]
+    public async Task A_series_against_a_tag_nobody_has_used_is_not_found()
+    {
+        var client = User("records-h2h-unknown");
+        await RecordAsync("records-h2h-unknown", "hu1", "hu2");
+
+        (await client.GetAsync(ApiRoutes.Fighters.Versus(FighterId.From("HU1"), FighterId.From("ZZZ"))))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.GetAsync(ApiRoutes.Fighters.Versus(FighterId.From("HU1"), FighterId.From("HU1"))))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound, "nobody argues with themselves");
+    }
 }

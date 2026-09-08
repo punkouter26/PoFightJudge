@@ -75,8 +75,14 @@ public static class ApiRoutes
 
         public static string ByTag(FighterId tag) => $"{Base}/{Uri.EscapeDataString(tag.Value)}";
 
+        /// <summary>The series between two people. Both tags in the path: it is one thing about the pair, not about either.</summary>
+        public const string VersusSegment = "/{tag}/vs/{opponent}";
+
         /// <summary>Their record and how they argue, together — what one person's page is built from.</summary>
         public static string Profile(FighterId tag) => $"{ByTag(tag)}/profile";
+
+        public static string Versus(FighterId tag, FighterId opponent) =>
+            $"{ByTag(tag)}/vs/{Uri.EscapeDataString(opponent.Value)}";
     }
 
     public static class Seed

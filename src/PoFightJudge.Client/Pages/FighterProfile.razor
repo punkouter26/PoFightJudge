@@ -51,7 +51,11 @@
                     {
                         <div>
                             <dt>Argues most with</dt>
-                            <dd>@rival.Opponent <span class="po-muted">(@rival.Wins–@rival.Losses over @rival.Fights)</span></dd>
+                            <dd>
+                                @* The series is a page of its own; the record here is the reason to open it. *@
+                                <RadzenLink Path="@($"vs/{_profile.Fighter.Tag}/{rival.Opponent}")" Text="@rival.Opponent" />
+                                <span class="po-muted">(@rival.Wins–@rival.Losses over @rival.Fights)</span>
+                            </dd>
                         </div>
                     }
                 </dl>

@@ -271,3 +271,40 @@ public sealed record SharedMatchDto(
 
 /// <summary>What sharing a ruling gives back: the token, and the path it is readable at.</summary>
 public sealed record ShareResponse(string Token, string Path);
+
+/// <summary>One time the two of them argued, with both scores side by side.</summary>
+public sealed record MeetingDto(
+    MatchId MatchId,
+    MatchMode Mode,
+    DateTimeOffset At,
+    string Topic,
+    string Winner,
+    int Score,
+    int OpponentScore)
+{
+    public bool IsDraw => string.IsNullOrEmpty(Winner);
+}
+
+/// <summary>
+/// Two people, every time they have argued. Computed from the same result rows a record is, so it can never disagree
+/// with either of their pages: a fight deleted from one side is gone from here in the same read.
+/// </summary>
+public sealed record HeadToHeadDto(
+    string Tag,
+    string DisplayName,
+    string OpponentTag,
+    string OpponentDisplayName,
+    int Meetings,
+    int Wins,
+    int Losses,
+    int Draws,
+    double AverageScore,
+    double OpponentAverageScore,
+    IReadOnlyList<MeetingDto> Recent)
+{
+    /// <summary>True when the first of the two is ahead on the series. A tie on wins is not being ahead.</summary>
+    public bool IsAhead => Wins > Losses;
+
+    /// <summary>True when neither has been in a fight with the other; the page says so rather than showing zeroes.</summary>
+    public bool NeverMet => Meetings == 0;
+}
