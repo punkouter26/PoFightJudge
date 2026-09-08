@@ -152,9 +152,11 @@ public class AnalysisTests(ApiFactory factory)
         ready.Report.Player1.Metrics.Words.Should().BeGreaterThan(0, "the stand-in transcriber says something");
         ready.Report.Overall.Reasons.Should().NotBeEmpty();
 
-        var results = factory.Services.GetRequiredService<IFighterResultRepository>();
-        (await results.ListForAsync(FighterId.From("F1"), "analysis-full")).Should().ContainSingle();
-        (await results.ListForAsync(FighterId.From("F2"), "analysis-full")).Should().ContainSingle();
+        // Waited for, not read straight after Ready: the pipeline publishes the ruling before it writes the result
+        // rows on purpose, so the room is not kept waiting on a record. Reading them the instant the status flips
+        // races that write, and loses it under load.
+        (await WaitForResultAsync("F1", "analysis-full")).Should().ContainSingle();
+        (await WaitForResultAsync("F2", "analysis-full")).Should().ContainSingle();
 
         // And both of them are now somebody the CPU and 1P channels can put in a seat, read from this fight. The
         // persona is written after the ruling is readable, deliberately — the room is not kept waiting on it — so
@@ -163,6 +165,25 @@ public class AnalysisTests(ApiFactory factory)
         f1.FromFights.Should().BeTrue();
         f1.Persona.Role.Should().Be(ProfileRole.Husband, "fighter one sits as the husband unless setup said otherwise");
         (await WaitForPersonaAsync(client, "F2")).Persona.Role.Should().Be(ProfileRole.Wife);
+    }
+
+    /// <summary>One fighter's rows, once the pipeline has written them. Same ten seconds the persona is given.</summary>
+    private async Task<IReadOnlyList<FighterResultDto>> WaitForResultAsync(string tag, string userId)
+    {
+        var results = factory.Services.GetRequiredService<IFighterResultRepository>();
+        const int Attempts = 100;
+        for (var attempt = 0; attempt < Attempts; attempt++)
+        {
+            var rows = await results.ListForAsync(FighterId.From(tag), userId);
+            if (rows.Count > 0)
+            {
+                return rows;
+            }
+
+            await Task.Delay(100);
+        }
+
+        throw new TimeoutException($"No result row for {tag} was written within 10s.");
     }
 
     private static async Task<ProfileDto> WaitForPersonaAsync(HttpClient client, string initials)

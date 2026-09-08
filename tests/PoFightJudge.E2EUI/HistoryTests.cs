@@ -38,18 +38,19 @@ public class HistoryTests(AppFixture app)
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/history", user: User);
         await using var _ = context;
 
-        var rows = page.Locator("tbody tr");
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('tbody tr').length === 2", null, new() { Timeout = 30_000 });
+        // Scoped to the grid: the date filters render calendars, and a bare tbody would count their rows too.
+        var rows = page.Locator(".history tbody tr");
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('.history tbody tr').length === 2", null, new() { Timeout = 30_000 });
         (await page.Locator(".mode--watch").CountAsync()).Should().Be(1, "one of them was the cast arguing");
         (await page.Locator(".mode--fight").CountAsync()).Should().Be(1, "the other was two people on a microphone");
 
         // Narrowing goes back to the server, so what comes back is the filter working rather than rows being hidden.
         await page.GetByRole(AriaRole.Radio, new() { Name = "Fights" }).ClickAsync();
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('tbody tr').length === 1", null, new() { Timeout = 15_000 });
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('.history tbody tr').length === 1", null, new() { Timeout = 15_000 });
         (await rows.First.InnerTextAsync()).Should().Contain("who forgot the bins");
 
         await page.GetByRole(AriaRole.Radio, new() { Name = "All" }).ClickAsync();
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('tbody tr').length === 2", null, new() { Timeout = 15_000 });
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('.history tbody tr').length === 2", null, new() { Timeout = 15_000 });
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Delete the thermostat" }).ClickAsync();
         var confirm = page.Locator(".rz-dialog");
@@ -57,8 +58,8 @@ public class HistoryTests(AppFixture app)
         (await confirm.InnerTextAsync()).Should().Contain("cannot be undone");
         await confirm.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
 
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('tbody tr').length === 1", null, new() { Timeout = 15_000 });
-        (await page.Locator("tbody").InnerTextAsync()).Should().NotContain("the thermostat");
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('.history tbody tr').length === 1", null, new() { Timeout = 15_000 });
+        (await page.Locator(".history tbody").InnerTextAsync()).Should().NotContain("the thermostat");
 
         var matches = app.Services.GetRequiredService<IMatchRepository>();
         (await matches.GetAsync(User, watched)).Should().BeNull("deleting the row deletes the argument, not just the line on screen");
