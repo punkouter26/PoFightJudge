@@ -95,6 +95,15 @@ public sealed partial class WatchReplay : ComponentBase, IDisposable
         Nav.NavigateTo(person is null ? "cpu" : "1p");
     }
 
+    /// <summary>Keeps the page's own copy of the match true after the share is made or taken back.</summary>
+    private void OnShareChanged(string? token)
+    {
+        if (_match is not null)
+        {
+            _match = _match with { ShareToken = token };
+        }
+    }
+
     private string NameOf(Speaker speaker) =>
         _match is null ? speaker.ToString() : speaker == Speaker.Player1 ? _match.Side1.DisplayName : _match.Side2.DisplayName;
 

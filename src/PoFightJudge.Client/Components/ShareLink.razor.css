@@ -1,0 +1,26 @@
+.share {
+  display: grid;
+  gap: var(--po-space-2);
+}
+
+.live {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+::deep .url {
+  min-width: 18rem;
+  flex: 1 1 18rem;
+}
+
+.hint,
+.error {
+  margin: 0;
+  font-size: var(--po-text-sm);
+}
+
+.error {
+  color: var(--po-danger);
+}

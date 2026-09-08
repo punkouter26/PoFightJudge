@@ -1,0 +1,110 @@
+@page "/v/{Token}"
+@attribute [AllowAnonymous]
+@layout MainLayout
+@inject IApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@Title · PoFightJudge</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Somebody sent you this" Title="@Title" Lead="@Lead">
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="2" Label="Opening the ruling" />
+        }
+        else if (_shared is null)
+        {
+            <EmptyState Icon="link_off" Title="This link is not live"
+                        Text="It was taken back, or the argument behind it was deleted. Only the person who shared it can put it back.">
+                <Action>
+                    <RadzenButton Text="Have your own argument" Icon="mic" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo(""))" />
+                </Action>
+            </EmptyState>
+        }
+        else
+        {
+            <article class="ruling po-card">
+                <header>
+                    <ModeBadge Mode="@_shared.Mode" />
+                    <span class="po-muted">@_shared.StartedAt.LocalDateTime.ToString("d MMMM yyyy", System.Globalization.CultureInfo.CurrentCulture)</span>
+                    @if (_shared.IsFake)
+                    {
+                        <span class="po-chip" title="Argued with no key, so nothing here was really judged.">rehearsal</span>
+                    }
+                </header>
+
+                <div class="who">
+                    <span class="side p1">@_shared.Side1Name</span>
+                    <span class="po-muted">vs</span>
+                    <span class="side p2">@_shared.Side2Name</span>
+                </div>
+
+                <h2 class="po-display">
+                    @if (_shared.IsDraw)
+                    {
+                        @("Nobody took it.")
+                    }
+                    else
+                    {
+                        @($"{_shared.Winner} took it.")
+                    }
+                </h2>
+
+                @if (_shared.Verdict is { Length: > 0 } verdict)
+                {
+                    <p class="summary">@verdict</p>
+                }
+
+                @if (_shared.Reasons.Count > 0)
+                {
+                    <ul class="reasons">
+                        @foreach (var reason in _shared.Reasons)
+                        {
+                            <li>@reason</li>
+                        }
+                    </ul>
+                }
+            </article>
+
+            <p class="po-muted note">
+                This is the ruling only. The recording, the transcript and everything measured about how the two of them
+                argued stay with the account that made it.
+            </p>
+
+            <div class="go">
+                <RadzenButton Text="Argue about something yourself" Icon="mic" ButtonStyle="ButtonStyle.Primary"
+                              Size="ButtonSize.Large" Click="@(() => Nav.NavigateTo(""))" />
+            </div>
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private SharedMatchDto? _shared;
+    private bool _loading = true;
+
+    [Parameter] public string Token { get; set; } = string.Empty;
+
+    private string Title => _shared?.Topic is { Length: > 0 } topic ? topic : "A ruling";
+
+    private string Lead => _shared is null
+        ? "Looking it up."
+        : "The judge's ruling on an argument somebody else had.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        try
+        {
+            _shared = Token.Length == 0 ? null : await Api.GetSharedAsync(Token);
+        }
+        catch (HttpRequestException)
+        {
+            _shared = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

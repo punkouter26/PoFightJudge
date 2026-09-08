@@ -66,12 +66,19 @@ public sealed class HistoryEndpoints : ICarterModule
         ClaimsPrincipal user,
         IMatchRepository matches,
         IAudioBlobStore blobs,
+        IShareRepository shares,
         CancellationToken ct)
     {
         var userId = user.UserId();
-        if (await matches.GetAsync(userId, id, ct) is null)
+        if (await matches.GetAsync(userId, id, ct) is not { } match)
         {
             return Results.NotFound();
+        }
+
+        // A shared link outliving the argument it points at is the one way a delete could fail to be a delete.
+        if (match.ShareToken is { Length: > 0 } token)
+        {
+            await shares.RevokeAsync(token, ct);
         }
 
         await blobs.DeleteMatchAudioAsync(id, ct);

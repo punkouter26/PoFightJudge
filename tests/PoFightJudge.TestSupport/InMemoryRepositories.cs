@@ -288,3 +288,33 @@ public sealed class InMemoryWatchAudioStore : IWatchAudioStore
         Task.FromResult<TtsAudio?>(_clips.TryGetValue(IAudioBlobStore.Round(matchId, index, TtsAudioFormats.Extension(format)), out var clip) ? clip : null);
 }
 
+
+/// <summary>
+/// The share index, in memory. The token is the key, exactly as the partition key is in storage, so a test that
+/// resolves one exercises the same shape of lookup the real repository does.
+/// </summary>
+public sealed class InMemoryShareRepository : IShareRepository
+{
+    private readonly ConcurrentDictionary<string, ShareTarget> _shares = new(StringComparer.Ordinal);
+
+    public Task<string> ShareAsync(string userId, MatchId matchId, string? existingToken, CancellationToken ct = default)
+    {
+        if (existingToken is { Length: > 0 })
+        {
+            return Task.FromResult(existingToken);
+        }
+
+        var token = ShareRepository.NewToken();
+        _shares[token] = new ShareTarget(userId, matchId);
+        return Task.FromResult(token);
+    }
+
+    public Task RevokeAsync(string token, CancellationToken ct = default)
+    {
+        _shares.TryRemove(token, out _);
+        return Task.CompletedTask;
+    }
+
+    public Task<ShareTarget?> ResolveAsync(string token, CancellationToken ct = default) =>
+        Task.FromResult(_shares.GetValueOrDefault(token));
+}

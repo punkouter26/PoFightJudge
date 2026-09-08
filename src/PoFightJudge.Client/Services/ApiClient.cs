@@ -94,6 +94,15 @@ public interface IApiClient
 
     Task DeleteMatchAsync(MatchId id, CancellationToken ct = default);
 
+    /// <summary>Makes the ruling readable by link. Pressing it twice gives the same link back, not a second one.</summary>
+    Task<ShareResponse> ShareMatchAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>Takes the link back. The address stops working for everybody who has it.</summary>
+    Task UnshareMatchAsync(MatchId id, CancellationToken ct = default);
+
+    /// <summary>Reads a shared ruling. Travels anonymously: whoever opens the link has no account here.</summary>
+    Task<SharedMatchDto?> GetSharedAsync(string token, CancellationToken ct = default);
+
     /// <summary>The board for one mode. Empty rather than an error, because a board is never the point of the page.</summary>
     Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default);
 
@@ -439,6 +448,31 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         {
             throw await ApiException.FromAsync(response, ct);
         }
+    }
+
+    public async Task<ShareResponse> ShareMatchAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsync(Relative(ApiRoutes.Matches.Share(id)), null, ct);
+        return await ReadAsync<ShareResponse>(response, ct);
+    }
+
+    public async Task UnshareMatchAsync(MatchId id, CancellationToken ct = default)
+    {
+        using var response = await http.DeleteAsync(Relative(ApiRoutes.Matches.Share(id)), ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await ApiException.FromAsync(response, ct);
+        }
+    }
+
+    /// <summary>
+    /// On the anonymous client on purpose. A reader following a link is not signed in, and in Production the
+    /// authorized client throws before the request leaves rather than sending it without a token.
+    /// </summary>
+    public async Task<SharedMatchDto?> GetSharedAsync(string token, CancellationToken ct = default)
+    {
+        using var response = await anonymous.GetAsync(Relative(ApiRoutes.Shares.ByToken(token)), ct);
+        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<SharedMatchDto>(ct) : null;
     }
 
     public async Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default)

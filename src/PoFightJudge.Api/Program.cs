@@ -123,6 +123,7 @@ try
     builder.Services.AddSingleton<IProfileImageService, ProfileImageService>();
     builder.Services.AddSingleton<IProfileGenerator, ProfileGenerator>();
     builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+    builder.Services.AddScoped<IShareRepository, ShareRepository>();
     builder.Services.AddScoped<IFighterRepository, FighterRepository>();
     builder.Services.AddScoped<IFighterPersonaWriter, FighterPersonaWriter>();
     builder.Services.AddScoped<IFighterResultRepository, FighterResultRepository>();

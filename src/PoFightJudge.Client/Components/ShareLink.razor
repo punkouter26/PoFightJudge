@@ -1,0 +1,121 @@
+@inject IApiClient Api
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+
+@* Sharing is asked for and can be taken back. Nothing is readable by anyone else until this button is pressed. *@
+<div class="share">
+    @if (_token is null)
+    {
+        <RadzenButton Text="@(_working ? "Making a link…" : "Share the ruling")" Icon="share"
+                      ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Size="ButtonSize.Small"
+                      Disabled="@_working" Click="@ShareAsync" />
+    }
+    else
+    {
+        <div class="live">
+            <RadzenTextBox Value="@Url" ReadOnly="true" Name="shareUrl" aria-label="The link to this ruling" class="url" />
+            <RadzenButton Icon="@(_copied ? "check" : "content_copy")" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                          title="Copy the link" aria-label="Copy the link" Click="@CopyAsync" />
+            <RadzenButton Text="Stop sharing" Icon="link_off" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
+                          Disabled="@_working" Click="@RevokeAsync" />
+        </div>
+        <p class="po-muted hint">Anyone with this link can read the ruling — the topic, who argued and who took it. Not the recording.</p>
+    }
+
+    @if (_error is not null)
+    {
+        <p class="po-muted error" role="status">@_error</p>
+    }
+</div>
+
+@code {
+    private string? _token;
+    private bool _working;
+    private bool _copied;
+    private string? _error;
+
+    /// <summary>The match being shared.</summary>
+    [Parameter, EditorRequired] public MatchId Match { get; set; }
+
+    /// <summary>The token it is already shared under, if any. Owned by the page, which knows the match.</summary>
+    [Parameter] public string? Token { get; set; }
+
+    /// <summary>Raised when the share is made or taken back, so the page's own copy of the match stays true.</summary>
+    [Parameter] public EventCallback<string?> TokenChanged { get; set; }
+
+    private string Url => _token is null ? string.Empty : Nav.ToAbsoluteUri(ApiRoutes.Shares.Page(_token).TrimStart('/')).ToString();
+
+    protected override void OnParametersSet() => _token = Token;
+
+    private async Task ShareAsync()
+    {
+        _working = true;
+        _error = null;
+        try
+        {
+            var shared = await Api.ShareMatchAsync(Match);
+            _token = shared.Token;
+            await TokenChanged.InvokeAsync(_token);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Summary;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "The link could not be made. Try again in a moment.";
+        }
+        finally
+        {
+            _working = false;
+        }
+    }
+
+    private async Task RevokeAsync()
+    {
+        _working = true;
+        _error = null;
+        try
+        {
+            await Api.UnshareMatchAsync(Match);
+            _token = null;
+            _copied = false;
+            await TokenChanged.InvokeAsync(null);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Summary;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "The link could not be taken back. Try again in a moment.";
+        }
+        finally
+        {
+            _working = false;
+        }
+    }
+
+    /// <summary>
+    /// Straight to the browser's own clipboard API rather than through a script of ours: the CSP is script-src 'self',
+    /// and this needs no file to be served. It is refused outside a user gesture and on an insecure origin, so the
+    /// box beside it stays selectable and the failure is said out loud rather than swallowed.
+    /// </summary>
+    private async Task CopyAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", Url);
+            _copied = true;
+            _error = null;
+        }
+        catch (JSException)
+        {
+            _error = "This browser would not let the page copy it. Select the link and copy it yourself.";
+        }
+        catch (InvalidOperationException)
+        {
+            _error = "This browser would not let the page copy it. Select the link and copy it yourself.";
+        }
+    }
+}

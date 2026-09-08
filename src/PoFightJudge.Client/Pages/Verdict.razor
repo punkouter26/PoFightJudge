@@ -42,6 +42,10 @@
                             Who said what is not certain here. @_report.SpeakerMappingNote
                         </RadzenAlert>
                     }
+                    @if (_match is not null)
+                    {
+                        <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
+                    }
                 </section>
 
                 @if (_report.Highlights is { Count: > 0 } highlights)

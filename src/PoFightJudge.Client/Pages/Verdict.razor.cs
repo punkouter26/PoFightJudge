@@ -20,6 +20,9 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     private readonly CancellationTokenSource _leaving = new();
     private AnalysisReportDto? _report;
+
+    /// <summary>The match row, read once for the share control: the report says what was decided, not who owns it.</summary>
+    private MatchDto? _match;
     private AnalysisStatus _status = AnalysisStatus.Queued;
     private string? _problem;
     private bool _retrying;
@@ -69,7 +72,31 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             return;
         }
 
+        // Alongside the report rather than before it: a share control that is not there yet must never hold up the
+        // ruling, and a match that cannot be read just means the control does not appear.
+        try
+        {
+            _match = await Api.GetMatchAsync(id, _leaving.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (HttpRequestException)
+        {
+            _match = null;
+        }
+
         await PollAsync(id);
+    }
+
+    /// <summary>Keeps the page's own copy of the match true after the share is made or taken back.</summary>
+    private void OnShareChanged(string? token)
+    {
+        if (_match is not null)
+        {
+            _match = _match with { ShareToken = token };
+        }
     }
 
     /// <summary>Asks until there is something to show, or until it is clear nothing is coming.</summary>

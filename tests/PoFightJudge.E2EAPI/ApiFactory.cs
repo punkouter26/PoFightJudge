@@ -48,6 +48,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IFighterRepository, InMemoryFighterRepository>();
             services.RemoveAll<IMatchRepository>();
             services.AddSingleton<IMatchRepository, InMemoryMatchRepository>();
+            services.AddSingleton<IShareRepository, InMemoryShareRepository>();
             services.RemoveAll<IWatchAudioStore>();
             services.AddSingleton<IWatchAudioStore, InMemoryWatchAudioStore>();
 

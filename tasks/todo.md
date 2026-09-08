@@ -80,7 +80,7 @@
 - [x] T54 WATCH replay: `GET /api/matches/{id}/turns` and a replay page for stored round audio
 - [x] T55 Rate limits the client can see: 429 + `Retry-After` becomes a toast and a countdown
 - [x] T56 Run it back: rematch from a finished match, and setup remembers the last pair
-- [ ] T57 Share a verdict: an opt-in, revocable read-only link
+- [x] T57 Share a verdict: an opt-in, revocable read-only link
 - [ ] T58 Head to head: two combatants side by side, from the rivalry data already computed
 - [ ] T59 Take the clip: download a highlight
 - [ ] T60 Keyboard: a command palette and the shortcuts HotKeys2 was added for

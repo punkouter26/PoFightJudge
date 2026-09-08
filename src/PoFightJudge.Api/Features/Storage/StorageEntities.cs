@@ -17,6 +17,9 @@ public static class TableNames
     public const string WatchResults = "pofightjudgewatchresults";
     public const string FighterResults = "pofightjudgefighterresults";
     public const string Fighters = "pofightjudgefighters";
+
+    /// <summary>Reverse index for shared rulings: PartitionKey is the token, so resolving one is a point read.</summary>
+    public const string Shares = "pofightjudgeshares";
 }
 
 /// <summary>
@@ -70,6 +73,12 @@ public sealed class MatchEntity : ITableEntity
     /// <summary>True when the match was played against the fakes, so history can label it and stats can exclude it.</summary>
     public bool IsFake { get; set; }
 
+    /// <summary>
+    /// The token this ruling is shared under, or null when it is not shared. Kept on the match as well as in the
+    /// shares table so the owner's own page can say "shared" without scanning the index for their own row.
+    /// </summary>
+    public string? ShareToken { get; set; }
+
     public static MatchEntity From(MatchDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -94,6 +103,7 @@ public sealed class MatchEntity : ITableEntity
             Persona = dto.Persona,
             AudioBlobName = dto.AudioBlobName,
             IsFake = dto.IsFake,
+            ShareToken = dto.ShareToken,
         };
     }
 
@@ -114,6 +124,7 @@ public sealed class MatchEntity : ITableEntity
     {
         Persona = Persona,
         AudioBlobName = AudioBlobName,
+        ShareToken = ShareToken,
     };
 
     private static SideKind ParseKind(string? kind) => Enum.TryParse<SideKind>(kind, ignoreCase: true, out var parsed) ? parsed : SideKind.Persona;
@@ -428,4 +439,23 @@ public sealed class FighterEntity : ITableEntity
         CreatedAt,
         LastSeenAt,
         Enum.TryParse<ProfileRole>(Role, ignoreCase: true, out var role) ? role : ProfileRole.Husband);
+}
+
+/// <summary>
+/// PartitionKey = share token, RowKey = a constant: a reader has only the token, so resolving one must be a point
+/// read. The row holds who owns the match, because a share is revoked by its owner and by nobody else.
+/// </summary>
+public sealed class ShareEntity : ITableEntity
+{
+    public string PartitionKey { get; set; } = string.Empty;
+
+    public string RowKey { get; set; } = string.Empty;
+
+    public DateTimeOffset? Timestamp { get; set; }
+
+    public ETag ETag { get; set; }
+
+    public string UserId { get; set; } = string.Empty;
+
+    public string MatchId { get; set; } = string.Empty;
 }

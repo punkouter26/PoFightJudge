@@ -54,6 +54,7 @@
                     {
                         <p class="verdict">@verdict</p>
                     }
+                    <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
                 </section>
 
                 @if (_turns.Count == 0)

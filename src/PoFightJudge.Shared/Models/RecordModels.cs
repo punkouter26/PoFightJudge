@@ -57,6 +57,12 @@ public sealed record MatchDto(
     /// <summary>Name of the recorded audio for a fight; a watch stores audio per round instead.</summary>
     public string? AudioBlobName { get; init; }
 
+    /// <summary>
+    /// The token this ruling is readable under without signing in, or null when it is not shared. Sharing is always
+    /// asked for and can always be taken back; nothing is shared by being played.
+    /// </summary>
+    public string? ShareToken { get; init; }
+
     /// <summary>True when the judge called neither side.</summary>
     public bool IsDraw => string.IsNullOrEmpty(Winner);
 
@@ -243,3 +249,25 @@ public sealed record LeaderboardRowDto(string Id, string DisplayName, int Matche
 
 /// <summary>What a fighter may change about themselves: the name, never the tag.</summary>
 public sealed record RenameFighterRequest(string? DisplayName);
+
+/// <summary>
+/// A ruling as somebody who was not in it sees it. Deliberately thin: the topic, who argued, who took it and what was
+/// said about why. No audio, no clips, no metrics and no account — a link that is passed around should carry the
+/// result of the argument, not a dossier on the two people who had it.
+/// </summary>
+public sealed record SharedMatchDto(
+    MatchMode Mode,
+    DateTimeOffset StartedAt,
+    string Topic,
+    string Side1Name,
+    string Side2Name,
+    string Winner,
+    string? Verdict,
+    bool IsFake,
+    IReadOnlyList<string> Reasons)
+{
+    public bool IsDraw => string.IsNullOrEmpty(Winner);
+}
+
+/// <summary>What sharing a ruling gives back: the token, and the path it is readable at.</summary>
+public sealed record ShareResponse(string Token, string Path);

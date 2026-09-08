@@ -294,4 +294,87 @@ public class RecordsTests(ApiFactory factory)
 
         (await theirs.GetAsync(ApiRoutes.Matches.Turns(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    /// <summary>
+    /// A ruling is the one thing here worth sending to somebody. Sharing is asked for, the link reads without an
+    /// account, and it can be taken back — nothing becomes readable merely by being played.
+    /// </summary>
+    [Fact]
+    public async Task A_shared_ruling_reads_without_an_account_and_stops_when_it_is_taken_back()
+    {
+        var mine = User("records-share");
+        var id = await RecordAsync("records-share", "sr1", "sr2");
+        using var anonymous = factory.CreateClient();
+
+        var shared = await mine.PostAsync(ApiRoutes.Matches.Share(id), content: null);
+        var link = await shared.Content.ReadFromJsonAsync<ShareResponse>();
+
+        shared.StatusCode.Should().Be(HttpStatusCode.OK);
+        link!.Token.Should().NotBeNullOrWhiteSpace();
+        link.Path.Should().Be($"/v/{link.Token}");
+
+        var read = await anonymous.GetFromJsonAsync<SharedMatchDto>(ApiRoutes.Shares.ByToken(link.Token));
+        read!.Topic.Should().Be("the thermostat");
+        read.Side1Name.Should().Be("SR1");
+        read.Winner.Should().Be("SR1");
+
+        (await mine.DeleteAsync(ApiRoutes.Matches.Share(id))).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await anonymous.GetAsync(ApiRoutes.Shares.ByToken(link.Token))).StatusCode
+            .Should().Be(HttpStatusCode.NotFound, "a share that cannot be taken back is not a share");
+    }
+
+    [Fact]
+    public async Task Sharing_twice_is_one_link_rather_than_two()
+    {
+        var mine = User("records-share-twice");
+        var id = await RecordAsync("records-share-twice", "st3", "st4");
+
+        var first = await (await mine.PostAsync(ApiRoutes.Matches.Share(id), content: null)).Content.ReadFromJsonAsync<ShareResponse>();
+        var second = await (await mine.PostAsync(ApiRoutes.Matches.Share(id), content: null)).Content.ReadFromJsonAsync<ShareResponse>();
+
+        second!.Token.Should().Be(first!.Token, "pressing share again wants the address, not a second live link");
+    }
+
+    [Fact]
+    public async Task Nobody_can_share_a_debate_that_is_not_theirs()
+    {
+        var theirs = User("records-share-stranger");
+        var id = await RecordAsync("records-share-owner", "sx1", "sx2");
+
+        (await theirs.PostAsync(ApiRoutes.Matches.Share(id), content: null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await theirs.DeleteAsync(ApiRoutes.Matches.Share(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>A link that outlived the argument it points at would be the one way a delete failed to be a delete.</summary>
+    [Fact]
+    public async Task Deleting_the_argument_kills_the_link_to_it()
+    {
+        var mine = User("records-share-delete");
+        var id = await RecordAsync("records-share-delete", "sd1", "sd2");
+        using var anonymous = factory.CreateClient();
+        var link = await (await mine.PostAsync(ApiRoutes.Matches.Share(id), content: null)).Content.ReadFromJsonAsync<ShareResponse>();
+
+        await mine.DeleteAsync(ApiRoutes.Matches.ById(id));
+
+        (await anonymous.GetAsync(ApiRoutes.Shares.ByToken(link!.Token))).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// What travels is the ruling, not a dossier. A recording of two real people arguing, and the twenty-five things
+    /// measured about how they did it, are not something a link passed around should carry.
+    /// </summary>
+    [Fact]
+    public async Task A_shared_ruling_carries_no_recording_and_no_measurements()
+    {
+        var mine = User("records-share-thin");
+        var id = await RecordAsync("records-share-thin", "sn1", "sn2");
+        using var anonymous = factory.CreateClient();
+        var link = await (await mine.PostAsync(ApiRoutes.Matches.Share(id), content: null)).Content.ReadFromJsonAsync<ShareResponse>();
+
+        var body = await anonymous.GetStringAsync(ApiRoutes.Shares.ByToken(link!.Token));
+
+        body.Should().NotContain("records-share-thin", "the account that owns it is nobody else's business");
+        body.Should().NotContain("AudioBlobName").And.NotContain("audio");
+        body.Should().NotContain("Metrics").And.NotContain("metrics");
+    }
 }

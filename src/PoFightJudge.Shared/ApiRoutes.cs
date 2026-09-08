@@ -142,9 +142,31 @@ public static class ApiRoutes
         /// <summary>What was actually said, in order — the transcript a WATCH replay is built from.</summary>
         public const string TurnsSegment = "/{id}/turns";
 
+        /// <summary>Share the ruling (POST) or take the share back (DELETE). Owner only, both ways.</summary>
+        public const string ShareSegment = "/{id}/share";
+
         public static string ById(MatchId id) => $"{Base}/{id.Value}";
 
         public static string Turns(MatchId id) => $"{ById(id)}/turns";
+
+        public static string Share(MatchId id) => $"{ById(id)}/share";
+    }
+
+    /// <summary>
+    /// A shared ruling, readable without signing in. The token is the whole of the access control, so it is 128 bits
+    /// of randomness and nothing here takes an id: a match id must not be walkable into somebody else's argument.
+    /// </summary>
+    public static class Shares
+    {
+        public const string Base = $"{ApiPrefix}/shared";
+        public const string ByTokenSegment = "/{token}";
+
+        /// <summary>Where the client page lives, for building the link somebody actually pastes.</summary>
+        public const string PagePrefix = "/v";
+
+        public static string ByToken(string token) => $"{Base}/{Uri.EscapeDataString(token)}";
+
+        public static string Page(string token) => $"{PagePrefix}/{Uri.EscapeDataString(token)}";
     }
 
     public static class Leaderboard
