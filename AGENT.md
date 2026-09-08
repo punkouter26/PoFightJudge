@@ -79,8 +79,15 @@ Each was a deliberate decision made while building; the commit that made it says
 
 ## Still outstanding
 
-- **Nothing has been deployed.** The templates compile and the workflow is written; the repository, the OIDC
-  registration and the first release are yours to approve.
+- **The infrastructure exists; the first release has not happened.** On 2026-09-08 `infra/main.bicep` was
+  deployed by hand (resource group `PoFightJudge`, `app-pofightjudge` on `asp-pofightjudge-f1`, `stpofightjudge`,
+  the storage roles and the vault policy), the six `PoFightJudge--*` secrets were seeded into `kv-poshared`, the
+  site's redirect URI was added to the `PoArgueJudge` Entra app the client signs in with, and the
+  `PoFightJudge-GitHub-OIDC` registration was created with federated credentials for
+  `repo:punkouter26/PoFightJudge` (`ref:refs/heads/master`, `environment:production`) and Contributor + User
+  Access Administrator on the subscription. What remains is the GitHub half: the private repository, its three
+  `AZURE_*` variables (client id `018bf14a-14f7-4c38-8547-2ebfb12b72e7`), the `production` environment, and the
+  first push, which is what runs `deploy.yml`.
 - The **transcription fallback** has never run against the real service: both real fights had usable live
   captions, which the pipeline prefers.
 
