@@ -137,7 +137,7 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     [Fact(Timeout = 60_000)]
     public async Task A_blocked_microphone_says_what_to_do_about_it()
     {
-        JSInterop.Setup<string>(MicInterop.Start).SetResult("NotAllowedError");
+        JSInterop.Setup<string>(MicInterop.Start, _ => true).SetResult("NotAllowedError");
 
         var cut = await AtTheirTurnAsync();
 

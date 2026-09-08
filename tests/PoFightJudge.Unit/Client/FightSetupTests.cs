@@ -16,7 +16,7 @@ using FightPage = PoFightJudge.Client.Pages.Fight;
 
 namespace PoFightJudge.Unit.Client;
 
-public class FightSetupTests : BunitContext
+public class FightSetupTests : BunitContext, IAsyncLifetime
 {
     private readonly IApiClient _api = Substitute.For<IApiClient>();
 
@@ -26,10 +26,20 @@ public class FightSetupTests : BunitContext
         // The setup screens open on the last card played; a substitute storage means every test opens blank.
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
+        // The setup screen now carries a microphone check, which owns a MicInterop of its own.
+        Services.AddScoped<MicInterop>();
         Services.AddSingleton(_api);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetFightersAsync(Arg.Any<CancellationToken>()).Returns(Roster());
     }
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>
+    /// The microphone check on this screen owns a MicInterop, which only disposes asynchronously; bunit tears its
+    /// container down synchronously and throws unless the teardown is awaited here.
+    /// </summary>
+    public new async Task DisposeAsync() => await base.DisposeAsync().ConfigureAwait(false);
 
     private static IReadOnlyList<FighterDto> Roster() =>
     [

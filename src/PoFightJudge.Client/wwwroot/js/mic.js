@@ -91,7 +91,37 @@ window.PoMic = (function () {
 
   // Returns "" when recording started, or the DOMException name when it did not. The caller turns that name into a
   // sentence: a refused permission and a missing device need different advice.
-  async function start() {
+  // The chosen microphone, when there is one. `exact` on purpose: silently falling back to the default is how
+  // somebody ends up recording on the wrong device after deliberately picking one.
+  function constrain(deviceId) {
+    const audio = { channelCount: 1, echoCancellation: true, noiseSuppression: true };
+    if (deviceId) {
+      audio.deviceId = { exact: deviceId };
+    }
+
+    return audio;
+  }
+
+  // The microphones this browser will admit to. Labels are blank until permission has been given once, which is why
+  // the setup screen asks for the microphone before it offers the list.
+  async function devices() {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== "function") {
+      return [];
+    }
+
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      return all
+        .filter(function (d) { return d.kind === "audioinput"; })
+        .map(function (d, i) {
+          return { id: d.deviceId, label: d.label || "Microphone " + (i + 1) };
+        });
+    } catch (err) {
+      return [];
+    }
+  }
+
+  async function start(deviceId) {
     try {
       if (recorder) {
         return "";
@@ -102,7 +132,7 @@ window.PoMic = (function () {
       }
 
       stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: constrain(deviceId),
       });
 
       chunks = [];
@@ -226,5 +256,5 @@ window.PoMic = (function () {
     return window.btoa(binary);
   }
 
-  return { start: start, stop: stop, cancel: cancel, recording: recording, level: level };
+  return { start: start, stop: stop, cancel: cancel, recording: recording, level: level, devices: devices };
 })();

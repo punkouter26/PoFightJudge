@@ -15,7 +15,7 @@ public class MicInteropTests : BunitContext
     [Fact]
     public async Task A_microphone_that_starts_reports_no_problem_and_hands_back_the_clip_it_recorded()
     {
-        JSInterop.Setup<string>(MicInterop.Start).SetResult(string.Empty);
+        JSInterop.Setup<string>(MicInterop.Start, _ => true).SetResult(string.Empty);
         JSInterop.Setup<string>(MicInterop.Stop).SetResult("UklGRiQ=");
         await using var sut = new MicInterop(JSInterop.JSRuntime);
 
@@ -29,7 +29,7 @@ public class MicInteropTests : BunitContext
     [Fact]
     public async Task A_refused_microphone_comes_back_as_the_browsers_own_error_name()
     {
-        JSInterop.Setup<string>(MicInterop.Start).SetResult("NotAllowedError");
+        JSInterop.Setup<string>(MicInterop.Start, _ => true).SetResult("NotAllowedError");
         await using var sut = new MicInterop(JSInterop.JSRuntime);
 
         var problem = await sut.StartAsync();
@@ -40,7 +40,7 @@ public class MicInteropTests : BunitContext
     [Fact]
     public async Task A_browser_that_throws_on_the_bridge_is_a_problem_not_a_crash()
     {
-        JSInterop.Setup<string>(MicInterop.Start).SetException(new JSException("mic.js is not loaded"));
+        JSInterop.Setup<string>(MicInterop.Start, _ => true).SetException(new JSException("mic.js is not loaded"));
         JSInterop.Setup<string>(MicInterop.Stop).SetException(new JSException("mic.js is not loaded"));
         await using var sut = new MicInterop(JSInterop.JSRuntime);
 

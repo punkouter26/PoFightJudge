@@ -1,0 +1,162 @@
+@implements IAsyncDisposable
+@inject MicInterop Mic
+
+@* Before the bell. A fight that dies on a muted headset is three minutes nobody gets back. *@
+<section class="check" aria-label="Microphone">
+    <div class="row">
+        <RadzenButton Text="@(_open ? "Stop the test" : "Test the microphone")" Icon="@(_open ? "stop" : "mic")"
+                      ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Size="ButtonSize.Small"
+                      Disabled="@_opening" Click="@ToggleAsync" />
+
+        @if (_devices.Count > 1)
+        {
+            <RadzenFormField Text="Which microphone" Variant="Variant.Outlined" class="picker">
+                <ChildContent>
+                    <RadzenDropDown Data="@_devices" TValue="string" ValueProperty="Id" TextProperty="Label"
+                                    Value="@DeviceId" Change="@OnDeviceChosenAsync" Name="mic" aria-label="Which microphone" />
+                </ChildContent>
+            </RadzenFormField>
+        }
+    </div>
+
+    @if (_open)
+    {
+        <LevelMeter Listening="true" Caption="@Caption" />
+    }
+    else if (_heard)
+    {
+        <p class="po-muted said" role="status">That worked — you came through clearly.</p>
+    }
+
+    @if (_problem is { Length: > 0 })
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_problem</RadzenAlert>
+    }
+</section>
+
+@code {
+    /// <summary>Above this, somebody is audibly talking rather than sitting in a quiet room.</summary>
+    private const double HeardAt = 0.06;
+
+    /// <summary>How often the level is read while the test is open. Fast enough to look live, slow enough to be free.</summary>
+    private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(120);
+
+    private readonly CancellationTokenSource _leaving = new();
+    private IReadOnlyList<MicDevice> _devices = [];
+    private Task? _watching;
+    private bool _open;
+    private bool _opening;
+    private bool _heard;
+    private string? _problem;
+
+    /// <summary>The chosen microphone, owned by the page so the fight opens the same one that was tested.</summary>
+    [Parameter] public string? DeviceId { get; set; }
+
+    [Parameter] public EventCallback<string?> DeviceIdChanged { get; set; }
+
+    private string Caption => _heard ? "Heard you" : "Say something";
+
+    public async ValueTask DisposeAsync()
+    {
+        await _leaving.CancelAsync();
+        _leaving.Dispose();
+
+        // The recording light must not outlive the page it belongs to.
+        await Mic.CancelAsync(CancellationToken.None);
+    }
+
+    private async Task ToggleAsync()
+    {
+        if (_open)
+        {
+            await CloseAsync();
+            return;
+        }
+
+        _opening = true;
+        _problem = null;
+        _heard = false;
+        try
+        {
+            if (await Mic.StartAsync(DeviceId, _leaving.Token) is { } error)
+            {
+                _problem = Explain(error);
+                return;
+            }
+
+            _open = true;
+
+            // Only now: labels are blank until permission has been given once, so a list offered before this is a
+            // list of opaque ids.
+            _devices = await Mic.DevicesAsync(_leaving.Token);
+            _watching = WatchAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Left the page mid-open.
+        }
+        finally
+        {
+            _opening = false;
+        }
+    }
+
+    private async Task CloseAsync()
+    {
+        _open = false;
+        await Mic.CancelAsync(_leaving.Token);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Reads the level off the live stream until the test is stopped. Once it has heard somebody it keeps saying so,
+    /// because the useful answer is "this works", not "this is loud right now".
+    /// </summary>
+    private async Task WatchAsync()
+    {
+        while (_open && !_leaving.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(Tick, _leaving.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            _heard |= await Mic.LevelAsync(_leaving.Token) >= HeardAt;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnDeviceChosenAsync(object? value)
+    {
+        DeviceId = value as string;
+        await DeviceIdChanged.InvokeAsync(DeviceId);
+
+        // Reopen on the new device, so the meter is showing the one that was just picked.
+        if (_open)
+        {
+            await CloseAsync();
+            await ToggleAsync();
+        }
+    }
+
+    /// <summary>
+    /// The browser's error name turned into what to do about it. A refused permission and a missing device are
+    /// different problems and the advice for one is useless for the other.
+    /// </summary>
+    private static string Explain(string error) => error switch
+    {
+        "NotAllowedError" or "SecurityError" =>
+            "The browser is blocking the microphone. Allow it for this site in the address bar, then test again.",
+        "NotFoundError" or "DevicesNotFoundError" =>
+            "No microphone was found. Plug one in, or check that the one you have is not switched off.",
+        "NotReadableError" or "TrackStartError" =>
+            "Something else is holding the microphone. Close whatever is using it and test again.",
+        "NotSupportedError" =>
+            "This browser will not give a page the microphone. Try Chrome or Edge over https.",
+        _ => $"The microphone could not be opened ({error}).",
+    };
+}

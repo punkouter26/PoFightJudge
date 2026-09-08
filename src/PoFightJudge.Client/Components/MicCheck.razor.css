@@ -1,0 +1,20 @@
+.check {
+  display: grid;
+  gap: var(--po-space-3);
+}
+
+.row {
+  display: flex;
+  gap: var(--po-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+::deep .picker {
+  min-width: 14rem;
+}
+
+.said {
+  margin: 0;
+  color: var(--po-success);
+}

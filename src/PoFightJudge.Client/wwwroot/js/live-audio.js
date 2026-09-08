@@ -71,14 +71,19 @@ window.PoLive = (function () {
 
   // Starts capture. `ref` is a DotNetObjectReference exposing [JSInvokable] OnAudioFrame(byte[]).
   // Returns the device sample rate, or an error name when the microphone was refused.
-  async function startCapture(ref) {
+  async function startCapture(ref, deviceId) {
     try {
       dotnet = ref;
       await ensureContext();
 
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      // The chosen microphone, when there is one. `exact` on purpose: silently falling back to the default is how
+      // somebody ends up recording a fight on the wrong device after deliberately picking one.
+      const audio = { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+      if (deviceId) {
+        audio.deviceId = { exact: deviceId };
+      }
+
+      stream = await navigator.mediaDevices.getUserMedia({ audio: audio });
 
       // Absolute: the fight page lives at /fight/{id}, where a relative path would resolve to /fight/js/...
       await ctx.audioWorklet.addModule("/js/pcm-worklet.js");

@@ -32,8 +32,11 @@ public class LiveAudioTests : BunitContext
 
         started.Started.Should().BeTrue();
         started.SampleRate.Should().Be(48_000, "the worklet resamples from whatever the device runs at");
-        JSInterop.VerifyInvoke(LiveAudio.StartCapture).Arguments.Should().ContainSingle()
-            .Which.Should().BeAssignableTo<DotNetObjectReference<AudioCaptureBridge>>("frames come back through this");
+        // The bridge frames come back through, and the microphone chosen at setup — null here, meaning the default.
+        var arguments = JSInterop.VerifyInvoke(LiveAudio.StartCapture).Arguments;
+        arguments.Should().HaveCount(2);
+        arguments[0].Should().BeAssignableTo<DotNetObjectReference<AudioCaptureBridge>>("frames come back through this");
+        arguments[1].Should().BeNull("nothing was picked, so the browser chooses");
     }
 
     [Fact]

@@ -12,16 +12,17 @@ public sealed class MicInterop(IJSRuntime js) : IAsyncDisposable
     public const string Stop = "PoMic.stop";
     public const string Cancel = "PoMic.cancel";
     public const string Level = "PoMic.level";
+    public const string Devices = "PoMic.devices";
 
     /// <summary>
     /// Starts recording. Returns null when the microphone is live, or the browser's error name when it is not —
     /// a refused permission and a missing device are different problems and need different advice.
     /// </summary>
-    public async Task<string?> StartAsync(CancellationToken ct = default)
+    public async Task<string?> StartAsync(string? deviceId = null, CancellationToken ct = default)
     {
         try
         {
-            var error = await js.InvokeAsync<string>(Start, ct);
+            var error = await js.InvokeAsync<string>(Start, ct, deviceId);
             return string.IsNullOrEmpty(error) ? null : error;
         }
         catch (JSException ex)
@@ -59,6 +60,22 @@ public sealed class MicInterop(IJSRuntime js) : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// The microphones this browser will admit to. Labels are blank until permission has been given once, so the
+    /// setup screen asks for the microphone before it offers the list — an unlabelled list of ids helps nobody.
+    /// </summary>
+    public async Task<IReadOnlyList<MicDevice>> DevicesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await js.InvokeAsync<MicDevice[]>(Devices, ct) ?? [];
+        }
+        catch (JSException)
+        {
+            return [];
+        }
+    }
+
     /// <summary>Throws the recording away and releases the microphone.</summary>
     public async ValueTask CancelAsync(CancellationToken ct = default)
     {
@@ -88,3 +105,6 @@ public sealed class MicInterop(IJSRuntime js) : IAsyncDisposable
         }
     }
 }
+
+/// <summary>One microphone the browser is willing to name.</summary>
+public sealed record MicDevice(string Id, string Label);

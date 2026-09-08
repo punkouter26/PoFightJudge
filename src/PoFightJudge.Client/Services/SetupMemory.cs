@@ -4,7 +4,11 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Client.Services;
 
 /// <summary>How a fight was set up last time, so the next one opens on the same card rather than on two blank boxes.</summary>
-public sealed record FightCard(string One, string Two, string Topic, ProfileRole OneRole, ProfileRole TwoRole, HostPersonaId Persona);
+public sealed record FightCard(string One, string Two, string Topic, ProfileRole OneRole, ProfileRole TwoRole, HostPersonaId Persona)
+{
+    /// <summary>The microphone that was tested at setup. Empty means whichever one the browser picks.</summary>
+    public string Device { get; init; } = string.Empty;
+}
 
 /// <summary>The same for a watch: two personas, or a persona and the tag a person argued under.</summary>
 public sealed record WatchCard(string Husband, string Wife, string Topic, string Tag = "");
@@ -52,6 +56,16 @@ public sealed class SetupMemory(ILocalStorageService storage)
         }
 
         return await ReadAsync<WatchCard>(WatchKey);
+    }
+
+    /// <summary>
+    /// The microphone that was last tested, without spending a rematch. The live page needs the device and nothing
+    /// else, and reading the card through FightAsync would consume a rematch the setup screen has not seen yet.
+    /// </summary>
+    public async Task<string?> MicAsync()
+    {
+        var stored = await ReadAsync<FightCard>(FightKey);
+        return stored?.Device is { Length: > 0 } device ? device : null;
     }
 
     public Task RememberAsync(FightCard card) => WriteAsync(FightKey, card);

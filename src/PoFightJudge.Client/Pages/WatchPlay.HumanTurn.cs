@@ -130,7 +130,7 @@ public sealed partial class WatchPlay
         _micProblem = null;
         _heardNothing = false;
 
-        var error = await Mic.StartAsync(_leaving.Token);
+        var error = await Mic.StartAsync(ct: _leaving.Token);
         if (error is not null)
         {
             _micProblem = MicMessage(error);

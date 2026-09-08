@@ -32,6 +32,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     [Inject] private ILiveAudio Audio { get; set; } = default!;
 
+    [Inject] private SetupMemory Memory { get; set; } = default!;
+
     [Inject] private LiveConnectionFactory Connections { get; set; } = default!;
 
     [Inject] private IApiClient Api { get; set; } = default!;
@@ -72,7 +74,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         }
 
         // The microphone opens only once the fight is joined, so nothing is recorded into nowhere.
-        var started = await Audio.StartCaptureAsync(_connection);
+        // The microphone chosen and tested at setup, so the fight opens the one that was proved to work.
+        var started = await Audio.StartCaptureAsync(_connection, await Memory.MicAsync());
         if (!started.Started)
         {
             _fatal = MicMessage(started.Error);

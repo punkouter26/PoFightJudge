@@ -19,7 +19,7 @@ public interface ILiveAudio : IAsyncDisposable
     /// Asks for the microphone and starts streaming frames to <paramref name="sink"/>. Returns the device's sample
     /// rate, or an error name when the microphone was refused, so the page can say which problem it is.
     /// </summary>
-    Task<CaptureStart> StartCaptureAsync(IAudioFrameSink sink, CancellationToken ct = default);
+    Task<CaptureStart> StartCaptureAsync(IAudioFrameSink sink, string? deviceId = null, CancellationToken ct = default);
 
     /// <summary>Queues a chunk of the host's voice, 24 kHz PCM, to play seamlessly after whatever is already queued.</summary>
     Task PlayAsync(byte[] pcm24k, CancellationToken ct = default);
@@ -57,14 +57,14 @@ public sealed class LiveAudio(IJSRuntime js) : ILiveAudio
 
     private DotNetObjectReference<AudioCaptureBridge>? _bridge;
 
-    public async Task<CaptureStart> StartCaptureAsync(IAudioFrameSink sink, CancellationToken ct = default)
+    public async Task<CaptureStart> StartCaptureAsync(IAudioFrameSink sink, string? deviceId = null, CancellationToken ct = default)
     {
         _bridge?.Dispose();
         _bridge = DotNetObjectReference.Create(new AudioCaptureBridge(sink));
 
         try
         {
-            return await js.InvokeAsync<CaptureStart>(StartCapture, ct, _bridge) ?? new CaptureStart(0, "NotSupportedError");
+            return await js.InvokeAsync<CaptureStart>(StartCapture, ct, _bridge, deviceId) ?? new CaptureStart(0, "NotSupportedError");
         }
         catch (JSException ex)
         {
