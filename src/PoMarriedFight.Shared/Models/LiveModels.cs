@@ -28,7 +28,9 @@ public sealed record CreateFightRequest(
     HostPersonaId Persona = HostPersonaId.Referee,
     string Player1Tag = "",
     string Player2Tag = "",
-    string? Topic = null);
+    string? Topic = null,
+    ProfileRole Player1Role = ProfileRole.Husband,
+    ProfileRole Player2Role = ProfileRole.Wife);
 
 /// <summary>The fight that was started. Its id is what the browser joins the hub with.</summary>
 public sealed record CreateFightResponse(MatchId MatchId);

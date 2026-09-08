@@ -13,6 +13,11 @@
             <h3>@DisplayName</h3>
             <div class="meta">
                 <span class="po-chip @(IsWife ? "po-chip--p2" : "po-chip--p1")">@Persona.Initials · @Persona.Role</span>
+                @if (Profile.FromFights)
+                {
+                    @* Read from a real person's 2P fights and rewritten after each one; the authored cast never carries this. *@
+                    <span class="po-chip po-chip--accent" title="Read from their 2P fights and rewritten after each one">From 2P</span>
+                }
                 @if (!string.IsNullOrWhiteSpace(Persona.Occupation))
                 {
                     <span class="po-muted">@Persona.Occupation@(Persona.Age is { } age ? $", {age}" : string.Empty)</span>

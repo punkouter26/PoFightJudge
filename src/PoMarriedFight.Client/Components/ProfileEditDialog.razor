@@ -24,6 +24,13 @@
         </div>
     }
 
+    @if (Existing?.FromFights == true)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="from-fights">
+            This persona is read from @Existing.Persona.Initials's 2P fights and is rewritten after each one. Anything you change here lasts until their next fight.
+        </RadzenAlert>
+    }
+
     <RadzenFieldset Text="Identity" class="section">
         <div class="identity">
             <div class="portrait">

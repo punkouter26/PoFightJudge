@@ -155,6 +155,31 @@ public class AnalysisTests(ApiFactory factory)
         var results = factory.Services.GetRequiredService<IFighterResultRepository>();
         (await results.ListForAsync(FighterId.From("F1"), "analysis-full")).Should().ContainSingle();
         (await results.ListForAsync(FighterId.From("F2"), "analysis-full")).Should().ContainSingle();
+
+        // And both of them are now somebody the CPU and 1P channels can put in a seat, read from this fight. The
+        // persona is written after the ruling is readable, deliberately — the room is not kept waiting on it — so
+        // it is allowed a moment to land.
+        var f1 = await WaitForPersonaAsync(client, "F1");
+        f1.FromFights.Should().BeTrue();
+        f1.Persona.Role.Should().Be(ProfileRole.Husband, "fighter one sits as the husband unless setup said otherwise");
+        (await WaitForPersonaAsync(client, "F2")).Persona.Role.Should().Be(ProfileRole.Wife);
+    }
+
+    private static async Task<ProfileDto> WaitForPersonaAsync(HttpClient client, string initials)
+    {
+        const int Attempts = 100; // a hundred looks, 100 ms apart: ten seconds for a stand-in model that answers at once
+        for (var attempt = 0; attempt < Attempts; attempt++)
+        {
+            var cast = await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base) ?? [];
+            if (cast.Find(p => string.Equals(p.Persona.Initials, initials, StringComparison.Ordinal)) is { } persona)
+            {
+                return persona;
+            }
+
+            await Task.Delay(100);
+        }
+
+        throw new TimeoutException($"No persona for {initials} appeared in the cast within 10s.");
     }
 
     /// <summary>Puts a recording where the pipeline expects one, for a fight nobody spoke into.</summary>

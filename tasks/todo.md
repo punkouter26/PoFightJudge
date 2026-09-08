@@ -72,3 +72,6 @@
 - [x] T50 Infra as code + CI
 - [x] T51 Scripts, docs, secret seeding (ask-first)
 - [x] T52 Verify, review, simplify, evidence  ← CP8
+
+## Phase I — From manual testing
+- [x] T53 Fighter personas: a 2P fighter becomes a CPU/1P persona, read from their fights (seat chosen at 2P setup)

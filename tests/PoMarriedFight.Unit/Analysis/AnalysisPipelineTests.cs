@@ -3,9 +3,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using PoMarriedFight.Api.Features.Ai;
 using PoMarriedFight.Api.Features.Ai.Fakes;
 using PoMarriedFight.Api.Features.Analysis;
+using PoMarriedFight.Api.Features.Diagnostics;
 using PoMarriedFight.Api.Features.Fight;
+using PoMarriedFight.Api.Features.Fighters;
+using PoMarriedFight.Api.Features.Profiles;
 using PoMarriedFight.Api.Features.Records;
 using PoMarriedFight.Api.Features.Storage;
 using PoMarriedFight.Shared.Identifiers;
@@ -26,6 +30,8 @@ public sealed class AnalysisPipelineTests : IDisposable
     private readonly InMemoryAudioBlobStore _blobs = new();
     private readonly InMemoryWatchResultRepository _watchResults = new();
     private readonly InMemoryFighterResultRepository _fighterResults = new();
+    private readonly InMemoryFighterRepository _fighters = new();
+    private readonly InMemoryProfileRepository _profiles = new();
     private readonly InMemoryMatchRepository _matches;
     private readonly ServiceProvider _services;
     private readonly IGeminiJudgeClient _judge = Substitute.For<IGeminiJudgeClient>();
@@ -38,6 +44,11 @@ public sealed class AnalysisPipelineTests : IDisposable
         services.AddSingleton<IMatchRepository>(_matches);
         services.AddSingleton<IFighterResultRepository>(_fighterResults);
         services.AddSingleton<IAudioBlobStore>(_blobs);
+        services.AddSingleton<IFighterPersonaWriter>(new FighterPersonaWriter(
+            _fighters, _fighterResults, _profiles,
+            new FakeGeminiText(new AiLatencyTracker(), TimeSpan.Zero),
+            GeminiModelOptions.Defaults,
+            NullLogger<FighterPersonaWriter>.Instance));
         _services = services.BuildServiceProvider();
 
         _judge.JudgeAsync(Arg.Any<JudgeRequest>(), Arg.Any<CancellationToken>())
@@ -58,6 +69,9 @@ public sealed class AnalysisPipelineTests : IDisposable
     /// <summary>A finished fight with a recording, ready to be read.</summary>
     private async Task<MatchDto> RecordedAsync(string one = "AL", string two = "SM", bool withAudio = true)
     {
+        // Both fighters exist from the moment a fight starts; the persona written afterwards is keyed on them.
+        await _fighters.EnsureAsync(FighterId.From(one), Now, ProfileRole.Husband);
+        await _fighters.EnsureAsync(FighterId.From(two), Now, ProfileRole.Wife);
         var match = new MatchDto(
             MatchId.New(), "user-1", MatchMode.Fight, Now.AddMinutes(-5), Now,
             "the thermostat", MatchSide.Human(one), MatchSide.Human(two),
@@ -114,6 +128,21 @@ public sealed class AnalysisPipelineTests : IDisposable
         rows.Should().ContainSingle().Which.Won.Should().BeTrue();
         (await _fighterResults.ListForAsync(FighterId.From("SM"), "user-1", CancellationToken.None)).Should().ContainSingle()
             .Which.Won.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Both_fighters_come_out_of_it_with_a_persona_the_other_channels_can_seat()
+    {
+        var match = await RecordedAsync();
+
+        using var pipeline = Pipeline();
+        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
+
+        var al = await _profiles.GetByIdAsync(ProfileId.From("AL"));
+        al.Should().NotBeNull("what they said in 2P is now somebody CPU and 1P can put in a seat");
+        al!.FromFights.Should().BeTrue();
+        al.Role.Should().Be(ProfileRole.Husband);
+        (await _profiles.GetByIdAsync(ProfileId.From("SM")))!.Role.Should().Be(ProfileRole.Wife);
     }
 
     /// <summary>

@@ -8,6 +8,7 @@ using PoMarriedFight.Client.Services;
 using PoMarriedFight.Shared.Identifiers;
 using PoMarriedFight.Shared.Models;
 using Radzen;
+using Radzen.Blazor;
 
 // The domain tests own PoMarriedFight.Unit.Fight, which shadows the page type here.
 using FightPage = PoMarriedFight.Client.Pages.Fight;
@@ -112,6 +113,31 @@ public class FightSetupTests : BunitContext
                 && r.Topic == "who does the dishes" && r.Persona == HostPersonaId.Roastmaster),
             Arg.Any<CancellationToken>());
         nav.Uri.Should().EndWith($"fight/{id.Value}");
+    }
+
+    [Fact]
+    public async Task Each_fighter_chooses_the_seat_their_persona_will_argue_from_and_the_choice_is_sent()
+    {
+        // 2P itself has no husband or wife. The choice is for afterwards: the persona read from this fight is what
+        // CPU and 1P put in a seat, and those channels pit a husband against a wife.
+        _api.StartFightAsync(Arg.Any<CreateFightRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CreateFightResponse(MatchId.New())));
+        var cut = RenderSetup();
+
+        var seats = cut.FindComponents<RadzenSelectBar<ProfileRole>>();
+        seats.Should().HaveCount(2, "one per fighter");
+        seats[0].Instance.Value.Should().Be(ProfileRole.Husband, "fighter one is the husband unless they say otherwise");
+        seats[1].Instance.Value.Should().Be(ProfileRole.Wife);
+
+        await TypeTagAsync(cut, second: false, "KKK");
+        await TypeTagAsync(cut, second: true, "LLL");
+        await cut.InvokeAsync(() => seats[0].Instance.ValueChanged.InvokeAsync(ProfileRole.Wife));
+        await cut.InvokeAsync(() => seats[1].Instance.ValueChanged.InvokeAsync(ProfileRole.Husband));
+        await StartButton(cut).ClickAsync(new());
+
+        await _api.Received(1).StartFightAsync(
+            Arg.Is<CreateFightRequest>(r => r.Player1Role == ProfileRole.Wife && r.Player2Role == ProfileRole.Husband),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

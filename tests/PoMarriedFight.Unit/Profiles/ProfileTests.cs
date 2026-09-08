@@ -144,4 +144,17 @@ public class ProfileTests
             .And.Contain("\"stressResponse\":null");
         JsonSerializer.Deserialize<CreateProfileRequest>(json, Web)!.AttachmentStyle.Should().Be(AttachmentStyle.Anxious);
     }
+    [Fact]
+    public void A_persona_read_from_fights_says_so_all_the_way_through_storage_and_out_to_the_client()
+    {
+        var profile = FullRequest("KKK", ProfileRole.Husband).ToDomain();
+        profile.FromFights.Should().BeFalse("anything that came through the editor was authored");
+
+        profile.MarkFromFights();
+
+        profile.ToEntity().FromFights.Should().BeTrue();
+        profile.ToEntity().ToDomain().FromFights.Should().BeTrue("or a restart would turn it back into a cast member");
+        profile.ToDto().FromFights.Should().BeTrue("the cast page marks these apart");
+        profile.ToRequest().ToDomain().FromFights.Should().BeFalse("the flag is not the editor's to set");
+    }
 }

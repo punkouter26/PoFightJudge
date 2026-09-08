@@ -41,8 +41,8 @@ public class RecordsTests(ApiFactory factory)
             MatchSide.Human(one), MatchSide.Human(two), SessionPhase.Done, SessionStatus.Ready,
             oneWon ? one : two, "It was close.", IsFake: true));
 
-        await fighters.EnsureAsync(FighterId.From(one), now);
-        await fighters.EnsureAsync(FighterId.From(two), now);
+        await fighters.EnsureAsync(FighterId.From(one), now, role: null);
+        await fighters.EnsureAsync(FighterId.From(two), now, role: null);
         await results.SaveAsync(
         [
             new FighterResultDto(one, userId, id, mode, now, "the thermostat", two, oneWon, false, score,

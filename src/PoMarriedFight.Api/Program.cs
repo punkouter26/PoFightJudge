@@ -124,6 +124,7 @@ try
     builder.Services.AddSingleton<IProfileGenerator, ProfileGenerator>();
     builder.Services.AddScoped<IMatchRepository, MatchRepository>();
     builder.Services.AddScoped<IFighterRepository, FighterRepository>();
+    builder.Services.AddScoped<IFighterPersonaWriter, FighterPersonaWriter>();
     builder.Services.AddScoped<IFighterResultRepository, FighterResultRepository>();
     builder.Services.AddScoped<IWatchResultRepository, WatchResultRepository>();
     builder.Services.AddPoWatch();

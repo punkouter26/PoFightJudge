@@ -406,6 +406,9 @@ public sealed class FighterEntity : ITableEntity
 
     public DateTimeOffset LastSeenAt { get; set; }
 
+    /// <summary>The seat their persona argues from; see <see cref="FighterDto.Role"/>. Stored by name.</summary>
+    public string Role { get; set; } = nameof(ProfileRole.Husband);
+
     public static FighterEntity From(FighterDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -415,8 +418,14 @@ public sealed class FighterEntity : ITableEntity
             DisplayName = dto.DisplayName,
             CreatedAt = dto.CreatedAt,
             LastSeenAt = dto.LastSeenAt,
+            Role = dto.Role.ToString(),
         };
     }
 
-    public FighterDto ToDto() => new(RowKey, DisplayName, CreatedAt, LastSeenAt);
+    public FighterDto ToDto() => new(
+        RowKey,
+        DisplayName,
+        CreatedAt,
+        LastSeenAt,
+        Enum.TryParse<ProfileRole>(Role, ignoreCase: true, out var role) ? role : ProfileRole.Husband);
 }

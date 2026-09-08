@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Carter;
 using PoMarriedFight.Api.Features.Auth;
+using PoMarriedFight.Api.Features.Profiles;
 using PoMarriedFight.Api.Features.Records;
 using PoMarriedFight.Shared;
 using PoMarriedFight.Shared.Identifiers;
@@ -113,6 +114,7 @@ public sealed class FighterEndpoints : ICarterModule
         ClaimsPrincipal user,
         IFighterRepository fighters,
         IFighterResultRepository results,
+        IProfileRepository profiles,
         CancellationToken ct)
     {
         if (await fighters.GetAsync(tag, ct) is null)
@@ -128,6 +130,14 @@ public sealed class FighterEndpoints : ICarterModule
         if ((await results.ListForAnyoneAsync(tag, ct)).Count == 0)
         {
             await fighters.DeleteAsync(tag, ct);
+
+            // Their persona was read from these fights; with the last of them gone, it goes too. An authored cast
+            // member who happens to share the initials is not theirs and stays.
+            var personaId = ProfileId.From(tag.Value);
+            if (await profiles.GetByIdAsync(personaId, ct) is { FromFights: true })
+            {
+                await profiles.DeleteAsync(personaId, ct);
+            }
         }
 
         return Results.NoContent();

@@ -72,4 +72,7 @@ public sealed class ProfileTableEntity : ITableEntity
     public string? FacePic { get; set; }
 
     public string? TtsSettingsJson { get; set; }
+
+    /// <summary>See <see cref="Profile.FromFights"/>.</summary>
+    public bool FromFights { get; set; }
 }

@@ -2,6 +2,7 @@ using Azure.Data.Tables;
 using PoMarriedFight.Api.Common;
 using PoMarriedFight.Api.Features.Storage;
 using PoMarriedFight.Shared.Identifiers;
+using PoMarriedFight.Shared.Models;
 
 namespace PoMarriedFight.Api.Features.Fighters;
 
@@ -11,8 +12,11 @@ namespace PoMarriedFight.Api.Features.Fighters;
 /// </summary>
 public interface IFighterRepository
 {
-    /// <summary>Returns the fighter for this tag, creating it on first sight and stamping the last-seen time either way.</summary>
-    Task<Fighter> EnsureAsync(FighterId id, DateTimeOffset now, CancellationToken ct = default);
+    /// <summary>
+    /// Returns the fighter for this tag, creating it on first sight and stamping the last-seen time either way.
+    /// A <paramref name="role"/> is the seat chosen for them this time; null leaves whatever they had.
+    /// </summary>
+    Task<Fighter> EnsureAsync(FighterId id, DateTimeOffset now, ProfileRole? role, CancellationToken ct = default);
 
     Task<Fighter?> GetAsync(FighterId id, CancellationToken ct = default);
 
@@ -29,12 +33,17 @@ public sealed class FighterRepository(TableServiceClient tables) : IFighterRepos
 {
     private TableClient Table => tables.GetTableClient(TableNames.Fighters);
 
-    public Task<Fighter> EnsureAsync(FighterId id, DateTimeOffset now, CancellationToken ct = default) =>
+    public Task<Fighter> EnsureAsync(FighterId id, DateTimeOffset now, ProfileRole? role, CancellationToken ct = default) =>
         StorageBootstrap.WithTableAsync(tables, TableNames.Fighters, async token =>
         {
             var existing = await ReadAsync(id, token);
             var fighter = existing ?? Fighter.Create(id, now);
             fighter.Seen(now);
+            if (role is { } chosen)
+            {
+                fighter.ArgueAs(chosen);
+            }
+
             await Table.UpsertEntityAsync(FighterEntity.From(fighter.ToDto()), TableUpdateMode.Replace, token);
             return fighter;
         }, ct);

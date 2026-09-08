@@ -10,8 +10,32 @@
     <ChildContent>
         <div class="setup">
             <section class="tags">
-                <FighterTagInput Label="Fighter one" Name="player1Tag" Tag="@_one" TagChanged="@OnOneChanged" Known="@_known" Excluded="@_two" />
-                <FighterTagInput Label="Fighter two" Name="player2Tag" Tag="@_two" TagChanged="@OnTwoChanged" Known="@_known" Excluded="@_one" />
+                <div class="fighter-setup">
+                    <FighterTagInput Label="Fighter one" Name="player1Tag" Tag="@_one" TagChanged="@OnOneChanged" Known="@_known" Excluded="@_two" />
+                    @* 2P has no husband or wife. The seat is for afterwards: what they say here becomes a persona that
+                       CPU and 1P can put in an argument, and those channels pit a husband against a wife. *@
+                    <div class="seat">
+                        <span class="po-eyebrow">Argues as</span>
+                        <RadzenSelectBar @bind-Value="_oneRole" TValue="ProfileRole" Name="player1Role" Size="ButtonSize.Small" aria-label="Fighter one argues as">
+                            <Items>
+                                <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
+                                <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
+                            </Items>
+                        </RadzenSelectBar>
+                    </div>
+                </div>
+                <div class="fighter-setup">
+                    <FighterTagInput Label="Fighter two" Name="player2Tag" Tag="@_two" TagChanged="@OnTwoChanged" Known="@_known" Excluded="@_one" />
+                    <div class="seat">
+                        <span class="po-eyebrow">Argues as</span>
+                        <RadzenSelectBar @bind-Value="_twoRole" TValue="ProfileRole" Name="player2Role" Size="ButtonSize.Small" aria-label="Fighter two argues as">
+                            <Items>
+                                <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
+                                <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
+                            </Items>
+                        </RadzenSelectBar>
+                    </div>
+                </div>
             </section>
 
             <section class="preview" aria-label="Who is arguing">
@@ -47,7 +71,7 @@
                               Disabled="@(Problem is not null || _starting)" Click="@StartAsync" />
             </div>
 
-            <p class="po-muted note">The microphone only opens once you press start, and it closes when the fight ends.</p>
+            <p class="po-muted note">The microphone only opens once you press start, and it closes when the fight ends. Afterwards each of you becomes a persona in the cast, read from what you said, for the CPU and 1P channels.</p>
         </div>
     </ChildContent>
 </PageShell>
@@ -57,6 +81,8 @@
     private string _one = string.Empty;
     private string _two = string.Empty;
     private string _topic = string.Empty;
+    private ProfileRole _oneRole = ProfileRole.Husband;
+    private ProfileRole _twoRole = ProfileRole.Wife;
     private HostPersonaId _persona = HostPersonaId.Referee;
     private bool _starting;
     private string? _error;
@@ -89,7 +115,7 @@
         _error = null;
         try
         {
-            var started = await Api.StartFightAsync(new CreateFightRequest(_persona, _one, _two, _topic.Trim() is { Length: > 0 } t ? t : null));
+            var started = await Api.StartFightAsync(new CreateFightRequest(_persona, _one, _two, _topic.Trim() is { Length: > 0 } t ? t : null, _oneRole, _twoRole));
             Nav.NavigateTo($"fight/{started.MatchId.Value}");
         }
         catch (ApiException ex)

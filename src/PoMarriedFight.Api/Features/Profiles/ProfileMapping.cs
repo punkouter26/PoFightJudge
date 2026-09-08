@@ -23,6 +23,7 @@ public static partial class ProfileMapping
     [MapperIgnoreSource(nameof(Profile.Id))]
     [MapperIgnoreSource(nameof(Profile.IsHuman))]
     [MapperIgnoreSource(nameof(Profile.FacePic))]
+    [MapperIgnoreSource(nameof(Profile.FromFights))]
     public static partial CreateProfileRequest ToRequest(this Profile profile);
 
     [MapperIgnoreSource(nameof(Profile.Id))]
@@ -105,7 +106,8 @@ public static partial class ProfileMapping
             entity.CommonArguments ?? string.Empty,
             entity.Philosophy ?? string.Empty,
             entity.FacePic,
-            tts ?? TtsSettings.Default(role));
+            tts ?? TtsSettings.Default(role),
+            entity.FromFights);
     }
 
     private static bool HasValue(string? value) => !string.IsNullOrEmpty(value);

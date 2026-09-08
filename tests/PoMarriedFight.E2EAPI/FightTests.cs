@@ -64,12 +64,18 @@ public class FightTests(ApiFactory factory)
     {
         var client = User("fight-start");
 
-        var id = await StartAsync(client, "aa1", "bb2");
+        var response = await client.PostAsJsonAsync(
+            ApiRoutes.Fights.Base,
+            new CreateFightRequest(HostPersonaId.Referee, "aa1", "bb2", null, ProfileRole.Wife, ProfileRole.Husband));
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await response.Content.ReadFromJsonAsync<CreateFightResponse>())!.MatchId;
 
         // Read through the store rather than over HTTP: the roster endpoint is a later task, but the rows are the point.
         var fighters = factory.Services.GetRequiredService<IFighterRepository>();
-        (await fighters.GetAsync(FighterId.From("AA1"))).Should().NotBeNull("both fighters exist from the moment the fight starts");
-        (await fighters.GetAsync(FighterId.From("BB2"))).Should().NotBeNull();
+        var one = await fighters.GetAsync(FighterId.From("AA1"));
+        one.Should().NotBeNull("both fighters exist from the moment the fight starts");
+        one!.Role.Should().Be(ProfileRole.Wife, "the seat chosen at setup is what their persona will argue from");
+        (await fighters.GetAsync(FighterId.From("BB2")))!.Role.Should().Be(ProfileRole.Husband);
 
         var snapshot = await client.GetFromJsonAsync<DebateSnapshotDto>(ApiRoutes.Fights.ById(id));
         snapshot.Should().NotBeNull();

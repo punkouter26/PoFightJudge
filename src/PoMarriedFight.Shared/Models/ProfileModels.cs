@@ -124,6 +124,12 @@ public sealed record ProfileDto
     public bool HasFace { get; init; }
 
     public required CreateProfileRequest Persona { get; init; }
+
+    /// <summary>
+    /// True for a persona read from somebody's 2P fights, which is rewritten after each one. The authored cast is
+    /// never touched, and the editor cannot set this: it is the pipeline's mark, not a field.
+    /// </summary>
+    public bool FromFights { get; init; }
 }
 
 /// <summary>Result of <c>POST /api/seed/profiles</c>: how many personas were written and how many got a bundled face.</summary>

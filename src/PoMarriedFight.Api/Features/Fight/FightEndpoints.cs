@@ -70,8 +70,8 @@ public sealed class FightEndpoints : ICarterModule
 
         // Both fighters exist from the moment the fight starts, so a record has somewhere to land even if it ends badly.
         var now = clock.GetUtcNow();
-        await fighters.EnsureAsync(FighterId.From(first), now, ct);
-        await fighters.EnsureAsync(FighterId.From(second), now, ct);
+        await fighters.EnsureAsync(FighterId.From(first), now, request.Player1Role, ct);
+        await fighters.EnsureAsync(FighterId.From(second), now, request.Player2Role, ct);
 
         var setup = new ShowSetup(request.Persona, first, second, Topic(request.Topic))
         {

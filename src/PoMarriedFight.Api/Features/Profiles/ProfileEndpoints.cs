@@ -97,6 +97,12 @@ public sealed class ProfileEndpoints : ICarterModule
 
         var profile = request.ToDomain();
         profile.UpdateFacePic(existing.FacePic); // the face has its own endpoint; an edit never drops it
+        if (existing.FromFights)
+        {
+            // Still theirs, still rewritten after their next fight; an edit here lasts until then.
+            profile.MarkFromFights();
+        }
+
         await repo.UpsertAsync(profile, ct);
         return Results.Ok(profile.ToDto());
     }

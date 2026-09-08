@@ -294,7 +294,8 @@ public sealed class WatchEndpoints : ICarterModule
                 // side, so the snapshot is built from their own lines: what they repeat, how they open, their best.
                 var spoken = match.Rounds.Where(r => string.Equals(r.Speaker, SpeakerOf(side, match), StringComparison.Ordinal)).Select(r => r.Text);
                 var style = FightStyleSnapshotExtractor.FromSpokenLines(spoken);
-                await fighters.EnsureAsync(FighterId.From(side.Id), now, ct);
+                var seat = string.Equals(side.Id, match.Husband.Id, StringComparison.Ordinal) ? ProfileRole.Husband : ProfileRole.Wife;
+                await fighters.EnsureAsync(FighterId.From(side.Id), now, seat, ct);
                 await fighterResults.SaveAsync([new FighterResultDto(side.Id, match.UserId, match.Id, MatchMode.Watch, now, match.Topic ?? string.Empty, opponent.Id, won, draw, score, style)], ct);
             }
             else

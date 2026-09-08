@@ -144,7 +144,11 @@ public sealed record FighterResultDto(
     StyleSnapshot Style);
 
 /// <summary>A person who has argued at least once. The tag is the identity; only the display name can be edited.</summary>
-public sealed record FighterDto(string Tag, string DisplayName, DateTimeOffset CreatedAt, DateTimeOffset LastSeenAt);
+/// <summary>
+/// A real person on the roster. <paramref name="Role"/> is the seat their persona argues from in CPU and 1P —
+/// 2P has no husband or wife of its own, so it is chosen at setup and the last choice stands.
+/// </summary>
+public sealed record FighterDto(string Tag, string DisplayName, DateTimeOffset CreatedAt, DateTimeOffset LastSeenAt, ProfileRole Role = ProfileRole.Husband);
 
 /// <summary>Head-to-head with one particular opponent: who they are, and how it has gone.</summary>
 public sealed record RivalryDto(string Opponent, int Fights, int Wins, int Losses)

@@ -26,17 +26,18 @@ public class FighterRepositoryTests(AzuriteFixture azurite)
     private static FighterId Tag() => FighterId.From(TestTags.Next());
 
     [SkippableFact]
-    public async Task Ensure_creates_a_fighter_once_and_then_only_moves_the_last_seen_time()
+    public async Task Ensure_creates_a_fighter_once_and_then_moves_only_the_last_seen_time_and_the_seat_they_chose()
     {
         var sut = Sut();
         var tag = Tag();
 
         (await sut.GetAsync(tag)).Should().BeNull("a tag that has never argued is not a fighter yet");
 
-        var first = await sut.EnsureAsync(tag, At);
-        var second = await sut.EnsureAsync(tag, At.AddHours(3));
+        var first = await sut.EnsureAsync(tag, At, role: null);
+        var second = await sut.EnsureAsync(tag, At.AddHours(3), ProfileRole.Wife);
 
         first.CreatedAt.Should().Be(At);
+        first.Role.Should().Be(ProfileRole.Husband, "until somebody chooses a seat for them");
         second.CreatedAt.Should().Be(At, "the second debate does not re-create the person");
         second.LastSeenAt.Should().Be(At.AddHours(3));
 
@@ -44,6 +45,9 @@ public class FighterRepositoryTests(AzuriteFixture azurite)
         stored!.CreatedAt.Should().Be(At);
         stored.LastSeenAt.Should().Be(At.AddHours(3));
         stored.DisplayName.Should().Be(tag.Value);
+        stored.Role.Should().Be(ProfileRole.Wife, "the seat chosen at setup is stored with them, so their persona can take it");
+
+        (await sut.EnsureAsync(tag, At.AddHours(4), role: null)).Role.Should().Be(ProfileRole.Wife, "a debate that names no seat leaves the last choice alone");
     }
 
     [SkippableFact]
@@ -51,7 +55,7 @@ public class FighterRepositoryTests(AzuriteFixture azurite)
     {
         var sut = Sut();
         var tag = Tag();
-        await sut.EnsureAsync(tag, At);
+        await sut.EnsureAsync(tag, At, role: null);
 
         var renamed = await sut.RenameAsync(tag, "Alex");
 
@@ -67,8 +71,8 @@ public class FighterRepositoryTests(AzuriteFixture azurite)
         var sut = Sut();
         var older = Tag();
         var newer = Tag();
-        await sut.EnsureAsync(older, At.AddDays(-2));
-        await sut.EnsureAsync(newer, At);
+        await sut.EnsureAsync(older, At.AddDays(-2), role: null);
+        await sut.EnsureAsync(newer, At, role: null);
 
         var roster = await sut.ListAsync();
         roster.Select(f => f.Tag).Should().ContainInOrder(newer.Value, older.Value);

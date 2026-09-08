@@ -57,4 +57,18 @@ public class FighterTests
         back.ToDto().Should().Be(fighter.ToDto());
         Fighter.Rehydrate(new FighterDto("EF", string.Empty, Created, Created)).DisplayName.Should().Be("EF", "a row written before display names still shows something");
     }
+    [Fact]
+    public void A_fighter_argues_as_the_husband_until_they_say_otherwise_and_the_choice_travels_with_them()
+    {
+        // 2P has no roles of its own; the choice exists so that the persona read from their fights can take a seat
+        // in CPU and 1P, which pit a husband against a wife.
+        var fighter = Fighter.Create(FighterId.From("KKK"), Created);
+        fighter.Role.Should().Be(ProfileRole.Husband);
+
+        fighter.ArgueAs(ProfileRole.Wife);
+        fighter.Role.Should().Be(ProfileRole.Wife);
+        fighter.ToDto().Role.Should().Be(ProfileRole.Wife, "the roster carries it");
+        Fighter.Rehydrate(fighter.ToDto()).Role.Should().Be(ProfileRole.Wife, "and it survives storage");
+        Fighter.Create(FighterId.From("LLL"), Created, role: ProfileRole.Wife).Role.Should().Be(ProfileRole.Wife);
+    }
 }

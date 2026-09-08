@@ -75,10 +75,15 @@ public sealed class InMemoryFighterRepository : IFighterRepository
 {
     private readonly ConcurrentDictionary<string, Fighter> _rows = new(StringComparer.Ordinal);
 
-    public Task<Fighter> EnsureAsync(FighterId id, DateTimeOffset now, CancellationToken ct = default)
+    public Task<Fighter> EnsureAsync(FighterId id, DateTimeOffset now, ProfileRole? role, CancellationToken ct = default)
     {
         var fighter = _rows.GetOrAdd(id.Value, _ => Fighter.Create(id, now));
         fighter.Seen(now);
+        if (role is { } chosen)
+        {
+            fighter.ArgueAs(chosen);
+        }
+
         return Task.FromResult(fighter);
     }
 

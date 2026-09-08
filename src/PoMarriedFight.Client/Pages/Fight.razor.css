@@ -9,6 +9,17 @@
   gap: var(--po-space-4);
 }
 
+.fighter-setup {
+  display: grid;
+  gap: var(--po-space-2);
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-3);
+}
+
 .preview {
   display: grid;
   grid-template-columns: 1fr;

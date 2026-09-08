@@ -27,12 +27,19 @@ public sealed class Fighter
     /// <summary>When this tag last argued. Moves on every match, so an idle roster can be read at a glance.</summary>
     public DateTimeOffset LastSeenAt { get; private set; }
 
-    public static Fighter Create(FighterId id, DateTimeOffset now, string? displayName = null) => new()
+    /// <summary>
+    /// The seat their persona argues from in CPU and 1P. 2P has no husband or wife, so this is chosen at setup and
+    /// the last choice stands: the persona is rewritten after every fight anyway.
+    /// </summary>
+    public ProfileRole Role { get; private set; } = ProfileRole.Husband;
+
+    public static Fighter Create(FighterId id, DateTimeOffset now, string? displayName = null, ProfileRole role = ProfileRole.Husband) => new()
     {
         Id = id,
         DisplayName = string.IsNullOrWhiteSpace(displayName) ? id.Value : displayName.Trim(),
         CreatedAt = now,
         LastSeenAt = now,
+        Role = role,
     };
 
     public static Fighter Rehydrate(FighterDto dto)
@@ -44,6 +51,7 @@ public sealed class Fighter
             DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? dto.Tag : dto.DisplayName,
             CreatedAt = dto.CreatedAt,
             LastSeenAt = dto.LastSeenAt,
+            Role = dto.Role,
         };
     }
 
@@ -59,5 +67,8 @@ public sealed class Fighter
         }
     }
 
-    public FighterDto ToDto() => new(Tag, DisplayName, CreatedAt, LastSeenAt);
+    /// <summary>The seat chosen for them this time. It replaces the last one: whoever set up the fight decided.</summary>
+    public void ArgueAs(ProfileRole role) => Role = role;
+
+    public FighterDto ToDto() => new(Tag, DisplayName, CreatedAt, LastSeenAt, Role);
 }

@@ -163,6 +163,11 @@ public sealed partial class AnalysisPipeline(
         await SaveRecordsAsync(results, match, report, mapped, ct);
         await MarkAsync(matches, match with { Winner = WinnerTag(match, overall) }, SessionStatus.Ready, ct);
         LogReady(logger, matchId.Value, stopwatch.Elapsed.TotalSeconds);
+
+        // Last, and after the room can already read the ruling: the persona is a bonus read from a report that is
+        // on the record, and it is the one step here that costs a model call per fighter.
+        var personas = scope.ServiceProvider.GetRequiredService<IFighterPersonaWriter>();
+        await personas.WriteAsync(match, report, mapped, ct);
     }
 
     /// <summary>

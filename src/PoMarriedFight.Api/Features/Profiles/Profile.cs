@@ -77,6 +77,12 @@ public sealed class Profile
     /// <summary>True when this side is a real person rather than an authored persona. Never stored: a human has a fighter row, not a profile.</summary>
     public bool IsHuman { get; private set; }
 
+    /// <summary>
+    /// True for a persona read from somebody's 2P fights and rewritten after each one. It is what tells the pipeline
+    /// a row is its own to overwrite, and the cast page to say so; the authored cast never carries it.
+    /// </summary>
+    public bool FromFights { get; private set; }
+
     private Profile()
     {
     }
@@ -123,6 +129,9 @@ public sealed class Profile
 
     public void UpdateFacePic(string? blobName) => FacePic = blobName;
 
+    /// <summary>Marks this persona as read from fights. Set by the pipeline, kept through edits, never set by the editor.</summary>
+    public void MarkFromFights() => FromFights = true;
+
     /// <summary>Full hydration for the repository and the request mapper; the only way to set every field at once.</summary>
     public static Profile Rehydrate(
         ProfileId id,
@@ -153,7 +162,8 @@ public sealed class Profile
         string commonArguments,
         string philosophy,
         string? facePic,
-        TtsSettings ttsSettings) => new()
+        TtsSettings ttsSettings,
+        bool fromFights = false) => new()
         {
             Id = id,
             Name = name,
@@ -184,6 +194,7 @@ public sealed class Profile
             Philosophy = philosophy,
             FacePic = facePic,
             TtsSettings = ttsSettings,
+            FromFights = fromFights,
         };
 }
 
