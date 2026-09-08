@@ -79,15 +79,15 @@ Each was a deliberate decision made while building; the commit that made it says
 
 ## Still outstanding
 
-- **The infrastructure exists; the first release has not happened.** On 2026-09-08 `infra/main.bicep` was
-  deployed by hand (resource group `PoFightJudge`, `app-pofightjudge` on `asp-pofightjudge-f1`, `stpofightjudge`,
-  the storage roles and the vault policy), the six `PoFightJudge--*` secrets were seeded into `kv-poshared`, the
-  site's redirect URI was added to the `PoArgueJudge` Entra app the client signs in with, and the
-  `PoFightJudge-GitHub-OIDC` registration was created with federated credentials for
-  `repo:punkouter26/PoFightJudge` (`ref:refs/heads/master`, `environment:production`) and Contributor + User
-  Access Administrator on the subscription. What remains is the GitHub half: the private repository, its three
-  `AZURE_*` variables (client id `018bf14a-14f7-4c38-8547-2ebfb12b72e7`), the `production` environment, and the
-  first push, which is what runs `deploy.yml`.
+- **The first release went out on 2026-09-08.** `infra/main.bicep` had been deployed by hand (resource group
+  `PoFightJudge`, `app-pofightjudge` on `asp-pofightjudge-f1`, `stpofightjudge`, the storage roles and the vault
+  policy), the six `PoFightJudge--*` secrets seeded into `kv-poshared`, and the site's redirect URI added to the
+  `PoArgueJudge` Entra app the client signs in with. The GitHub half followed the same day: the private repository,
+  its three `AZURE_*` variables (client id `018bf14a-14f7-4c38-8547-2ebfb12b72e7`), the `production` environment,
+  and `deploy.yml`. Two things the plan had not foreseen: GitHub now stamps owner and repository ids into the OIDC
+  subject (`repo:punkouter26@121304072/PoFightJudge@1360738000:…`), so the `PoFightJudge-GitHub-OIDC` registration
+  carries a second pair of federated credentials in that form beside the original ones; and the client's
+  `wwwroot/appsettings.json` had shipped with empty MSAL values, which curl cannot see but `DeployedSiteTests` did.
 - The **transcription fallback** has never run against the real service: both real fights had usable live
   captions, which the pipeline prefers.
 
