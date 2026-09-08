@@ -2,6 +2,7 @@
 @page "/fight"
 @inject IApiClient Api
 @inject NavigationManager Nav
+@inject SetupMemory Memory
 
 <PageTitle>2P · PoFightJudge</PageTitle>
 
@@ -93,7 +94,22 @@
         : string.Equals(_one, _two, StringComparison.OrdinalIgnoreCase) ? "Two people cannot share one tag."
         : null;
 
-    protected override async Task OnInitializedAsync() => _known = await Api.GetFightersAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        _known = await Api.GetFightersAsync();
+
+        // The same two people argue most nights, and typing both tags again every time is the tax on that. A rematch
+        // takes precedence over the remembered card; both leave the topic to whatever it was, blank included.
+        if (await Memory.FightAsync() is { } card)
+        {
+            _one = card.One;
+            _two = card.Two;
+            _topic = card.Topic;
+            _oneRole = card.OneRole;
+            _twoRole = card.TwoRole;
+            _persona = card.Persona;
+        }
+    }
 
     private FighterDto? Known(string tag) =>
         tag.Length == 0 ? null : _known.FirstOrDefault(f => string.Equals(f.Tag, tag, StringComparison.OrdinalIgnoreCase));
@@ -116,6 +132,7 @@
         try
         {
             var started = await Api.StartFightAsync(new CreateFightRequest(_persona, _one, _two, _topic.Trim() is { Length: > 0 } t ? t : null, _oneRole, _twoRole));
+            await Memory.RememberAsync(new FightCard(_one, _two, _topic.Trim(), _oneRole, _twoRole, _persona));
             Nav.NavigateTo($"fight/{started.MatchId.Value}");
         }
         catch (ApiException ex)

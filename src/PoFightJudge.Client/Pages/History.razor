@@ -3,6 +3,7 @@
 @inject IApiClient Api
 @inject NavigationManager Nav
 @inject DialogService Dialogs
+@inject SetupMemory Memory
 
 <PageTitle>History · PoFightJudge</PageTitle>
 
@@ -79,6 +80,9 @@
                                     <RadzenButton Text="Replay" Icon="play_arrow" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
                                                   Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo($"watch/replay/{match.Id.Value}"))" />
                                 }
+                                <RadzenButton Icon="replay" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                                              title="@($"Argue {match.Topic} again")" aria-label="@($"Argue {match.Topic} again")"
+                                              Click="@(() => RunItBack(match))" />
                                 <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
                                               title="@($"Delete {match.Topic}")" aria-label="@($"Delete {match.Topic}")" Click="@(() => ConfirmAsync(match))" />
                             </div>
@@ -118,6 +122,28 @@
         {
             _loading = false;
         }
+    }
+
+    /// <summary>
+    /// The same matchup, set up again. It fills the setup screen in rather than starting anything: a side can be a
+    /// person, and nothing here should be able to put a result on somebody's record without them pressing start.
+    /// </summary>
+    private void RunItBack(MatchDto match)
+    {
+        if (match.Mode == MatchMode.Fight)
+        {
+            Memory.Rematch(new FightCard(match.Side1.Id, match.Side2.Id, match.Topic, ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Referee));
+            Nav.NavigateTo("2p");
+            return;
+        }
+
+        var person = match.Side1.IsHuman ? match.Side1 : match.Side2.IsHuman ? match.Side2 : null;
+        Memory.Rematch(new WatchCard(
+            match.Side1.IsHuman ? string.Empty : match.Side1.Id,
+            match.Side2.IsHuman ? string.Empty : match.Side2.Id,
+            match.Topic,
+            person?.Id ?? string.Empty));
+        Nav.NavigateTo(person is null ? "cpu" : "1p");
     }
 
     /// <summary>

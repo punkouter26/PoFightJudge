@@ -9,6 +9,11 @@
             <RadzenButton Text="@(_playingAll ? "Stop" : "Play it back")" Icon="@(_playingAll ? "stop" : "play_arrow")"
                           ButtonStyle="ButtonStyle.Primary" Variant="Variant.Filled" Click="@PlayAllAsync" />
         }
+        @if (_match is not null)
+        {
+            <RadzenButton Text="Run it back" Icon="replay" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                          Click="@RunItBack" />
+        }
         <RadzenButton Text="History" Icon="history" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
                       Click="@(() => Nav.NavigateTo("history"))" />
     </Actions>

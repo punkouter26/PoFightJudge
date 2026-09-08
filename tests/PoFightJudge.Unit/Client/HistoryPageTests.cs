@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,9 @@ public class HistoryPageTests : BunitContext
     public HistoryPageTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetMatchesAsync(Arg.Any<MatchMode?>(), Arg.Any<CancellationToken>()).Returns(_ => Both());
@@ -145,6 +149,9 @@ public class RecordComponentTests : BunitContext
     public RecordComponentTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
@@ -199,6 +206,9 @@ public class LeaderboardPageTests : BunitContext
     public LeaderboardPageTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetLeaderboardAsync(MatchMode.Watch, Arg.Any<CancellationToken>())
@@ -261,6 +271,9 @@ public class ProfileRecordPageTests : BunitContext
     public ProfileRecordPageTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetProfileAsync(ProfileId.From("MAH"), Arg.Any<CancellationToken>()).Returns(new ProfileDto

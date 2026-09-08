@@ -4,6 +4,7 @@
 @inject IApiClient Api
 @inject SimulationState Simulation
 @inject NavigationManager Nav
+@inject SetupMemory Memory
 
 <PageTitle>@Channel · PoFightJudge</PageTitle>
 
@@ -208,6 +209,7 @@
         {
             _flags = await Api.GetFeaturesAsync();
             _cast = [.. await Api.GetProfilesAsync()];
+            await ReopenAsync();
         }
         catch (HttpRequestException ex)
         {
@@ -228,7 +230,42 @@
 
     private void PickRandomTopic() => _topic = RandomTopics[Random.Shared.Next(RandomTopics.Length)];
 
-    private void Start()
+    /// <summary>
+    /// Opens on the last matchup, or on a rematch if one was asked for. Only sides still in the cast are restored:
+    /// a profile deleted since then would otherwise arrive as a card naming somebody who is gone.
+    /// </summary>
+    private async Task ReopenAsync()
+    {
+        if (await Memory.WatchAsync() is not { } card)
+        {
+            return;
+        }
+
+        _topic = card.Topic;
+        _tag = card.Tag;
+
+        var husband = ProfileById(card.Husband);
+        var wife = ProfileById(card.Wife);
+        if (IsOnePlayer)
+        {
+            // In 1P only one of the two was a persona; the other seat is the person, and their tag came with the card.
+            // Seating is what turns those two into a husband and a wife, so it has to run here as it does on a click.
+            _opponent = husband is not null ? SideFor(husband) : wife is not null ? SideFor(wife) : null;
+            await SeatAsync();
+        }
+        else if (husband is not null && wife is not null)
+        {
+            _husband = SideFor(husband);
+            _wife = SideFor(wife);
+        }
+    }
+
+    private ProfileDto? ProfileById(string initials) =>
+        initials.Length == 0 ? null : _cast.FirstOrDefault(p => string.Equals(p.Persona.Initials, initials, StringComparison.OrdinalIgnoreCase));
+
+    private static MatchSide SideFor(ProfileDto profile) => MatchSide.Persona(profile.Persona.Initials, profile.Persona.Name);
+
+    private async Task Start()
     {
         if (Problem is not null)
         {
@@ -236,6 +273,11 @@
         }
 
         Simulation.Set(_husband!, _wife!, _topic);
+        await Memory.RememberAsync(new WatchCard(
+            _husband!.IsHuman ? string.Empty : _husband.Id,
+            _wife!.IsHuman ? string.Empty : _wife.Id,
+            _topic,
+            IsOnePlayer ? Initials.Normalize(_tag) : string.Empty));
         Nav.NavigateTo("watch/play");
     }
 }

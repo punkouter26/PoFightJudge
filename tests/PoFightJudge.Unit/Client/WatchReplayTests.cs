@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -23,6 +24,9 @@ public sealed class WatchReplayTests : BunitContext, IAsyncLifetime
     public WatchReplayTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         Services.AddScoped<AudioInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;

@@ -32,6 +32,7 @@ builder.Services.AddScoped<MicInterop>();
 builder.Services.AddScoped<ILiveAudio, LiveAudio>();
 builder.Services.AddScoped(sp => new LiveConnectionFactory(sp, new Uri(builder.HostEnvironment.BaseAddress)));
 builder.Services.AddScoped<SimulationState>();
+builder.Services.AddScoped<SetupMemory>();
 // The same rules the API enforces, for <FluentValidationValidator> (registered explicitly: no assembly scanning under trimming).
 builder.Services.AddScoped<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
 

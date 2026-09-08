@@ -1,4 +1,5 @@
 using AngleSharp.Dom;
+using Blazored.LocalStorage;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,9 @@ public class FightSetupTests : BunitContext
     public FightSetupTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetFightersAsync(Arg.Any<CancellationToken>()).Returns(Roster());
@@ -179,5 +183,40 @@ public class FightSetupTests : BunitContext
 
         cut.Markup.Should().Contain("only opens once you press start");
         JSInterop.Invocations.Should().NotContain(i => i.Identifier.StartsWith("PoLive", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// SPEC §J2 says the tag boxes default to the last pair used. Nothing did: every fight started by typing both
+    /// tags again, which is the tax on the same two people arguing most nights.
+    /// </summary>
+    [Fact]
+    public void The_setup_opens_on_the_card_that_was_played_last()
+    {
+        var storage = Services.GetRequiredService<ILocalStorageService>();
+        storage.GetItemAsync<FightCard>(SetupMemory.FightKey, Arg.Any<CancellationToken>())
+            .Returns(new FightCard("AB", "CD", "the bins", ProfileRole.Wife, ProfileRole.Husband, HostPersonaId.Referee));
+
+        var cut = RenderSetup();
+
+        cut.WaitForAssertion(() => StartButton(cut).HasAttribute("disabled").Should().BeFalse("both tags came back, so it can start"));
+        cut.Markup.Should().Contain("the bins");
+    }
+
+    [Fact]
+    public async Task Starting_a_fight_remembers_the_card_for_next_time()
+    {
+        var storage = Services.GetRequiredService<ILocalStorageService>();
+        _api.StartFightAsync(Arg.Any<CreateFightRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CreateFightResponse(MatchId.New())));
+        var cut = RenderSetup();
+        await TypeTagAsync(cut, second: false, "AB");
+        await TypeTagAsync(cut, second: true, "CD");
+
+        await StartButton(cut).ClickAsync(new());
+
+        await storage.Received(1).SetItemAsync(
+            SetupMemory.FightKey,
+            Arg.Is<FightCard>(c => string.Equals(c.One, "AB", StringComparison.Ordinal) && string.Equals(c.Two, "CD", StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
     }
 }

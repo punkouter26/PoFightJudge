@@ -1,4 +1,5 @@
 using AngleSharp.Dom;
+using Blazored.LocalStorage;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,9 @@ public class WatchSetupTests : BunitContext
     public WatchSetupTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         Services.AddSingleton(_simulation);
         JSInterop.Mode = JSRuntimeMode.Loose;

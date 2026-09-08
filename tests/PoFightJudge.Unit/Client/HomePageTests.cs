@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,9 @@ public class HomePageTests : BunitContext
     public HomePageTests()
     {
         Services.AddRadzenComponents();
+        // The setup screens open on the last card played; a substitute storage means every test opens blank.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
         Services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 9, 6, 20, 41, 0, TimeSpan.Zero)));
         JSInterop.Mode = JSRuntimeMode.Loose;

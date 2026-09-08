@@ -25,6 +25,8 @@ public sealed partial class WatchReplay : ComponentBase, IDisposable
 
     [Inject] private AudioInterop Audio { get; set; } = default!;
 
+    [Inject] private SetupMemory Memory { get; set; } = default!;
+
     [Inject] private NavigationManager Nav { get; set; } = default!;
 
     private string Title => _match?.Topic is { Length: > 0 } topic ? topic : "Replay";
@@ -70,6 +72,27 @@ public sealed partial class WatchReplay : ComponentBase, IDisposable
         {
             _loading = false;
         }
+    }
+
+    /// <summary>
+    /// The same two, arguing the same thing again. It arms the setup screen rather than starting anything: a side can
+    /// be a person, and a button that put words in somebody's mouth without them pressing start would be worse.
+    /// </summary>
+    private void RunItBack()
+    {
+        if (_match is null)
+        {
+            return;
+        }
+
+        var person = _match.Side1.IsHuman ? _match.Side1 : _match.Side2.IsHuman ? _match.Side2 : null;
+        Memory.Rematch(new WatchCard(
+            _match.Side1.IsHuman ? string.Empty : _match.Side1.Id,
+            _match.Side2.IsHuman ? string.Empty : _match.Side2.Id,
+            _match.Topic,
+            person?.Id ?? string.Empty));
+
+        Nav.NavigateTo(person is null ? "cpu" : "1p");
     }
 
     private string NameOf(Speaker speaker) =>
