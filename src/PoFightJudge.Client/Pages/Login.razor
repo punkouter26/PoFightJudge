@@ -16,15 +16,26 @@
         <p class="po-muted">Sign in to pick a couple to watch, or step up to the mic with your own.</p>
 
         <div class="buttons">
-            @if (Env.IsProduction() || !Features.Flags.DevGuestEnabled)
+            @* Production only ever shows the Microsoft button — the prod client is MSAL-driven. *@
+            @if (Env.IsProduction())
             {
                 <RadzenButton Text="Sign in with Microsoft" Icon="login" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
-                              Click="SignInWithMicrosoft" Disabled="@(!Env.IsProduction())" />
+                              Click="SignInWithMicrosoft" />
             }
-            @if (Features.Flags.DevGuestEnabled)
+            else
             {
-                <RadzenButton Text="Continue as Guest (Dev)" Icon="person" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large"
-                              Click="ContinueAsGuestAsync" IsBusy="@_busy" BusyText="Signing in…" />
+                @* Dev: show "Sign in with Microsoft" only when the API has the dev Entra OIDC scheme wired. Otherwise
+                       the guest button is the only door, same as before this task. *@
+                @if (Features.Flags.DevEntraEnabled)
+                {
+                    <RadzenButton Text="Sign in with Microsoft" Icon="login" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
+                                  Click="SignInWithMicrosoft" />
+                }
+                @if (Features.Flags.DevGuestEnabled)
+                {
+                    <RadzenButton Text="Continue as Guest (Dev)" Icon="person" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large"
+                                  Click="ContinueAsGuestAsync" IsBusy="@_busy" BusyText="Signing in…" />
+                }
             }
         </div>
 
@@ -32,10 +43,11 @@
         {
             <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
         }
-        @if (!Env.IsProduction() && Features.Loaded && !Features.Flags.DevGuestEnabled)
+        @if (!Env.IsProduction() && Features.Loaded && !Features.Flags.DevGuestEnabled && !Features.Flags.DevEntraEnabled)
         {
             <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
-                Guest sign-in is off. Set <code>FeatureManagement:DevGuestEnabled</code> and <code>PoFightJudge:Auth:AllowFakeAuth</code> in Development.
+                Both sign-in doors are off. Set <code>FeatureManagement:DevGuestEnabled</code> for the guest door, or
+                <code>PoFightJudge:Auth:AllowDevEntra</code> + <code>PoFightJudge:AzureAd:DevClientId</code> for the Microsoft door.
             </RadzenAlert>
         }
     </div>
@@ -67,8 +79,22 @@
         }
     }
 
-    private void SignInWithMicrosoft() =>
-        Nav.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(SafeReturnUrl())}");
+    private void SignInWithMicrosoft()
+    {
+        var returnUrl = Uri.EscapeDataString(SafeReturnUrl());
+        if (Env.IsProduction())
+        {
+            // Production: MSAL handles the code flow on the client.
+            Nav.NavigateTo($"authentication/login?returnUrl={returnUrl}");
+        }
+        else
+        {
+            // Dev: the BFF cookie scheme on the server runs the code flow. forceLoad:true is required so the
+            // browser does a real HTTP request — without it Blazor's router would intercept the navigation and
+            // never call the API endpoint.
+            Nav.NavigateTo($"auth/login/dev?returnUrl={returnUrl}", forceLoad: true);
+        }
+    }
 
     private async Task ContinueAsGuestAsync()
     {

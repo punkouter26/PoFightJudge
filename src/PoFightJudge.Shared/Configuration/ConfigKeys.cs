@@ -27,6 +27,22 @@ public static class ConfigKeys
     {
         /// <summary>Explicit opt-in for FakeAuth + guest sign-in; honoured only outside Production.</summary>
         public const string AllowFakeAuth = $"{Root}:Auth:AllowFakeAuth";
+
+        /// <summary>
+        /// Explicit opt-in for the real Entra ID cookie scheme in Development. When <c>true</c> and the environment is
+        /// Development, the API registers an OIDC code-flow handler alongside the existing guest cookie endpoint, and
+        /// the WASM client shows a 'Sign in with Microsoft' button. Test and Production ignore this flag — Test keeps
+        /// FakeAuth for deterministic impersonation; Production already runs the prod Entra registration through MSAL.
+        /// </summary>
+        public const string AllowDevEntra = $"{Root}:Auth:AllowDevEntra";
+
+        /// <summary>
+        /// Dev Entra config (separate from the prod keys so the prod app registration stays untouched). Keys are
+        /// mapped from Key Vault secrets <c>PoFightJudge--AzureAd--ClientId-Dev</c> and <c>--TenantId-Dev</c> by the
+        /// existing <see cref="Shared.PoFightJudgeSecretManager"/>.
+        /// </summary>
+        public const string DevClientId = $"{Root}:AzureAd:DevClientId";
+        public const string DevTenantId = $"{Root}:AzureAd:DevTenantId";
     }
 
     /// <summary>Who may run <c>POST /api/seed/profiles</c> with a real login: a list of emails (Admin role always qualifies).</summary>
@@ -153,8 +169,15 @@ public static class Flags
     /// <summary>Require the admin role for /api/diag even in Development.</summary>
     public const string DiagRequiresAdminInDev = "DiagRequiresAdminInDev";
 
+    /// <summary>
+    /// True when the API is running the dev Entra OIDC scheme (Development AND <c>PoFightJudge:Auth:AllowDevEntra</c>
+    /// AND a dev client id is configured). The client renders the 'Sign in with Microsoft' button when this is on,
+    /// otherwise the guest button is the only door.
+    /// </summary>
+    public const string DevEntraEnabled = "DevEntraEnabled";
+
     public static readonly IReadOnlyList<string> All =
     [
-        UseFakeAi, DevGuestEnabled, HumanInWatch, BrowserSpeechRecognition, PreferFastVoice, TtsCacheEnabled, UseAzurite, DiagRequiresAdminInDev,
+        UseFakeAi, DevGuestEnabled, HumanInWatch, BrowserSpeechRecognition, PreferFastVoice, TtsCacheEnabled, UseAzurite, DiagRequiresAdminInDev, DevEntraEnabled,
     ];
 }

@@ -29,7 +29,7 @@ public class FakeAiBannerTests : BunitContext
     [Fact]
     public void Shows_when_the_api_says_the_ai_is_fake()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, false, false));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, false, false, DevEntraEnabled: false));
 
         var cut = Render<FakeAiBanner>();
 
@@ -39,7 +39,7 @@ public class FakeAiBannerTests : BunitContext
     [Fact]
     public void Stays_hidden_when_the_ai_is_real_or_the_api_is_unreachable()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, true, DevEntraEnabled: false));
         Render<FakeAiBanner>().Markup.Should().NotContain("Using fake AI");
 
         _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns<FeatureFlagsDto>(_ => throw new HttpRequestException("down"));

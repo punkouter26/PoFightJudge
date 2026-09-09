@@ -22,6 +22,11 @@ public sealed class FeatureFlagEndpoints : ICarterModule
                 // The server half of the gate on a person taking a side in WATCH; the client ANDs it with its own
                 // microphone check. A spoken turn is only offered when a transcriber can actually finish it.
                 HumanInWatch: await features.IsEnabledAsync(Flags.HumanInWatch) && transcription.IsEnabled,
-                BrowserSpeechRecognition: await features.IsEnabledAsync(Flags.BrowserSpeechRecognition))))
+                BrowserSpeechRecognition: await features.IsEnabledAsync(Flags.BrowserSpeechRecognition),
+                // Dev Entra: only when Development AND the AllowDevEntra flag is set AND a dev client id is configured.
+                // The client id check is what makes the gate fail-closed if KV is unavailable locally.
+                DevEntraEnabled: env.IsDevelopment()
+                    && config.GetValue<bool>(ConfigKeys.Auth.AllowDevEntra)
+                    && !string.IsNullOrWhiteSpace(config[ConfigKeys.Auth.DevClientId]))))
             .AllowAnonymous().WithTags("Diagnostics");
 }

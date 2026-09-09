@@ -78,6 +78,7 @@
 
 ## Phase J — From the feature review (2026-09-08)
 - [x] T54 WATCH replay: `GET /api/matches/{id}/turns` and a replay page for stored round audio
+- [x] T55 Dev env signs in with Microsoft or guest: BFF cookie scheme (OIDC code flow) registered in Development when `PoFightJudge:Auth:AllowDevEntra` is on and the dev Entra client id is in KV; Login page shows both buttons in Dev, MSAL only in Prod, FakeAuth only in Test. Dev Entra registration: `po-fightjudge-dev` (appId `af9ec924-980b-4bda-b5fe-afebcfc1b35a`, audience `AzureADandPersonalMicrosoftAccount`, redirect URIs `https://localhost:5001/signin-oidc` + 5000 + 127.0.0.1:5001 + 127.0.0.1:5000). Secrets: `PoFightJudge--AzureAd--ClientId-Dev` + `--TenantId-Dev` in `kv-poshared`.
 - [x] T55 Rate limits the client can see: 429 + `Retry-After` becomes a toast and a countdown
 - [x] T56 Run it back: rematch from a finished match, and setup remembers the last pair
 - [x] T57 Share a verdict: an opt-in, revocable read-only link

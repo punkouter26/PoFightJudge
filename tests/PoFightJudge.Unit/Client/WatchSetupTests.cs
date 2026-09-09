@@ -35,7 +35,7 @@ public class WatchSetupTests : BunitContext
         Services.AddSingleton(_simulation);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns(Cast());
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, HumanInWatch: true, true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, HumanInWatch: true, true, DevEntraEnabled: false));
     }
 
     private static IReadOnlyList<ProfileDto> Cast() =>
@@ -147,7 +147,7 @@ public class WatchSetupTests : BunitContext
     [Fact]
     public void A_person_is_only_offered_when_a_transcriber_could_finish_their_turn()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, HumanInWatch: false, true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, HumanInWatch: false, true, DevEntraEnabled: false));
 
         var cut = RenderSetup(onePlayer: true);
 
