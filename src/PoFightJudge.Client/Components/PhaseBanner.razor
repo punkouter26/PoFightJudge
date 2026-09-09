@@ -28,4 +28,16 @@
         SessionPhase.Verdict => "Both of you stop talking.",
         _ => "That is that.",
     };
+
+    private SessionPhase? _drawnPhase;
+    private string? _drawnTopic;
+
+    /// <summary>The phase changes four times in a fight; the snapshot that carries it arrives hundreds of times.</summary>
+    protected override bool ShouldRender() => _drawnPhase != Phase || !string.Equals(_drawnTopic, Topic, StringComparison.Ordinal);
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _drawnPhase = Phase;
+        _drawnTopic = Topic;
+    }
 }

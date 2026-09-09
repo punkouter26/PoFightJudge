@@ -133,18 +133,25 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         await Audio.ClearPlaybackAsync();
     });
 
-    public void OnCaption(CaptionDto caption) => Dispatch(() =>
+    /// <summary>
+    /// A caption fragment. These arrive several times a second while a line is being rewritten, and they say
+    /// nothing about the phase, the clock, the host or the scoreboard — CaptionFeed subscribes to the log and
+    /// redraws itself, so the page is only redrawn for the one fragment that does change something up here.
+    /// </summary>
+    public void OnCaption(CaptionDto caption)
     {
         _captions.Add(caption);
 
         // The host has finished a sentence; anything still queued is the tail of it.
-        if (caption is { Speaker: Speaker.Host, Final: true })
+        if (caption is { Speaker: Speaker.Host, Final: true } && _hostSpeaking)
         {
-            _hostSpeaking = false;
+            Dispatch(() =>
+            {
+                _hostSpeaking = false;
+                return Task.CompletedTask;
+            });
         }
-
-        return Task.CompletedTask;
-    });
+    }
 
     public void OnSnapshot(DebateSnapshotDto snapshot) => Dispatch(async () =>
     {

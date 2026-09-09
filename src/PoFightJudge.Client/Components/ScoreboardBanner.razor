@@ -74,4 +74,18 @@
         fighter is null || fighter.CreatedAt == fighter.LastSeenAt ? "First fight"
         : string.Equals(fighter.DisplayName, fighter.Tag, StringComparison.Ordinal) ? "Argued here before"
         : fighter.DisplayName;
+
+    private string? _drawn;
+
+    /// <summary>
+    /// Seven parameters, and a live fight publishes a snapshot that touches none of them several times a second.
+    /// What is actually on screen is the two names, the two records, who has the floor and whether the meter is
+    /// live — so that is what is compared, rather than the snapshot that carried it.
+    /// </summary>
+    protected override bool ShouldRender() => !string.Equals(OnScreen, _drawn, StringComparison.Ordinal);
+
+    protected override void OnAfterRender(bool firstRender) => _drawn = OnScreen;
+
+    private string OnScreen =>
+        string.Join('|', Player1, Player2, Record(Player1Record), Record(Player2Record), Speaking, Listening, HostSpeaking);
 }

@@ -16,6 +16,16 @@ public sealed class CaptionLog
 
     public IReadOnlyList<CaptionDto> Lines => _lines;
 
+    /// <summary>
+    /// Bumped on every change. The live API rewrites the line being spoken several times a second, and the page
+    /// that owns this log has a phase banner, a clock, a host indicator and a scoreboard on it that none of those
+    /// fragments touch — the feed watches this instead, and redraws alone.
+    /// </summary>
+    public int Version { get; private set; }
+
+    /// <summary>Raised after <see cref="Version"/> moves. Handlers run on whatever thread added the line.</summary>
+    public event EventHandler? Changed;
+
     public void Add(CaptionDto caption)
     {
         ArgumentNullException.ThrowIfNull(caption);
@@ -41,9 +51,21 @@ public sealed class CaptionLog
         {
             _lines.RemoveRange(0, _lines.Count - MaxLines);
         }
+
+        Bump();
     }
 
-    public void Clear() => _lines.Clear();
+    public void Clear()
+    {
+        _lines.Clear();
+        Bump();
+    }
+
+    private void Bump()
+    {
+        Version++;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>Where this speaker last appears, or -1 if they have not spoken yet.</summary>
     private int LastLineOf(Speaker speaker)

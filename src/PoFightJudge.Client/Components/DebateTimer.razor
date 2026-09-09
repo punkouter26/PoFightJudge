@@ -18,4 +18,22 @@
     private double Percent => Math.Clamp(100.0 * RemainingSeconds / Total, 0, 100);
 
     private string Clock => $"{RemainingSeconds / 60}:{RemainingSeconds % 60:00}";
+
+    private int _drawnElapsed = -1;
+    private int _drawnRemaining = -1;
+
+    /// <summary>
+    /// A live fight publishes a snapshot far more often than a second passes, and this shows seconds. Redrawing on
+    /// a snapshot that says the same time is a progress bar and two spans diffed for nothing.
+    ///
+    /// What was drawn is recorded after the render rather than inside the check: ShouldRender is not called for the
+    /// first one, so a check that recorded its own answer would let the second render through unconditionally.
+    /// </summary>
+    protected override bool ShouldRender() => ElapsedSeconds != _drawnElapsed || RemainingSeconds != _drawnRemaining;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _drawnElapsed = ElapsedSeconds;
+        _drawnRemaining = RemainingSeconds;
+    }
 }

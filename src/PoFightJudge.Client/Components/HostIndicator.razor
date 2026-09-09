@@ -11,4 +11,16 @@
     [Parameter] public bool Speaking { get; set; }
 
     private HostPersonaDto Host => HostPersonaCatalogue.For(Persona);
+
+    private HostPersonaId? _drawnPersona;
+    private bool _drawnSpeaking;
+
+    /// <summary>Two facts, one of which never changes during a fight. The voice level is a CSS variable, not a render.</summary>
+    protected override bool ShouldRender() => _drawnPersona != Persona || _drawnSpeaking != Speaking;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _drawnPersona = Persona;
+        _drawnSpeaking = Speaking;
+    }
 }

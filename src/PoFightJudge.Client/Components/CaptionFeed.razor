@@ -1,4 +1,10 @@
-@* What is being said, as it is said. A log region so a screen reader reads new lines without stealing focus. *@
+@implements IDisposable
+
+@* What is being said, as it is said. A log region so a screen reader reads new lines without stealing focus.
+
+   This component subscribes to its own log rather than being redrawn by the page that owns it: the live API
+   rewrites the line being spoken several times a second, and none of those fragments say anything about the phase
+   banner, the clock, the host indicator or the scoreboard above it. *@
 <section class="captions po-glass" role="log" aria-live="polite" aria-label="What is being said">
     @if (Log.Lines.Count == 0)
     {
@@ -24,6 +30,54 @@
     [Parameter] public string Player2Name { get; set; } = "Fighter two";
 
     [Parameter] public string HostName { get; set; } = "The host";
+
+    /// <summary>The log currently subscribed to, so a changed <c>Log</c> parameter moves the subscription with it.</summary>
+    private CaptionLog? _subscribed;
+
+    /// <summary>What is on screen, so a parent redraw that changed nothing here does not become one.</summary>
+    private int _drawn = -1;
+    private string _names = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_subscribed, Log))
+        {
+            return;
+        }
+
+        if (_subscribed is not null)
+        {
+            _subscribed.Changed -= OnLogChanged;
+        }
+
+        _subscribed = Log;
+        _subscribed.Changed += OnLogChanged;
+    }
+
+    /// <summary>
+    /// Recorded after the render rather than inside the check: ShouldRender is not called for the first one, so a
+    /// check that recorded its own answer would let the second render through unconditionally.
+    /// </summary>
+    protected override bool ShouldRender() => Log.Version != _drawn || !string.Equals(Names, _names, StringComparison.Ordinal);
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _drawn = Log.Version;
+        _names = Names;
+    }
+
+    private string Names => $"{Player1Name}|{Player2Name}|{HostName}";
+
+    public void Dispose()
+    {
+        if (_subscribed is not null)
+        {
+            _subscribed.Changed -= OnLogChanged;
+            _subscribed = null;
+        }
+    }
+
+    private void OnLogChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
     private string NameFor(Speaker speaker) => speaker switch
     {
