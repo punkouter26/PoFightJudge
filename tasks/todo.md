@@ -111,3 +111,4 @@
 ## Phase M — AI pipeline audit (2026-09-09)
 - [x] T79 WATCH reads the streams it already serves: the line as it is written, the audio clause by clause
 - [x] T80 The next line is given a voice while this one is still being spoken
+- [x] T81 The judge caches its shared prefix by name and assesses both players at once

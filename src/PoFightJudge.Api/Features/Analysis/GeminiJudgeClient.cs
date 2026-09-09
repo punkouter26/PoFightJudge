@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Options;
 using PoFightJudge.Api.Features.Ai;
 
 using PoFightJudge.Shared.Models;
@@ -39,14 +40,27 @@ public interface IGeminiJudgeClient
 /// nested schemas may be rejected", and <c>$ref</c> is rejected outright by this API, so there is no way to declare
 /// the assessment once and use it twice. One player per call is what fits.
 ///
-/// The calls go out in order rather than together. They share a long identical prefix — the instructions, the
-/// recording and the session data — and only the trailing task line differs, so the second one arrives while that
-/// prefix is still worth caching. The ruling stays separate: it is cheap, it needs no audio, and folding it back in
-/// is what overran the output ceiling when this was one monolithic call.
+/// The two assessments share a long identical prefix — the instructions, the recording and the session data —
+/// and only the trailing task line differs. That prefix is uploaded once as a cachedContents resource and both
+/// calls name it, which buys the discount outright instead of hoping the provider's implicit cache is still warm,
+/// and lets the two go out together rather than one behind the other. Explicit caching has a minimum token count
+/// a very short fight may not reach, so a refused cache falls back to the inline requests unchanged.
+///
+/// The ruling stays separate: it is cheap, it needs no audio, and folding it back in is what overran the output
+/// ceiling when this was one monolithic call.
 /// </remarks>
-public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, GeminiModelOptions models, ILogger<GeminiJudgeClient> logger) : IGeminiJudgeClient
+public sealed partial class GeminiJudgeClient(
+    IHttpClientFactory factory,
+    GeminiModelOptions models,
+    IOptions<AnalysisOptions> options,
+    ILogger<GeminiJudgeClient> logger) : IGeminiJudgeClient
 {
     private const string ServiceTierField = "service_tier";
+
+    private const string CachedContentField = "cachedContent";
+
+    /// <summary>Where a cachedContents resource is created and deleted, relative to the client base address.</summary>
+    public const string CachePath = "v1beta/cachedContents";
 
 
     /// <summary>Serializer for the stored report JSON (enums as strings so the blob is readable and stable).</summary>
@@ -73,12 +87,100 @@ public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, Gemini
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // One player at a time — the schema for both at once is refused — and in order, so the second call finds
-        // the shared prefix warm. The ruling then needs only the two scorelines.
-        var player1 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models), ct);
-        var player2 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models), ct);
-        var overall = await RuleAsync(request, player1, player2, ct);
-        return new JudgeOutputDto(player1, player2, overall);
+        // One player at a time: the schema for both at once is refused. Whether the two calls can go out together
+        // depends on whether their shared prefix could be cached under a name — without one they would each be
+        // re-uploading the whole recording, and sending them in order at least leaves the implicit cache a chance.
+        var cache = await CreateCacheAsync(request, ct);
+        try
+        {
+            PlayerAssessmentDto player1;
+            PlayerAssessmentDto player2;
+            if (cache is null)
+            {
+                player1 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models), ct);
+                player2 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models), ct);
+            }
+            else
+            {
+                var first = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models, cache), ct);
+                var second = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models, cache), ct);
+                player1 = await first;
+                player2 = await second;
+            }
+
+            var overall = await RuleAsync(request, player1, player2, ct);
+            return new JudgeOutputDto(player1, player2, overall);
+        }
+        finally
+        {
+            if (cache is not null)
+            {
+                await DeleteCacheAsync(cache);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Uploads the shared prefix under a name, or answers null. Null is not a failure worth stopping for: the
+    /// caller sends the prefix inline instead, which is exactly what it did before there was a cache at all. The
+    /// documented reasons to expect one are a fight too short to reach the minimum token count and the flag being
+    /// off, and neither is a reason to lose a report.
+    /// </summary>
+    private async Task<string?> CreateCacheAsync(JudgeRequest request, CancellationToken ct)
+    {
+        var ttl = TimeSpan.FromSeconds(Math.Max(1, options.Value.JudgeCacheTtlSeconds));
+        if (!options.Value.JudgeContextCache)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var http = factory.CreateClient(GeminiHttpClients.Analysis);
+            using var content = new StringContent(BuildCacheRequest(request, models, ttl), Encoding.UTF8, "application/json");
+            using var response = await http.PostAsync(new Uri(CachePath, UriKind.Relative), content, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = GeminiHttp.Truncate(body, 200);
+                LogCacheRefused(logger, (int)response.StatusCode, detail);
+                return null;
+            }
+
+            var name = ParseCacheName(body);
+            if (name is not null)
+            {
+                LogCached(logger, name);
+            }
+
+            return name;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            LogCacheUnavailable(logger, ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Best-effort tidy-up. A cache is billed for as long as it is stored, and the TTL is the backstop rather than
+    /// the plan; a delete that fails costs the rest of one TTL and must never surface as a failed analysis.
+    /// </summary>
+    private async Task DeleteCacheAsync(string name)
+    {
+        try
+        {
+            using var http = factory.CreateClient(GeminiHttpClients.Analysis);
+            using var response = await http.DeleteAsync(new Uri($"v1beta/{name}", UriKind.Relative), CancellationToken.None);
+            if (!response.IsSuccessStatusCode)
+            {
+                LogCacheNotDeleted(logger, name, (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            LogCacheNotDeleted(logger, name, 0);
+        }
     }
 
     private Task<JudgeOverallDto> RuleAsync(JudgeRequest request, PlayerAssessmentDto p1, PlayerAssessmentDto p2, CancellationToken ct) =>
@@ -139,15 +241,62 @@ public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, Gemini
     /// One player's assessment: instructions, the audio, the shared session data, then the task. Everything before
     /// the task is identical between the two calls, which is what makes the prefix worth caching.
     /// </summary>
-    public static string BuildAssessmentRequest(JudgeRequest request, bool first, GeminiModelOptions options) => Request(
-        new JsonArray(
-            Text(Instructions),
-            File(request),
-            Text(SessionData(request)),
-            Text(AssessmentTask(request, first))),
-        AnalysisSchema.PlayerAssessment(),
-        options,
-        MaxOutputTokens);
+    public static string BuildAssessmentRequest(JudgeRequest request, bool first, GeminiModelOptions options) =>
+        BuildAssessmentRequest(request, first, options, cacheName: null);
+
+    /// <summary>
+    /// The same, against a cached prefix when there is one: the task is all that is sent, and the instructions, the
+    /// recording and the session data are read from the cache the name points at.
+    /// </summary>
+    public static string BuildAssessmentRequest(JudgeRequest request, bool first, GeminiModelOptions options, string? cacheName)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var parts = cacheName is null
+            ? new JsonArray(
+                Text(Instructions),
+                File(request),
+                Text(SessionData(request)),
+                Text(AssessmentTask(request, first)))
+            : new JsonArray(Text(AssessmentTask(request, first)));
+
+        return Request(parts, AnalysisSchema.PlayerAssessment(), options, MaxOutputTokens, cacheName);
+    }
+
+    /// <summary>
+    /// The prefix, as a cachedContents resource. Everything here is identical between the two assessments, which is
+    /// the whole reason it can be sent once; the task line is deliberately not in it.
+    /// </summary>
+    public static string BuildCacheRequest(JudgeRequest request, GeminiModelOptions options, TimeSpan ttl)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(options);
+
+        return new JsonObject
+        {
+            // The cache is bound to one model: a name created against another is refused at generateContent.
+            ["model"] = $"models/{options.Judge}",
+            ["contents"] = new JsonArray(new JsonObject
+            {
+                ["role"] = "user",
+                ["parts"] = new JsonArray(Text(Instructions), File(request), Text(SessionData(request))),
+            }),
+            ["ttl"] = $"{(long)ttl.TotalSeconds}s",
+        }.ToJsonString();
+    }
+
+    /// <summary>The name of a cache that was actually created, or null for anything else — a refusal, an error body, a blank.</summary>
+    public static string? ParseCacheName(string body)
+    {
+        try
+        {
+            return (JsonNode.Parse(body) as JsonObject)?["name"]?.GetValue<string>() is { Length: > 0 } name ? name : null;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>The ruling. Text only — the audio said everything it had to say in the assessments.</summary>
     public static string BuildOverallRequest(JudgeRequest request, PlayerAssessmentDto p1, PlayerAssessmentDto p2, GeminiModelOptions options) => Request(
@@ -157,9 +306,10 @@ public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, Gemini
             Text(RulingTask(request, p1, p2))),
         AnalysisSchema.Overall(),
         options,
-        MaxOutputTokens);
+        MaxOutputTokens,
+        cacheName: null);
 
-    private static string Request(JsonArray parts, JsonObject schema, GeminiModelOptions options, int maxOutputTokens)
+    private static string Request(JsonArray parts, JsonObject schema, GeminiModelOptions options, int maxOutputTokens, string? cacheName)
     {
         var generationConfig = new JsonObject
         {
@@ -180,6 +330,11 @@ public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, Gemini
             ["contents"] = new JsonArray(new JsonObject { ["role"] = "user", ["parts"] = parts }),
             ["generationConfig"] = generationConfig,
         };
+
+        if (cacheName is { Length: > 0 })
+        {
+            body[CachedContentField] = cacheName;
+        }
 
         // Nobody is waiting on this call in real time — the client polls — so it runs at the discounted tier.
         if (!string.IsNullOrWhiteSpace(options.JudgeServiceTier))
@@ -315,4 +470,16 @@ public sealed partial class GeminiJudgeClient(IHttpClientFactory factory, Gemini
 
     [LoggerMessage(EventId = 5301, Level = LogLevel.Warning, Message = "The judge's discount tier is busy; the same request goes again at the standard tier.")]
     private static partial void LogFlexBusy(ILogger logger, Exception ex);
+
+    [LoggerMessage(EventId = 5302, Level = LogLevel.Information, Message = "Judge prefix cached as {Name}; both assessments read it.")]
+    private static partial void LogCached(ILogger logger, string name);
+
+    [LoggerMessage(EventId = 5303, Level = LogLevel.Information, Message = "The judge's prefix was not cached (HTTP {Status}: {Detail}); the assessments carry it inline instead.")]
+    private static partial void LogCacheRefused(ILogger logger, int status, string detail);
+
+    [LoggerMessage(EventId = 5304, Level = LogLevel.Warning, Message = "The cache endpoint could not be reached; the assessments carry the prefix inline instead.")]
+    private static partial void LogCacheUnavailable(ILogger logger, Exception ex);
+
+    [LoggerMessage(EventId = 5305, Level = LogLevel.Warning, Message = "Judge cache {Name} was not deleted (HTTP {Status}); it will expire on its own.")]
+    private static partial void LogCacheNotDeleted(ILogger logger, string name, int status);
 }

@@ -38,4 +38,19 @@ public sealed class AnalysisOptions
     /// mid-fight costs a few seconds rather than the analysis.
     /// </summary>
     public double ClientTranscriptWaitSeconds { get; set; } = 3;
+
+    /// <summary>
+    /// Upload the two assessments' shared prefix — the instructions, the recording and the session data — once as a
+    /// cachedContents resource, so both read it by name and can go out together. On by default: it is the same
+    /// bytes either way, and the alternative is hoping the provider's implicit cache is still warm while the calls
+    /// queue behind each other to give it the chance. A refused cache falls back to sending the prefix inline.
+    /// </summary>
+    public bool JudgeContextCache { get; set; } = true;
+
+    /// <summary>
+    /// How long the cache is allowed to live. It is deleted as soon as the ruling is written, so this is the
+    /// backstop for an analysis that died halfway rather than the plan — and it is billed by storage time, which is
+    /// why it is minutes rather than hours.
+    /// </summary>
+    public int JudgeCacheTtlSeconds { get; set; } = 600;
 }

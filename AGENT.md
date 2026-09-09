@@ -99,6 +99,10 @@ Each was a deliberate decision made while building; the commit that made it says
   `wwwroot/appsettings.json` had shipped with empty MSAL values, which curl cannot see but `DeployedSiteTests` did.
 - The **transcription fallback** has never run against the real service: both real fights had usable live
   captions, which the pipeline prefers.
+- The judge's **explicit context cache** (T81) has never run against the real service either. The shape is from the
+  published reference, the fallback to inline parts is tested, and a refusal is logged rather than fatal — but
+  whether a real fight's prefix clears the minimum token count is a measurement nobody has taken. The log line at
+  event 5302/5303 says which way it went on any given fight.
 
 The real-key measurements for CP4, CP5 and CP6 are done (2026-09-07) and written up in `docs/CP4.md`,
 `docs/CP5.md`, `docs/CP6.md` and `docs/VERIFICATION.md`. They were worth running: nine defects came out of them,
