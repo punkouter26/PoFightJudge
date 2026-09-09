@@ -97,7 +97,7 @@
 
 ## Phase L — UI/UX review (2026-09-08)
 - [x] T69 Tokens that resolve: eight dead `var(--po-*)` references fixed, and a guard so the next one fails a test
-- [ ] T70 The viewport a phone actually has: `dvh` and the safe-area insets
+- [x] T70 The viewport a phone actually has: `dvh` and the safe-area insets
 - [ ] T71 Touch targets that are the size the stylesheet claims
 - [ ] T72 Headings in order: a card does not decide the document outline
 - [ ] T73 Nothing jumps after first paint: the banners hold their slot

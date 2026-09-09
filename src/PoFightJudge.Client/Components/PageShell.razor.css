@@ -1,7 +1,10 @@
+/* The gutters take whichever is larger, the design's own or the frame's inset, so a landscape notch never eats a
+   word; the bottom adds the home indicator to the page's own tail rather than choosing between them. */
 .po-shell {
   width: 100%;
   margin: 0 auto;
-  padding: var(--po-space-6) var(--po-page-gutter) var(--po-space-8);
+  padding-block: var(--po-space-6) calc(var(--po-space-8) + var(--po-safe-b));
+  padding-inline: max(var(--po-page-gutter), var(--po-safe-l)) max(var(--po-page-gutter), var(--po-safe-r));
 }
 
 .narrow { max-width: calc(var(--po-page-narrow) + 2 * var(--po-page-gutter)); }
@@ -44,7 +47,8 @@ h1 {
 
 @media (max-width: 40rem) {
   .po-shell {
-    padding: var(--po-space-4) var(--po-space-4) var(--po-space-7);
+    padding-block: var(--po-space-4) calc(var(--po-space-7) + var(--po-safe-b));
+    padding-inline: max(var(--po-space-4), var(--po-safe-l)) max(var(--po-space-4), var(--po-safe-r));
   }
 
   .head {

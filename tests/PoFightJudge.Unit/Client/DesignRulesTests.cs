@@ -87,6 +87,39 @@ public partial class DesignRulesTests
     }
 
     /// <summary>
+    /// A phone's viewport is not 100vh. Mobile browsers size vh against the toolbar-less viewport, so an element
+    /// asked for 100vh is taller than the screen the moment the toolbar is showing — which is a scrollbar on a page
+    /// that fits. dvh is the unit that tracks the toolbar; vh is kept only as the line above it, for a browser that
+    /// does not know dvh yet.
+    /// </summary>
+    [Fact]
+    public void Full_height_is_measured_in_dynamic_viewport_units()
+    {
+        var problems = new List<string>();
+        foreach (var file in StyleSheets())
+        {
+            var lines = File.ReadAllLines(file);
+            var name = Path.GetRelativePath(ClientRoot, file);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                if (!lines[i].Contains("100vh", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                // The fallback is the declaration immediately above its dvh twin; on its own it is the bug.
+                var next = i + 1 < lines.Length ? lines[i + 1] : string.Empty;
+                if (!next.Contains("100dvh", StringComparison.Ordinal))
+                {
+                    problems.Add($"{name}:{i + 1}: 100vh with no 100dvh on the line below it");
+                }
+            }
+        }
+
+        problems.Should().BeEmpty("vh overflows a phone's viewport by the height of its toolbar");
+    }
+
+    /// <summary>
     /// Tokens no stylesheet declares because JavaScript sets them on an element every frame. They are listed rather
     /// than pattern-matched so that adding one is a decision somebody makes.
     /// </summary>
