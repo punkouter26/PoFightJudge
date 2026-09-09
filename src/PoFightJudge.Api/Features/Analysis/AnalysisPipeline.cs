@@ -99,9 +99,15 @@ public sealed partial class AnalysisPipeline(
         // and then generateContent answers 400 INVALID_ARGUMENT for it — measured against the live endpoint on
         // 2026-09-07, under audio/ogg and audio/opus alike, where the same clip as a WAV is accepted. So the disk
         // keeps the small version and the model gets the one it will read.
-        var buffer = await ReadRecordingAsync(blobs, blobName, ct);
+        //
+        // Scoped to the upload and nothing more: a recording is tens of megabytes, and holding it for the length of
+        // the analysis meant two concurrent fights were carrying both of them through the judge as well.
         const string MimeType = "audio/wav";
-        var file = await files.UploadAndWaitAsync(buffer, buffer.Length, MimeType, $"{matchId.Value}-players.wav", clock, ct);
+        GeminiFile file;
+        await using (var recording = await RecordingSource.OpenAsync(blobs, blobName, DebateOrchestrator.PlayerSampleRate, ct))
+        {
+            file = await files.UploadAndWaitAsync(recording.Content, recording.Length, MimeType, $"{matchId.Value}-players.wav", clock, ct);
+        }
 
         // The cheapest usable transcript wins. Only a fight that produced neither is worth paying to diarize.
         var (existing, source) = await ReadExistingTranscriptAsync(blobs, matchId, ct);
@@ -238,27 +244,6 @@ public sealed partial class AnalysisPipeline(
         return await ReadClientTranscriptAsync(blobs, matchId, ct) is { } browser
             ? (browser, "on-device")
             : (null, "diarized");
-    }
-
-    /// <summary>
-    /// The recording, as 16-bit PCM in a WAV, whichever way it was stored. Opus is the format on disk and nothing
-    /// more: everything that reads a recording — the model, the slicer, a person listening back — wants samples.
-    /// </summary>
-    private static async Task<MemoryStream> ReadRecordingAsync(IAudioBlobStore blobs, string blobName, CancellationToken ct)
-    {
-        await using var audio = await blobs.OpenReadAsync(blobName, ct)
-            ?? throw new InvalidOperationException("The recording is missing from storage.");
-
-        using var stored = new MemoryStream();
-        await audio.CopyToAsync(stored, ct);
-
-        if (!OpusAudio.IsOpus(blobName))
-        {
-            stored.Position = 0;
-            return new MemoryStream(stored.ToArray(), writable: false);
-        }
-
-        return new MemoryStream(OpusAudio.DecodeToWav(stored.ToArray(), DebateOrchestrator.PlayerSampleRate), writable: false);
     }
 
     /// <summary>Reads one stored transcript. Anything missing or malformed is simply not there.</summary>

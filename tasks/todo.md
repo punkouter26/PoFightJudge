@@ -113,3 +113,4 @@
 - [x] T80 The next line is given a voice while this one is still being spoken
 - [x] T81 The judge caches its shared prefix by name and assesses both players at once
 - [x] T82 What the judge spends is on the ledger, so the cached share can be read rather than assumed
+- [x] T83 The recording goes to the model without being copied through memory four times

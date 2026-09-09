@@ -93,27 +93,36 @@ public sealed class WavWriter(int sampleRate) : IDisposable
         }
     }
 
+    /// <summary>A canonical PCM16 mono WAV header: RIFF, fmt and the start of data.</summary>
+    public const int HeaderBytes = 44;
+
     public static byte[] Build(int sampleRate, ReadOnlySpan<byte> pcm16)
     {
-        var header = new byte[44];
-        "RIFF"u8.CopyTo(header);
-        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(4), 36 + pcm16.Length);
-        "WAVE"u8.CopyTo(header.AsSpan(8));
-        "fmt "u8.CopyTo(header.AsSpan(12));
-        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(16), 16);
-        BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(20), 1);
-        BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(22), 1);
-        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(24), sampleRate);
-        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(28), sampleRate * 2);
-        BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(32), 2);
-        BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(34), 16);
-        "data"u8.CopyTo(header.AsSpan(36));
-        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(40), pcm16.Length);
-
-        var wav = new byte[44 + pcm16.Length];
-        header.CopyTo(wav, 0);
-        pcm16.CopyTo(wav.AsSpan(44));
+        var wav = new byte[HeaderBytes + pcm16.Length];
+        WriteHeader(wav.AsSpan(0, HeaderBytes), sampleRate, pcm16.Length);
+        pcm16.CopyTo(wav.AsSpan(HeaderBytes));
         return wav;
+    }
+
+    /// <summary>
+    /// Writes the header in place, so a caller that decoded straight into a buffer with room reserved at the front
+    /// can finish the file without copying the samples a second time.
+    /// </summary>
+    public static void WriteHeader(Span<byte> header, int sampleRate, int dataBytes)
+    {
+        "RIFF"u8.CopyTo(header);
+        BinaryPrimitives.WriteInt32LittleEndian(header[4..], 36 + dataBytes);
+        "WAVE"u8.CopyTo(header[8..]);
+        "fmt "u8.CopyTo(header[12..]);
+        BinaryPrimitives.WriteInt32LittleEndian(header[16..], 16);
+        BinaryPrimitives.WriteInt16LittleEndian(header[20..], 1);
+        BinaryPrimitives.WriteInt16LittleEndian(header[22..], 1);
+        BinaryPrimitives.WriteInt32LittleEndian(header[24..], sampleRate);
+        BinaryPrimitives.WriteInt32LittleEndian(header[28..], sampleRate * 2);
+        BinaryPrimitives.WriteInt16LittleEndian(header[32..], 2);
+        BinaryPrimitives.WriteInt16LittleEndian(header[34..], 16);
+        "data"u8.CopyTo(header[36..]);
+        BinaryPrimitives.WriteInt32LittleEndian(header[40..], dataBytes);
     }
 
     /// <summary>Root-mean-square of a 16-bit little-endian PCM frame, 0 to 1. This is what the silence gate reads.</summary>

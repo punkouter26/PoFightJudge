@@ -99,9 +99,59 @@ public static class OpusAudio
         using var decoder = OpusCodecFactory.CreateDecoder(sampleRate, 1);
         var reader = new OpusOggReadStream(decoder, input);
 
+        using var pcm = DecodeTo(ogg, sampleRate, reserveHeader: 0);
+        return pcm.ToArray();
+    }
+
+    /// <summary>
+    /// The same recording as a WAV, for everything downstream that reads one.
+    /// </summary>
+    /// <remarks>
+    /// Decoded straight into the buffer the WAV is returned in. Going through <see cref="Decode"/> built the audio
+    /// three times over — the decoder's own growing stream, the array <c>ToArray</c> copied out of it, and the WAV
+    /// built around that — which on a fifteen-minute fight is about 86 MB of transient allocation for 28 MB of
+    /// sound, on a plan with a gigabyte and two analyses allowed at once.
+    /// </remarks>
+    public static byte[] DecodeToWav(byte[] ogg, int sampleRate)
+    {
+        using var buffer = DecodeTo(ogg, sampleRate, reserveHeader: WavWriter.HeaderBytes);
+        var wav = buffer.GetBuffer();
+        var length = (int)buffer.Length;
+
+        WavWriter.WriteHeader(wav.AsSpan(0, WavWriter.HeaderBytes), sampleRate, length - WavWriter.HeaderBytes);
+
+        // GetBuffer hands back the whole capacity, which is rarely the length; the WAV is only the used part.
+        return wav.Length == length ? wav : wav.AsSpan(0, length).ToArray();
+    }
+
+    /// <summary>
+    /// Decodes into one stream, leaving <paramref name="reserveHeader"/> bytes at the front for a caller that wants
+    /// to write a header in front of the samples without copying them again.
+    /// </summary>
+    private static MemoryStream DecodeTo(byte[] ogg, int sampleRate, int reserveHeader)
+    {
+        ArgumentNullException.ThrowIfNull(ogg);
+        if (!IsSupportedRate(sampleRate))
+        {
+            throw new ArgumentOutOfRangeException(nameof(sampleRate), sampleRate, "Opus decodes to 8, 12, 16, 24 or 48 kHz.");
+        }
+
+        using var input = new MemoryStream(ogg);
+        using var decoder = OpusCodecFactory.CreateDecoder(sampleRate, 1);
+        var reader = new OpusOggReadStream(decoder, input);
+
         // A frame is at most 60 ms; the buffer is sized for the largest one the format allows.
         var buffer = new short[sampleRate / 1000 * 60];
-        using var pcm = new MemoryStream();
+
+        // Sized up front from what the compressed side weighs, so the stream is not reallocated and recopied a
+        // dozen times on the way to its final size. Being a little wrong costs one resize; being absent costs all
+        // of them.
+        var expected = reserveHeader + (ogg.Length * (sampleRate * 2) / Math.Max(1, BitsPerSecond / 8));
+        var pcm = new MemoryStream(expected);
+        pcm.SetLength(reserveHeader);
+        pcm.Position = reserveHeader;
+
+        var bytes = new byte[buffer.Length * 2];
         while (reader.HasNextPacket)
         {
             var packet = reader.ReadNextRawPacket();
@@ -113,14 +163,13 @@ public static class OpusAudio
             var decoded = decoder.Decode(packet, buffer, buffer.Length, false);
             for (var i = 0; i < decoded; i++)
             {
-                pcm.WriteByte((byte)(buffer[i] & 0xFF));
-                pcm.WriteByte((byte)((buffer[i] >> 8) & 0xFF));
+                bytes[i * 2] = (byte)(buffer[i] & 0xFF);
+                bytes[(i * 2) + 1] = (byte)((buffer[i] >> 8) & 0xFF);
             }
+
+            pcm.Write(bytes, 0, decoded * 2);
         }
 
-        return pcm.ToArray();
+        return pcm;
     }
-
-    /// <summary>The same recording as a WAV, for everything downstream that reads one.</summary>
-    public static byte[] DecodeToWav(byte[] ogg, int sampleRate) => WavWriter.Build(sampleRate, Decode(ogg, sampleRate));
 }
