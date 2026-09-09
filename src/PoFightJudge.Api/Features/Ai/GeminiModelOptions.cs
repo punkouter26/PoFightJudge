@@ -15,6 +15,7 @@ public sealed record GeminiModelOptions(
     string Tts,
     string Live,
     string Transcribe,
+    string TurnTranscribe,
     string Voice,
     string JudgeThinkingLevel,
     string JudgeServiceTier)
@@ -26,6 +27,10 @@ public sealed record GeminiModelOptions(
         Tts: "gemini-3.1-flash-tts-preview",
         Live: "gemini-3.1-flash-live-preview",
         Transcribe: "gemini-3.5-transcribe",
+
+        // Not the transcribe tier: on generateContent it answers 200 and returns an empty part every
+        // time, which reaches a player as a turn that heard nothing. Flash-lite reads the same clip.
+        TurnTranscribe: "gemini-3.1-flash-lite",
         Voice: "Puck",
         JudgeThinkingLevel: "low",
         JudgeServiceTier: "flex");
@@ -37,6 +42,7 @@ public sealed record GeminiModelOptions(
         Tts: Pick(configuration, ConfigKeys.Ai.TtsModel, Defaults.Tts),
         Live: Pick(configuration, ConfigKeys.Ai.LiveModel, Defaults.Live),
         Transcribe: Pick(configuration, ConfigKeys.Ai.TranscribeModel, Defaults.Transcribe),
+        TurnTranscribe: Pick(configuration, ConfigKeys.Ai.TurnTranscribeModel, Defaults.TurnTranscribe),
         Voice: Pick(configuration, ConfigKeys.Ai.Voice, Defaults.Voice),
         JudgeThinkingLevel: Pick(configuration, ConfigKeys.Ai.JudgeThinkingLevel, Defaults.JudgeThinkingLevel),
         JudgeServiceTier: Pick(configuration, ConfigKeys.Ai.JudgeServiceTier, Defaults.JudgeServiceTier));

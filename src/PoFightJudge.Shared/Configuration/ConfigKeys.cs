@@ -50,6 +50,13 @@ public static class ConfigKeys
         public const string TtsModel = $"{Section}:TtsModel";
         public const string LiveModel = $"{Section}:LiveModel";
         public const string TranscribeModel = $"{Section}:TranscribeModel";
+
+        /// <summary>
+        /// The live human turn, which goes through <c>generateContent</c> rather than the diarizing
+        /// <c>interactions</c> API. It is a separate key because the two surfaces do not accept the same
+        /// model: see <c>GeminiTranscriptionService</c> for what the transcribe tier does to a turn.
+        /// </summary>
+        public const string TurnTranscribeModel = $"{Section}:TurnTranscribeModel";
         public const string Voice = $"{Section}:Voice";
         public const string JudgeThinkingLevel = $"{Section}:JudgeThinkingLevel";
         public const string JudgeServiceTier = $"{Section}:JudgeServiceTier";

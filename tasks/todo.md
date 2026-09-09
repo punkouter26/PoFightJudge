@@ -140,3 +140,4 @@
 
 ## Phase P — The spoken turn (2026-09-09)
 - [x] T103 A turn you only have to talk into: the microphone opens, a two-second pause ends it, and the line sends itself
+- [x] T104 The spoken turn gets its own transcriber: one model id served two Gemini surfaces, and the one the diarizer needs returns an empty turn on generateContent

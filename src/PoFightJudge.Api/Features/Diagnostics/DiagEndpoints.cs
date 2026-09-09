@@ -38,6 +38,7 @@ public sealed class DiagEndpoints : ICarterModule
                     config[ConfigKeys.Ai.TtsModel] ?? string.Empty,
                     config[ConfigKeys.Ai.LiveModel] ?? string.Empty,
                     config[ConfigKeys.Ai.TranscribeModel] ?? string.Empty,
+                    config[ConfigKeys.Ai.TurnTranscribeModel] ?? string.Empty,
                     config[ConfigKeys.Ai.Voice] ?? string.Empty),
                 toggles,
                 latency.Snapshot(),

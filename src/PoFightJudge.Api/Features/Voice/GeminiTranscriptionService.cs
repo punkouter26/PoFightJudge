@@ -17,7 +17,10 @@ namespace PoFightJudge.Api.Features.Voice;
 /// The model is config-driven and the default matters. Measured against <c>generateContent</c>,
 /// <c>gemini-3.5-transcribe</c> accepts the request, bills the audio tokens, returns HTTP 200 with
 /// <c>finishReason: STOP</c> — and emits an empty part every time; the flash-lite tier transcribes the same clip
-/// correctly and is the only tier tested that refuses non-speech instead of inventing dialogue over it.
+/// correctly and is the only tier tested that refuses non-speech instead of inventing dialogue over it. So this
+/// reads <see cref="GeminiModelOptions.TurnTranscribe"/> and not <c>Transcribe</c>, which belongs to the diarizing
+/// <c>interactions</c> call in <c>GeminiTranscribeClient</c> and is correct there. One key for both was the bug:
+/// the value the diarizer needs silently returned an empty turn to every player who spoke.
 /// </remarks>
 public sealed partial class GeminiTranscriptionService(IHttpClientFactory httpClients, GeminiModelOptions models, AiMode mode, AiLatencyTracker latency, ILogger<GeminiTranscriptionService> logger) : ITranscriptionService
 {
@@ -55,11 +58,11 @@ public sealed partial class GeminiTranscriptionService(IHttpClientFactory httpCl
         using var content = new StringContent(BuildPayload(wav).ToJsonString(JsonOptions), Encoding.UTF8, "application/json");
 
         var started = Stopwatch.GetTimestamp();
-        using var response = await client.PostAsync(GeminiTextClient.Endpoint(models.Transcribe, stream: false), content, ct);
+        using var response = await client.PostAsync(GeminiTextClient.Endpoint(models.TurnTranscribe, stream: false), content, ct);
         var raw = await response.Content.ReadAsStringAsync(ct);
         var elapsed = Stopwatch.GetElapsedTime(started);
         latency.Record(Operation, elapsed.TotalMilliseconds);
-        LogCompleted(logger, models.Transcribe, wav.Length, elapsed.TotalMilliseconds, (int)response.StatusCode);
+        LogCompleted(logger, models.TurnTranscribe, wav.Length, elapsed.TotalMilliseconds, (int)response.StatusCode);
 
         JsonObject? body = null;
         try

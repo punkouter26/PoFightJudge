@@ -36,7 +36,7 @@ public sealed record HealthCheckDto(string Name, HealthState State, string Detai
 public sealed record HealthReportDto(string Environment, HealthState Overall, DateTimeOffset Timestamp, IReadOnlyList<HealthCheckDto> Checks);
 
 /// <summary>Model ids in use per operation, as reported by /api/diag.</summary>
-public sealed record ModelIdsDto(string Round, string Judge, string Profile, string Tts, string Live, string Transcribe, string Voice);
+public sealed record ModelIdsDto(string Round, string Judge, string Profile, string Tts, string Live, string Transcribe, string TurnTranscribe, string Voice);
 
 /// <summary>
 /// What <c>/api/diag</c> reports: environment, readiness, provider presence and the model ids in use. Presence only —
