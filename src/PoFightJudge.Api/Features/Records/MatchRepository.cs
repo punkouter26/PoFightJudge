@@ -37,12 +37,6 @@ public interface IMatchRepository
     /// </summary>
     Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default);
 
-    /// <summary>Attaches a fight's embedding to its analysis row. Best-effort: a fight without one is simply not findable by meaning.</summary>
-    Task SaveVectorAsync(MatchId id, IReadOnlyList<float> vector, string describedAs, CancellationToken ct = default);
-
-    /// <summary>The embeddings for one account's fights, for a search to rank. Fights with no vector are left out.</summary>
-    Task<IReadOnlyList<FightVectorRow>> ListVectorsAsync(string userId, CancellationToken ct = default);
-
     /// <summary>Removes the match and everything hanging off it. Returns false when there was nothing to delete.</summary>
     Task<bool> DeleteAsync(string userId, MatchId id, CancellationToken ct = default);
 }
@@ -189,60 +183,6 @@ public sealed class MatchRepository(TableServiceClient tables) : IMatchRepositor
             // Oldest first, so the fight that has been waiting longest is read first.
             return [.. stranded.OrderBy(m => m.StartedAt)];
         }, ct);
-
-    /// <summary>
-    /// Merged onto the analysis row rather than replacing it: the report is written by a different call, and the
-    /// two race on a re-analysis. A merge that loses to a concurrent report costs a search result, not a report.
-    /// </summary>
-    public Task SaveVectorAsync(MatchId id, IReadOnlyList<float> vector, string describedAs, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(vector);
-        if (vector.Count == 0)
-        {
-            return Task.CompletedTask;
-        }
-
-        return StorageBootstrap.WithTableAsync(tables, TableNames.Analyses, token => Table(TableNames.Analyses).UpsertEntityAsync(
-            new AnalysisEntity
-            {
-                PartitionKey = id.Value,
-                RowKey = AnalysisEntity.FixedRowKey,
-                Vector = FightVector.ToBase64(vector),
-                VectorText = describedAs,
-            },
-            TableUpdateMode.Merge,
-            token), ct);
-    }
-
-    /// <summary>
-    /// One read of the account's fights, then one read of the analyses they point at. A vector search on this scale
-    /// is a scan and a sort in memory; a hobby history is hundreds of rows, not millions, and an index nobody
-    /// maintains is worse than a scan somebody understands.
-    /// </summary>
-    public async Task<IReadOnlyList<FightVectorRow>> ListVectorsAsync(string userId, CancellationToken ct = default)
-    {
-        var mine = await ListAsync(userId, MatchMode.Fight, ct);
-        if (mine.Count == 0)
-        {
-            return [];
-        }
-
-        return await StorageBootstrap.WithTableAsync<IReadOnlyList<FightVectorRow>>(tables, TableNames.Analyses, async token =>
-        {
-            var rows = new List<FightVectorRow>(mine.Count);
-            foreach (var match in mine)
-            {
-                var response = await Table(TableNames.Analyses).GetEntityIfExistsAsync<AnalysisEntity>(
-                    match.Id.Value, AnalysisEntity.FixedRowKey, cancellationToken: token);
-                if (response.HasValue && FightVector.FromBase64(response.Value!.Vector) is { Count: > 0 } vector)
-                {
-                    rows.Add(new FightVectorRow(match.Id, match.Topic, match.EndedAt ?? match.StartedAt, vector));
-                }
-            }
-
-            return rows;
-        }, ct);
-    }
 
     public Task SaveAnalysisAsync(AnalysisRecordDto analysis, CancellationToken ct = default) =>
         StorageBootstrap.WithTableAsync(tables, TableNames.Analyses, token => Table(TableNames.Analyses).UpsertEntityAsync(AnalysisEntity.From(analysis), TableUpdateMode.Replace, token), ct);

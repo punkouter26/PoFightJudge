@@ -154,11 +154,6 @@ public static class ApiRoutes
         /// <summary>Share the ruling (POST) or take the share back (DELETE). Owner only, both ways.</summary>
         public const string ShareSegment = "/{id}/share";
 
-        /// <summary>Find a fight by what it was about rather than by the words its topic happens to contain.</summary>
-        public const string SearchSegment = "/search";
-
-        public const string SearchUrl = $"{Base}{SearchSegment}";
-
         public static string ById(MatchId id) => $"{Base}/{id.Value}";
 
         public static string Turns(MatchId id) => $"{ById(id)}/turns";

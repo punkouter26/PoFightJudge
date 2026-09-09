@@ -67,17 +67,6 @@ public static class AiServiceExtensions
             });
         }
 
-        // The embedding seam follows the key, not the text runtime: Ollama serves dialogue, and a local embedding
-        // model is a different download for a search nobody is running offline.
-        if (useFakes)
-        {
-            services.AddSingleton<IGeminiEmbedding, FakeEmbedding>();
-        }
-        else
-        {
-            services.AddSingleton<IGeminiEmbedding, GeminiEmbeddingClient>();
-        }
-
         if (useOllama)
         {
             services.AddSingleton<IGeminiText, OllamaTextClient>();

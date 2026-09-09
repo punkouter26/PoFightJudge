@@ -129,3 +129,4 @@
 
 ## Phase O — Prune (2026-09-09)
 - [x] T94 The browser recogniser we stopped using: `ListenInterop`, `listen.js` and `HeardTranscript` deleted
+- [x] T95 A search nothing called: the fight-embedding chain and `/api/matches/search` deleted

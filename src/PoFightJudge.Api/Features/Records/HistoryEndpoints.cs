@@ -28,8 +28,6 @@ public sealed class HistoryEndpoints : ICarterModule
             .Produces<IReadOnlyList<TurnDto>>()
             .Produces(StatusCodes.Status404NotFound);
 
-        matches.MapGet(ApiRoutes.Matches.SearchSegment, SearchAsync).Produces<FightSearchResponse>();
-
         matches.MapDelete(ApiRoutes.Matches.ByIdSegment, DeleteAsync)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
@@ -54,49 +52,6 @@ public sealed class HistoryEndpoints : ICarterModule
             user.UserId(),
             new MatchQuery(mode, q, from, to, skip ?? 0, take ?? MatchQuery.DefaultTake),
             ct);
-
-    /// <summary>
-    /// The fights closest in meaning to what was typed.
-    /// </summary>
-    /// <remarks>
-    /// The ordinary history filter is a substring match on the topic, because Table Storage has no contains: it
-    /// finds "thermostat" only if somebody typed "thermostat". This finds the fight where they argued about the
-    /// heating bill for twenty minutes without once using the word.
-    ///
-    /// One embedding call for the query, then a scan and a sort over the account's own fights. At this scale that
-    /// is the right shape — a history is hundreds of rows, and an index nobody maintains is worse than a scan
-    /// somebody understands.
-    /// </remarks>
-    private static async Task<IResult> SearchAsync(
-        ClaimsPrincipal user,
-        IMatchRepository matches,
-        IGeminiEmbedding embedding,
-        string? q,
-        int? take,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(q))
-        {
-            return Results.Ok(FightSearchResponse.Unavailable);
-        }
-
-        var query = await embedding.EmbedAsync(q.Trim(), forQuery: true, ct);
-        if (query.Count == 0)
-        {
-            // No embedding service, or it refused. Saying so lets the page fall back to the substring filter rather
-            // than showing an empty result that reads as "you have never argued about that".
-            return Results.Ok(FightSearchResponse.Unavailable);
-        }
-
-        var rows = await matches.ListVectorsAsync(user.UserId(), ct);
-        var wanted = Math.Clamp(take ?? MatchQuery.DefaultTake, 1, MatchQuery.MaxTake);
-        var found = FightSearch.Rank(rows, query, wanted);
-
-        return Results.Ok(new FightSearchResponse(
-            [.. found.Select(f => new FightMatchDto(f.Id, f.Topic, f.At, Math.Round(FightVector.Similarity(f.Vector, query), 4)))],
-            Available: true));
-    }
-
     private static async Task<IResult> GetAsync(MatchId id, ClaimsPrincipal user, IMatchRepository matches, CancellationToken ct) =>
         await matches.GetAsync(user.UserId(), id, ct) is { } match ? Results.Ok(match) : Results.NotFound();
 

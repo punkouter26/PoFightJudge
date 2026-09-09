@@ -296,26 +296,6 @@ public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults,
     public Task<AnalysisRecordDto?> GetAnalysisAsync(MatchId id, CancellationToken ct = default) =>
         Task.FromResult(_analyses.GetValueOrDefault(id.Value));
 
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (IReadOnlyList<float> Vector, string Text)> _vectors = new(StringComparer.Ordinal);
-
-    public Task SaveVectorAsync(MatchId id, IReadOnlyList<float> vector, string describedAs, CancellationToken ct = default)
-    {
-        if (vector.Count > 0)
-        {
-            _vectors[id.Value] = (vector, describedAs);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public Task<IReadOnlyList<FightVectorRow>> ListVectorsAsync(string userId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<FightVectorRow>>(
-        [
-            .. _matches.Values
-                .Where(m => string.Equals(m.UserId, userId, StringComparison.Ordinal) && _vectors.ContainsKey(m.Id.Value))
-                .Select(m => new FightVectorRow(m.Id, m.Topic, m.EndedAt ?? m.StartedAt, _vectors[m.Id.Value].Vector)),
-        ]);
-
     /// <summary>Everything left mid-read, oldest first — the same order the table query returns.</summary>
     public Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<MatchDto>>(

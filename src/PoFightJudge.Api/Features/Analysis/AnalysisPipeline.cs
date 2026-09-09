@@ -22,7 +22,6 @@ public sealed partial class AnalysisPipeline(
     IGeminiFilesClient files,
     IRecordingTranscriber transcriber,
     IGeminiJudgeClient judge,
-    IGeminiEmbedding embedding,
     TimeProvider clock,
     IOptions<AnalysisOptions> options,
     ILogger<AnalysisPipeline> logger) : BackgroundService, IAnalysisIntake
@@ -186,31 +185,6 @@ public sealed partial class AnalysisPipeline(
         // on the record, and it is the one step here that costs a model call per fighter.
         var personas = scope.ServiceProvider.GetRequiredService<IFighterPersonaWriter>();
         await personas.WriteAsync(match, report, ct);
-
-        // And what the fight was about, as a vector, so a history can be searched by meaning rather than by whether
-        // somebody happened to type the same word into the topic. Cheapest call in the app, and the last one: a
-        // fight that could not be embedded is one the search will not find, which is not a reason to fail a report.
-        await EmbedAsync(matches, match, overall.Summary, ct);
-    }
-
-    /// <summary>
-    /// Describes the fight and stores the vector. Failure here is logged and dropped: everything a person came for
-    /// is already on the record by the time this runs.
-    /// </summary>
-    private async Task EmbedAsync(IMatchRepository matches, MatchDto match, string? summary, CancellationToken ct)
-    {
-        try
-        {
-            var described = FightSearch.Describe(match.Topic, match.Side1.DisplayName, match.Side2.DisplayName, summary);
-            if (await embedding.EmbedAsync(described, forQuery: false, ct) is { Count: > 0 } vector)
-            {
-                await matches.SaveVectorAsync(match.Id, vector, described, ct);
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException and not OutOfMemoryException)
-        {
-            LogNotEmbedded(logger, match.Id.Value, ex);
-        }
     }
 
     /// <summary>
@@ -409,7 +383,4 @@ public sealed partial class AnalysisPipeline(
 
     [LoggerMessage(EventId = 5005, Level = LogLevel.Warning, Message = "Analysis {MatchId}: a stored transcript was unusable, falling back to the transcribe model")]
     private static partial void LogTranscriptUnusable(ILogger logger, string matchId, Exception ex);
-
-    [LoggerMessage(EventId = 5006, Level = LogLevel.Warning, Message = "Analysis {MatchId}: the fight was not embedded, so it will not be findable by meaning")]
-    private static partial void LogNotEmbedded(ILogger logger, string matchId, Exception ex);
 }
