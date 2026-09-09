@@ -77,6 +77,12 @@ public static class ConfigKeys
 
         /// <summary>Wire format the voice chain asks providers for: <c>mp3</c> (default) or <c>pcm</c>.</summary>
         public const string TtsWireFormat = $"{Section}:TtsWireFormat";
+
+        /// <summary>
+        /// A local Ollama daemon serving the text seam instead of the fakes, outside Production. Bound as a section
+        /// because it carries an endpoint and a model name rather than one value.
+        /// </summary>
+        public const string OllamaSection = $"{Section}:Ollama";
     }
 
     /// <summary>

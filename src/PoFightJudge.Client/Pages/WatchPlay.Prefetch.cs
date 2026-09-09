@@ -76,6 +76,12 @@ public sealed partial class WatchPlay
     {
         _arrivingSpeaker = speaker;
         _arriving.Clear();
+
+        // Before the first fragment, not after it. Whose turn it is is known the moment the request goes out, and
+        // the stage should say so while the line is still being written rather than staying on the last speaker
+        // until the first words land.
+        StateHasChanged();
+
         GenerateRoundResponse? final = null;
 
         await foreach (var part in Api.StreamRoundAsync(Request(speaker, interjection), ct))
