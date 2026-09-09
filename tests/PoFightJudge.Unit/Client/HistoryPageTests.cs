@@ -10,6 +10,8 @@ using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 using Radzen;
 using Radzen.Blazor;
+using FightersPage = PoFightJudge.Client.Pages.Fighters;
+using ProfilesPage = PoFightJudge.Client.Pages.Profiles;
 
 namespace PoFightJudge.Unit.Client;
 
@@ -205,18 +207,20 @@ public class RecordComponentTests : BunitContext
     }
 }
 
-/// <summary>The two boards, and the persona page one of them leads to.</summary>
-public class LeaderboardPageTests : BunitContext
+/// <summary>The standings, on the two pages that list the people they rank.</summary>
+public class StandingsTests : BunitContext, IAsyncLifetime
 {
     private readonly IApiClient _api = Substitute.For<IApiClient>();
 
-    public LeaderboardPageTests()
+    public StandingsTests()
     {
         Services.AddRadzenComponents();
-        // The setup screens open on the last card played; a substitute storage means every test opens blank.
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
+        Services.AddSingleton(TimeProvider.System);
+        // A cast card previews the persona's voice, so the page needs the interop even though nothing here clicks it.
+        Services.AddScoped<AudioInterop>();
         // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
         Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
@@ -224,115 +228,45 @@ public class LeaderboardPageTests : BunitContext
             .Returns([Row("MAH", "Married Husband", 5, 4), Row("KSH", "Karen", 5, 1)]);
         _api.GetLeaderboardAsync(MatchMode.Fight, Arg.Any<CancellationToken>())
             .Returns([Row("AB", "Alex", 3, 2)]);
+        _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([]);
     }
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>A cast card holds an AudioInterop, which is released asynchronously; bunit's teardown has to be awaited.</summary>
+    public new async Task DisposeAsync() => await base.DisposeAsync().ConfigureAwait(false);
 
     private static LeaderboardRowDto Row(string id, string name, int matches, int wins) =>
         new(id, name, matches, wins, (double)wins / matches, 61.5);
 
     [Fact]
-    public async Task Both_boards_are_in_the_page_so_one_can_be_read_against_the_other()
+    public async Task The_cast_standings_are_on_the_page_that_lists_the_cast()
     {
-        var cut = Render<Leaderboard>();
+        _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            new ProfileDto { Id = ProfileId.From("MAH"), Persona = new CreateProfileRequest { Initials = "MAH", Name = "Married Husband", Role = ProfileRole.Husband } },
+        ]);
 
-        await cut.WaitForAssertionAsync(() => cut.FindComponents<Board>().Should().HaveCount(2));
-        cut.Markup.Should().Contain("Married Husband").And.Contain("Alex");
+        var cut = Render<ProfilesPage>();
+
+        // The order the server sent is the standing, and the places are numbered from it.
+        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows
+            .Select(r => r.DisplayName).Should().Equal("Married Husband", "Karen"));
+        cut.FindComponent<Board>().Markup.Should().Contain("80%", "four wins from five is what the row says");
     }
 
     [Fact]
-    public async Task The_order_the_server_sent_is_the_standing_and_the_places_are_numbered_from_it()
+    public async Task The_fighter_standings_are_on_the_page_that_lists_the_fighters()
     {
-        var cut = Render<Leaderboard>();
+        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            FighterStatsDto.Empty("AB", "Alex") with { Fights = 3, Wins = 2, Losses = 1 },
+        ]);
 
-        await cut.WaitForAssertionAsync(() => cut.FindComponents<Board>().Should().HaveCount(2));
-        var cast = cut.FindComponents<Board>()[0];
-        cast.Instance.Rows.Select(r => r.DisplayName).Should().Equal("Married Husband", "Karen");
-        cast.Markup.Should().Contain("80%", "four wins from five is what the row says");
-    }
+        var cut = Render<FightersPage>();
 
-    [Fact]
-    public async Task A_board_says_why_it_is_empty_rather_than_showing_an_empty_table()
-    {
-        _api.GetLeaderboardAsync(Arg.Any<MatchMode>(), Arg.Any<CancellationToken>()).Returns([]);
-
-        var cut = Render<Leaderboard>();
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponents<EmptyState>().Should().HaveCount(2));
-        cut.Markup.Should().Contain("argued twice");
-    }
-
-    [Fact]
-    public async Task Only_the_cast_board_leads_anywhere_because_only_a_persona_has_a_page_yet()
-    {
-        var cut = Render<Leaderboard>();
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponents<Board>().Should().HaveCount(2));
-        var boards = cut.FindComponents<Board>();
-        boards[0].Instance.OnOpen.HasDelegate.Should().BeTrue();
-        boards[1].Instance.OnOpen.HasDelegate.Should().BeFalse();
-    }
-}
-
-/// <summary>One persona's record, read back from their results.</summary>
-public class ProfileRecordPageTests : BunitContext
-{
-    private readonly IApiClient _api = Substitute.For<IApiClient>();
-
-    public ProfileRecordPageTests()
-    {
-        Services.AddRadzenComponents();
-        // The setup screens open on the last card played; a substitute storage means every test opens blank.
-        Services.AddSingleton(Substitute.For<ILocalStorageService>());
-        Services.AddScoped<SetupMemory>();
-        Services.AddSingleton(_api);
-        // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
-        Services.AddScoped<Viewport>();
-        JSInterop.Mode = JSRuntimeMode.Loose;
-        _api.GetProfileAsync(ProfileId.From("MAH"), Arg.Any<CancellationToken>()).Returns(new ProfileDto
-        {
-            Id = ProfileId.From("MAH"),
-            Persona = new CreateProfileRequest { Initials = "MAH", Name = "Married Husband", Role = ProfileRole.Husband },
-        });
-    }
-
-    private static ProfileRecordDto Record(int matches) => new(
-        "MAH", matches, 3, 1, 1, 62.5, new DateTimeOffset(2026, 9, 1, 20, 0, 0, TimeSpan.Zero),
-        new AdvancedStatsDto(70, 40, 55, 2, 30, 60, 45, 35, 50, 0.5),
-        new RivalryDto("KSH", 4, 3, 1));
-
-    private IRenderedComponent<ProfileRecord> RenderRecord() =>
-        Render<ProfileRecord>(p => p.Add(c => c.Initials, "MAH"));
-
-    [Fact]
-    public async Task The_record_is_the_tally_the_rival_and_what_the_averages_say_about_them()
-    {
-        _api.GetProfileRecordAsync(ProfileId.From("MAH"), Arg.Any<CancellationToken>()).Returns(Record(5));
-
-        var cut = RenderRecord();
-
-        await cut.WaitForAssertionAsync(() => cut.FindAll(".stats .stat").Should().HaveCount(10, "every measured field is shown"));
-        cut.Markup.Should().Contain("Married Husband").And.Contain("KSH").And.Contain("62.5");
-        cut.Find(".tally .big").TextContent.Should().Contain("3").And.Contain("of 5");
-    }
-
-    [Fact]
-    public async Task A_persona_that_has_never_argued_is_offered_an_argument_rather_than_a_table_of_zeroes()
-    {
-        _api.GetProfileRecordAsync(ProfileId.From("MAH"), Arg.Any<CancellationToken>()).Returns(ProfileRecordDto.Empty("MAH"));
-
-        var cut = RenderRecord();
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponent<EmptyState>().Instance.Title.Should().Be("Never argued"));
-        cut.FindAll(".stats .stat").Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task Initials_nobody_in_the_cast_uses_are_not_a_record()
-    {
-        // Matched on the real id: an uninitialised value object is not a valid argument matcher.
-        _api.GetProfileRecordAsync(ProfileId.From("ZZZ"), Arg.Any<CancellationToken>()).Returns((ProfileRecordDto?)null);
-
-        var cut = Render<ProfileRecord>(p => p.Add(c => c.Initials, "ZZZ"));
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponent<EmptyState>().Instance.Title.Should().Be("No such persona"));
+        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows
+            .Select(r => r.DisplayName).Should().Equal("Alex"));
     }
 }

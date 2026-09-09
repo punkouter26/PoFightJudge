@@ -134,3 +134,4 @@
 - [x] T97 One voice, one transcriber, one text model: the provider fan-out collapsed onto Gemini and the fakes
 - [x] T98 Three toggles, not nine flags: `Microsoft.FeatureManagement` gone, the rest answered where they are asked
 - [x] T99 One door per environment: the dev Entra OIDC scheme deleted, so sign-in is MSAL or guest
+- [x] T100 The standings live under the roster they rank: three stats pages deleted, nav down to seven

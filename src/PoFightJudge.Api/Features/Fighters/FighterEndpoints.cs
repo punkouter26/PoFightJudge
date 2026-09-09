@@ -36,10 +36,6 @@ public sealed class FighterEndpoints : ICarterModule
             .Produces<FighterDto>()
             .Produces(StatusCodes.Status404NotFound);
 
-        fighters.MapGet(ApiRoutes.Fighters.VersusSegment, VersusAsync)
-            .Produces<HeadToHeadDto>()
-            .Produces(StatusCodes.Status404NotFound);
-
         fighters.MapGet(ApiRoutes.Fighters.ProfileSegment, ProfileAsync)
             .Produces<FighterProfileDto>()
             .Produces(StatusCodes.Status404NotFound);
@@ -100,37 +96,6 @@ public sealed class FighterEndpoints : ICarterModule
             StyleProfileBuilder.Build(dto.Tag, rows),
             rows));
     }
-
-    /// <summary>
-    /// The two of them, every time they have argued. Both sides' rows are read because a meeting is two rows — one
-    /// per person — and the opponent's is what carries their score.
-    /// </summary>
-    private static async Task<IResult> VersusAsync(
-        FighterId tag,
-        FighterId opponent,
-        ClaimsPrincipal user,
-        IFighterRepository fighters,
-        IFighterResultRepository results,
-        CancellationToken ct)
-    {
-        if (tag == opponent)
-        {
-            return Results.NotFound();
-        }
-
-        if (await fighters.GetAsync(tag, ct) is not { } one || await fighters.GetAsync(opponent, ct) is not { } two)
-        {
-            return Results.NotFound();
-        }
-
-        var userId = user.UserId();
-        return Results.Ok(HeadToHeadBuilder.Build(
-            one.ToDto(),
-            two.ToDto(),
-            await results.ListForAsync(tag, userId, ct),
-            await results.ListForAsync(opponent, userId, ct)));
-    }
-
     /// <summary>
     /// Only the display name can change. The tag is the identity every result is keyed on, so renaming that would
     /// not be a rename — it would be a different person inheriting somebody's record.

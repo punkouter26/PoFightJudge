@@ -17,7 +17,7 @@ public class TouchTargetTests(AppFixture app)
     /// <summary>WCAG 2.2 SC 2.5.8 (AA). Everything that can be pressed clears at least this.</summary>
     private const int Minimum = 24;
 
-    private static readonly string[] Routes = ["/", "/cpu", "/2p", "/profiles", "/fighters", "/history", "/leaderboard"];
+    private static readonly string[] Routes = ["/", "/cpu", "/2p", "/profiles", "/fighters", "/history"];
 
     [SkippableFact]
     public async Task The_persistent_chrome_is_44px_on_a_phone()

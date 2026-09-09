@@ -49,7 +49,6 @@ public static class ApiRoutes
         public const string Base = $"{ApiPrefix}/profiles";
         public const string ByIdSegment = "/{id}";
         public const string FaceSegment = "/{id}/face";
-        public const string RecordSegment = "/{id}/record";
         public const string GenerateSegment = "/generate";
         public const string PreviewLineSegment = "/preview-line";
 
@@ -58,7 +57,6 @@ public static class ApiRoutes
 
         public static string ById(ProfileId id) => $"{Base}/{Uri.EscapeDataString(id.Value)}";
         public static string Face(ProfileId id) => $"{ById(id)}/face";
-        public static string Record(ProfileId id) => $"{ById(id)}/record";
         public static string Generate(string role) => $"{GenerateUrl}?role={Uri.EscapeDataString(role)}";
     }
 
@@ -75,14 +73,8 @@ public static class ApiRoutes
 
         public static string ByTag(FighterId tag) => $"{Base}/{Uri.EscapeDataString(tag.Value)}";
 
-        /// <summary>The series between two people. Both tags in the path: it is one thing about the pair, not about either.</summary>
-        public const string VersusSegment = "/{tag}/vs/{opponent}";
-
         /// <summary>Their record and how they argue, together — what one person's page is built from.</summary>
         public static string Profile(FighterId tag) => $"{ByTag(tag)}/profile";
-
-        public static string Versus(FighterId tag, FighterId opponent) =>
-            $"{ByTag(tag)}/vs/{Uri.EscapeDataString(opponent.Value)}";
     }
 
     public static class Seed

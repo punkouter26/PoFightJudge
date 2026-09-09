@@ -15,7 +15,7 @@
         </a>
         @* The bar above 64rem, a drawer below it. Responsive="false" on both: Radzen's own responsive menu decides
            which to show from JavaScript, after measuring the bar, and until that ran the first paint on a phone had
-           all eight items in flow and a 269 px top bar. Which one is in the document is a media query here, so the
+           every item in flow and a 269 px top bar. Which one is in the document is a media query here, so the
            first frame is already the right one. *@
         <nav class="nav" aria-label="Primary">
             <RadzenMenu Responsive="false">
@@ -80,7 +80,7 @@
 </div>
 
 @code {
-    /// <summary>The eight destinations, written once and rendered twice: as the bar, and as the drawer.</summary>
+    /// <summary>The seven destinations, written once and rendered twice: as the bar, and as the drawer.</summary>
     private static readonly (string Text, string Path, string Icon)[] Destinations =
     [
         ("Home", "", "home"),
@@ -90,7 +90,6 @@
         ("Profiles", "profiles", "groups"),
         ("Fighters", "fighters", "person"),
         ("History", "history", "history"),
-        ("Leaderboard", "leaderboard", "leaderboard"),
     ];
 
     private bool _signingOut;

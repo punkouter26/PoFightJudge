@@ -122,16 +122,8 @@ public interface IApiClient
 
     /// <summary>The board for one mode. Empty rather than an error, because a board is never the point of the page.</summary>
     Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default);
-
-    /// <summary>One persona's record across the watches it has argued in.</summary>
-    Task<ProfileRecordDto?> GetProfileRecordAsync(ProfileId id, CancellationToken ct = default);
-
     /// <summary>One person's page: their record, how they argue, and what they argued.</summary>
     Task<FighterProfileDto?> GetFighterProfileAsync(FighterId tag, CancellationToken ct = default);
-
-    /// <summary>The series between two people, or null when either tag is unknown. Empty rather than null when they have never met.</summary>
-    Task<HeadToHeadDto?> GetHeadToHeadAsync(FighterId tag, FighterId opponent, CancellationToken ct = default);
-
     /// <summary>Changes a fighter's display name. The tag never changes.</summary>
     Task<FighterDto> RenameFighterAsync(FighterId tag, string? displayName, CancellationToken ct = default);
 
@@ -581,25 +573,11 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
             ? await response.Content.ReadFromJsonAsync<IReadOnlyList<LeaderboardRowDto>>(ct) ?? []
             : [];
     }
-
-    public async Task<ProfileRecordDto?> GetProfileRecordAsync(ProfileId id, CancellationToken ct = default)
-    {
-        using var response = await http.GetAsync(Relative(ApiRoutes.Profiles.Record(id)), ct);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<ProfileRecordDto>(ct) : null;
-    }
-
     public async Task<FighterProfileDto?> GetFighterProfileAsync(FighterId tag, CancellationToken ct = default)
     {
         using var response = await http.GetAsync(Relative(ApiRoutes.Fighters.Profile(tag)), ct);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<FighterProfileDto>(ct) : null;
     }
-
-    public async Task<HeadToHeadDto?> GetHeadToHeadAsync(FighterId tag, FighterId opponent, CancellationToken ct = default)
-    {
-        using var response = await http.GetAsync(Relative(ApiRoutes.Fighters.Versus(tag, opponent)), ct);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<HeadToHeadDto>(ct) : null;
-    }
-
     public async Task<FighterDto> RenameFighterAsync(FighterId tag, string? displayName, CancellationToken ct = default)
     {
         using var response = await http.PutAsJsonAsync(Relative(ApiRoutes.Fighters.ByTag(tag)), new RenameFighterRequest(displayName), ct);

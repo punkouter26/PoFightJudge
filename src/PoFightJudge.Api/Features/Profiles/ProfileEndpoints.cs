@@ -24,9 +24,6 @@ public sealed class ProfileEndpoints : ICarterModule
         profiles.MapGet(string.Empty, ListAsync).Produces<List<ProfileDto>>();
         profiles.MapGet(ApiRoutes.Profiles.ByIdSegment, GetAsync).Produces<ProfileDto>().Produces(StatusCodes.Status404NotFound);
 
-        profiles.MapGet(ApiRoutes.Profiles.RecordSegment, RecordAsync)
-            .Produces<ProfileRecordDto>()
-            .Produces(StatusCodes.Status404NotFound);
         profiles.MapPost(string.Empty, CreateAsync).WithValidation<CreateProfileRequest>()
             .Produces<ProfileDto>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status409Conflict);
         profiles.MapPut(ApiRoutes.Profiles.ByIdSegment, UpdateAsync).WithValidation<CreateProfileRequest>()
@@ -44,25 +41,6 @@ public sealed class ProfileEndpoints : ICarterModule
 
     private static async Task<IResult> ListAsync(IProfileRepository repo, CancellationToken ct) =>
         Results.Ok((await repo.GetAllAsync(ct)).Select(p => p.ToDto()).ToList());
-
-    /// <summary>
-    /// How this persona has done in the watches it has argued in, computed from its result rows. A persona with no
-    /// matches yet has an empty record rather than none: it exists, it just has not argued.
-    /// </summary>
-    private static async Task<IResult> RecordAsync(
-        ProfileId id,
-        IProfileRepository profiles,
-        IWatchResultRepository results,
-        CancellationToken ct)
-    {
-        if (await profiles.GetByIdAsync(id, ct) is null)
-        {
-            return Results.NotFound();
-        }
-
-        return Results.Ok(ProfileStatsBuilder.Build(id.Value, await results.ListForAsync(id.Value, ct)));
-    }
-
     private static async Task<IResult> GetAsync(ProfileId id, IProfileRepository repo, CancellationToken ct) =>
         await repo.GetByIdAsync(id, ct) is { } profile ? Results.Ok(profile.ToDto()) : Results.NotFound();
 

@@ -98,14 +98,27 @@
                     </RadzenDataGridColumn>
                 </Columns>
             </RadzenDataGrid>
+
+            @* The standings sit under the roster they rank rather than on a page of their own. *@
+            <section class="standings" aria-label="Standings">
+                <div class="section-head">
+                    <h2>Standings</h2>
+                    <span class="po-muted">Anybody with fewer than @MinimumMatches fights is left off.</span>
+                </div>
+                <Board Rows="_board" Empty="No one has argued twice on the microphone yet." />
+            </section>
         }
     </ChildContent>
 </PageShell>
 
 @code {
     private IReadOnlyList<FighterStatsDto> _roster = [];
+    private IReadOnlyList<LeaderboardRowDto> _board = [];
     private bool _loading = true;
     private string? _error;
+
+    /// <summary>The cut-off the server applies, repeated here so the page can explain the gap rather than look wrong.</summary>
+    private const int MinimumMatches = 2;
 
     protected override async Task OnInitializedAsync()
     {
@@ -114,6 +127,7 @@
         try
         {
             _roster = await Api.GetRosterAsync();
+            _board = await Api.GetLeaderboardAsync(MatchMode.Fight);
         }
         catch (ApiException ex)
         {

@@ -61,6 +61,16 @@
                     </RadzenDataList>
                 </section>
             }
+
+            @* The standings sit under the roster they rank rather than on a page of their own: the question "who is
+               winning" is asked about this list, and it was one nav destination away from the answer. *@
+            <section class="standings" aria-label="Standings">
+                <div class="section-head">
+                    <h2>Standings</h2>
+                    <span class="po-muted">Anybody with fewer than @MinimumMatches arguments is left off.</span>
+                </div>
+                <Board Rows="_board" Empty="Nobody in the cast has argued twice yet." />
+            </section>
         }
     </ChildContent>
 </PageShell>
@@ -79,6 +89,10 @@
     private string? _error;
     private RoleFilter _filter = RoleFilter.All;
     private string _stamp = string.Empty;
+    private IReadOnlyList<LeaderboardRowDto> _board = [];
+
+    /// <summary>The cut-off the server applies, repeated here so the page can explain the gap rather than look wrong.</summary>
+    private const int MinimumMatches = 2;
 
     private IEnumerable<(ProfileRole Role, string Label, string Chip)> Sections
     {
@@ -106,6 +120,7 @@
         {
             _profiles = [.. await Api.GetProfilesAsync()];
             _stamp = Clock.GetUtcNow().ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+            _board = await Api.GetLeaderboardAsync(MatchMode.Watch);
         }
         catch (HttpRequestException ex)
         {

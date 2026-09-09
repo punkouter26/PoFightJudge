@@ -15,7 +15,7 @@ public class ViewportFitTests(AppFixture app)
     /// <summary>A page may run over by this much before it counts as scrolling. One line of text, roughly.</summary>
     private const int Slack = 24;
 
-    private static readonly string[] Routes = ["/", "/cpu", "/1p", "/2p", "/login", "/leaderboard"];
+    private static readonly string[] Routes = ["/", "/cpu", "/1p", "/2p", "/login"];
 
     [SkippableFact]
     public async Task Every_setup_screen_fits_a_phone_held_upright()

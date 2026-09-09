@@ -36,12 +36,12 @@ public class EveryRouteTests(AppFixture app)
 
     /// <summary>
     /// Routes whose job is to be a list. These are not held to the viewport, and deliberately so: eight profiles,
-    /// twenty matches or a leaderboard cannot be made to fit 844 px without either shrinking the rows past reading
+    /// twenty matches or a roster cannot be made to fit 844 px without either shrinking the rows past reading
     /// or paginating them, and both of those lose more than the scroll costs. They are held to everything else.
     /// </summary>
     private static readonly string[] Lists =
     [
-        "/profiles", "/fighters", "/history", "/leaderboard", "/health",
+        "/profiles", "/fighters", "/history", "/health",
     ];
 
     /// <summary>
