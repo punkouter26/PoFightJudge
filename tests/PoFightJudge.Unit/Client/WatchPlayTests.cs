@@ -228,7 +228,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
 
         var cut = Render<WatchPlay>();
         await cut.WaitForAssertionAsync(() => cut.FindAll("article.line").Should().HaveCount(1), TimeSpan.FromSeconds(10));
-        await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
+        await cut.AdvanceUntilAsync(_clock, "section.your-turn");
 
         await cut.WaitForAssertionAsync(() => cut.FindAll("section.your-turn").Should().HaveCount(1), TimeSpan.FromSeconds(10));
         _asked.Should().HaveCount(1, "the page does not write the person's line for them");
@@ -243,7 +243,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         await cut.WaitForAssertionAsync(() => _asked.Should().HaveCount(2, "the loop resumes on the persona's side once the person has spoken"), TimeSpan.FromSeconds(10));
         _asked[1].History.Should().HaveCount(2, "the persona answers the person's line, not the one before it");
 
-        await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
+        await cut.AdvanceUntilAsync(_clock, "section.your-turn");
         await spoken;
         await cut.WaitForAssertionAsync(() => cut.FindAll("section.your-turn").Should().HaveCount(1, "it is the person's turn again"), TimeSpan.FromSeconds(10));
     }

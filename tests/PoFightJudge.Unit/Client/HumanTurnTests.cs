@@ -86,7 +86,8 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     {
         var cut = Render<WatchPlay>();
         await cut.WaitForAssertionAsync(() => cut.FindAll("article.line").Should().HaveCount(1), TimeSpan.FromSeconds(10));
-        await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
+
+        await cut.AdvanceUntilAsync(_clock, "section.your-turn");
         await cut.WaitForAssertionAsync(() => cut.FindAll("section.your-turn").Should().HaveCount(1), TimeSpan.FromSeconds(10));
         return cut;
     }

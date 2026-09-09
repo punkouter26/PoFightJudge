@@ -71,6 +71,9 @@ public static class ConfigKeys
         public const string TtsModel = $"{Section}:TtsModel";
         public const string LiveModel = $"{Section}:LiveModel";
         public const string TranscribeModel = $"{Section}:TranscribeModel";
+
+        /// <summary>What a fight's summary is embedded with, so a history can be searched by meaning.</summary>
+        public const string EmbeddingModel = $"{Section}:EmbeddingModel";
         public const string Voice = $"{Section}:Voice";
         public const string JudgeThinkingLevel = $"{Section}:JudgeThinkingLevel";
         public const string JudgeServiceTier = $"{Section}:JudgeServiceTier";

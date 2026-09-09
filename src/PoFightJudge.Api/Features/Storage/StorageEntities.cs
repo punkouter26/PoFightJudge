@@ -218,6 +218,15 @@ public sealed class AnalysisEntity : ITableEntity
 
     public DateTimeOffset UpdatedAt { get; set; }
 
+    /// <summary>
+    /// The fight's embedding, base64 of the raw floats. Kept on this row rather than a table of its own: it is
+    /// written once, by the same upsert that writes the report, and read by the one query that ranks a search.
+    /// </summary>
+    public string? Vector { get; set; }
+
+    /// <summary>What was embedded — the topic and the ruling — so a re-embedding can tell whether it has changed.</summary>
+    public string? VectorText { get; set; }
+
     public string? Json0 { get; set; }
 
     public string? Json1 { get; set; }

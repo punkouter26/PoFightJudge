@@ -384,8 +384,9 @@ public sealed partial class WatchPlay : IAsyncDisposable
                 _lineEndsAt = endsAt;
 
                 // The line is being spoken now rather than merely written, and the stage says so — the speaking
-                // corner, the meter and the caret all read state this loop is the only thing moving.
-                StateHasChanged();
+                // corner, the meter and the caret all read state this loop is the only thing moving. Through the
+                // dispatcher, because a clause arrives on whatever thread its continuation landed on.
+                await InvokeAsync(StateHasChanged);
             }
 
             // Kept as well as played: the same bytes are what the verdict archives and a replay plays back.

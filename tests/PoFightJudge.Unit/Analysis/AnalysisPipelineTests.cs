@@ -62,6 +62,7 @@ public sealed class AnalysisPipelineTests : IDisposable
         files ?? new FakeAnalysisClients.Files(),
         new GeminiRecordingTranscriber(transcriber ?? new FakeAnalysisClients.Transcriber()),
         _judge,
+        new FakeEmbedding(),
         _clock,
         Options.Create(_options),
         NullLogger<AnalysisPipeline>.Instance);

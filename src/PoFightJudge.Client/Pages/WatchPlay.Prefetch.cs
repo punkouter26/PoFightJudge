@@ -80,7 +80,7 @@ public sealed partial class WatchPlay
         // Before the first fragment, not after it. Whose turn it is is known the moment the request goes out, and
         // the stage should say so while the line is still being written rather than staying on the last speaker
         // until the first words land.
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         GenerateRoundResponse? final = null;
 
@@ -89,7 +89,11 @@ public sealed partial class WatchPlay
             if (part.Delta is { Length: > 0 } fragment)
             {
                 _arriving.Append(fragment);
-                StateHasChanged();
+
+                // Through the dispatcher, not straight at it. This runs on whatever thread the stream's
+                // continuation landed on, and StateHasChanged off the renderer's dispatcher throws — which took
+                // the whole round loop down with it rather than dropping one repaint.
+                await InvokeAsync(StateHasChanged);
                 continue;
             }
 

@@ -15,6 +15,7 @@ public sealed record GeminiModelOptions(
     string Tts,
     string Live,
     string Transcribe,
+    string Embedding,
     string Voice,
     string JudgeThinkingLevel,
     string JudgeServiceTier)
@@ -26,6 +27,7 @@ public sealed record GeminiModelOptions(
         Tts: "gemini-3.1-flash-tts-preview",
         Live: "gemini-3.1-flash-live-preview",
         Transcribe: "gemini-3.5-transcribe",
+        Embedding: "gemini-embedding-001",
         Voice: "Puck",
         JudgeThinkingLevel: "low",
         JudgeServiceTier: "flex");
@@ -37,6 +39,7 @@ public sealed record GeminiModelOptions(
         Tts: Pick(configuration, ConfigKeys.Ai.TtsModel, Defaults.Tts),
         Live: Pick(configuration, ConfigKeys.Ai.LiveModel, Defaults.Live),
         Transcribe: Pick(configuration, ConfigKeys.Ai.TranscribeModel, Defaults.Transcribe),
+        Embedding: Pick(configuration, ConfigKeys.Ai.EmbeddingModel, Defaults.Embedding),
         Voice: Pick(configuration, ConfigKeys.Ai.Voice, Defaults.Voice),
         JudgeThinkingLevel: Pick(configuration, ConfigKeys.Ai.JudgeThinkingLevel, Defaults.JudgeThinkingLevel),
         JudgeServiceTier: Pick(configuration, ConfigKeys.Ai.JudgeServiceTier, Defaults.JudgeServiceTier));

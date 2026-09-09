@@ -118,3 +118,4 @@
 - [x] T85 The browser transcribes what it hears, so a fight with thin captions stops paying to diarize
 - [x] T86 A local model writes the dialogue in development, behind the same seam Gemini sits behind
 - [x] T87 A fight is read by Azure when it is configured, not by the model that answers empty and bills anyway
+- [x] T88 Fights remember each other: every fight is embedded, and a history is searchable by meaning

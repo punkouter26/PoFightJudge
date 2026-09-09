@@ -313,6 +313,22 @@ public sealed record HeadToHeadDto(
 /// How a history list is narrowed. Every part is optional; all of them together are an AND. The text runs over the
 /// topic, both sides and the winner, because those are the four things somebody remembers about an argument.
 /// </summary>
+/// <summary>
+/// One fight a meaning search turned up, with how close it was. The score is shown to nobody — it is here so a
+/// caller can tell a strong hit from a weak one without re-running the comparison.
+/// </summary>
+public sealed record FightMatchDto(MatchId Id, string Topic, DateTimeOffset At, double Closeness);
+
+/// <summary>
+/// What a meaning search found. Empty is a legitimate answer: nothing close enough is better than the least bad
+/// thing in the history.
+/// </summary>
+public sealed record FightSearchResponse(IReadOnlyList<FightMatchDto> Found, bool Available)
+{
+    /// <summary>Nothing to search with — no embedding service configured, or nothing embedded yet.</summary>
+    public static FightSearchResponse Unavailable { get; } = new([], Available: false);
+}
+
 public sealed record MatchQuery(
     MatchMode? Mode = null,
     string? Text = null,
