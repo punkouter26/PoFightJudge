@@ -1,7 +1,7 @@
 # PoFightJudge — Specification
 
-Status: DRAFT v1 for approval (2026-09-06). Interview answers and research are recorded here; the capability
-breakdown is in [CAPABILITY-MAP.md](CAPABILITY-MAP.md).
+Status: v1 (2026-09-06). What the app must do; interview answers and research are recorded here. What was
+actually built, in order, is [tasks/todo.md](tasks/todo.md).
 
 ## 1. Objective
 
@@ -127,7 +127,7 @@ the E2EUI fight against the real host; `POFIGHTJUDGE_SMOKE_URL` points `Deployed
 
 ```
 PoFightJudge.slnx  Directory.Build.props  Directory.Packages.props  global.json  docker-compose.yml  .editorconfig
-README.md  CLAUDE.md  AGENT.md  NET_RULES.md  SPEC.md  CAPABILITY-MAP.md  tasks/plan.md  tasks/todo.md
+README.md  CLAUDE.md  AGENT.md  NET_RULES.md  SPEC.md  tasks/todo.md
 SCRIPTS/setup.ps1  SCRIPTS/azurite.ps1  SCRIPTS/seed-secrets.ps1
 infra/main.bicep  infra/resources.bicep  infra/storage-role.bicep  infra/keyvault-access.bicep
 .github/workflows/deploy.yml

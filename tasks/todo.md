@@ -39,7 +39,7 @@
 - [x] T26 WATCH setup UI
 - [x] T27 WATCH play UI
 - [x] T28 The spoken human turn  (Radzen's RadzenSpeechToTextButton replaced the planned speech.js + SpeechRecognitionInterop)
-- [x] T29 WATCH end-to-end hardening  ← CP4 (fakes green; the real-key timing run is carried to T51, see docs/CP4.md)
+- [x] T29 WATCH end-to-end hardening  ← CP4 (fakes green; the real-key timing run is carried to T51)
 
 ## Phase E — FIGHT live
 - [x] T30 Fighter domain + repositories  (pulled ahead of T25: a person in WATCH needs a fighter result)
@@ -136,3 +136,4 @@
 - [x] T99 One door per environment: the dev Entra OIDC scheme deleted, so sign-in is MSAL or guest
 - [x] T100 The standings live under the roster they rank: three stats pages deleted, nav down to seven
 - [x] T101 The suites capped: 96 Unit, 26 Integration, 24 API, 24 UI — one test per decision, not per branch
+- [x] T102 Six documents, not thirteen: the checkpoint reports, the build plan and an unbuilt design deleted

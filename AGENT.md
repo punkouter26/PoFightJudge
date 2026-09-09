@@ -1,8 +1,8 @@
 # AGENT.md — how this repository is worked on
 
-Written for whoever (or whatever) picks the work up next. [README.md](README.md) says what the app is;
-[SPEC.md](SPEC.md) says what it must do; [tasks/plan.md](tasks/plan.md) says how it was built and in what order.
-This file is the operating detail that lives in neither.
+Written for whoever (or whatever) picks the work up next. [README.md](README.md) says what the app is and how to
+run it; [SPEC.md](SPEC.md) says what it must do; [tasks/todo.md](tasks/todo.md) is the task log, one line per
+commit. This file is the operating detail that lives in none of them.
 
 ## Identity and history
 
@@ -88,6 +88,10 @@ Each was a deliberate decision made while building; the commit that made it says
 | T90 | `WatchEndpoints` only | plus `WatchPersonaBacklog`, a hosted drain loop | a watch rules inside the request that ends it, and a model call per person there is time the room spends waiting on something it did not ask for |
 | T92 | `MediaRecorder` for a watch turn, decoded back to samples | the `pcm-capture` worklet a live fight already uses, straight to WAV | `decodeAudioData` refuses MediaRecorder's WebM on some machines (`EncodingError`), and a container the page only ever unpacks itself is a step that can fail for nothing |
 | T68 | a WebGPU pass on the verdict, WebGL2 as the fallback | WebGL2 only (`PoGfx.probe()` still reports WebGPU) | a second rendering backend for one cosmetic pass, which no tier here can exercise — headless Chromium has no `navigator.gpu` — is untested code for an effect nobody could tell apart |
+| T97 | the voice slice only | plus `TtsSettings.FishReferenceId` out of the profile editor, the validator and the seed | a persona field whose only consumer was the provider being deleted is not a field any more |
+| T98 | the flags | plus `appsettings.Development.json`'s duplicate `PoFightJudge` key | the Ollama block that T86 added was a second key in the same object, and removing it fixed a silent shadow |
+| T100 | the pages and their endpoints | plus `.husky/commit-msg` | the hook took two-digit task numbers only, so T100 could not be committed under the rule the hook exists to enforce |
+| T101 | trim the suites | 62 Unit files deleted outright | at one test per decision most of those files had no decision left that another test did not already make |
 
 ## Still outstanding
 
@@ -110,9 +114,10 @@ Each was a deliberate decision made while building; the commit that made it says
   whether a real fight's prefix clears the minimum token count is a measurement nobody has taken. The log line at
   event 5302/5303 says which way it went on any given fight.
 
-The real-key measurements for CP4, CP5 and CP6 are done (2026-09-07) and written up in `docs/CP4.md`,
-`docs/CP5.md`, `docs/CP6.md` and `docs/VERIFICATION.md`. They were worth running: nine defects came out of them,
-seven of which no test on the stand-ins could have seen.
+The real-key measurements for WATCH, FIGHT and the analysis were taken on 2026-09-07. They were worth running:
+nine defects came out of them, seven of which no test on the stand-ins could have seen. The write-ups were
+point-in-time reports and were deleted in T102; `docs/screenshots/` is what is left of them, and the runs that
+produce those screenshots are still in `WatchHardeningTests`.
 
 ## Costs
 

@@ -13,8 +13,9 @@ measurements each, and the moments worth listening to again.
 A merge of [PoMarriedLife](https://github.com/punkouter26/PoMarriedLife) and
 [PoArgueJudge](https://github.com/punkouter26/PoArgueJudge) into one fresh solution.
 
-Governance: [SPEC.md](SPEC.md) · [CAPABILITY-MAP.md](CAPABILITY-MAP.md) · [tasks/plan.md](tasks/plan.md) ·
-[tasks/todo.md](tasks/todo.md) · [NET_RULES.md](NET_RULES.md) · [AGENT.md](AGENT.md).
+Governance: [SPEC.md](SPEC.md) is what it must do · [AGENT.md](AGENT.md) is how it is worked on ·
+[NET_RULES.md](NET_RULES.md) is the standard every `Po*` solution follows · [tasks/todo.md](tasks/todo.md) is the
+task log.
 
 ## Run it
 
