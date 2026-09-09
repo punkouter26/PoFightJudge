@@ -39,6 +39,7 @@ public sealed class WatchStageTests : BunitContext, IAsyncLifetime
         Services.AddScoped<MicInterop>();
         Services.AddScoped<SfxInterop>();
         Services.AddScoped<GfxInterop>();
+        Services.AddScoped<ParticleInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
 
         _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())

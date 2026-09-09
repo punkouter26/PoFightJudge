@@ -40,6 +40,7 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SfxInterop>();
         Services.AddScoped<GfxInterop>();
+        Services.AddScoped<ParticleInterop>();
         Services.AddScoped<MicInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
 

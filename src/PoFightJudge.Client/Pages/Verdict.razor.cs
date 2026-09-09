@@ -12,6 +12,9 @@ namespace PoFightJudge.Client.Pages;
 /// </summary>
 public sealed partial class Verdict : ComponentBase, IDisposable
 {
+    /// <summary>The element the confetti falls into. It covers the ruling and both fighters' cards.</summary>
+    public const string RevealSelector = ".verdict";
+
     /// <summary>How often to ask. Long enough not to hammer the API, short enough that a finished report appears.</summary>
     internal static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
 
@@ -26,6 +29,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     private AnalysisStatus _status = AnalysisStatus.Queued;
     private string? _problem;
     private bool _retrying;
+    private bool _finished;
     private int _tab;
 
     [Parameter] public string MatchIdText { get; set; } = string.Empty;
@@ -35,6 +39,12 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     [Inject] private TimeProvider Clock { get; set; } = default!;
 
     [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    [Inject] private SfxInterop Sound { get; set; } = default!;
+
+    [Inject] private ParticleInterop Particles { get; set; } = default!;
+
+    [Inject] private GfxInterop Gfx { get; set; } = default!;
 
     private string Title => _report is null ? "Reading it back" : _report.Topic is { Length: > 0 } topic ? topic : "The ruling";
 
@@ -90,6 +100,19 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         await PollAsync(id);
     }
 
+    /// <summary>
+    /// Once the report is on the page, it is finished like a piece of film: a vignette that pulls the eye into the
+    /// ruling, and grain over the top. Over the page rather than behind it — grain behind the cards is a texture.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_report is not null && !_finished)
+        {
+            _finished = true;
+            await Gfx.MountAsync(RevealSelector, Shaders.Grain, level: null, over: true, _leaving.Token);
+        }
+    }
+
     /// <summary>Keeps the page's own copy of the match true after the share is made or taken back.</summary>
     private void OnShareChanged(string? token)
     {
@@ -115,6 +138,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
                     _report = answer.Report;
                     _problem = null;
                     StateHasChanged();
+                    await CelebrateAsync();
                     return;
                 }
 
@@ -155,6 +179,25 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// The moment the report lands. Somebody has been watching a spinner for a minute: the ruling arriving is the
+    /// one thing on this page worth announcing, and the confetti falls on the card of whoever took it.
+    /// </summary>
+    private async Task CelebrateAsync()
+    {
+        if (_report is null)
+        {
+            return;
+        }
+
+        await Sound.PlayAsync(Sfx.Fanfare, ct: _leaving.Token);
+
+        // After the render that put the cards on the page, or there is nothing to measure the burst against.
+        await Task.Yield();
+        var won = _report.Overall.Overall == Speaker.Player1 ? _report.Player1.Name : _report.Player2.Name;
+        await Particles.BurstAsync(RevealSelector, ParticleInterop.Confetti, $".player[data-tag='{won}']", _leaving.Token);
+    }
+
     private async Task RetryAsync()
     {
         if (_retrying || !MatchId.TryParse(MatchIdText, null, out var id))
@@ -190,5 +233,10 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     {
         _leaving.Cancel();
         _leaving.Dispose();
+
+        // This page disposes synchronously, so the canvases are let go rather than awaited. Neither call can fail
+        // in a way anybody could act on.
+        Gfx.Release(RevealSelector);
+        Particles.Release(RevealSelector);
     }
 }

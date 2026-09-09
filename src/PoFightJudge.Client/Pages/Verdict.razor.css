@@ -1,4 +1,5 @@
-.verdict { display: grid; gap: var(--po-space-5); }
+/* Positioned, because the confetti canvas hangs in here when the ruling lands. */
+.verdict { position: relative; display: grid; gap: var(--po-space-5); }
 
 .waiting {
   display: grid;
@@ -57,4 +58,23 @@
 @media (min-width: 48rem) {
   .pair { grid-template-columns: 1fr 1fr; }
   .side-by-side { grid-template-columns: 1fr 1fr; }
+}
+
+/* The reveal: each part of the report arrives a beat after the one above it, in reading order. Purely on first
+   paint — nothing here re-runs, and one switch turns all of it off. */
+.verdict > * {
+  animation: rise var(--po-dur-slow) var(--po-ease) both;
+}
+
+.verdict > *:nth-child(2) { animation-delay: 90ms; }
+.verdict > *:nth-child(3) { animation-delay: 180ms; }
+.verdict > *:nth-child(4) { animation-delay: 270ms; }
+.verdict > *:nth-child(n+5) { animation-delay: 360ms; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verdict > * { animation: none; }
 }

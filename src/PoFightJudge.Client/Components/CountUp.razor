@@ -1,0 +1,88 @@
+@implements IDisposable
+@inject SfxInterop Sound
+@inject TimeProvider Clock
+
+@* A number that arrives rather than appearing. A scoreboard that counts up is read as a result being announced;
+   the same number sitting there is read as a field. The blips climb with it, which is what makes the two feel
+   like one thing rather than a sound played over a picture. *@
+<span class="count po-num">@Text</span>
+
+@code {
+    /// <summary>How many steps the climb takes. Twenty-four over three-quarters of a second reads as counting.</summary>
+    private const int Steps = 24;
+
+    /// <summary>Every third step is heard. Eight blips announce a number; twenty-four rattle.</summary>
+    private const int BlipEvery = 3;
+
+    private readonly CancellationTokenSource _leaving = new();
+
+    /// <summary>
+    /// Where the climb has got to, or null when it is not climbing — in which case the real value is shown. That
+    /// is the important half: the animation is started by the first frame that actually arrives, so a browser or a
+    /// test that never gives it one shows the finished number rather than a zero that never moves.
+    /// </summary>
+    private double? _counting;
+
+    private bool _started;
+
+    [Parameter, EditorRequired] public double Value { get; set; }
+
+    /// <summary>What goes after the number — a per-cent sign, usually. Never counted, only appended.</summary>
+    [Parameter] public string Suffix { get; set; } = string.Empty;
+
+    [Parameter] public int Decimals { get; set; }
+
+    /// <summary>How long the climb takes. Zero shows the number and says nothing.</summary>
+    [Parameter] public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(750);
+
+    /// <summary>Whether the climb is heard as well as seen.</summary>
+    [Parameter] public bool Audible { get; set; } = true;
+
+    private string Text =>
+        (_counting ?? Value).ToString($"N{Math.Clamp(Decimals, 0, 3)}", System.Globalization.CultureInfo.CurrentCulture) + Suffix;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _started || Duration <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        _started = true;
+        await ClimbAsync();
+    }
+
+    private async Task ClimbAsync()
+    {
+        var interval = Duration / Steps;
+        for (var step = 1; step <= Steps; step++)
+        {
+            try
+            {
+                await Task.Delay(interval, Clock, _leaving.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            // Eased out, so it slows into the number rather than arriving at full speed and stopping dead.
+            var progress = step / (double)Steps;
+            var eased = 1 - Math.Pow(1 - progress, 3);
+            _counting = step == Steps ? null : Value * eased;
+
+            if (Audible && step % BlipEvery == 0 && step < Steps)
+            {
+                await Sound.PlayAsync(Sfx.Count, eased, _leaving.Token);
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        _leaving.Cancel();
+        _leaving.Dispose();
+    }
+}

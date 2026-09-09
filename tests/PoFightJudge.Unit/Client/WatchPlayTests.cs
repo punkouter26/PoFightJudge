@@ -43,6 +43,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SfxInterop>();
         Services.AddScoped<GfxInterop>();
+        Services.AddScoped<ParticleInterop>();
         Services.AddScoped<MicInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
 

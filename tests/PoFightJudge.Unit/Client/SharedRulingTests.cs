@@ -26,6 +26,11 @@ public class SharedRulingTests : BunitContext
     public SharedRulingTests()
     {
         Services.AddRadzenComponents();
+        Services.AddScoped<ParticleInterop>();
+        Services.AddScoped<GfxInterop>();
+        // The ruling arrives with a fanfare, and the numbers on it count themselves up.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SfxInterop>();
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);

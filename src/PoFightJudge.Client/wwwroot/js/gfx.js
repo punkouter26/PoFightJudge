@@ -121,7 +121,28 @@ void main() {
   outColour = vec4(colour, clamp(alpha, 0.0, 1.0));
 }`;
 
-  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP };
+  // The verdict, finished like a piece of film: a vignette that pulls the eye in and grain over the top of it.
+  // This one is mounted OVER the page rather than under it, which is the only way grain reads as grain.
+  const GRAIN = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 outColour;
+uniform vec2 u_res;
+uniform float u_time;
+uniform vec3 u_c3;
+${NOISE}
+void main() {
+  float aspect = u_res.x / max(u_res.y, 1.0);
+  float vignette = smoothstep(0.45, 1.15, length((v_uv - 0.5) * vec2(aspect, 1.0)));
+
+  // Sampled at pixel scale and moved every frame, because grain that holds still is a texture, not grain.
+  float grain = hash(v_uv * u_res + fract(u_time) * 431.0) - 0.5;
+  float alpha = vignette * 0.3 + abs(grain) * 0.05;
+  vec3 colour = mix(vec3(0.0), u_c3 * 0.35, vignette * 0.25) + vec3(grain * 0.12);
+  outColour = vec4(colour, clamp(alpha, 0.0, 0.42));
+}`;
+
+  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN };
 
   const mounts = new Map();
   let frame = 0;
@@ -329,7 +350,10 @@ void main() {
     const canvas = document.createElement("canvas");
     canvas.className = "po-gfx";
     canvas.setAttribute("aria-hidden", "true");
-    canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:0;";
+    // Over the page or under it. Under is the default — an aura belongs behind the faces — but grain has to be on
+    // top of what it is graining, and it never takes a click either way.
+    const layer = settings.over ? 3 : 0;
+    canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:" + layer + ";";
     try {
       gl = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: false, powerPreference: "low-power" });
     } catch (e) {
@@ -422,6 +446,15 @@ void main() {
 
   return {
     probe: probe,
+
+    /**
+     * A design token as a CSS colour string, resolved by this theme. Exposed because PoParticles needs the same
+     * answer and there is no sense in two probes: light-dark() can only be unpicked by asking the browser.
+     */
+    colour: function (token) {
+      const rgb = tokenColour(token, null);
+      return rgb ? "rgb(" + Math.round(rgb[0] * 255) + "," + Math.round(rgb[1] * 255) + "," + Math.round(rgb[2] * 255) + ")" : null;
+    },
 
     /** Mounts a shader on the first element matching `selector`. False when it could not be done, for any reason. */
     mount: function (selector, shader, options) {

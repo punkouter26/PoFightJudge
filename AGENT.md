@@ -62,6 +62,12 @@ other through `Shared` contracts and repositories, not through each other's serv
   all. The scripted host replaces the client, so the state machine under test is the real one.
 - Records are computed on read by `FighterStatsBuilder`, `ProfileStatsBuilder` and `StyleProfileBuilder` from
   result rows. Nothing anywhere increments a counter.
+- The effects layer is four files in `wwwroot/js` and nothing in the app depends on any of it: `sfx.js` synthesizes
+  every sound that is not a voice, `gfx.js` runs the WebGL2 shaders, `particles.js` the canvas physics, and
+  `fx.js` the one-shot CSS classes. Each entry point answers "no" rather than throwing, reduced motion turns the
+  drawn half off entirely, and the sound switch is stored where JS can read it before Blazor boots. The catalogues
+  are spelled twice — `Sfx`/`Shaders` in C#, the voices and shaders in JS — and tests hold the pairs together,
+  because a name the browser does not know is silence rather than an error.
 
 ## Deviations from the plan
 
@@ -76,6 +82,9 @@ Each was a deliberate decision made while building; the commit that made it says
 | T50 | "workflow YAML parsed by a test" | `InfraTests` reads the workflow as text | a YAML parser is a new package, which is ask-first |
 | T39 | one judge call assessing both players | one call per player | the live endpoint refuses a response schema carrying two full assessments, and `$ref` with it |
 | T53 | one `Shared/Models` file per task | three (`LiveModels`, `RecordModels`, `ProfileModels`) | the seat travels from the 2P setup request, through the fighter row, to the persona the cast page shows; one contract per hop |
+| T65 | a crowd bed under the stage | no ambient loop at all | every mode has an open microphone, and continuous noise out of the speakers is what the recording picks up |
+| T67 | glass on the live chrome | glass, and the opaque floor kept underneath it | the contrast test reads tokens, not blurs; the floor is what the words are actually read against |
+| T68 | a WebGPU pass on the verdict, WebGL2 as the fallback | WebGL2 only (`PoGfx.probe()` still reports WebGPU) | a second rendering backend for one cosmetic pass, which no tier here can exercise — headless Chromium has no `navigator.gpu` — is untested code for an effect nobody could tell apart |
 
 ## Still outstanding
 

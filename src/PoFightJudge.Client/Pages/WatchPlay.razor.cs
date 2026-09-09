@@ -94,6 +94,8 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
     [Inject] private GfxInterop Gfx { get; set; } = default!;
 
+    [Inject] private ParticleInterop Particles { get; set; } = default!;
+
     [Inject] private MicInterop Mic { get; set; } = default!;
 
     [Inject] private TimeProvider Clock { get; set; } = default!;
@@ -154,7 +156,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
     {
         if (firstRender)
         {
-            _drawn = await Gfx.MountAsync(StageSelector, Shaders.Stage, GfxInterop.WatchLevel, _leaving.Token);
+            _drawn = await Gfx.MountAsync(StageSelector, Shaders.Stage, GfxInterop.WatchLevel, ct: _leaving.Token);
         }
 
         if (!_drawn || string.Equals(_aimedAt, _speaking, StringComparison.Ordinal))
@@ -383,6 +385,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         // stage — one gesture in three places, which is the only reason it reads as a hit rather than a glitch.
         await Sound.PlayOverAsync(Sfx.Slap, 0.6, _leaving.Token);
         await Gfx.ShockAsync(StageSelector, _leaving.Token);
+        await Particles.BurstAsync(StageSelector, ParticleInterop.Sparks, ".corner.speaking", _leaving.Token);
         await Audio.StopAsync(_leaving.Token);
         if (_beat is { } interrupted)
         {
@@ -434,6 +437,12 @@ public sealed partial class WatchPlay : IAsyncDisposable
             _stage = Stage.Done;
             _error = null;
             await Sound.PlayOverAsync(Sfx.GavelThree, 0.9, ct);
+
+            // After the render that puts the ruling on the page: the confetti falls on the card of whoever took it,
+            // and there is nothing to measure that against until it is there.
+            StateHasChanged();
+            await Task.Yield();
+            await Particles.BurstAsync(StageSelector, ParticleInterop.Confetti, WinnerCorner, ct);
         }
         catch (ApiException ex)
         {
@@ -530,6 +539,15 @@ public sealed partial class WatchPlay : IAsyncDisposable
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Which corner the confetti falls on. A draw gets the middle of the stage rather than an arbitrary side.
+    /// </summary>
+    private string? WinnerCorner =>
+        _verdict is null || _verdict.Winner.Length == 0 ? null
+        : string.Equals(Simulation.Husband?.Id, _verdict.Winner, StringComparison.OrdinalIgnoreCase)
+            ? ".corner:first-child"
+            : ".corner:last-child";
+
     private MatchSide SideOf(string speaker) =>
         WatchTurns.IsHusband(speaker) ? Simulation.Husband! : Simulation.Wife!;
 
@@ -555,6 +573,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
         // The microphone goes first: a recording light left on after the page is gone is not something to explain.
         await Mic.CancelAsync(CancellationToken.None);
+        await Particles.ClearAsync(StageSelector, CancellationToken.None);
 
         // Then the canvas, before anything that might take its time: it holds a GL context and a frame loop, and
         // both of those outlive a page that only half finished tidying itself up.

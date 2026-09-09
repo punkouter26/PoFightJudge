@@ -11,8 +11,11 @@ public static class Shaders
     /// <summary>The live fight's backdrop: the two fighters' colours flowing, heating up as the clock runs out.</summary>
     public const string Backdrop = "backdrop";
 
+    /// <summary>The verdict, finished like film: a vignette and grain, over the page rather than behind it.</summary>
+    public const string Grain = "grain";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
-    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop];
+    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain];
 }
 
 /// <summary>
@@ -38,11 +41,11 @@ public sealed class GfxInterop(IJSRuntime js)
     public const string LiveLevel = "live";
 
     /// <summary>Mounts a shader on the first element matching <paramref name="selector"/>. False when it could not be.</summary>
-    public async Task<bool> MountAsync(string selector, string shader, string? level = null, CancellationToken ct = default)
+    public async Task<bool> MountAsync(string selector, string shader, string? level = null, bool over = false, CancellationToken ct = default)
     {
         try
         {
-            return await js.InvokeAsync<bool>(Mount, ct, selector, shader, new { level });
+            return await js.InvokeAsync<bool>(Mount, ct, selector, shader, new { level, over });
         }
         catch (JSException)
         {
@@ -60,6 +63,12 @@ public sealed class GfxInterop(IJSRuntime js)
 
     public Task UnmountAsync(string selector, CancellationToken ct = default) =>
         SafelyAsync(() => js.InvokeVoidAsync(Unmount, ct, selector));
+
+    /// <summary>
+    /// The same, for a page that can only dispose synchronously. Deliberately not awaited: the call cannot fail in
+    /// a way anybody could act on, and a canvas left up for one more frame is not worth changing a page's contract.
+    /// </summary>
+    public void Release(string selector) => _ = UnmountAsync(selector, CancellationToken.None);
 
     /// <summary>Points the effect at a child of the mounted element — the card of whoever is speaking.</summary>
     public Task FocusAsync(string selector, string? childSelector, CancellationToken ct = default) =>

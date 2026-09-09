@@ -59,6 +59,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     [Inject] private GfxInterop Gfx { get; set; } = default!;
 
+    [Inject] private ParticleInterop Particles { get; set; } = default!;
+
     private SessionPhase Phase => _snapshot?.Phase ?? SessionPhase.Intro;
 
     private string Player1 => _snapshot?.Player1Name is { Length: > 0 } name ? name : "Fighter one";
@@ -217,8 +219,20 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
             _ => 0.5,
         };
 
+        var heat = HeatFor(snapshot.Phase, snapshot.DebateRemainingSeconds);
         await Gfx.SetAsync(StageSelector, "mix", mix);
-        await Gfx.SetAsync(StageSelector, "heat", HeatFor(snapshot.Phase, snapshot.DebateRemainingSeconds));
+        await Gfx.SetAsync(StageSelector, "heat", heat);
+
+        // Embers only while the clock is actually running out. Thirty a second at the death is enough to see and
+        // few enough that a phone does not notice them.
+        if (snapshot.Phase == SessionPhase.Debate)
+        {
+            await Particles.EmitAsync(StageSelector, heat * 30);
+        }
+        else
+        {
+            await Particles.EmitAsync(StageSelector, 0);
+        }
     }
 
     /// <summary>
@@ -324,6 +338,7 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         // The canvas first: it holds a GL context and a frame loop, and both outlive a page that only half
         // finished tidying itself up.
         await Gfx.UnmountAsync(StageSelector, CancellationToken.None);
+        await Particles.ClearAsync(StageSelector, CancellationToken.None);
         await Audio.StopAsync(CancellationToken.None);
         if (_connection is not null)
         {

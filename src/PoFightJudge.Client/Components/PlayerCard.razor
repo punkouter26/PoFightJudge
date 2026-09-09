@@ -20,15 +20,15 @@
     <dl class="headline">
         <div>
             <dt class="po-eyebrow">Share of the room</dt>
-            <dd class="po-display">@StatFormat.Percent(Report.Metrics.TalkShare)</dd>
+            <dd class="po-display"><CountUp Value="@(Report.Metrics.TalkShare * 100)" Suffix="%" Audible="@Won" /></dd>
         </div>
         <div>
             <dt class="po-eyebrow">Pace</dt>
-            <dd class="po-display">@StatFormat.Number(Report.Metrics.WordsPerMinute)</dd>
+            <dd class="po-display"><CountUp Value="@Report.Metrics.WordsPerMinute" Audible="false" /></dd>
         </div>
         <div>
             <dt class="po-eyebrow">Facts right</dt>
-            <dd class="po-display">@Report.Assessment.CorrectnessPercent%</dd>
+            <dd class="po-display"><CountUp Value="@Report.Assessment.CorrectnessPercent" Suffix="%" Audible="false" /></dd>
         </div>
     </dl>
 </article>

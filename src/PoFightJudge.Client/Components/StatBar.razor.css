@@ -28,4 +28,15 @@
   background: var(--stat-color, var(--po-accent));
   border-radius: inherit;
   transition: width var(--po-dur-base) var(--po-ease);
+  /* Swept in on first paint. A measurement that was already at its value when the page appeared reads as a
+     template; one that arrives reads as a reading somebody took. */
+  animation: sweep var(--po-dur-slow) var(--po-ease) both;
+}
+
+@keyframes sweep {
+  from { width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill { animation: none; transition: none; }
 }

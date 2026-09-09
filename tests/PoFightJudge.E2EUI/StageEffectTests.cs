@@ -31,7 +31,7 @@ public class StageEffectTests(AppFixture app)
               host.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:120px;';
               document.body.appendChild(host);
               const drawn = [];
-              for (const shader of ['stage', 'backdrop']) {
+              for (const shader of ['stage', 'backdrop', 'grain']) {
                 if (PoGfx.mount('#gfx-probe', shader)) { drawn.push(shader); }
                 PoGfx.unmount('#gfx-probe');
               }
@@ -40,7 +40,7 @@ public class StageEffectTests(AppFixture app)
             }
             """);
 
-        mounted.Should().Equal(["stage", "backdrop"], "both shaders must compile and link, or they draw nothing at all");
+        mounted.Should().Equal(["stage", "backdrop", "grain"], "every shader must compile and link, or it draws nothing at all");
         errors.Should().BeEmpty();
     }
 
@@ -100,6 +100,38 @@ public class StageEffectTests(AppFixture app)
         errors.Should().BeEmpty("a voice that throws while it is being scheduled would say so on the console");
     }
 
+    /// <summary>
+    /// The particles are real physics on a real canvas: they have to be spawned, drawn, and then gone. What is
+    /// asserted is the end of that — the canvas takes itself away once the last one has died, because a page that
+    /// keeps a frame loop running after the confetti has landed is the one way this becomes a battery complaint.
+    /// </summary>
+    [SkippableFact]
+    public async Task Confetti_puts_a_canvas_up_and_takes_it_away_again()
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
+        await using var _ = context;
+
+        var thrown = await page.EvaluateAsync<bool>(
+            """
+            () => {
+              const host = document.createElement('div');
+              host.id = 'fx-probe';
+              host.style.cssText = 'position:fixed;left:0;top:0;width:300px;height:200px;';
+              document.body.appendChild(host);
+              return PoParticles.burst('#fx-probe', 'confetti');
+            }
+            """);
+
+        thrown.Should().BeTrue();
+        (await page.Locator("#fx-probe canvas.po-particles").CountAsync()).Should().Be(1, "the confetti is falling");
+
+        await page.EvaluateAsync("() => PoParticles.clear('#fx-probe')");
+        (await page.Locator("#fx-probe canvas.po-particles").CountAsync()).Should().Be(0, "and it does not stay up afterwards");
+
+        await page.EvaluateAsync("() => document.getElementById('fx-probe')?.remove()");
+        errors.Should().BeEmpty();
+    }
+
     /// <summary>Somebody who asked the whole system for less motion is not given the loudest thing in it.</summary>
     [SkippableFact]
     public async Task Reduced_motion_mounts_nothing()
@@ -123,10 +155,12 @@ public class StageEffectTests(AppFixture app)
               host.id = 'gfx-probe';
               host.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:120px;';
               document.body.appendChild(host);
-              const result = PoGfx.mount('#gfx-probe', 'stage');
+              const drawn = PoGfx.mount('#gfx-probe', 'stage');
+              const thrown = PoParticles.burst('#gfx-probe', 'confetti');
               PoGfx.unmount('#gfx-probe');
+              PoParticles.clear('#gfx-probe');
               host.remove();
-              return result;
+              return drawn || thrown;
             }
             """);
 

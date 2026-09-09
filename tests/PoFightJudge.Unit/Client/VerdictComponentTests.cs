@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
@@ -25,6 +26,11 @@ public sealed class VerdictComponentTests : BunitContext, IAsyncLifetime
     public VerdictComponentTests()
     {
         Services.AddRadzenComponents();
+        Services.AddScoped<ParticleInterop>();
+        Services.AddScoped<GfxInterop>();
+        // The ruling arrives with a fanfare, and the numbers on it count themselves up.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SfxInterop>();
         Services.AddSingleton(_api);
         Services.AddSingleton<TimeProvider>(_clock);
         JSInterop.Mode = JSRuntimeMode.Loose;
