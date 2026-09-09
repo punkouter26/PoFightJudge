@@ -61,8 +61,12 @@
 }
 
 /* The reveal: each part of the report arrives a beat after the one above it, in reading order. Purely on first
-   paint — nothing here re-runs, and one switch turns all of it off. */
-.verdict > * {
+   paint — nothing here re-runs, and one switch turns all of it off.
+
+   Not the canvases: PoGfx and PoParticles append their own into .verdict, which made them children of this rule and
+   gave the grain and the confetti a 360 ms delay and a 12 px slide of their own, on top of whatever they were
+   already drawing. They are absolutely positioned over the report, not part of its reading order. */
+.verdict > *:not(canvas) {
   animation: rise var(--po-dur-slow) var(--po-ease) both;
 }
 
@@ -76,5 +80,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .verdict > * { animation: none; }
+  .verdict > *:not(canvas) { animation: none; }
 }

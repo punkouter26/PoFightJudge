@@ -20,6 +20,8 @@ public class LoginPageTests : BunitContext
         Services.AddRadzenComponents();
         Services.AddScoped<ThemeInterop>();
         Services.AddSingleton(_api);
+        // Program.cs loads the gate before the first render; under bunit the component's own fallback load does it.
+        Services.AddSingleton<FeatureGate>();
         Services.AddScoped<AuthenticationStateProvider>(_ => new ApiAuthStateProvider(_api));
         var env = Substitute.For<IWebAssemblyHostEnvironment>();
         env.Environment.Returns("Development");

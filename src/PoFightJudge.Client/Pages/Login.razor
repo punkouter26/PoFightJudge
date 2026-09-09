@@ -5,6 +5,7 @@
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthState
 @inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment Env
+@inject FeatureGate Features
 
 <PageTitle>Sign in · PoFightJudge</PageTitle>
 
@@ -15,12 +16,12 @@
         <p class="po-muted">Sign in to pick a couple to watch, or step up to the mic with your own.</p>
 
         <div class="buttons">
-            @if (Env.IsProduction() || _flags is not { DevGuestEnabled: true })
+            @if (Env.IsProduction() || !Features.Flags.DevGuestEnabled)
             {
                 <RadzenButton Text="Sign in with Microsoft" Icon="login" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
                               Click="SignInWithMicrosoft" Disabled="@(!Env.IsProduction())" />
             }
-            @if (_flags is { DevGuestEnabled: true })
+            @if (Features.Flags.DevGuestEnabled)
             {
                 <RadzenButton Text="Continue as Guest (Dev)" Icon="person" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large"
                               Click="ContinueAsGuestAsync" IsBusy="@_busy" BusyText="Signing in…" />
@@ -31,7 +32,7 @@
         {
             <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
         }
-        @if (!Env.IsProduction() && _flags is { DevGuestEnabled: false })
+        @if (!Env.IsProduction() && Features.Loaded && !Features.Flags.DevGuestEnabled)
         {
             <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
                 Guest sign-in is off. Set <code>FeatureManagement:DevGuestEnabled</code> and <code>PoFightJudge:Auth:AllowFakeAuth</code> in Development.
@@ -44,17 +45,23 @@
     [SupplyParameterFromQuery(Name = "returnUrl")]
     public string? ReturnUrl { get; set; }
 
-    private FeatureFlagsDto? _flags;
     private bool _busy;
     private string? _error;
 
+    /// <summary>
+    /// The flags were read at startup, so the buttons are right on the first render. The one case left is a browser
+    /// that booted while the API was down: this is the page it lands on, and asking again here is what lets it
+    /// recover without a reload.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        try
+        if (Features.Loaded)
         {
-            _flags = await Api.GetFeaturesAsync();
+            return;
         }
-        catch (HttpRequestException)
+
+        await Features.LoadAsync();
+        if (!Features.Loaded)
         {
             _error = "The API is not answering. Is it running?";
         }

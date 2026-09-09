@@ -5,6 +5,7 @@
 @inject SimulationState Simulation
 @inject NavigationManager Nav
 @inject SetupMemory Memory
+@inject FeatureGate Features
 
 <PageTitle>@Channel · PoFightJudge</PageTitle>
 
@@ -105,7 +106,6 @@
     private string _topic = string.Empty;
     private bool _loading = true;
     private string? _loadError;
-    private FeatureFlagsDto? _flags;
     private bool? _channel;
 
     /// <summary>
@@ -121,7 +121,7 @@
         : "Two of your profiles argue it out in their own voices, three rounds each, and a judge calls it on the merits.";
 
     /// <summary>Whether the server can transcribe a spoken turn at all; without it 1P has nothing to listen with.</summary>
-    private bool CanSpeak => _flags?.HumanInWatch ?? false;
+    private bool CanSpeak => Features.Flags.HumanInWatch;
 
     /// <summary>Which seat the opponent's role leaves for the person. Reads as a statement, because it is one.</summary>
     private string YourSeat => _opponent is null
@@ -207,7 +207,12 @@
     {
         try
         {
-            _flags = await Api.GetFeaturesAsync();
+            if (!Features.Loaded)
+            {
+                // The gate is loaded in Program.cs; this is the browser that booted while the API was down.
+                await Features.LoadAsync();
+            }
+
             _cast = [.. await Api.GetProfilesAsync()];
             await ReopenAsync();
         }

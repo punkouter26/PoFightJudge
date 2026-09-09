@@ -3,12 +3,23 @@
   align-items: center;
   justify-content: center;
   gap: var(--po-space-2);
-  min-height: 28px;
-  padding: var(--po-space-1) var(--po-space-4);
+  /* Fixed, not a minimum: the two copies are each one line, and a strip that cannot change height cannot move the
+     page under it when the web font lands. */
+  height: 28px;
+  padding: 0 var(--po-space-4);
   background: var(--po-accent-soft);
   color: var(--po-accent-text);
   font-size: var(--po-text-xs);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.short { display: none; }
+
+@media (max-width: 40rem) {
+  .po-fake-banner { letter-spacing: 0.06em; }
+  .full { display: none; }
+  .short { display: inline; }
 }

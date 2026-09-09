@@ -28,6 +28,8 @@ public class WatchSetupTests : BunitContext
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
+        // Program.cs loads the gate before the first render; under bunit the component's own fallback load does it.
+        Services.AddSingleton<FeatureGate>();
         Services.AddSingleton(_simulation);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns(Cast());

@@ -35,7 +35,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
     private readonly CancellationTokenSource _leaving = new();
 
     private IReadOnlyList<ProfileDto> _cast = [];
-    private FeatureFlagsDto? _flags;
     private CancellationTokenSource? _beat;
 
     /// <summary>
@@ -83,6 +82,8 @@ public sealed partial class WatchPlay : IAsyncDisposable
     }
 
     [Inject] private IApiClient Api { get; set; } = default!;
+
+    [Inject] private FeatureGate Features { get; set; } = default!;
 
     [Inject] private SimulationState Simulation { get; set; } = default!;
 
@@ -190,7 +191,12 @@ public sealed partial class WatchPlay : IAsyncDisposable
     {
         try
         {
-            _flags = await Api.GetFeaturesAsync(_leaving.Token);
+            if (!Features.Loaded)
+            {
+                // The gate is loaded in Program.cs; this is the browser that booted while the API was down.
+                await Features.LoadAsync(_leaving.Token);
+            }
+
             _cast = await Api.GetProfilesAsync(_leaving.Token) ?? [];
         }
         catch (ApiException)

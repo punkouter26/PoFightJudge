@@ -1,11 +1,37 @@
-// Stamps the stored theme on <html> before Blazor boots so there is no flash of the wrong palette.
-// Dark is the default (no attribute needed); only an explicit "light" choice is stamped. Kept in a file for the CSP.
-// Blazored.LocalStorage writes the value with SetItemAsStringAsync, so it is the bare word, not a JSON string —
-// the quote-strip below tolerates either.
+// Runs before anything paints, in a file rather than inline because the CSP is script-src 'self'.
+//
+// Two jobs, both about the first frame:
+//
+//  1. Stamp the stored theme on <html> so the palette does not flash. Dark is the default (no attribute needed);
+//     only an explicit "light" choice is stamped. Blazored.LocalStorage writes with SetItemAsStringAsync, so the
+//     value is the bare word rather than a JSON string — the quote-strip below tolerates either.
+//
+//  2. Put Radzen's stylesheet in the critical path. <RadzenTheme> injects it from Blazor, which is roughly 1.4 s
+//     in, and until then every Radzen component on the page is unstyled: an icon is its ligature *text*, so the
+//     menu icon measured 72 px wide instead of 24 and the whole top bar re-laid out when the sheet landed. That was
+//     0.11 of the home page's 0.12 CLS. Appended here, it downloads alongside the framework and is applied before
+//     Blazor's first render. <RadzenTheme> still owns the runtime swap; a second link to the same file is inert.
 (function () {
+  var theme = null;
   try {
-    var t = localStorage.getItem('po-theme');
-    if (t) t = t.replace(/^"|"$/g, '');
-    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    theme = localStorage.getItem('po-theme');
+    if (theme) theme = theme.replace(/^"|"$/g, '');
+    if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
   } catch (e) { /* storage blocked: keep the default */ }
+
+  var base = '_content/Radzen.Blazor/';
+  var sheet = document.createElement('link');
+  sheet.rel = 'stylesheet';
+  sheet.href = base + 'css/' + (theme === 'light' ? 'material-base.css' : 'material-dark-base.css');
+  document.head.appendChild(sheet);
+
+  // The icon font is declared inside that sheet, so the browser cannot find it until the sheet parses. Asking for
+  // it here means the glyphs are ready when the rules that use them arrive.
+  var font = document.createElement('link');
+  font.rel = 'preload';
+  font.as = 'font';
+  font.type = 'font/woff2';
+  font.crossOrigin = 'anonymous';
+  font.href = base + 'fonts/MaterialSymbolsOutlined.woff2';
+  document.head.appendChild(font);
 })();

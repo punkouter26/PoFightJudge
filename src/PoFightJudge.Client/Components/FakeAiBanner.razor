@@ -1,28 +1,30 @@
-@inject IApiClient Api
+@inject FeatureGate Features
 
-@if (_show)
+@* The flags are loaded in Program.cs before the first render, so this is decided on the first paint rather than a
+   strip that appears once the API answers and pushes the page down under it.
+
+   Two lengths, because this is a strip above every screen and the long one wrapped to three lines on a phone in the
+   fallback face and two in Barlow — an 18 px jump on the web font's arrival, and 62 px of a 844 px screen spent
+   saying the same thing. Fixed to one line at both, so the swap cannot resize the box. *@
+@if (Features.Flags.UseFakeAi)
 {
-    <div class="po-fake-banner" role="status" aria-live="polite">
+    <div class="po-fake-banner" role="status">
         <RadzenIcon Icon="science" />
-        <span>Using fake AI — no Gemini key configured. Matches are exhibitions.</span>
+        <span class="full">Using fake AI — no Gemini key configured. Matches are exhibitions.</span>
+        <span class="short">Fake AI — exhibition matches</span>
     </div>
 }
 
 @code {
-    private bool _show;
-
+    /// <summary>
+    /// Normally a no-op: Program.cs loads the gate before the first render. The case it covers is a browser that
+    /// booted while the API was down — this banner is on every screen, so it is a reasonable place to ask again.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        try
+        if (!Features.Loaded)
         {
-            // Through the typed client: the banner renders on the sign-in page, before there is a token, and the
-            // feature-flag call is the one that travels on the anonymous HttpClient.
-            var flags = await Api.GetFeaturesAsync();
-            _show = flags.UseFakeAi;
-        }
-        catch (HttpRequestException)
-        {
-            // The API is down; the pages will say so in their own words.
+            await Features.LoadAsync();
         }
     }
 }

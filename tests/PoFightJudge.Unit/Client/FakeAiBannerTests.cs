@@ -21,6 +21,8 @@ public class FakeAiBannerTests : BunitContext
     {
         Services.AddRadzenComponents();
         Services.AddSingleton(_api);
+        // Program.cs loads the gate before the first render; under bunit the component's own fallback load does it.
+        Services.AddSingleton<FeatureGate>();
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 

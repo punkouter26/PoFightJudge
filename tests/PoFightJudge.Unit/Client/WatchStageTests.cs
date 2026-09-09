@@ -31,6 +31,8 @@ public sealed class WatchStageTests : BunitContext, IAsyncLifetime
         Services.AddRadzenComponents();
         Services.AddHotKeys2();
         Services.AddSingleton(_api);
+        // Program.cs loads the gate before the first render; under bunit the component's own fallback load does it.
+        Services.AddSingleton<FeatureGate>();
         Services.AddSingleton(_simulation);
         Services.AddSingleton<TimeProvider>(_clock);
         Services.AddSingleton(Substitute.For<ILocalStorageService>());

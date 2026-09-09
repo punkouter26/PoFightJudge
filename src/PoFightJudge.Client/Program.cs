@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using PoFightJudge.Client;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Models;
@@ -38,6 +39,7 @@ builder.Services.AddScoped<SimulationState>();
 builder.Services.AddScoped<SetupMemory>();
 builder.Services.AddScoped<SaveInterop>();
 builder.Services.AddScoped<ConnectionState>();
+builder.Services.AddScoped<FeatureGate>();
 builder.Services.AddScoped<ConnectionWatchHandler>();
 // The same rules the API enforces, for <FluentValidationValidator> (registered explicitly: no assembly scanning under trimming).
 builder.Services.AddScoped<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
@@ -75,7 +77,14 @@ else
 builder.Services.AddAuthorizationCore(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Before the first render, not after it. The fake-AI banner sits above the top bar, so a flag that arrives late is a
+// strip that appears and pushes the whole app down — measured at CLS 0.29 on the home page. One request, and every
+// page that needs the flags reads them from the gate instead of asking again.
+await host.Services.GetRequiredService<FeatureGate>().LoadAsync();
+
+await host.RunAsync();
 
 namespace PoFightJudge.Client
 {

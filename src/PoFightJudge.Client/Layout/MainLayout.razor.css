@@ -121,6 +121,14 @@
 
 /* ── Nav switches at 64rem: seven tabs, a brand and a session block do not fit sooner. ── */
 @media (max-width: 64rem) {
+  /* Closed until Radzen says open. Radzen collapses the menu by adding `rz-menu-closed` from its own JS, after it
+     has measured the bar — so until that ran, all eight items were in flow and the top bar was 269 px tall on a
+     phone instead of 64. Everything below it then jumped 205 px, which was the whole of the home page's CLS.
+     Starting from the closed state in CSS means the first paint is already the settled one. */
+  .nav ::deep .rz-menu:not(.rz-menu-open) .rz-navigation-item {
+    display: none;
+  }
+
   .topbar {
     grid-template-columns: auto 1fr auto;
     gap: var(--po-space-3);

@@ -35,6 +35,8 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         // The play screen binds S to the slap, so its hot-key context needs a home.
         Services.AddHotKeys2();
         Services.AddSingleton(_api);
+        // Program.cs loads the gate before the first render; under bunit the component's own fallback load does it.
+        Services.AddSingleton<FeatureGate>();
         Services.AddSingleton(_simulation);
         Services.AddSingleton<TimeProvider>(_clock);
         Services.AddScoped<AudioInterop>();

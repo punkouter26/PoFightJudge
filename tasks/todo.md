@@ -100,7 +100,7 @@
 - [x] T70 The viewport a phone actually has: `dvh` and the safe-area insets
 - [x] T71 Touch targets that are the size the stylesheet claims
 - [x] T72 Headings in order: a card does not decide the document outline
-- [ ] T73 Nothing jumps after first paint: the banners hold their slot
+- [x] T73 Nothing jumps after first paint: the banners hold their slot
 - [ ] T74 A grid a phone can read: cards below 40rem, columns above it
 - [ ] T75 A live fight that renders what changed, not the page
 - [ ] T76 Setup as three steps, so each one is a screen
