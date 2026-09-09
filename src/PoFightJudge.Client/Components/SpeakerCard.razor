@@ -6,7 +6,7 @@
     {
         <div class="face face--empty" aria-hidden="true">?</div>
         <div class="who">
-            <h3 class="po-muted">Nobody yet</h3>
+            <h2 class="po-muted">Nobody yet</h2>
             <p class="po-muted">Pick a persona, or step up to the microphone.</p>
         </div>
     }
@@ -16,7 +16,7 @@
             <RadzenIcon Icon="mic" />
         </div>
         <div class="who">
-            <h3>@Side.DisplayName</h3>
+            <h2>@Side.DisplayName</h2>
             <div class="meta">
                 <span class="po-chip po-chip--accent">@Side.Id · you</span>
                 <span class="po-muted">Speaks for themselves</span>
@@ -34,7 +34,7 @@
             <div class="face face--blank po-display" aria-hidden="true">@Side.Id</div>
         }
         <div class="who">
-            <h3>@Side.DisplayName</h3>
+            <h2>@Side.DisplayName</h2>
             <div class="meta">
                 <span class="po-chip @(IsWife ? "po-chip--p2" : "po-chip--p1")">@Side.Id</span>
                 @if (Profile is not null && !string.IsNullOrWhiteSpace(Profile.Persona.Occupation))

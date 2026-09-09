@@ -36,7 +36,7 @@
 
 .who { grid-area: who; display: grid; gap: var(--po-space-1); }
 
-.who h3 { margin: 0; }
+.who h2 { margin: 0; }
 
 .meta {
   display: flex;

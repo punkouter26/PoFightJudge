@@ -12,6 +12,14 @@
   border-bottom: 1px solid var(--po-rule);
 }
 
+/* The label became an h2 for the outline's sake, and h1-h4 are display type app-wide. It is still a chip, so it
+   keeps the chip's face: the change was semantic and nothing about it should be visible. */
+.section-head h2 {
+  font-family: var(--po-font-body);
+  font-size: var(--po-text-xs);
+  letter-spacing: 0.04em;
+}
+
 ::deep .cards .rz-datalist-data {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
