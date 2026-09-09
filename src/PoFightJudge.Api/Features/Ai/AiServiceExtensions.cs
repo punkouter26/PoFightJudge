@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using PoFightJudge.Api.Features.Ai.Fakes;
 using PoFightJudge.Api.Features.Diagnostics;
 using PoFightJudge.Api.Features.Voice;
@@ -52,10 +53,41 @@ public static class AiServiceExtensions
         else
         {
             services.AddSingleton<IGeminiText, GeminiTextClient>();
+
+            // Registration order is the voice chain. A persona's own cloned voice leads where there is one, because
+            // sounding like the character is the entire point of giving it one; Gemini speaks for everybody else and
+            // catches anything Fish refuses.
+            AddFishAudio(services, configuration);
             services.AddSingleton<ITtsProvider, GeminiTtsService>();
             services.AddSingleton<IWatchAi, WatchAi>();
         }
 
         return mode;
+    }
+
+    /// <summary>
+    /// Fish Audio, when a key is configured. Absent one the provider is not registered at all, so the chain is
+    /// Gemini alone and a persona's reference id sits there harmlessly until somebody sets the secret.
+    /// </summary>
+    private static void AddFishAudio(IServiceCollection services, IConfiguration configuration)
+    {
+        var key = configuration[ConfigKeys.Ai.FishAudioApiKey]
+            ?? Environment.GetEnvironmentVariable(ConfigKeys.Ai.FishAudioApiKeyEnvVar);
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            services.AddSingleton(new FishAudioOptions(Enabled: false));
+            return;
+        }
+
+        services.AddSingleton(new FishAudioOptions(Enabled: true, configuration[ConfigKeys.Ai.FishDefaultReferenceId]));
+        services.AddHttpClient(FishAudioService.ClientName, client =>
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
+
+            // Cloning a voice takes longer than reading one off a shelf, and the round is already waiting on it.
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
+
+        services.AddSingleton<ITtsProvider, FishAudioService>();
     }
 }

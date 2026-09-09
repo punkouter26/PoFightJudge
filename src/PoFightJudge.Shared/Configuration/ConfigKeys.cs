@@ -44,6 +44,14 @@ public static class ConfigKeys
         public const string GeminiApiKey = $"{Root}:GeminiApiKey";
         public const string GeminiApiKeyEnvVar = "GEMINI_API_KEY";
 
+        /// <summary>Fish Audio, the cloned-voice provider. Its presence is the whole switch: no key, no Fish.</summary>
+        public const string FishAudioApiKey = $"{Root}:FishAudioApiKey";
+
+        public const string FishAudioApiKeyEnvVar = "FISH_API_KEY";
+
+        /// <summary>An optional shared voice for personas that carry no reference id of their own.</summary>
+        public const string FishDefaultReferenceId = $"{Root}:Fish:DefaultReferenceId";
+
         public const string RoundModel = $"{Section}:RoundModel";
         public const string JudgeModel = $"{Section}:JudgeModel";
         public const string ProfileModel = $"{Section}:ProfileModel";

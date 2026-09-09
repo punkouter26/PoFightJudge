@@ -23,6 +23,11 @@ public class ProfileEditDialogTests : BunitContext
         Services.AddRadzenComponents();
         Services.AddSingleton(_api);
         Services.AddSingleton<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
+
+        // The dialog asks the gate which voice controls to draw. Unasked, it answers "everything off", which is the
+        // Gemini voice — the same section these tests were written against.
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, false, FishVoices: false));
+        Services.AddSingleton(new FeatureGate(_api));
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 

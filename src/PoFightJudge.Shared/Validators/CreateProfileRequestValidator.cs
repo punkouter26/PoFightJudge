@@ -53,5 +53,9 @@ public sealed class TtsSettingsDtoValidator : AbstractValidator<TtsSettingsDto>
         RuleFor(t => t.Pitch).InclusiveBetween(CreateProfileRequestValidator.MinProsody, CreateProfileRequestValidator.MaxProsody);
         RuleFor(t => t.Speed).InclusiveBetween(CreateProfileRequestValidator.MinProsody, CreateProfileRequestValidator.MaxProsody);
         RuleFor(t => t.VoiceName).NotEmpty().MaximumLength(CreateProfileRequestValidator.MaxVoiceNameLength);
+
+        // A Fish reference id is opaque — it is whatever the voice's own page calls it — so only its length is this
+        // side's business. Empty is legitimate: that persona is then spoken by the ordinary provider.
+        RuleFor(t => t.FishReferenceId).MaximumLength(128);
     }
 }

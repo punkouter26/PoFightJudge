@@ -36,7 +36,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void Outside_production_the_guest_door_is_the_only_door()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, FishVoices: false));
 
         var cut = Render<Login>();
 
@@ -47,7 +47,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void With_the_guest_door_shut_the_page_says_how_to_open_it()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, FishVoices: false));
 
         var cut = Render<Login>();
 
@@ -58,7 +58,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public async Task Continue_as_guest_signs_in_and_returns_to_a_safe_url_only()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, FishVoices: false));
         _api.GuestSignInAsync(Arg.Any<CancellationToken>()).Returns(new AuthMeDto(true, "GUEST-1", "GUEST-1", "DevGuest"));
         var nav = Services.GetRequiredService<BunitNavigationManager>();
 

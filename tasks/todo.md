@@ -143,3 +143,4 @@
 - [x] T104 The spoken turn gets its own transcriber: one model id served two Gemini surfaces, and the one the diarizer needs returns an empty turn on generateContent
 - [x] T105 A profile that counts as well as reads: twelve career word stats computed from everything a person has ever said
 - [x] T106 The persona editor halved: 28 fields become 14, and the nine lines of "50 (neutral)" stop being sent to the model
+- [x] T107 Cloned voices come back: Fish Audio restored ahead of Gemini, and the editor asks for a voice id instead of a voice

@@ -35,7 +35,7 @@ public class WatchSetupTests : BunitContext
         Services.AddSingleton(_simulation);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns(Cast());
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, HumanInWatch: true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(true, true, HumanInWatch: true, FishVoices: false));
     }
 
     private static IReadOnlyList<ProfileDto> Cast() =>

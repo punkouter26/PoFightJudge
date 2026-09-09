@@ -4,6 +4,7 @@
 @using Blazored.FluentValidation
 @using PoFightJudge.Shared.Validators
 @inject IApiClient Api
+@inject FeatureGate Features
 @inject DialogService Dialog
 
 @* Create or edit a persona. Hosted by DialogService (the page awaits the saved ProfileDto) and rendered on its own in
@@ -123,24 +124,47 @@
         </div>
     </RadzenFieldset>
 
-    <RadzenFieldset Text="Voice" class="section">
-        <div class="voice">
-            <RadzenFormField Text="Gemini voice" Variant="Variant.Outlined">
-                <ChildContent>
-                    <RadzenDropDown TValue="string" @bind-Value="_model.TtsSettings.VoiceName" Data="@VoicesFor(_model.Role)" Name="VoiceName" />
-                </ChildContent>
-                <Helper><ValidationMessage For="@(() => _model.TtsSettings.VoiceName)" /></Helper>
-            </RadzenFormField>
-            <div class="slider">
-                <div class="slider-head"><span>Pitch</span><span class="po-num">@_model.TtsSettings.Pitch.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span><span></span></div>
-                <RadzenSlider TValue="double" Min="@((decimal)CreateProfileRequestValidator.MinProsody)" Max="@((decimal)CreateProfileRequestValidator.MaxProsody)" Step="0.05" @bind-Value="_model.TtsSettings.Pitch" aria-label="Pitch" />
+    @* Two ways to have a voice, and only ever one of them on screen. With Fish Audio configured a persona speaks in
+       a cloned voice named by its reference id, and Gemini's own voice and prosody do not apply to it; without a
+       Fish key there is nothing a reference id could be sent to, so asking for one would be asking for nothing. *@
+    @if (Features.Flags.FishVoices)
+    {
+        <RadzenFieldset Text="Voice" class="section">
+            <div class="voice">
+                <RadzenFormField Text="Fish voice id" Variant="Variant.Outlined" class="span-2">
+                    <ChildContent>
+                        <RadzenTextBox @bind-Value="_model.TtsSettings.FishReferenceId" Name="FishReferenceId" MaxLength="128"
+                                       Placeholder="e.g. trump" aria-label="Fish Audio voice id" />
+                    </ChildContent>
+                    <Helper>
+                        <span class="po-muted">The id from the voice's fish.audio/m/&#123;id&#125; page. Leave it empty and this persona is spoken by the ordinary voice.</span>
+                        <ValidationMessage For="@(() => _model.TtsSettings.FishReferenceId)" />
+                    </Helper>
+                </RadzenFormField>
             </div>
-            <div class="slider">
-                <div class="slider-head"><span>Speed</span><span class="po-num">@_model.TtsSettings.Speed.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span><span></span></div>
-                <RadzenSlider TValue="double" Min="@((decimal)CreateProfileRequestValidator.MinProsody)" Max="@((decimal)CreateProfileRequestValidator.MaxProsody)" Step="0.05" @bind-Value="_model.TtsSettings.Speed" aria-label="Speed" />
+        </RadzenFieldset>
+    }
+    else
+    {
+        <RadzenFieldset Text="Voice" class="section">
+            <div class="voice">
+                <RadzenFormField Text="Gemini voice" Variant="Variant.Outlined">
+                    <ChildContent>
+                        <RadzenDropDown TValue="string" @bind-Value="_model.TtsSettings.VoiceName" Data="@VoicesFor(_model.Role)" Name="VoiceName" />
+                    </ChildContent>
+                    <Helper><ValidationMessage For="@(() => _model.TtsSettings.VoiceName)" /></Helper>
+                </RadzenFormField>
+                <div class="slider">
+                    <div class="slider-head"><span>Pitch</span><span class="po-num">@_model.TtsSettings.Pitch.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span><span></span></div>
+                    <RadzenSlider TValue="double" Min="@((decimal)CreateProfileRequestValidator.MinProsody)" Max="@((decimal)CreateProfileRequestValidator.MaxProsody)" Step="0.05" @bind-Value="_model.TtsSettings.Pitch" aria-label="Pitch" />
+                </div>
+                <div class="slider">
+                    <div class="slider-head"><span>Speed</span><span class="po-num">@_model.TtsSettings.Speed.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span><span></span></div>
+                    <RadzenSlider TValue="double" Min="@((decimal)CreateProfileRequestValidator.MinProsody)" Max="@((decimal)CreateProfileRequestValidator.MaxProsody)" Step="0.05" @bind-Value="_model.TtsSettings.Speed" aria-label="Speed" />
+                </div>
             </div>
-        </div>
-    </RadzenFieldset>
+        </RadzenFieldset>
+    }
 
     @if (_error is not null)
     {

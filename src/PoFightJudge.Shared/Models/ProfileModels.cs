@@ -19,6 +19,12 @@ public sealed class TtsSettingsDto
     public double Speed { get; set; } = 1.0;
 
     public string VoiceName { get; set; } = "Charon";
+
+    /// <summary>
+    /// The Fish Audio voice model id from its <c>fish.audio/m/{id}</c> page — this character's cloned voice. Blank
+    /// means the persona has no voice of its own and the ordinary provider speaks for it.
+    /// </summary>
+    public string? FishReferenceId { get; set; }
 }
 
 /// <summary>

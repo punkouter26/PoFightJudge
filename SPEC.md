@@ -95,7 +95,7 @@ viewport and a laptop, with every screen built from Radzen components.
 | AI — judge / analysis / profile gen | **`gemini-3.7-flash`** (`generateContent`, `responseSchema`, `thinkingConfig.thinkingLevel: low`, analysis on `service_tier: flex`) |
 | AI — diarization | **`gemini-3.5-transcribe`** via `POST /v1beta/interactions` (`diarization_mode: speaker`, word timestamps), audio via Files API; used only when the live caption transcript is too thin (< 30 words) |
 | AI — a spoken turn | **`gemini-3.1-flash-lite`** (`Ai:TurnTranscribeModel`), one `inlineData` WAV part on `generateContent`, temperature 0. Deliberately **not** the diarization tier: on `generateContent` that id answers 200 with `finishReason: STOP` and an empty part, which reaches a player as a turn that heard nothing. Two keys, because the two surfaces do not accept the same model |
-| AI — TTS | **`gemini-3.1-flash-tts-preview`** (`responseModalities:["AUDIO"]`, `speechConfig.voiceConfig.prebuiltVoiceConfig`), behind Fish Audio (`POST https://api.fish.audio/v1/tts`, `reference_id`, Bearer) and Azure Speech (REST TTS + fast transcription) |
+| AI — TTS | Two providers, in order. **Fish Audio** (`POST https://api.fish.audio/v1/tts`, model `s2.1-pro-free`, `reference_id`, Bearer) speaks any persona that carries a `FishReferenceId`, so a character can have a cloned voice; mp3 must be requested at 32000 or 44100 or Fish 400s. Everyone else, and anything Fish refuses, falls to **`gemini-3.1-flash-tts-preview`** (`speech_config.voice`). No Fish key means the provider is not registered at all. Azure Speech is gone (T97) |
 | Gemini transport | Raw `HttpClient` / `ClientWebSocket` with `x-goog-api-key`; no Google SDK (it exposes neither Live nor Interactions) |
 | Storage | Azure.Data.Tables 12.12.0, Azure.Storage.Blobs 12.29.2, Azure.Identity 1.21.0 — **endpoint + `DefaultAzureCredential` only, no connection strings anywhere**. Local: Azurite `--oauth basic` over HTTPS (dev cert) on **12000 blob / 12001 queue / 12002 table** |
 | Auth | Development/Test: `FakeAuthHandler` (`X-Fake-User`) + `GuestMiddleware` (cookie); Production: Entra ID — `Microsoft.Identity.Web` 4.14.2 JWT bearer (`ValidAudiences = [clientId, api://clientId]`), `Microsoft.Authentication.WebAssembly.Msal` with tenant-specific authority. `FakeAuthHandler` throws in Production |
@@ -151,7 +151,7 @@ src/PoFightJudge.Api/
   Features/Ai/            GeminiHttp, GeminiRetryHandler, GeminiResilience, GeminiModelOptions, IGeminiText,
                           GeminiTextClient, Fakes/{FakeGeminiText,FakeTts,FakeTranscription,FakeLiveClient…} (non-Production DI only)
   Features/Voice/         ITtsService, RoutingTtsService, TtsAudio, TtsAudioFormats, SentenceChunker,
-                          FishAudioService, AzureSpeechService, GeminiTtsService, ITtsCache, BlobTtsCache, ITranscriptionService,
+                          FishAudioService, GeminiTtsService, CachingTtsService, ITtsCache, BlobTtsCache, ITranscriptionService,
                           AzureTranscriptionService, GeminiTranscriptionService
   Features/Watch/         WatchMatch, WatchRound, ArgueScoreCalculator, AdvancedStats, AttitudeSelector, RoundPromptBuilder,
                           JudgePromptBuilder, WatchEndpoints (generate-round[-stream], round-audio[-stream], verdict, transcribe),
@@ -232,7 +232,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 
 | Concept | Shape | Storage |
 |---|---|---|
-| `Profile` (WATCH persona) | `ProfileId` (= upper-cased initials, 1–3 alphanumerics), `Role` (Husband/Wife), name/age/occupation, likes/dislikes, 6 trait flags, 9 sliders (0–100), love language/attachment/stress response, common arguments, philosophy, `FacePic` (blob), `TtsSettings` (pitch, speed, Gemini voice, `FishReferenceId`). Record is derived, not stored | `Profiles` table: PK `"profile"`, RK initials — **global** |
+| `Profile` (WATCH persona) | `ProfileId` (= upper-cased initials, 1–3 alphanumerics), `Role` (Husband/Wife), name/age/occupation, likes/dislikes, common arguments, philosophy, 4 sliders (0–100: logic-vs-emotion, patience, holds grudges, jealousy), `FacePic` (blob), `TtsSettings` (pitch, speed, Gemini voice, `FishReferenceId`). The six trait flags, three psychology enums and five topic sliders went in T106. Record is derived, not stored | `Profiles` table: PK `"profile"`, RK initials — **global** |
 | `Fighter` (real person) | `FighterId` (= upper-cased tag, 1–3 alphanumerics), `DisplayName` (defaults to the tag; the only editable field), `CreatedAt`, `CreatedByUserId`. **Auto-created** by `POST /api/fights` for any unknown tag. Everything else — record, averages, badges, streak, rivalries, form and the **style profile** — is derived on read from `FightResults` | `Fighters` table: PK `"fighter"`, RK tag — **global** |
 | `Match` | `MatchId`, `UserId`, `Mode` (Watch/Fight), `Topic`, `HusbandId`/`WifeId` (Watch) or `Fighter1Id`/`Fighter2Id` (Fight), display names denormalised, `Persona`, `Status` (Live/Analyzing/Ready/Failed), `Winner`, `VerdictText`, `StartedAt/EndedAt`, audio blob names, `IsFake` | `Matches` table: PK userId, RK matchId |
 | `Turn` | index, `Speaker` (Host/Player1/Player2 ↔ Husband/Wife), `Kind` (Talk/Probe/Interrupt/Verdict/Round), start/end seconds, text, mood, audio format | `Turns` table: PK matchId, RK index |

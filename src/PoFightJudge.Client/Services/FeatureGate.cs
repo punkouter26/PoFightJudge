@@ -15,7 +15,7 @@ namespace PoFightJudge.Client.Services;
 /// </summary>
 public sealed class FeatureGate(IApiClient api)
 {
-    private static readonly FeatureFlagsDto Off = new(UseFakeAi: false, DevGuestEnabled: false, HumanInWatch: false);
+    private static readonly FeatureFlagsDto Off = new(UseFakeAi: false, DevGuestEnabled: false, HumanInWatch: false, FishVoices: false);
 
     /// <summary>The flags. Never null: it is <see cref="Off"/> until the load succeeds, and again if it does not.</summary>
     public FeatureFlagsDto Flags { get; private set; } = Off;

@@ -157,7 +157,11 @@ public sealed class Profile
 }
 
 /// <summary>Value object for TTS voice configuration. Voice names are the Gemini prebuilt voices, split by role.</summary>
-public sealed record TtsSettings(double Pitch, double Speed, string VoiceName)
+/// <param name="FishReferenceId">
+/// The Fish Audio voice model id from its <c>fish.audio/m/{id}</c> page — a cloned voice for this character. Null
+/// or blank means this persona has no voice of its own and is spoken by the ordinary provider.
+/// </param>
+public sealed record TtsSettings(double Pitch, double Speed, string VoiceName, string? FishReferenceId = null)
 {
     private static readonly string[] HusbandVoices = ["Charon", "Puck", "Fenrir"];
     private static readonly string[] WifeVoices = ["Kore", "Zephyr"];

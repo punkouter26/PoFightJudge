@@ -11,12 +11,22 @@ namespace PoFightJudge.Api.Features.Voice;
 public sealed record TtsRoutingOptions(string WireFormat, bool CacheEnabled);
 
 /// <summary>
-/// Speaks a line through the one configured provider — Gemini TTS, or the fake — with the content-addressed cache in
-/// front of it, and splits a long line into clauses so the first one can start playing while the rest is rendered.
-/// A provider failure returns silence rather than throwing: a voice problem must never break a round.
+/// Speaks a line through the configured providers, with the content-addressed cache in front of them, and splits a
+/// long line into clauses so the first can start playing while the rest is rendered. A provider failure falls
+/// through to the next and finally returns silence rather than throwing: a voice problem must never break a round.
 /// </summary>
-public sealed partial class CachingTtsService(ITtsProvider provider, TtsRoutingOptions routing, ITtsCache cache, ILogger<CachingTtsService> logger) : ITtsService
+/// <remarks>
+/// Registration order is the chain, and it is short on purpose: a persona's own cloned voice first, then the
+/// ordinary one. Anything that cannot speak for this persona — Fish Audio without a reference id for it — is not
+/// asked. Callers never learn which provider answered.
+/// </remarks>
+public sealed partial class CachingTtsService(IEnumerable<ITtsProvider> providers, TtsRoutingOptions routing, ITtsCache cache, ILogger<CachingTtsService> logger) : ITtsService
 {
+    private readonly IReadOnlyList<ITtsProvider> _providers = [.. providers];
+
+    /// <summary>Who will be asked to speak for this persona, best first.</summary>
+    public IReadOnlyList<ITtsProvider> ChainFor(TtsSettings settings) => [.. _providers.Where(p => p.CanSpeak(settings))];
+
     public async Task<TtsAudio> GenerateTtsAsync(string text, TtsSettings settings, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -67,40 +77,46 @@ public sealed partial class CachingTtsService(ITtsProvider provider, TtsRoutingO
 
     /// <summary>The cache key includes the provider, so the fake and the real voice can never collide in one account.</summary>
     public static string CacheKey(string text, TtsSettings settings, string provider, string format) =>
-        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{provider}|{format}|{settings.VoiceName}|{settings.Pitch:F2}|{settings.Speed:F2}|{text}");
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{provider}|{format}|{settings.VoiceName}|{settings.FishReferenceId}|{settings.Pitch:F2}|{settings.Speed:F2}|{text}");
 
-    /// <summary>Runs the provider through the cache. Null means it failed or said nothing.</summary>
+    /// <summary>Runs the chain through the cache, best provider first. Null means every one of them failed or said nothing.</summary>
     private async Task<TtsAudio?> SpeakAsync(string text, TtsSettings settings, CancellationToken ct)
     {
-        var key = routing.CacheEnabled && cache.IsEnabled ? CacheKey(text, settings, provider.Name, routing.WireFormat) : null;
-        if (key is not null && await cache.TryGetAsync(key, ct) is { } cached && !cached.IsEmpty)
+        foreach (var provider in ChainFor(settings))
         {
-            return cached;
-        }
-
-        try
-        {
-            var audio = await provider.SynthesizeAsync(text, settings, ct);
-            if (audio.IsEmpty)
+            // Keyed per provider, so a line already spoken in a cloned voice is never served for the ordinary one.
+            var key = routing.CacheEnabled && cache.IsEnabled ? CacheKey(text, settings, provider.Name, routing.WireFormat) : null;
+            if (key is not null && await cache.TryGetAsync(key, ct) is { } cached && !cached.IsEmpty)
             {
-                return null;
+                return cached;
             }
 
-            if (key is not null)
+            try
             {
-                await cache.SetAsync(key, audio, ct);
-            }
+                var audio = await provider.SynthesizeAsync(text, settings, ct);
+                if (audio.IsEmpty)
+                {
+                    continue;
+                }
 
-            return audio;
+                if (key is not null)
+                {
+                    await cache.SetAsync(key, audio, ct);
+                }
+
+                return audio;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // The next provider gets a turn. A cloned voice that 402s or rate-limits must not silence the round.
+                LogProviderFailed(logger, provider.Name, ex);
+            }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            LogProviderFailed(logger, provider.Name, ex);
-            return null;
-        }
+
+        return null;
     }
 
-    [LoggerMessage(EventId = 3401, Level = LogLevel.Warning, Message = "Voice provider {Provider} failed; the line is played silent")]
+    [LoggerMessage(EventId = 3401, Level = LogLevel.Warning, Message = "Voice provider {Provider} failed; trying the next one, and the line is played silent if there is none")]
     private static partial void LogProviderFailed(ILogger logger, string provider, Exception exception);
 
     [LoggerMessage(EventId = 3402, Level = LogLevel.Warning, Message = "TTS chunk {Index} could not be synthesized; the rest of the line still plays: {Reason}")]
