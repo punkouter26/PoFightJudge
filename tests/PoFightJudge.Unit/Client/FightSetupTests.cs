@@ -28,6 +28,8 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
         Services.AddScoped<SetupMemory>();
         // The setup screen now carries a microphone check, which owns a MicInterop of its own.
         Services.AddScoped<MicInterop>();
+        Services.AddScoped<SfxInterop>();
+        Services.AddSingleton(TimeProvider.System);
         Services.AddSingleton(_api);
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetFightersAsync(Arg.Any<CancellationToken>()).Returns(Roster());

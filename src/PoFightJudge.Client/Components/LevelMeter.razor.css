@@ -40,6 +40,38 @@
 
 .meter--on .fill { width: calc(var(--po-mic-level, 0) * 100%); }
 
+/* The spectrum sits under the level bar, dimmer: it is the shape of the sound, not the reading. Each bar reads one
+   of the eight --po-band-N properties the recorders publish; there is no way to index a custom property, so the
+   eight are written out. */
+.bands {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity var(--po-dur-base) var(--po-ease);
+}
+
+.meter--on .bands { opacity: 0.85; }
+
+.band {
+  flex: 1;
+  height: 8%;
+  border-radius: 1px;
+  background: var(--po-p1);
+  transition: height 70ms linear;
+}
+
+.meter--on .band:nth-child(1) { height: calc(8% + var(--po-band-0, 0) * 92%); }
+.meter--on .band:nth-child(2) { height: calc(8% + var(--po-band-1, 0) * 92%); }
+.meter--on .band:nth-child(3) { height: calc(8% + var(--po-band-2, 0) * 92%); }
+.meter--on .band:nth-child(4) { height: calc(8% + var(--po-band-3, 0) * 92%); }
+.meter--on .band:nth-child(5) { height: calc(8% + var(--po-band-4, 0) * 92%); }
+.meter--on .band:nth-child(6) { height: calc(8% + var(--po-band-5, 0) * 92%); }
+.meter--on .band:nth-child(7) { height: calc(8% + var(--po-band-6, 0) * 92%); }
+.meter--on .band:nth-child(8) { height: calc(8% + var(--po-band-7, 0) * 92%); }
+
 @keyframes pulse {
   50% { opacity: 0.35; }
 }
@@ -47,4 +79,6 @@
 @media (prefers-reduced-motion: reduce) {
   .meter--on .lamp { animation: none; }
   .fill { transition: none; }
+  /* The level still says whether the microphone is hearing anything; eight bars jumping do not add to that. */
+  .bands { display: none; }
 }

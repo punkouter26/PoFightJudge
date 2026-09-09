@@ -87,7 +87,41 @@ void main() {
   outColour = vec4(colour, clamp(alpha, 0.0, 1.0));
 }`;
 
-  const SHADERS = { "stage": STAGE };
+  // The live fight's backdrop: a slow flowing field between the two fighters' colours, biased toward whoever has
+  // the floor and heating up as the clock runs down. It sits behind the cards, so most of what shows is the gaps.
+  const BACKDROP = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 outColour;
+uniform vec2 u_res;
+uniform float u_time;
+uniform float u_level;
+uniform float u_mix;
+uniform float u_heat;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+uniform vec3 u_c3;
+${NOISE}
+void main() {
+  float aspect = u_res.x / max(u_res.y, 1.0);
+  vec2 p = vec2(v_uv.x * aspect, v_uv.y);
+  float t = u_time * (0.05 + u_heat * 0.2);
+
+  // Warping the domain before sampling it again is what turns four octaves of value noise into something that
+  // looks like it is moving rather than scrolling.
+  vec2 warp = vec2(fbm(p * 1.5 + t), fbm(p * 1.5 + 4.7 - t));
+  float field = fbm(p * 2.1 + warp * 1.3 + vec2(0.0, t * 0.6));
+
+  float pull = (clamp(u_mix, 0.0, 1.0) - 0.5) * 0.8;
+  vec3 colour = mix(u_c1, u_c2, clamp(v_uv.x * 0.8 + field * 0.5 - 0.15 - pull, 0.0, 1.0));
+  colour = mix(colour, u_c3, u_heat * 0.5 * (0.35 + 0.65 * field));
+
+  float vignette = smoothstep(1.2, 0.2, length((v_uv - 0.5) * vec2(aspect, 1.0)));
+  float alpha = (0.14 + 0.2 * field + u_heat * 0.13 + u_level * 0.08) * vignette;
+  outColour = vec4(colour, clamp(alpha, 0.0, 1.0));
+}`;
+
+  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP };
 
   const mounts = new Map();
   let frame = 0;
@@ -188,6 +222,7 @@ void main() {
   function readColours(mount) {
     mount.c1 = tokenColour(mount.tokens[0], [0.25, 0.66, 0.96]);
     mount.c2 = tokenColour(mount.tokens[1], [1.0, 0.31, 0.55]);
+    mount.c3 = tokenColour(mount.tokens[2], [1.0, 0.35, 0.35]);
   }
 
   // The theme toggle stamps data-theme on <html>; every mounted canvas re-reads its colours when it does.
@@ -256,6 +291,7 @@ void main() {
         gl.uniform1f(mount.u.shock, mount.shockAt > 0 ? (now - mount.shockAt) / 1000 : -1);
         gl.uniform3f(mount.u.c1, mount.c1[0], mount.c1[1], mount.c1[2]);
         gl.uniform3f(mount.u.c2, mount.c2[0], mount.c2[1], mount.c2[2]);
+        gl.uniform3f(mount.u.c3, mount.c3[0], mount.c3[1], mount.c3[2]);
         gl.uniform1f(mount.u.mix, mount.mix);
         gl.uniform1f(mount.u.heat, mount.heat);
         gl.clearColor(0, 0, 0, 0);
@@ -325,7 +361,7 @@ void main() {
       program: prog,
       start: performance.now(),
       level: settings.level || null,
-      tokens: settings.tokens || ["--po-p1", "--po-p2"],
+      tokens: settings.tokens || ["--po-p1", "--po-p2", "--po-danger"],
       side: 0,
       mix: 0.5,
       heat: 0,
@@ -334,6 +370,7 @@ void main() {
       shockAt: 0,
       c1: [0.25, 0.66, 0.96],
       c2: [1.0, 0.31, 0.55],
+      c3: [1.0, 0.35, 0.35],
       u: {
         res: gl.getUniformLocation(prog, "u_res"),
         time: gl.getUniformLocation(prog, "u_time"),
@@ -343,6 +380,7 @@ void main() {
         shock: gl.getUniformLocation(prog, "u_shock"),
         c1: gl.getUniformLocation(prog, "u_c1"),
         c2: gl.getUniformLocation(prog, "u_c2"),
+        c3: gl.getUniformLocation(prog, "u_c3"),
         mix: gl.getUniformLocation(prog, "u_mix"),
         heat: gl.getUniformLocation(prog, "u_heat"),
       },

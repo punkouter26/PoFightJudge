@@ -3,7 +3,8 @@
   gap: var(--po-space-3);
   max-height: 26rem;
   overflow-y: auto;
-  padding-right: var(--po-space-2);
+  padding: var(--po-space-3);
+  border-radius: var(--po-radius-md);
 }
 
 .caption {

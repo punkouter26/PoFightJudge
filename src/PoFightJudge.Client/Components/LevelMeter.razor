@@ -2,14 +2,27 @@
    microphone, and they will keep talking into either one.
 
    The level itself is a CSS custom property published by whichever recorder is running — mic.js on a spoken turn,
-   live-audio.js during a fight — so the bar is painted by the browser rather than pushed a frame at a time. *@
+   live-audio.js during a fight — so the bar is painted by the browser rather than pushed a frame at a time. The
+   eight bars behind it are the same thing with the frequencies kept apart: a level says how loud, a shape says it
+   is a voice and not the fan. *@
 <div class="meter @(Listening ? "meter--on" : null)" role="status" aria-label="@Label">
     <span class="lamp" aria-hidden="true"></span>
     <span class="caption po-eyebrow">@Caption</span>
-    <div class="track" aria-hidden="true"><div class="fill"></div></div>
+    <div class="track" aria-hidden="true">
+        <div class="bands">
+            @for (var band = 0; band < Bands; band++)
+            {
+                <span class="band"></span>
+            }
+        </div>
+        <div class="fill"></div>
+    </div>
 </div>
 
 @code {
+    /// <summary>How many bars the spectrum draws. The recorders publish exactly this many custom properties.</summary>
+    private const int Bands = 8;
+
     [Parameter] public bool Listening { get; set; }
 
     /// <summary>What the meter is for, in words — it is also what a screen reader is told.</summary>

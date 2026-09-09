@@ -1,5 +1,7 @@
+using Blazored.LocalStorage;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using PoFightJudge.Client.Components;
 using PoFightJudge.Client.Services;
 using Radzen;
@@ -16,6 +18,10 @@ public class MicCheckTests : BunitContext, IAsyncLifetime
     {
         Services.AddRadzenComponents();
         Services.AddScoped<MicInterop>();
+        // The check pings when the level is pinned at the top, and it needs a clock to space the pings out.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddSingleton(TimeProvider.System);
+        Services.AddScoped<SfxInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 

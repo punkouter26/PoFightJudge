@@ -3,7 +3,7 @@
   gap: var(--po-space-1);
   padding: var(--po-space-3) var(--po-space-4);
   border-radius: var(--po-radius-2);
-  background: var(--po-surface-2);
+  /* The fill and the edge come from .po-glass; only the phase's own stripe is set here. */
   border-left: 3px solid var(--po-muted);
 }
 

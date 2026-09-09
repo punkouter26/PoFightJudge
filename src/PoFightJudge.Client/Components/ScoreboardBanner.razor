@@ -1,6 +1,6 @@
 @* Who is arguing, what each of them has done before, and who has the floor right now. *@
 <section class="scoreboard" aria-label="Who is arguing">
-    <div class="side p1 @(HasFloor(Speaker.Player1) ? "side--speaking" : null)" data-tag="@Player1">
+    <div class="side p1 po-glass @(HasFloor(Speaker.Player1) ? "side--speaking" : null)" data-tag="@Player1">
         <span class="tag po-display">@Player1</span>
         <span class="record po-muted">@Record(Player1Record)</span>
         @if (HasFloor(Speaker.Player1))
@@ -25,7 +25,7 @@
         }
     </div>
 
-    <div class="side p2 @(HasFloor(Speaker.Player2) ? "side--speaking" : null)" data-tag="@Player2">
+    <div class="side p2 po-glass @(HasFloor(Speaker.Player2) ? "side--speaking" : null)" data-tag="@Player2">
         <span class="tag po-display">@Player2</span>
         <span class="record po-muted">@Record(Player2Record)</span>
         @if (HasFloor(Speaker.Player2))

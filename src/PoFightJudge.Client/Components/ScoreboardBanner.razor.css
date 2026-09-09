@@ -11,7 +11,6 @@
   justify-items: center;
   padding: var(--po-space-4);
   border-radius: var(--po-radius-2);
-  background: var(--po-surface-2);
   border-top: 3px solid transparent;
   transition: transform var(--po-dur-slow) ease, filter var(--po-dur-slow) ease;
 }
@@ -26,7 +25,8 @@
 
 .side--speaking {
   transform: scale(1.03);
-  background: var(--po-surface-3);
+  /* Tinted with their own colour rather than filled in: a solid panel would put out the glass behind it. */
+  background: color-mix(in srgb, currentColor 14%, var(--po-glass));
   box-shadow: 0 0 0 2px currentColor;
 }
 

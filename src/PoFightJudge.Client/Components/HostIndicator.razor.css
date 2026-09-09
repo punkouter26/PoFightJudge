@@ -4,7 +4,6 @@
   align-items: center;
   padding: var(--po-space-2) var(--po-space-3);
   border-radius: var(--po-radius-pill, 999px);
-  background: var(--po-surface-2);
 }
 
 .face { font-size: var(--po-text-lg); }

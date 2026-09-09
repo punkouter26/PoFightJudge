@@ -1,5 +1,7 @@
 @implements IAsyncDisposable
 @inject MicInterop Mic
+@inject SfxInterop Sound
+@inject TimeProvider Clock
 
 @* Before the bell. A fight that dies on a muted headset is three minutes nobody gets back. *@
 <section class="check" aria-label="Microphone">
@@ -28,6 +30,11 @@
         <p class="po-muted said" role="status">That worked — you came through clearly.</p>
     }
 
+    @if (_clipping)
+    {
+        <p class="po-muted said" role="status">That is too loud — it will come out distorted. Back off the gain, or sit further away.</p>
+    }
+
     @if (_problem is { Length: > 0 })
     {
         <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_problem</RadzenAlert>
@@ -38,6 +45,15 @@
     /// <summary>Above this, somebody is audibly talking rather than sitting in a quiet room.</summary>
     private const double HeardAt = 0.06;
 
+    /// <summary>
+    /// Above this the microphone is at the top of its range and the recording is being clipped. Worth saying out
+    /// loud once — a transcriber given a clipped clip returns nonsense, and nobody suspects the gain.
+    /// </summary>
+    private const double ClippingAt = 0.97;
+
+    /// <summary>How long before it is worth saying again. Long enough not to become the noise it is warning about.</summary>
+    private static readonly TimeSpan ClippingGap = TimeSpan.FromSeconds(6);
+
     /// <summary>How often the level is read while the test is open. Fast enough to look live, slow enough to be free.</summary>
     private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(120);
 
@@ -47,6 +63,8 @@
     private bool _open;
     private bool _opening;
     private bool _heard;
+    private bool _clipping;
+    private DateTimeOffset? _pinged;
     private string? _problem;
 
     /// <summary>The chosen microphone, owned by the page so the fight opens the same one that was tested.</summary>
@@ -104,6 +122,7 @@
     private async Task CloseAsync()
     {
         _open = false;
+        _clipping = false;
         await Mic.CancelAsync(_leaving.Token);
         StateHasChanged();
     }
@@ -125,9 +144,30 @@
                 return;
             }
 
-            _heard |= await Mic.LevelAsync(_leaving.Token) >= HeardAt;
+            var level = await Mic.LevelAsync(_leaving.Token);
+            _heard |= level >= HeardAt;
+            await CheckClippingAsync(level);
             StateHasChanged();
         }
+    }
+
+    /// <summary>Says so, once, when the level is pinned at the top: a warning nobody can hear is not a warning.</summary>
+    private async Task CheckClippingAsync(double level)
+    {
+        if (level < ClippingAt)
+        {
+            return;
+        }
+
+        _clipping = true;
+        var now = Clock.GetUtcNow();
+        if (_pinged is { } last && now - last < ClippingGap)
+        {
+            return;
+        }
+
+        _pinged = now;
+        await Sound.PlayAsync(Sfx.Clipping, ct: _leaving.Token);
     }
 
     private async Task OnDeviceChosenAsync(object? value)

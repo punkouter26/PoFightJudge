@@ -8,8 +8,11 @@ public static class Shaders
     /// <summary>The watch stage: an aura under whoever is speaking, and the ring a slap sends out.</summary>
     public const string Stage = "stage";
 
+    /// <summary>The live fight's backdrop: the two fighters' colours flowing, heating up as the clock runs out.</summary>
+    public const string Backdrop = "backdrop";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
-    public static IReadOnlyList<string> All { get; } = [Stage];
+    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop];
 }
 
 /// <summary>

@@ -22,9 +22,42 @@ window.PoLive = (function () {
   let micLevel = 0;
   let hostLevel = 0;
   let meterTimer = 0;
+  let micAnalyser = null;
+  let micSpectrum = null;
+
+  /** The same eight bars the watch meter draws, so one component reads either recorder. */
+  const BANDS = 8;
 
   function setVar(name, value) {
     document.documentElement.style.setProperty(name, value.toFixed(3));
+  }
+
+  // Log-spaced, because speech lives in the bottom fifth of the range: eight linear bands would be seven empty
+  // bars and one that moves.
+  function publishBands() {
+    if (!micAnalyser || !micSpectrum) {
+      return;
+    }
+
+    micAnalyser.getByteFrequencyData(micSpectrum);
+    const top = Math.floor(micSpectrum.length * 0.45);
+    let from = 1;
+    for (let band = 0; band < BANDS; band++) {
+      const to = Math.max(from + 1, Math.round(Math.pow(top, (band + 1) / BANDS)));
+      let peak = 0;
+      for (let i = from; i < to && i < micSpectrum.length; i++) {
+        peak = Math.max(peak, micSpectrum[i]);
+      }
+
+      from = to;
+      setVar("--po-band-" + band, peak / 255);
+    }
+  }
+
+  function clearBands() {
+    for (let band = 0; band < BANDS; band++) {
+      setVar("--po-band-" + band, 0);
+    }
   }
 
   function pumpLevels() {
@@ -43,6 +76,7 @@ window.PoLive = (function () {
     hostLevel = Math.min(1, Math.pow(Math.sqrt(sum / levelData.length) * 3.2, 0.7));
     setVar("--po-host-level", hostLevel);
     setVar("--po-mic-level", Math.min(1, Math.pow(micLevel * 3.2, 0.7)));
+    publishBands();
   }
 
   async function ensureContext() {
@@ -88,6 +122,15 @@ window.PoLive = (function () {
       // Absolute: the fight page lives at /fight/{id}, where a relative path would resolve to /fight/js/...
       await ctx.audioWorklet.addModule("/js/pcm-worklet.js");
       source = ctx.createMediaStreamSource(stream);
+
+      // A second tap on the same source, for the meter's bars. The worklet reports one number a frame; a voice
+      // that can be seen as a shape is what tells somebody the microphone is hearing them and not the room.
+      micAnalyser = ctx.createAnalyser();
+      micAnalyser.fftSize = 1024;
+      micAnalyser.smoothingTimeConstant = 0.6;
+      micSpectrum = new Uint8Array(micAnalyser.frequencyBinCount);
+      source.connect(micAnalyser);
+
       worklet = new AudioWorkletNode(ctx, "pcm-capture", { numberOfInputs: 1, numberOfOutputs: 0 });
       worklet.port.onmessage = function (e) {
         micLevel = e.data.rms;
@@ -192,6 +235,9 @@ window.PoLive = (function () {
     micLevel = 0;
     setVar("--po-mic-level", 0);
     setVar("--po-host-level", 0);
+    clearBands();
+    micAnalyser = null;
+    micSpectrum = null;
 
     if (meterTimer) {
       window.clearInterval(meterTimer);

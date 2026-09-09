@@ -1,5 +1,5 @@
 @* Who is hosting, and whether they are talking right now. The level comes from the audio graph, not from .NET. *@
-<div class="host @(Speaking ? "host--speaking" : null)" data-host="@Persona.ToString().ToLowerInvariant()">
+<div class="host po-glass @(Speaking ? "host--speaking" : null)" data-host="@Persona.ToString().ToLowerInvariant()">
     <span class="face" aria-hidden="true">@Host.Emoji</span>
     <span class="name">@Host.Name</span>
     <span class="state po-muted">@(Speaking ? "speaking" : "listening")</span>

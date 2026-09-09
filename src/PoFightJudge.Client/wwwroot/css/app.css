@@ -54,6 +54,14 @@
   --po-radius-lg: 10px;
   --po-radius-pill: 999px;
 
+  /* ── Glass ──
+     Panels that sit over the live stage's shader, blurring it rather than hiding it. The floor colour is opaque
+     enough on its own that the text over it still clears AA when backdrop-filter is unsupported or switched off —
+     the blur is the effect, never the legibility. */
+  --po-glass: light-dark(rgba(255, 255, 255, 0.82), rgba(21, 25, 35, 0.78));
+  --po-glass-edge: light-dark(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.08));
+  --po-glass-blur: blur(14px) saturate(1.3);
+
   /* ── Elevation ── */
   --po-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
   --po-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.35);
@@ -217,6 +225,21 @@ a:hover { color: var(--po-fg); }
 .po-card--lift:hover, .po-card--lift:focus-within { transform: translateY(-2px); box-shadow: var(--po-shadow-2); }
 .po-card--p1 { border-color: color-mix(in srgb, var(--po-p1) 45%, var(--po-border)); }
 .po-card--p2 { border-color: color-mix(in srgb, var(--po-p2) 45%, var(--po-border)); }
+
+/* ── Glass: the chrome of a live fight, over the shader behind it ──
+   Global rather than scoped because three components share it, and because the fallback matters more than the
+   effect: a browser with no backdrop-filter keeps the opaque floor and loses only the blur. */
+.po-glass {
+  background: var(--po-glass);
+  border: 1px solid var(--po-glass-edge);
+}
+
+@supports (backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px)) {
+  .po-glass {
+    -webkit-backdrop-filter: var(--po-glass-blur);
+    backdrop-filter: var(--po-glass-blur);
+  }
+}
 
 /* ── Typography helpers ── */
 .po-eyebrow {

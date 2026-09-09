@@ -1,6 +1,23 @@
+/* Positioned and isolated, because PoGfx hangs its backdrop canvas in here and the glass panes above blur it.
+   backdrop-filter reaches everything painted behind the element inside its own stacking context — which is what
+   `isolation` makes this. */
 .stage {
+  position: relative;
+  isolation: isolate;
   display: grid;
   gap: var(--po-space-4);
+  padding: var(--po-space-3);
+  border-radius: var(--po-radius-lg);
+  overflow: hidden;
+}
+
+/* Above the backdrop. Everything the page laid out sits on this layer; only the canvas is below it. */
+.bar,
+.stage > ::deep .scoreboard,
+.stage > ::deep .captions,
+.stage > ::deep .problem {
+  position: relative;
+  z-index: 1;
 }
 
 .bar {

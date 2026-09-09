@@ -16,6 +16,12 @@ namespace PoFightJudge.Client.Pages;
 /// </remarks>
 public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyncDisposable
 {
+    /// <summary>The element the backdrop is drawn on, and the one the glass above it blurs.</summary>
+    public const string StageSelector = ".stage";
+
+    /// <summary>Where the debate clock starts running hot. The backdrop turns over the last half-minute.</summary>
+    private const int HeatFromSeconds = 30;
+
     private readonly CaptionLog _captions = new();
     private LiveConnection? _connection;
     private FighterDto? _oneRecord;
@@ -28,6 +34,15 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     private string? _problem;
     private string? _fatal;
 
+    /// <summary>Whether the browser took the backdrop. No is a perfectly good answer; the glass has its own floor.</summary>
+    private bool _drawn;
+
+    /// <summary>The phase the last stinger was played for, so one phase is announced once.</summary>
+    private SessionPhase? _announced;
+
+    /// <summary>Who was last handed the floor, so the cue is played on the change rather than on every snapshot.</summary>
+    private Speaker? _lastFloor;
+
     [Parameter] public string MatchIdText { get; set; } = string.Empty;
 
     [Inject] private ILiveAudio Audio { get; set; } = default!;
@@ -39,6 +54,10 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     [Inject] private IApiClient Api { get; set; } = default!;
 
     [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    [Inject] private SfxInterop Sound { get; set; } = default!;
+
+    [Inject] private GfxInterop Gfx { get; set; } = default!;
 
     private SessionPhase Phase => _snapshot?.Phase ?? SessionPhase.Intro;
 
@@ -62,6 +81,9 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
             return;
         }
 
+        // The click that started the fight is the gesture the effects context needs.
+        await Sound.ArmAsync();
+
         _connection = Connections.Create();
         try
         {
@@ -83,6 +105,18 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         }
 
         _listening = true;
+    }
+
+    /// <summary>
+    /// Mounts the backdrop once the stage is really in the page. It breathes with the host rather than with the
+    /// microphone: the fighters are in the room, and the voice that belongs to the screen is the host's.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _fatal is null)
+        {
+            _drawn = await Gfx.MountAsync(StageSelector, Shaders.Backdrop, GfxInterop.LiveLevel);
+        }
     }
 
     public void OnHostAudio(byte[] pcm24k) => Dispatch(async () =>
@@ -120,7 +154,85 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         {
             await LoadRecordsAsync(snapshot);
         }
+
+        await AnnounceAsync(snapshot);
+        await PaintAsync(snapshot);
     });
+
+    /// <summary>
+    /// The show's punctuation: a sting on each new phase and a cue when the floor changes hands. Both land over
+    /// the host rather than beside them — the host is usually mid-sentence when the phase turns over, and a sound
+    /// competing with the words is worse than no sound.
+    /// </summary>
+    private async Task AnnounceAsync(DebateSnapshotDto snapshot)
+    {
+        if (_announced != snapshot.Phase)
+        {
+            _announced = snapshot.Phase;
+            if (StingFor(snapshot.Phase) is { } sting)
+            {
+                await Sound.PlayOverAsync(sting, 0.7);
+            }
+        }
+
+        // Only a real hand-over, and only while somebody actually has the floor: the host taking it back is their
+        // own voice saying so.
+        if (_lastFloor != snapshot.Speaking)
+        {
+            var had = _lastFloor;
+            _lastFloor = snapshot.Speaking;
+            if (snapshot.Speaking is not null && had is not null)
+            {
+                await Sound.PlayAsync(Sfx.Cue);
+            }
+        }
+    }
+
+    /// <summary>Which sound belongs to a phase. Intro has none: the host is already talking over it.</summary>
+    public static string? StingFor(SessionPhase phase) => phase switch
+    {
+        SessionPhase.Setup => Sfx.Intro,
+        SessionPhase.Debate => Sfx.Bell,
+        SessionPhase.Probe => Sfx.Probe,
+        SessionPhase.Verdict => Sfx.Ruling,
+        SessionPhase.Done => Sfx.BellThree,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Points the backdrop at whoever has the floor and heats it as the clock runs down. Both are one number each,
+    /// and the shader does the rest — nothing here is drawn from .NET.
+    /// </summary>
+    private async Task PaintAsync(DebateSnapshotDto snapshot)
+    {
+        if (!_drawn)
+        {
+            return;
+        }
+
+        var mix = snapshot.Speaking switch
+        {
+            Speaker.Player1 => 0.12,
+            Speaker.Player2 => 0.88,
+            _ => 0.5,
+        };
+
+        await Gfx.SetAsync(StageSelector, "mix", mix);
+        await Gfx.SetAsync(StageSelector, "heat", HeatFor(snapshot.Phase, snapshot.DebateRemainingSeconds));
+    }
+
+    /// <summary>
+    /// How hot the backdrop runs, 0 to 1. It climbs through the last half-minute of arguing and sits halfway up
+    /// once the host has taken over — the questions and the ruling are not calm, but they are not a countdown
+    /// either. Public because it is the whole decision, and the only part of the backdrop worth asserting.
+    /// </summary>
+    public static double HeatFor(SessionPhase phase, int remainingSeconds) => phase switch
+    {
+        SessionPhase.Debate when remainingSeconds is > 0 and <= HeatFromSeconds =>
+            (HeatFromSeconds - remainingSeconds) / (double)HeatFromSeconds,
+        SessionPhase.Probe or SessionPhase.Verdict => 0.5,
+        _ => 0,
+    };
 
     /// <summary>What each of them has done before. Missing records are simply absent; the fight does not need them.</summary>
     private async Task LoadRecordsAsync(DebateSnapshotDto snapshot)
@@ -209,6 +321,9 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     public async ValueTask DisposeAsync()
     {
+        // The canvas first: it holds a GL context and a frame loop, and both outlive a page that only half
+        // finished tidying itself up.
+        await Gfx.UnmountAsync(StageSelector, CancellationToken.None);
         await Audio.StopAsync(CancellationToken.None);
         if (_connection is not null)
         {

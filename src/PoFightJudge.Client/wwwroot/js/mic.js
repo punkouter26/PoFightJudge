@@ -16,12 +16,52 @@ window.PoMic = (function () {
   let samples = null;
 
   let meterFrame = 0;
+  let spectrum = null;
+
+  /** How many bars the meter draws. Eight is enough to see a voice move and few enough to stay legible at 6 rem. */
+  const BANDS = 8;
 
   function publish(value) {
     try {
       document.documentElement.style.setProperty("--po-mic-level", String(value));
     } catch {
       // No document (a worker, a test host): the meter simply does not move.
+    }
+  }
+
+  // The spectrum, as eight custom properties. Log-spaced, because speech lives in the bottom fifth of the range
+  // and eight linear bands would be seven empty bars and one that moves.
+  function publishBands() {
+    if (!analyser || !spectrum) {
+      return;
+    }
+
+    analyser.getByteFrequencyData(spectrum);
+    const top = Math.floor(spectrum.length * 0.45);
+    let from = 1;
+    for (let band = 0; band < BANDS; band++) {
+      const to = Math.max(from + 1, Math.round(Math.pow(top, (band + 1) / BANDS)));
+      let peak = 0;
+      for (let i = from; i < to && i < spectrum.length; i++) {
+        peak = Math.max(peak, spectrum[i]);
+      }
+
+      from = to;
+      try {
+        document.documentElement.style.setProperty("--po-band-" + band, (peak / 255).toFixed(3));
+      } catch {
+        return;
+      }
+    }
+  }
+
+  function clearBands() {
+    for (let band = 0; band < BANDS; band++) {
+      try {
+        document.documentElement.style.setProperty("--po-band-" + band, "0");
+      } catch {
+        return;
+      }
     }
   }
 
@@ -33,6 +73,7 @@ window.PoMic = (function () {
     }
 
     publish(level());
+    publishBands();
     meterFrame = requestAnimationFrame(pump);
   }
 
@@ -41,7 +82,9 @@ window.PoMic = (function () {
       meterContext = new (window.AudioContext || window.webkitAudioContext)();
       analyser = meterContext.createAnalyser();
       analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.6;
       samples = new Float32Array(analyser.fftSize);
+      spectrum = new Uint8Array(analyser.frequencyBinCount);
       meterContext.createMediaStreamSource(stream).connect(analyser);
       meterFrame = requestAnimationFrame(pump);
     } catch {
@@ -57,6 +100,7 @@ window.PoMic = (function () {
     }
 
     publish(0);
+    clearBands();
 
     if (stream) {
       stream.getTracks().forEach(function (t) { t.stop(); });
@@ -70,6 +114,7 @@ window.PoMic = (function () {
 
     analyser = null;
     samples = null;
+    spectrum = null;
     recorder = null;
   }
 
