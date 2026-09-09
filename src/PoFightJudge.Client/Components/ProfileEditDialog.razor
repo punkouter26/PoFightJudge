@@ -105,33 +105,9 @@
         </div>
     </RadzenFieldset>
 
-    <RadzenFieldset Text="Personality" class="section">
-        <div class="toggles">
-            @foreach (var toggle in Toggles)
-            {
-                <label class="toggle @(toggle.Get() ? "is-on" : null)">
-                    <RadzenSwitch Value="@toggle.Get()" Change="@(v => toggle.Set(v))" />
-                    <span>@toggle.Label</span>
-                </label>
-            }
-        </div>
-        <div class="styles">
-            <RadzenFormField Text="Love language" Variant="Variant.Outlined">
-                <ChildContent>
-                    <RadzenDropDown TValue="LoveLanguage?" @bind-Value="_model.LoveLanguage" Data="@LoveLanguages" ValueProperty="Value" TextProperty="Text" AllowClear="true" Placeholder="—" Name="LoveLanguage" />
-                </ChildContent>
-            </RadzenFormField>
-            <RadzenFormField Text="Attachment style" Variant="Variant.Outlined">
-                <ChildContent>
-                    <RadzenDropDown TValue="AttachmentStyle?" @bind-Value="_model.AttachmentStyle" Data="@AttachmentStyles" ValueProperty="Value" TextProperty="Text" AllowClear="true" Placeholder="—" Name="AttachmentStyle" />
-                </ChildContent>
-            </RadzenFormField>
-            <RadzenFormField Text="Under stress" Variant="Variant.Outlined">
-                <ChildContent>
-                    <RadzenDropDown TValue="StressResponse?" @bind-Value="_model.StressResponse" Data="@StressResponses" ValueProperty="Value" TextProperty="Text" AllowClear="true" Placeholder="—" Name="StressResponse" />
-                </ChildContent>
-            </RadzenFormField>
-        </div>
+    @* Four dials, not nine. These change how an argument is conducted; the ones that went were about what it is
+       about, which is what the free text above already says, and in somebody's own words. *@
+    <RadzenFieldset Text="How they argue" class="section">
         <div class="sliders">
             @foreach (var slider in Sliders)
             {
@@ -211,37 +187,17 @@
         [.. Enum.GetValues<T>().Select(v => new Option<T>(v, v.Humanize(LetterCasing.Sentence)))];
 
     private static readonly IReadOnlyList<Option<ProfileRole>> Roles = OptionsOf<ProfileRole>();
-    private static readonly IReadOnlyList<Option<LoveLanguage>> LoveLanguages = OptionsOf<LoveLanguage>();
-    private static readonly IReadOnlyList<Option<AttachmentStyle>> AttachmentStyles = OptionsOf<AttachmentStyle>();
-    private static readonly IReadOnlyList<Option<StressResponse>> StressResponses = OptionsOf<StressResponse>();
 
     private static IEnumerable<string> VoicesFor(ProfileRole role) => role == ProfileRole.Wife ? WifeVoices : HusbandVoices;
 
-    private sealed record Toggle(string Label, Func<bool> Get, Action<bool> Set);
-
     private sealed record Slider(string Left, string Right, Func<int> Get, Action<int> Set);
-
-    private IReadOnlyList<Toggle> Toggles =>
-    [
-        new("Introvert", () => _model.IsIntrovert, v => _model.IsIntrovert = v),
-        new("Stubborn", () => _model.IsStubborn, v => _model.IsStubborn = v),
-        new("Spontaneous", () => _model.IsSpontaneous, v => _model.IsSpontaneous = v),
-        new("Sarcastic", () => _model.IsSarcastic, v => _model.IsSarcastic = v),
-        new("Workaholic", () => _model.IsWorkaholic, v => _model.IsWorkaholic = v),
-        new("Pack rat", () => _model.IsPackRat, v => _model.IsPackRat = v),
-    ];
 
     private IReadOnlyList<Slider> Sliders =>
     [
         new("Logic", "Emotion", () => _model.LogicVsEmotion, v => _model.LogicVsEmotion = v),
-        new("Late", "Punctual", () => _model.Punctuality, v => _model.Punctuality = v),
-        new("Avoids in-laws", "Loves in-laws", () => _model.InLawAffinity, v => _model.InLawAffinity = v),
-        new("Offline", "Always on a screen", () => _model.ScreenTime, v => _model.ScreenTime = v),
-        new("Secure", "Jealous", () => _model.Jealousy, v => _model.Jealousy = v),
-        new("Tidy", "Messy", () => _model.IsMessy, v => _model.IsMessy = v),
-        new("Saver", "Spender", () => _model.SpendsMoneyFreely, v => _model.SpendsMoneyFreely = v),
-        new("Forgiving", "Holds grudges", () => _model.HoldsGrudges, v => _model.HoldsGrudges = v),
         new("Impatient", "Patient", () => _model.Patience, v => _model.Patience = v),
+        new("Forgiving", "Holds grudges", () => _model.HoldsGrudges, v => _model.HoldsGrudges = v),
+        new("Secure", "Jealous", () => _model.Jealousy, v => _model.Jealousy = v),
     ];
 
     protected override void OnParametersSet()

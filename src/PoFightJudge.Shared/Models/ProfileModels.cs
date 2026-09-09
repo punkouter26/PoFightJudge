@@ -11,33 +11,6 @@ public enum ProfileRole
     Wife,
 }
 
-[JsonConverter(typeof(JsonStringEnumConverter<LoveLanguage>))]
-public enum LoveLanguage
-{
-    WordsOfAffirmation,
-    ActsOfService,
-    ReceivingGifts,
-    QualityTime,
-    PhysicalTouch,
-}
-
-[JsonConverter(typeof(JsonStringEnumConverter<AttachmentStyle>))]
-public enum AttachmentStyle
-{
-    Secure,
-    Anxious,
-    Avoidant,
-}
-
-[JsonConverter(typeof(JsonStringEnumConverter<StressResponse>))]
-public enum StressResponse
-{
-    Fight,
-    Flight,
-    Freeze,
-    Fawn,
-}
-
 /// <summary>Voice configuration for a persona. Mutable because it is bound straight into the editor form.</summary>
 public sealed class TtsSettingsDto
 {
@@ -49,10 +22,18 @@ public sealed class TtsSettingsDto
 }
 
 /// <summary>
-/// Everything an author can set on a WATCH persona. One shape serves three jobs: the <c>POST /api/profiles</c> body,
+/// Everything an author can set on a WATCH persona: who they are, what they argue about, and four dials for how
+/// they argue. One shape serves three jobs: the <c>POST /api/profiles</c> body,
 /// the <c>PUT /api/profiles/{id}</c> body, and the editor's form model — so it is a mutable class with the same field
 /// names and 0–100 slider ranges as the aggregate. Nothing derived (record, stats, face bytes) travels in it.
 /// </summary>
+/// <remarks>
+/// Half the fields this used to carry are gone: six personality toggles, three psychology enums and five sliders
+/// about punctuality, in-laws, screen time, mess and money. They were authored once and then defaulted forever, so
+/// a typical persona spent nine prompt lines saying "50 (neutral)" — noise the model had to read past to reach the
+/// four sentences that actually said who somebody was. What is left is what the preview prompt always used, plus
+/// the four dials that change how an argument is conducted rather than what it is about.
+/// </remarks>
 public sealed class CreateProfileRequest
 {
     public string Initials { get; set; } = string.Empty;
@@ -69,37 +50,9 @@ public sealed class CreateProfileRequest
 
     public string Dislikes { get; set; } = string.Empty;
 
-    public bool IsIntrovert { get; set; }
-
-    public bool IsStubborn { get; set; }
-
-    public bool IsSpontaneous { get; set; }
-
-    public bool IsSarcastic { get; set; }
-
-    public bool IsWorkaholic { get; set; }
-
-    public bool IsPackRat { get; set; }
-
-    public LoveLanguage? LoveLanguage { get; set; }
-
-    public AttachmentStyle? AttachmentStyle { get; set; }
-
-    public StressResponse? StressResponse { get; set; }
-
     public int LogicVsEmotion { get; set; } = 50;
 
-    public int Punctuality { get; set; } = 50;
-
-    public int InLawAffinity { get; set; } = 50;
-
-    public int ScreenTime { get; set; } = 50;
-
     public int Jealousy { get; set; } = 50;
-
-    public int IsMessy { get; set; } = 50;
-
-    public int SpendsMoneyFreely { get; set; } = 50;
 
     public int HoldsGrudges { get; set; } = 50;
 

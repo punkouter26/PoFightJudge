@@ -15,18 +15,8 @@ public class ProfileTests
         Occupation = "Nurse",
         Likes = "tea",
         Dislikes = "noise",
-        IsIntrovert = true,
-        IsSarcastic = true,
-        LoveLanguage = LoveLanguage.QualityTime,
-        AttachmentStyle = AttachmentStyle.Anxious,
-        StressResponse = null,
         LogicVsEmotion = 30,
-        Punctuality = 90,
-        InLawAffinity = 10,
-        ScreenTime = 70,
         Jealousy = 20,
-        IsMessy = 60,
-        SpendsMoneyFreely = 80,
         HoldsGrudges = 95,
         Patience = 15,
         CommonArguments = "the thermostat",
@@ -65,7 +55,7 @@ public class ProfileTests
     }
 
     [Fact]
-    public void Entity_round_trip_keeps_enums_by_name_and_tts_as_json()
+    public void Entity_round_trip_keeps_the_role_by_name_and_tts_as_json()
     {
         var profile = FullRequest().ToDomain();
         profile.UpdateFacePic("faces/ABC.png");
@@ -76,8 +66,6 @@ public class ProfileTests
         entity.PartitionKey.Should().Be(ProfileTableEntity.Partition);
         entity.RowKey.Should().Be("ABC");
         entity.Role.Should().Be("Wife");
-        entity.LoveLanguage.Should().Be("QualityTime");
-        entity.StressResponse.Should().BeNull();
         entity.TtsSettingsJson.Should().Contain("\"Zephyr\"");
         back.ToDto().Should().BeEquivalentTo(profile.ToDto());
         back.FacePic.Should().Be("faces/ABC.png");

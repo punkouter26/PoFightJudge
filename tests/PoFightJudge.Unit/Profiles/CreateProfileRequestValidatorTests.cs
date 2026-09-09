@@ -27,7 +27,6 @@ public class CreateProfileRequestValidatorTests
         { nameof(CreateProfileRequest.Likes), r => r.Likes = "" },
         { nameof(CreateProfileRequest.Dislikes), r => r.Dislikes = " " },
         { nameof(CreateProfileRequest.Philosophy), r => r.Philosophy = new string('p', CreateProfileRequestValidator.MaxTextLength + 1) },
-        { nameof(CreateProfileRequest.LoveLanguage), r => r.LoveLanguage = (LoveLanguage)9 },
         { nameof(CreateProfileRequest.Patience), r => r.Patience = 101 },
         { nameof(CreateProfileRequest.Jealousy), r => r.Jealousy = -1 },
         { $"{nameof(CreateProfileRequest.TtsSettings)}.{nameof(TtsSettingsDto.Pitch)}", r => r.TtsSettings.Pitch = 2.5 },

@@ -54,7 +54,6 @@
 
 .fields,
 .bio,
-.styles,
 .voice {
   display: grid;
   grid-template-columns: 1fr;
@@ -64,33 +63,9 @@
 @media (min-width: 40rem) {
   .fields { grid-template-columns: repeat(2, 1fr); }
   .bio { grid-template-columns: repeat(2, 1fr); }
-  .styles { grid-template-columns: repeat(3, 1fr); }
   .voice { grid-template-columns: repeat(2, 1fr); }
 
   ::deep .span-2 { grid-column: span 2; }
-}
-
-.toggles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: var(--po-space-2);
-  margin-bottom: var(--po-space-4);
-}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--po-space-2);
-  padding: var(--po-space-2) var(--po-space-3);
-  border: 1px solid var(--po-border);
-  border-radius: var(--po-radius-sm);
-  font-size: var(--po-text-sm);
-  cursor: pointer;
-}
-
-.toggle.is-on {
-  border-color: var(--po-accent);
-  background: var(--po-accent-soft);
 }
 
 .sliders {

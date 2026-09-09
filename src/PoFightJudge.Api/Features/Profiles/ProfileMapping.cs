@@ -46,22 +46,8 @@ public static partial class ProfileMapping
         request.Role,
         request.Likes,
         request.Dislikes,
-        request.IsIntrovert,
-        request.IsStubborn,
-        request.IsSpontaneous,
-        request.IsSarcastic,
-        request.IsWorkaholic,
-        request.IsPackRat,
-        request.LoveLanguage,
-        request.AttachmentStyle,
-        request.StressResponse,
         request.LogicVsEmotion,
-        request.Punctuality,
-        request.InLawAffinity,
-        request.ScreenTime,
         request.Jealousy,
-        request.IsMessy,
-        request.SpendsMoneyFreely,
         request.HoldsGrudges,
         request.Patience,
         request.CommonArguments,
@@ -85,22 +71,8 @@ public static partial class ProfileMapping
             role,
             entity.Likes ?? string.Empty,
             entity.Dislikes ?? string.Empty,
-            entity.IsIntrovert,
-            entity.IsStubborn,
-            entity.IsSpontaneous,
-            entity.IsSarcastic,
-            entity.IsWorkaholic,
-            entity.IsPackRat,
-            ParseOrNull<LoveLanguage>(entity.LoveLanguage),
-            ParseOrNull<AttachmentStyle>(entity.AttachmentStyle),
-            ParseOrNull<StressResponse>(entity.StressResponse),
             entity.LogicVsEmotion,
-            entity.Punctuality,
-            entity.InLawAffinity,
-            entity.ScreenTime,
             entity.Jealousy,
-            entity.IsMessy,
-            entity.SpendsMoneyFreely,
             entity.HoldsGrudges,
             entity.Patience,
             entity.CommonArguments ?? string.Empty,
@@ -113,8 +85,4 @@ public static partial class ProfileMapping
     private static bool HasValue(string? value) => !string.IsNullOrEmpty(value);
 
     private static string SerializeTts(TtsSettings settings) => JsonSerializer.Serialize(settings);
-
-    private static T? ParseOrNull<T>(string? name)
-        where T : struct, Enum =>
-        !string.IsNullOrEmpty(name) && Enum.TryParse<T>(name, ignoreCase: true, out var value) ? value : null;
 }

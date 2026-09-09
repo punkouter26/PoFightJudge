@@ -24,8 +24,6 @@ public class ProfileRepositoryTests(AzuriteFixture azurite)
             Age = 38,
             Likes = likes,
             Dislikes = "mornings",
-            LoveLanguage = LoveLanguage.ActsOfService,
-            StressResponse = StressResponse.Freeze,
             Patience = 12,
             CommonArguments = "budget",
             Philosophy = "stoic",

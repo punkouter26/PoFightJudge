@@ -127,66 +127,18 @@ public static class RoundPromptBuilder
         return $"""
             ╔══ {p.Role.ToString().ToUpperInvariant()}: {p.Name ?? p.Initials} (age {p.Age?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?"}, {p.Occupation ?? "unemployed"}) ══╗
 
-              Traits: {FormatTraits(p)}
-              Love language:   {p.LoveLanguage?.ToString() ?? "—"}
-              Attachment:      {p.AttachmentStyle?.ToString() ?? "—"}
-              Stress response: {p.StressResponse?.ToString() ?? "—"}
-
               Likes:             {OrDash(p.Likes)}
               Dislikes:          {OrDash(p.Dislikes)}
               Common arguments:  {OrDash(p.CommonArguments)}
               Philosophy / motto:{OrDash(p.Philosophy)}
 
-              Personality sliders (0 = opposite extreme, 50 = neutral, 100 = full extreme):
+              How they argue (0 = opposite extreme, 50 = neutral, 100 = full extreme):
                 logic-vs-emotion   {p.LogicVsEmotion,3}  ({SliderLabel("logic", p.LogicVsEmotion)})
-                punctuality        {p.Punctuality,3}  ({SliderLabel("punctuality", p.Punctuality)})
-                in-law affinity    {p.InLawAffinity,3}  ({SliderLabel("inlaw", p.InLawAffinity)})
-                screen time        {p.ScreenTime,3}  ({SliderLabel("screen", p.ScreenTime)})
-                jealousy           {p.Jealousy,3}  ({SliderLabel("jealousy", p.Jealousy)})
-                messiness          {p.IsMessy,3}  ({SliderLabel("messy", p.IsMessy)})
-                spends freely      {p.SpendsMoneyFreely,3}  ({SliderLabel("spends", p.SpendsMoneyFreely)})
-                holds grudges      {p.HoldsGrudges,3}  ({SliderLabel("grudges", p.HoldsGrudges)})
                 patience           {p.Patience,3}  ({SliderLabel("patience", p.Patience)})
+                holds grudges      {p.HoldsGrudges,3}  ({SliderLabel("grudges", p.HoldsGrudges)})
+                jealousy           {p.Jealousy,3}  ({SliderLabel("jealousy", p.Jealousy)})
             {(p.IsHuman ? HumanOpponentDirective : string.Empty)}
             """;
-    }
-
-    /// <summary>The six boolean traits as a phrase; an em dash when none are set.</summary>
-    public static string FormatTraits(Profile p)
-    {
-        ArgumentNullException.ThrowIfNull(p);
-        var traits = new List<string>(6);
-        if (p.IsIntrovert)
-        {
-            traits.Add("introvert");
-        }
-
-        if (p.IsStubborn)
-        {
-            traits.Add("stubborn");
-        }
-
-        if (p.IsSpontaneous)
-        {
-            traits.Add("spontaneous");
-        }
-
-        if (p.IsSarcastic)
-        {
-            traits.Add("sarcastic");
-        }
-
-        if (p.IsWorkaholic)
-        {
-            traits.Add("workaholic");
-        }
-
-        if (p.IsPackRat)
-        {
-            traits.Add("pack-rat");
-        }
-
-        return traits.Count == 0 ? "—" : string.Join(", ", traits);
     }
 
     /// <summary>
@@ -197,12 +149,7 @@ public static class RoundPromptBuilder
     public static string SliderLabel(string axis, int v) => axis switch
     {
         "logic" => v < 35 ? "coldly logical" : v < 50 ? "leans logical" : v < 65 ? "leans emotional" : "very emotional",
-        "punctuality" => v < 35 ? "chronically late" : v < 50 ? "usually late" : v < 65 ? "usually on time" : "obsessively punctual",
-        "inlaw" => v < 35 ? "loathes in-laws" : v < 50 ? "cool to in-laws" : v < 65 ? "gets along" : "mother's best friend",
-        "screen" => v < 35 ? "almost no screen time" : v < 50 ? "moderate" : v < 65 ? "heavy user" : "doomscrolls for hours",
         "jealousy" => v < 35 ? "trusting" : v < 50 ? "secure" : v < 65 ? "watchful" : "extremely possessive",
-        "messy" => v < 35 ? "spotless" : v < 50 ? "tidy" : v < 65 ? "cluttered" : "total slob",
-        "spends" => v < 35 ? "tightwad" : v < 50 ? "frugal" : v < 65 ? "free with money" : "shopaholic",
         "grudges" => v < 35 ? "instantly forgives" : v < 50 ? "moves on" : v < 65 ? "keeps score" : "never forgets",
         "patience" => v < 35 ? "hair-trigger temper" : v < 50 ? "short fuse" : v < 65 ? "even-keeled" : "saintly patience",
         _ => "neutral",

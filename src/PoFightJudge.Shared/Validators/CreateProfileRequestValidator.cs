@@ -36,17 +36,9 @@ public sealed class CreateProfileRequestValidator : AbstractValidator<CreateProf
         RuleFor(r => r.CommonArguments).MaximumLength(MaxTextLength);
         RuleFor(r => r.Philosophy).MaximumLength(MaxTextLength);
 
-        RuleFor(r => r.LoveLanguage).IsInEnum().When(r => r.LoveLanguage.HasValue);
-        RuleFor(r => r.AttachmentStyle).IsInEnum().When(r => r.AttachmentStyle.HasValue);
-        RuleFor(r => r.StressResponse).IsInEnum().When(r => r.StressResponse.HasValue);
 
         RuleFor(r => r.LogicVsEmotion).InclusiveBetween(0, 100);
-        RuleFor(r => r.Punctuality).InclusiveBetween(0, 100);
-        RuleFor(r => r.InLawAffinity).InclusiveBetween(0, 100);
-        RuleFor(r => r.ScreenTime).InclusiveBetween(0, 100);
         RuleFor(r => r.Jealousy).InclusiveBetween(0, 100);
-        RuleFor(r => r.IsMessy).InclusiveBetween(0, 100);
-        RuleFor(r => r.SpendsMoneyFreely).InclusiveBetween(0, 100);
         RuleFor(r => r.HoldsGrudges).InclusiveBetween(0, 100);
         RuleFor(r => r.Patience).InclusiveBetween(0, 100);
 

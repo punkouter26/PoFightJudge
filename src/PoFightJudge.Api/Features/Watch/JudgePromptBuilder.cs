@@ -73,18 +73,8 @@ public static class JudgePromptBuilder
             RoundPromptBuilder.SliderLabel("logic", p.LogicVsEmotion),
             RoundPromptBuilder.SliderLabel("patience", p.Patience),
             RoundPromptBuilder.SliderLabel("grudges", p.HoldsGrudges),
+            RoundPromptBuilder.SliderLabel("jealousy", p.Jealousy),
         };
-
-        if (p.StressResponse is { } stress)
-        {
-            bits.Add($"{stress}-under-stress");
-        }
-
-        var traits = RoundPromptBuilder.FormatTraits(p);
-        if (!string.Equals(traits, "—", StringComparison.Ordinal))
-        {
-            bits.Add(traits);
-        }
 
         if (!string.IsNullOrWhiteSpace(p.Philosophy))
         {

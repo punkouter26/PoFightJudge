@@ -28,38 +28,24 @@ public sealed class Profile
 
     public string Dislikes { get; private set; } = string.Empty;
 
-    public bool IsIntrovert { get; private set; }
 
-    public bool IsStubborn { get; private set; }
 
-    public bool IsSpontaneous { get; private set; }
 
-    public bool IsSarcastic { get; private set; }
 
-    public bool IsWorkaholic { get; private set; }
 
-    public bool IsPackRat { get; private set; }
 
-    public LoveLanguage? LoveLanguage { get; private set; }
 
-    public AttachmentStyle? AttachmentStyle { get; private set; }
 
-    public StressResponse? StressResponse { get; private set; }
 
     // Sliders: 0–100, 50 = neutral.
     public int LogicVsEmotion { get; private set; } = 50;
 
-    public int Punctuality { get; private set; } = 50;
 
-    public int InLawAffinity { get; private set; } = 50;
 
-    public int ScreenTime { get; private set; } = 50;
 
     public int Jealousy { get; private set; } = 50;
 
-    public int IsMessy { get; private set; } = 50;
 
-    public int SpendsMoneyFreely { get; private set; } = 50;
 
     public int HoldsGrudges { get; private set; } = 50;
 
@@ -141,22 +127,8 @@ public sealed class Profile
         ProfileRole role,
         string likes,
         string dislikes,
-        bool isIntrovert,
-        bool isStubborn,
-        bool isSpontaneous,
-        bool isSarcastic,
-        bool isWorkaholic,
-        bool isPackRat,
-        LoveLanguage? loveLanguage,
-        AttachmentStyle? attachmentStyle,
-        StressResponse? stressResponse,
         int logicVsEmotion,
-        int punctuality,
-        int inLawAffinity,
-        int screenTime,
         int jealousy,
-        int isMessy,
-        int spendsMoneyFreely,
         int holdsGrudges,
         int patience,
         string commonArguments,
@@ -172,22 +144,8 @@ public sealed class Profile
             Role = role,
             Likes = likes,
             Dislikes = dislikes,
-            IsIntrovert = isIntrovert,
-            IsStubborn = isStubborn,
-            IsSpontaneous = isSpontaneous,
-            IsSarcastic = isSarcastic,
-            IsWorkaholic = isWorkaholic,
-            IsPackRat = isPackRat,
-            LoveLanguage = loveLanguage,
-            AttachmentStyle = attachmentStyle,
-            StressResponse = stressResponse,
             LogicVsEmotion = logicVsEmotion,
-            Punctuality = punctuality,
-            InLawAffinity = inLawAffinity,
-            ScreenTime = screenTime,
             Jealousy = jealousy,
-            IsMessy = isMessy,
-            SpendsMoneyFreely = spendsMoneyFreely,
             HoldsGrudges = holdsGrudges,
             Patience = patience,
             CommonArguments = commonArguments,

@@ -38,10 +38,6 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
             static JsonObject Str() => new() { ["type"] = "string" };
             static JsonObject RichStr() => new() { ["type"] = "string", ["minLength"] = FieldMinLength };
             static JsonObject Int() => new() { ["type"] = "integer" };
-            static JsonObject Bool() => new() { ["type"] = "boolean" };
-            static JsonObject Enum<T>()
-                where T : struct, Enum =>
-                new() { ["type"] = "string", ["enum"] = new JsonArray([.. System.Enum.GetNames<T>().Select(n => (JsonNode)n)]) };
 
             return new JsonObject
             {
@@ -55,22 +51,8 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
                     ["dislikes"] = RichStr(),
                     ["commonArguments"] = RichStr(),
                     ["philosophy"] = RichStr(),
-                    ["isIntrovert"] = Bool(),
-                    ["isStubborn"] = Bool(),
-                    ["isSpontaneous"] = Bool(),
-                    ["isSarcastic"] = Bool(),
-                    ["isWorkaholic"] = Bool(),
-                    ["isPackRat"] = Bool(),
-                    ["loveLanguage"] = Enum<LoveLanguage>(),
-                    ["attachmentStyle"] = Enum<AttachmentStyle>(),
-                    ["stressResponse"] = Enum<StressResponse>(),
                     ["logicVsEmotion"] = Int(),
-                    ["punctuality"] = Int(),
-                    ["inLawAffinity"] = Int(),
-                    ["screenTime"] = Int(),
                     ["jealousy"] = Int(),
-                    ["isMessy"] = Int(),
-                    ["spendsMoneyFreely"] = Int(),
                     ["holdsGrudges"] = Int(),
                     ["patience"] = Int(),
                 },
@@ -158,22 +140,8 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
             Dislikes = g?.Dislikes?.Trim() ?? string.Empty,
             CommonArguments = g?.CommonArguments?.Trim() ?? string.Empty,
             Philosophy = g?.Philosophy?.Trim() ?? string.Empty,
-            IsIntrovert = g?.IsIntrovert ?? false,
-            IsStubborn = g?.IsStubborn ?? false,
-            IsSpontaneous = g?.IsSpontaneous ?? false,
-            IsSarcastic = g?.IsSarcastic ?? false,
-            IsWorkaholic = g?.IsWorkaholic ?? false,
-            IsPackRat = g?.IsPackRat ?? false,
-            LoveLanguage = NormalizeEnum(g?.LoveLanguage, LoveLanguage.QualityTime),
-            AttachmentStyle = NormalizeEnum(g?.AttachmentStyle, AttachmentStyle.Secure),
-            StressResponse = NormalizeEnum(g?.StressResponse, StressResponse.Fight),
             LogicVsEmotion = Clamp(g?.LogicVsEmotion),
-            Punctuality = Clamp(g?.Punctuality),
-            InLawAffinity = Clamp(g?.InLawAffinity),
-            ScreenTime = Clamp(g?.ScreenTime),
             Jealousy = Clamp(g?.Jealousy),
-            IsMessy = Clamp(g?.IsMessy),
-            SpendsMoneyFreely = Clamp(g?.SpendsMoneyFreely),
             HoldsGrudges = Clamp(g?.HoldsGrudges),
             Patience = Clamp(g?.Patience),
         };
@@ -268,22 +236,8 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
         string? Dislikes,
         string? CommonArguments,
         string? Philosophy,
-        bool? IsIntrovert,
-        bool? IsStubborn,
-        bool? IsSpontaneous,
-        bool? IsSarcastic,
-        bool? IsWorkaholic,
-        bool? IsPackRat,
-        string? LoveLanguage,
-        string? AttachmentStyle,
-        string? StressResponse,
         int? LogicVsEmotion,
-        int? Punctuality,
-        int? InLawAffinity,
-        int? ScreenTime,
         int? Jealousy,
-        int? IsMessy,
-        int? SpendsMoneyFreely,
         int? HoldsGrudges,
         int? Patience);
 }

@@ -67,12 +67,6 @@ h3 {
   gap: var(--po-space-3);
 }
 
-.traits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--po-space-2);
-}
-
 .quote {
   margin: 0;
   padding-left: var(--po-space-3);

@@ -29,37 +29,23 @@ public sealed class ProfileTableEntity : ITableEntity
 
     public string? Dislikes { get; set; }
 
-    public bool IsIntrovert { get; set; }
 
-    public bool IsStubborn { get; set; }
 
-    public bool IsSpontaneous { get; set; }
 
-    public bool IsSarcastic { get; set; }
 
-    public bool IsWorkaholic { get; set; }
 
-    public bool IsPackRat { get; set; }
 
-    public string? LoveLanguage { get; set; }
 
-    public string? AttachmentStyle { get; set; }
 
-    public string? StressResponse { get; set; }
 
     public int LogicVsEmotion { get; set; } = 50;
 
-    public int Punctuality { get; set; } = 50;
 
-    public int InLawAffinity { get; set; } = 50;
 
-    public int ScreenTime { get; set; } = 50;
 
     public int Jealousy { get; set; } = 50;
 
-    public int IsMessy { get; set; } = 50;
 
-    public int SpendsMoneyFreely { get; set; } = 50;
 
     public int HoldsGrudges { get; set; } = 50;
 

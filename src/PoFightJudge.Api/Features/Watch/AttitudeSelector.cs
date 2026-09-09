@@ -44,11 +44,14 @@ public static class AttitudeSelector
         {
             >= 85 => "furious",
             >= 72 => speaker.HoldsGrudges >= 70 ? "hateful" : "hostile",
-            >= 58 => speaker.IsSarcastic ? "sarcastic" : "angry",
+
+            // Sarcasm belongs to the cold ones. It used to be its own switch, and the switch was the better signal;
+            // the logic end of the axis is the nearest honest stand-in, because dry is what that end sounds like.
+            >= 58 => speaker.LogicVsEmotion <= 40 ? "sarcastic" : "angry",
             >= 45 => "frustrated",
             >= 32 => Withdraws(speaker) ? "passive-aggressive" : "smug",
             >= CalmCeiling => "humble",
-            _ => speaker.StressResponse == StressResponse.Fawn ? "apologetic" : "calm",
+            _ => Concedes(speaker) ? "apologetic" : "calm",
         };
     }
 
@@ -60,25 +63,15 @@ public static class AttitudeSelector
         // Patience is the spine of it: an impatient spouse starts near boiling.
         var heat = 100 - speaker.Patience;
 
-        heat += speaker.StressResponse switch
-        {
-            StressResponse.Fight => 15,
-            StressResponse.Freeze => -10,
-            StressResponse.Flight => -10,
-            StressResponse.Fawn => -20,
-            _ => 0,
-        };
-
         // Someone who never lets anything go arrives already annoyed.
         if (speaker.HoldsGrudges >= 65)
         {
             heat += 10;
         }
 
-        if (speaker.IsStubborn)
-        {
-            heat += 5;
-        }
+        // Jealousy used to sit in the editor doing nothing to the argument. It is one of the four dials that
+        // survived, so it now costs what the stress response used to: a suspicious spouse starts further up.
+        heat += (speaker.Jealousy - 50) / 5;
 
         // Emotional speakers run hotter than analytical ones, on the same axis the UI shows; ±10 at the extremes.
         heat += (speaker.LogicVsEmotion - 50) / 5;
@@ -101,6 +94,12 @@ public static class AttitudeSelector
         return Math.Clamp(heat, 0, 100);
     }
 
-    /// <summary>True for the spouses who go quiet rather than loud: Freeze is the textbook stonewaller, and an introvert lands there by another route.</summary>
-    private static bool Withdraws(Profile speaker) => speaker.StressResponse == StressResponse.Freeze || speaker.IsIntrovert;
+    /// <summary>
+    /// The spouses who go quiet rather than loud. A grudge is the quiet form of anger — somebody keeping score does
+    /// not shout, they wait — so the dial that measures it decides who stonewalls and who gets smug about it.
+    /// </summary>
+    private static bool Withdraws(Profile speaker) => speaker.HoldsGrudges >= 55;
+
+    /// <summary>Who says sorry before anybody asks: patient, and not keeping score.</summary>
+    private static bool Concedes(Profile speaker) => speaker.Patience >= 70 && speaker.HoldsGrudges <= 30;
 }

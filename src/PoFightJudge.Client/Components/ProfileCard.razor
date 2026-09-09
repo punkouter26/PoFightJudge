@@ -41,16 +41,6 @@
         <StatBar LeftLabel="Forgiving" RightLabel="Holds on" Value="@Persona.HoldsGrudges" Color="@Accent" />
     </div>
 
-    @if (Traits.Count > 0)
-    {
-        <div class="traits">
-            @foreach (var trait in Traits)
-            {
-                <span class="po-chip po-chip--muted">@trait</span>
-            }
-        </div>
-    }
-
     @if (!string.IsNullOrWhiteSpace(Persona.Philosophy))
     {
         <blockquote class="quote po-muted">“@Persona.Philosophy”</blockquote>
@@ -129,13 +119,4 @@
             _playing = false;
         }
     }
-
-    private List<string> Traits =>
-    [
-        .. new (bool On, string Label)[]
-        {
-            (Persona.IsIntrovert, "Introvert"), (Persona.IsStubborn, "Stubborn"), (Persona.IsSpontaneous, "Spontaneous"),
-            (Persona.IsSarcastic, "Sarcastic"), (Persona.IsWorkaholic, "Workaholic"), (Persona.IsPackRat, "Pack rat"),
-        }.Where(t => t.On).Select(t => t.Label),
-    ];
 }
