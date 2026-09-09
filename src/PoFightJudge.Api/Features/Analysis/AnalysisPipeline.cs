@@ -83,6 +83,7 @@ public sealed partial class AnalysisPipeline(
         using var scope = scopes.CreateScope();
         var matches = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
         var results = scope.ServiceProvider.GetRequiredService<IFighterResultRepository>();
+        var words = scope.ServiceProvider.GetRequiredService<IFighterWordsRepository>();
         var blobs = scope.ServiceProvider.GetRequiredService<IAudioBlobStore>();
 
         var match = await matches.GetAsync(userId, matchId, ct)
@@ -177,13 +178,14 @@ public sealed partial class AnalysisPipeline(
 
         await SaveStatusAsync(matches, matchId, AnalysisStatus.Ready, JsonSerializer.Serialize(report, GeminiJudgeClient.JsonOptions), null, ct);
         await SaveRecordsAsync(results, match, report, mapped, ct);
+        await SaveWordsAsync(words, match, mapped, ct);
         await MarkAsync(matches, match with { Winner = WinnerTag(match, overall) }, SessionStatus.Ready, ct);
         LogReady(logger, matchId.Value, stopwatch.Elapsed.TotalSeconds);
 
         // Last, and after the room can already read the ruling: the persona is a bonus read from a report that is
         // on the record, and it is the one step here that costs a model call per fighter.
         var personas = scope.ServiceProvider.GetRequiredService<IFighterPersonaWriter>();
-        await personas.WriteAsync(match, report, mapped, ct);
+        await personas.WriteAsync(match, report, ct);
 
         // And what the fight was about, as a vector, so a history can be searched by meaning rather than by whether
         // somebody happened to type the same word into the topic. Cheapest call in the app, and the last one: a
@@ -247,6 +249,21 @@ public sealed partial class AnalysisPipeline(
             Draw: false,
             Score(theirs.Assessment),
             FightStyleSnapshotExtractor.FromFight(theirs.Assessment, theirs.Metrics, FirstWords(transcript, side)));
+    }
+
+    /// <summary>
+    /// What each person actually said, kept as words so their persona can be written from every debate they have
+    /// spoken in rather than from this one. Idempotent on (tag, match), like the result rows beside it.
+    /// </summary>
+    private static async Task SaveWordsAsync(IFighterWordsRepository words, MatchDto match, MappedTranscript transcript, CancellationToken ct)
+    {
+        var at = match.EndedAt ?? match.StartedAt;
+        foreach (var (side, speaker) in new[] { (match.Side1, Speaker.Player1), (match.Side2, Speaker.Player2) }.Where(s => s.Item1.IsHuman))
+        {
+            await words.SaveAsync(
+                SpokenDebate.From(side.Id, match.Id, at, MatchMode.Fight, transcript.For(speaker).OrderBy(w => w.Start).Select(w => w.Text)),
+                ct);
+        }
     }
 
     /// <summary>

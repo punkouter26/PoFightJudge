@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using PoFightJudge.Api.Features.Auth;
+using PoFightJudge.Api.Features.Fighters;
 using PoFightJudge.Api.Features.Watch;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
@@ -114,6 +116,12 @@ public class WatchTests(ApiFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<VerdictResponse>())!.Persisted.Should().BeTrue(
             "arguing an AI persona counts towards a person's record exactly as arguing another person does");
+
+        // And what they said is kept as words, not only as a reading of them, so the persona written after any
+        // later debate has this night to read as well.
+        var said = await factory.Services.GetRequiredService<IFighterWordsRepository>().ListAsync(FighterId.From("KD"));
+        said.Should().ContainSingle().Which.Said.Should().Contain("the thermostat");
+        said[0].Mode.Should().Be(MatchMode.Watch);
 
         // The person's turn is theirs to speak: the server refuses to write their line for them.
         var speakingForThem = await client.PostAsJsonAsync(ApiRoutes.Watch.GenerateRoundUrl, new GenerateRoundRequest(husband, person, [], "wife"));

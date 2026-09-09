@@ -40,7 +40,7 @@ public sealed class DebateOrchestratorTests : IAsyncDisposable
 
     private DebateOrchestrator? _orchestrator;
 
-    public DebateOrchestratorTests() => _matches = new InMemoryMatchRepository(_watchResults, _fighterResults);
+    public DebateOrchestratorTests() => _matches = new InMemoryMatchRepository(_watchResults, _fighterResults, new InMemoryFighterWordsRepository());
 
     private static byte[] Loud(int samples = 800)
     {

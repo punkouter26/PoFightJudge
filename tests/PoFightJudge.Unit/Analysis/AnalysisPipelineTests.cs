@@ -30,6 +30,7 @@ public sealed class AnalysisPipelineTests : IDisposable
     private readonly InMemoryAudioBlobStore _blobs = new();
     private readonly InMemoryWatchResultRepository _watchResults = new();
     private readonly InMemoryFighterResultRepository _fighterResults = new();
+    private readonly InMemoryFighterWordsRepository _fighterWords = new();
     private readonly InMemoryFighterRepository _fighters = new();
     private readonly InMemoryProfileRepository _profiles = new();
     private readonly InMemoryMatchRepository _matches;
@@ -39,13 +40,14 @@ public sealed class AnalysisPipelineTests : IDisposable
 
     public AnalysisPipelineTests()
     {
-        _matches = new InMemoryMatchRepository(_watchResults, _fighterResults);
+        _matches = new InMemoryMatchRepository(_watchResults, _fighterResults, _fighterWords);
         var services = new ServiceCollection();
         services.AddSingleton<IMatchRepository>(_matches);
         services.AddSingleton<IFighterResultRepository>(_fighterResults);
+        services.AddSingleton<IFighterWordsRepository>(_fighterWords);
         services.AddSingleton<IAudioBlobStore>(_blobs);
         services.AddSingleton<IFighterPersonaWriter>(new FighterPersonaWriter(
-            _fighters, _fighterResults, _profiles,
+            _fighters, _fighterResults, _fighterWords, _profiles,
             new FakeGeminiText(new AiLatencyTracker(), TimeSpan.Zero),
             GeminiModelOptions.Defaults,
             NullLogger<FighterPersonaWriter>.Instance));
@@ -198,6 +200,25 @@ public sealed class AnalysisPipelineTests : IDisposable
         style.BestQuote.Should().NotBeNullOrWhiteSpace();
         style.Opener.Should().NotBeNullOrWhiteSpace("how somebody opens is the most repeatable thing about them");
         style.Tips.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task Each_fighter_keeps_the_words_themselves_so_a_later_persona_can_read_this_fight_too()
+    {
+        var match = await RecordedAsync();
+
+        using var pipeline = Pipeline();
+        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
+
+        var said = await _fighterWords.ListAsync(FighterId.From("AL"), CancellationToken.None);
+        said.Should().ContainSingle("one row per fighter per fight, the same way the result rows go");
+        said[0].Said.Should().NotBeNullOrWhiteSpace();
+        said[0].Mode.Should().Be(MatchMode.Fight);
+        said[0].MatchId.Should().Be(match.Id);
+
+        var other = await _fighterWords.ListAsync(FighterId.From("SM"), CancellationToken.None);
+        other.Should().ContainSingle();
+        other[0].Said.Should().NotBe(said[0].Said, "each of them is kept saying their own half of it");
     }
 
     [Fact]

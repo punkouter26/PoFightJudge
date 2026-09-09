@@ -148,6 +148,7 @@ public sealed class FighterEndpoints : ICarterModule
         ClaimsPrincipal user,
         IFighterRepository fighters,
         IFighterResultRepository results,
+        IFighterWordsRepository words,
         IProfileRepository profiles,
         CancellationToken ct)
     {
@@ -159,10 +160,12 @@ public sealed class FighterEndpoints : ICarterModule
         foreach (var row in await results.ListForAsync(tag, user.UserId(), ct))
         {
             await results.DeleteForMatchAsync(row.MatchId, [tag.Value], ct);
+            await words.DeleteForMatchAsync(row.MatchId, [tag.Value], ct);
         }
 
         if ((await results.ListForAnyoneAsync(tag, ct)).Count == 0)
         {
+            await words.DeleteForFighterAsync(tag, ct);
             await fighters.DeleteAsync(tag, ct);
 
             // Their persona was read from these fights; with the last of them gone, it goes too. An authored cast

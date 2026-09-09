@@ -301,6 +301,17 @@ public sealed class MatchRepository(TableServiceClient tables) : IMatchRepositor
         {
             var table = side.IsHuman ? TableNames.FighterResults : TableNames.WatchResults;
             await StorageBootstrap.WithTableAsync(tables, table, token => Table(table).DeleteEntityAsync(side.Id, match.Id.Value, cancellationToken: token), ct);
+
+            // And what they said in it. Words that outlived the debate would keep writing personas from an argument
+            // the person asked to have forgotten.
+            if (side.IsHuman)
+            {
+                await StorageBootstrap.WithTableAsync(
+                    tables,
+                    TableNames.FighterWords,
+                    token => Table(TableNames.FighterWords).DeleteEntityAsync(side.Id, match.Id.Value, cancellationToken: token),
+                    ct);
+            }
         }
     }
 }

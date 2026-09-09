@@ -18,6 +18,9 @@ public static class TableNames
     public const string FighterResults = "pofightjudgefighterresults";
     public const string Fighters = "pofightjudgefighters";
 
+    /// <summary>What each person actually said, one row per debate: see <c>SpokenDebate</c>.</summary>
+    public const string FighterWords = "pofightjudgefighterwords";
+
     /// <summary>Reverse index for shared rulings: PartitionKey is the token, so resolving one is a point read.</summary>
     public const string Shares = "pofightjudgeshares";
 }

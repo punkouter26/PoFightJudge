@@ -127,6 +127,7 @@ try
     builder.Services.AddScoped<IFighterRepository, FighterRepository>();
     builder.Services.AddScoped<IFighterPersonaWriter, FighterPersonaWriter>();
     builder.Services.AddScoped<IFighterResultRepository, FighterResultRepository>();
+    builder.Services.AddScoped<IFighterWordsRepository, FighterWordsRepository>();
     builder.Services.AddScoped<IWatchResultRepository, WatchResultRepository>();
     builder.Services.AddPoWatch();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);

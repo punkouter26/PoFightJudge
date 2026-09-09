@@ -14,14 +14,15 @@ namespace PoFightJudge.Api.Features.Fighters;
 /// </summary>
 public interface IFighterPersonaWriter
 {
-    Task WriteAsync(MatchDto match, AnalysisReportDto report, MappedTranscript transcript, CancellationToken ct = default);
+    Task WriteAsync(MatchDto match, AnalysisReportDto report, CancellationToken ct = default);
 }
 
 /// <summary>
-/// The persona is read from evidence — their own words, the judge's read of them, and the style profile across
-/// every fight so far — through the same schema the invent-a-character generator uses, so the editor, the pickers
-/// and the round prompts need nothing new. It is rewritten after every fight: the fights are the truth about how
-/// somebody argues, and a card that stopped at their first one would be wrong by their third.
+/// The persona is read from evidence — everything they have said in every debate they have ever spoken in, the
+/// judge's read of them, and the style profile across every fight so far — through the same schema the
+/// invent-a-character generator uses, so the editor, the pickers and the round prompts need nothing new. It is
+/// rewritten after every fight: the fights are the truth about how somebody argues, and a card that stopped at
+/// their first one would be wrong by their third.
 /// </summary>
 /// <remarks>
 /// Two things are never touched. An authored cast member who happens to share the initials keeps their row — that
@@ -33,6 +34,7 @@ public interface IFighterPersonaWriter
 public sealed partial class FighterPersonaWriter(
     IFighterRepository fighters,
     IFighterResultRepository results,
+    IFighterWordsRepository words,
     IProfileRepository profiles,
     IGeminiText gemini,
     GeminiModelOptions models,
@@ -40,27 +42,23 @@ public sealed partial class FighterPersonaWriter(
 {
     public const string Operation = "fighter-persona";
 
-    /// <summary>Enough of what they said to hear how they talk. Past this it is spend, not evidence.</summary>
-    public const int MaxSaidChars = 1_500;
-
-    public async Task WriteAsync(MatchDto match, AnalysisReportDto report, MappedTranscript transcript, CancellationToken ct = default)
+    public async Task WriteAsync(MatchDto match, AnalysisReportDto report, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(report);
-        ArgumentNullException.ThrowIfNull(transcript);
 
         if (match.Side1.IsHuman)
         {
-            await WriteOneAsync(match.Side1.Id, Speaker.Player1, report.Player1.Assessment, transcript, ct);
+            await WriteOneAsync(match.Side1.Id, report.Player1.Assessment, ct);
         }
 
         if (match.Side2.IsHuman)
         {
-            await WriteOneAsync(match.Side2.Id, Speaker.Player2, report.Player2.Assessment, transcript, ct);
+            await WriteOneAsync(match.Side2.Id, report.Player2.Assessment, ct);
         }
     }
 
-    private async Task WriteOneAsync(string tag, Speaker side, PlayerAssessmentDto assessment, MappedTranscript transcript, CancellationToken ct)
+    private async Task WriteOneAsync(string tag, PlayerAssessmentDto assessment, CancellationToken ct)
     {
         try
         {
@@ -82,13 +80,16 @@ public sealed partial class FighterPersonaWriter(
             }
 
             var style = StyleProfileBuilder.Build(tag, await results.ListForAnyoneAsync(id, ct));
-            var said = Said(transcript, side);
+
+            // Everything they have ever said, this debate included: the words are the evidence, and a person who
+            // has argued five times has told us five times as much about how they argue.
+            var corpus = SpokenCorpus.From(await words.ListAsync(id, ct));
 
             CreateProfileRequest draft = new();
             for (var attempt = 0; attempt < 2; attempt++)
             {
                 var request = new GeminiTextRequest(
-                    BuildPrompt(fighter, style, assessment, said, attempt),
+                    BuildPrompt(fighter, style, assessment, corpus, attempt),
                     models.Profile,
                     Operation,
                     ProfileGenerator.Schema,
@@ -110,7 +111,7 @@ public sealed partial class FighterPersonaWriter(
             persona.MarkFromFights();
             persona.UpdateFacePic(existing?.FacePic);
             await profiles.UpsertAsync(persona, ct);
-            LogWritten(logger, tag, fighter.Role, style.Debates);
+            LogWritten(logger, tag, fighter.Role, style.Debates, corpus.Debates);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -122,23 +123,16 @@ public sealed partial class FighterPersonaWriter(
         }
     }
 
-    /// <summary>Their words, in the order they said them, cut at the tail: the opening is where the habits are.</summary>
-    public static string Said(MappedTranscript transcript, Speaker side)
-    {
-        ArgumentNullException.ThrowIfNull(transcript);
-        var text = string.Join(' ', transcript.For(side).OrderBy(w => w.Start).Select(w => w.Text));
-        return text.Length <= MaxSaidChars ? text : string.Concat(text.AsSpan(0, MaxSaidChars), "…");
-    }
-
     /// <summary>
     /// The instructions never change; the evidence does. The split keeps the constant half cacheable across every
     /// persona this ever writes, the same way the generator's prompt is split.
     /// </summary>
-    public static GeminiPrompt BuildPrompt(Fighter fighter, StyleProfileDto style, PlayerAssessmentDto assessment, string said, int attempt)
+    public static GeminiPrompt BuildPrompt(Fighter fighter, StyleProfileDto style, PlayerAssessmentDto assessment, SpokenCorpus corpus, int attempt)
     {
         ArgumentNullException.ThrowIfNull(fighter);
         ArgumentNullException.ThrowIfNull(style);
         ArgumentNullException.ThrowIfNull(assessment);
+        ArgumentNullException.ThrowIfNull(corpus);
 
         const string system = """
             You are writing the persona card of a REAL person for a satirical "married couple argument simulator",
@@ -164,8 +158,7 @@ public sealed partial class FighterPersonaWriter(
         var user = $"""
             Write the persona of {fighter.DisplayName} (tag {fighter.Tag}), who argues as the {fighter.Role.ToString().ToLowerInvariant()}.
 
-            WHAT THEY SAID IN THIS ARGUMENT (their own words, in order):
-            "{said}"
+            {Evidence(corpus)}
 
             THE JUDGE'S READ OF THEM:
               • tone: {tone}
@@ -185,8 +178,20 @@ public sealed partial class FighterPersonaWriter(
         return new GeminiPrompt(system, user);
     }
 
-    [LoggerMessage(EventId = 5101, Level = LogLevel.Information, Message = "Persona {Tag}: written as the {Role} from {Debates} fight(s)")]
-    private static partial void LogWritten(ILogger logger, string tag, ProfileRole role, int debates);
+    /// <summary>
+    /// Their own words, laid out for the model. Everything they have ever said, oldest first, so it can hear a
+    /// person rather than a night — and it is told which one is the fight that was just judged.
+    /// </summary>
+    private static string Evidence(SpokenCorpus corpus) =>
+        corpus.IsEmpty
+            ? "WHAT THEY SAID: nothing of theirs was transcribed. Go on the judge's read of them alone."
+            : $"""
+                EVERYTHING THEY HAVE SAID, across {corpus.Debates.ToString(CultureInfo.InvariantCulture)} argument(s), oldest first — their own words:
+                {corpus.Text}
+                """;
+
+    [LoggerMessage(EventId = 5101, Level = LogLevel.Information, Message = "Persona {Tag}: written as the {Role} from {Debates} fight(s) and {Spoken} transcribed one(s)")]
+    private static partial void LogWritten(ILogger logger, string tag, ProfileRole role, int debates, int spoken);
 
     [LoggerMessage(EventId = 5102, Level = LogLevel.Information, Message = "Persona {Tag}: an authored cast member owns these initials; left alone")]
     private static partial void LogKeptCast(ILogger logger, string tag);

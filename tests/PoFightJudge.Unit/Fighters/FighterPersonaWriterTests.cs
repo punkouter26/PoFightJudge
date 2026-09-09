@@ -24,18 +24,20 @@ public sealed class FighterPersonaWriterTests
 
     private readonly InMemoryFighterRepository _fighters = new();
     private readonly InMemoryFighterResultRepository _results = new();
+    private readonly InMemoryFighterWordsRepository _words = new();
     private readonly InMemoryProfileRepository _profiles = new();
 
     private FighterPersonaWriter Writer(IGeminiText? gemini = null) => new(
         _fighters,
         _results,
+        _words,
         _profiles,
         gemini ?? new FakeGeminiText(new AiLatencyTracker(), TimeSpan.Zero),
         GeminiModelOptions.Defaults,
         NullLogger<FighterPersonaWriter>.Instance);
 
     /// <summary>A fight KKK and LLL just had, as the pipeline hands it over once the judge has ruled.</summary>
-    private async Task<(MatchDto Match, AnalysisReportDto Report, MappedTranscript Transcript)> FoughtAsync()
+    private async Task<(MatchDto Match, AnalysisReportDto Report)> FoughtAsync()
     {
         await _fighters.EnsureAsync(FighterId.From("KKK"), Now, ProfileRole.Husband);
         await _fighters.EnsureAsync(FighterId.From("LLL"), Now, ProfileRole.Wife);
@@ -79,8 +81,15 @@ public sealed class FighterPersonaWriterTests
             GeneratedAt: Now,
             Highlights: []);
 
-        return (match, report, transcript);
+        await SaidAsync(match, "KKK", Speaker.Player1, transcript, Now);
+        await SaidAsync(match, "LLL", Speaker.Player2, transcript, Now);
+
+        return (match, report);
     }
+
+    /// <summary>What the pipeline stores for one side once the fight is read: their own words, in order.</summary>
+    private Task SaidAsync(MatchDto match, string tag, Speaker side, MappedTranscript transcript, DateTimeOffset at) =>
+        _words.SaveAsync(SpokenDebate.From(tag, match.Id, at, MatchMode.Fight, transcript.For(side).OrderBy(w => w.Start).Select(w => w.Text)));
 
     private static PlayerAssessmentDto Assessment(string tone, string quote) => new(
         "B2", "clear enough", 1, ["a slip"], 6, 7, 8, [new FallacyDto("Appeal to authority", quote)], 5, 6, 7, 80, [],
@@ -90,9 +99,9 @@ public sealed class FighterPersonaWriterTests
     [Fact]
     public async Task Both_people_get_a_persona_in_the_cast_under_their_own_initials_and_the_role_they_chose()
     {
-        var (match, report, transcript) = await FoughtAsync();
+        var (match, report) = await FoughtAsync();
 
-        await Writer().WriteAsync(match, report, transcript, CancellationToken.None);
+        await Writer().WriteAsync(match, report, CancellationToken.None);
 
         var kkk = await _profiles.GetByIdAsync(ProfileId.From("KKK"));
         kkk.Should().NotBeNull("KKK can now be picked for a CPU or 1P argument");
@@ -110,10 +119,10 @@ public sealed class FighterPersonaWriterTests
     [Fact]
     public async Task A_seeded_cast_member_who_happens_to_share_the_initials_is_never_written_over()
     {
-        var (match, report, transcript) = await FoughtAsync();
+        var (match, report) = await FoughtAsync();
         await _profiles.UpsertAsync(ProfileTests.FullRequest("KKK", ProfileRole.Husband).ToDomain());
 
-        await Writer().WriteAsync(match, report, transcript, CancellationToken.None);
+        await Writer().WriteAsync(match, report, CancellationToken.None);
 
         var kkk = await _profiles.GetByIdAsync(ProfileId.From("KKK"));
         kkk!.FromFights.Should().BeFalse("the authored cast never changes");
@@ -124,15 +133,15 @@ public sealed class FighterPersonaWriterTests
     [Fact]
     public async Task The_next_fight_rewrites_the_persona_but_keeps_their_face_and_takes_the_role_they_chose_this_time()
     {
-        var (match, report, transcript) = await FoughtAsync();
-        await Writer().WriteAsync(match, report, transcript, CancellationToken.None);
+        var (match, report) = await FoughtAsync();
+        await Writer().WriteAsync(match, report, CancellationToken.None);
 
         var first = await _profiles.GetByIdAsync(ProfileId.From("KKK"));
         first!.UpdateFacePic("faces/KKK.png");
         await _profiles.UpsertAsync(first);
         await _fighters.EnsureAsync(FighterId.From("KKK"), Now.AddDays(1), ProfileRole.Wife);
 
-        await Writer().WriteAsync(match, report, transcript, CancellationToken.None);
+        await Writer().WriteAsync(match, report, CancellationToken.None);
 
         var again = await _profiles.GetByIdAsync(ProfileId.From("KKK"));
         again!.FacePic.Should().Be("faces/KKK.png", "a photo somebody added is not something a fight should lose");
@@ -143,12 +152,12 @@ public sealed class FighterPersonaWriterTests
     [Fact]
     public async Task A_model_that_fails_costs_them_the_persona_and_nothing_else()
     {
-        var (match, report, transcript) = await FoughtAsync();
+        var (match, report) = await FoughtAsync();
         var gemini = Substitute.For<IGeminiText>();
         gemini.GenerateAsync(Arg.Any<GeminiTextRequest>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("503 from upstream"));
 
-        var act = () => Writer(gemini).WriteAsync(match, report, transcript, CancellationToken.None);
+        var act = () => Writer(gemini).WriteAsync(match, report, CancellationToken.None);
 
         await act.Should().NotThrowAsync("the analysis is already ready; a persona is a bonus, not a condition");
         (await _profiles.GetAllAsync()).Should().BeEmpty();
@@ -157,16 +166,63 @@ public sealed class FighterPersonaWriterTests
     [Fact]
     public async Task The_model_is_told_what_they_actually_said_and_what_the_judge_made_of_it()
     {
-        var (_, report, transcript) = await FoughtAsync();
+        var (_, report) = await FoughtAsync();
         var fighter = (await _fighters.GetAsync(FighterId.From("KKK")))!;
         var style = StyleProfileBuilder.Build("KKK", []);
+        var corpus = SpokenCorpus.From(await _words.ListAsync(FighterId.From("KKK")));
 
-        var prompt = FighterPersonaWriter.BuildPrompt(fighter, style, report.Player1.Assessment, FighterPersonaWriter.Said(transcript, Speaker.Player1), attempt: 0);
+        var prompt = FighterPersonaWriter.BuildPrompt(fighter, style, report.Player1.Assessment, corpus, attempt: 0);
 
         prompt.User.Should().Contain("Trump loves me", "their own words are the evidence");
         prompt.User.Should().Contain("Everyone needs to be like Trump", "so is the judge's pick of their best line");
         prompt.User.Should().Contain("husband", "the persona is written for the seat they chose");
         prompt.User.Should().Contain("KKK");
         prompt.System.Should().ContainEquivalentOf("real person", "this is not the invent-a-character prompt");
+    }
+
+    [Fact]
+    public async Task Everything_they_have_ever_said_goes_to_the_model_not_just_the_argument_just_had()
+    {
+        var (match, report) = await FoughtAsync();
+        var kkk = FighterId.From("KKK");
+
+        // Two nights they argued before this one, one in each engine: both are theirs, so both are evidence.
+        await _words.SaveAsync(SpokenDebate.From("KKK", MatchId.New(), Now.AddDays(-9), MatchMode.Watch, ["Look, the thing is, the bins were your job"]));
+        await _words.SaveAsync(SpokenDebate.From("KKK", MatchId.New(), Now.AddDays(-2), MatchMode.Fight, ["Look, the thing is, you never listen to a word"]));
+
+        var fighter = (await _fighters.GetAsync(kkk))!;
+        var corpus = SpokenCorpus.From(await _words.ListAsync(kkk));
+        var prompt = FighterPersonaWriter.BuildPrompt(fighter, StyleProfileBuilder.Build("KKK", []), report.Player1.Assessment, corpus, attempt: 0);
+
+        corpus.Debates.Should().Be(3, "every debate they have spoken in, this one included");
+        prompt.User.Should().Contain("the bins were your job", "what they said nine days ago is still how they argue");
+        prompt.User.Should().Contain("you never listen to a word");
+        prompt.User.Should().Contain("Trump loves me", "and tonight is in there too");
+        prompt.User.Should().Contain("the one just judged", "the model is told which night was the fight it is reading");
+
+        var bins = prompt.User.IndexOf("the bins were your job", StringComparison.Ordinal);
+        var tonight = prompt.User.IndexOf("Trump loves me", StringComparison.Ordinal);
+        bins.Should().BeLessThan(tonight, "oldest first, so it reads as somebody changing over time");
+
+        // And it is not just prompt-building: the persona itself is written from all of it.
+        await Writer().WriteAsync(match, report, CancellationToken.None);
+        (await _profiles.GetByIdAsync(ProfileId.From("KKK")))!.FromFights.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Somebody_whose_words_were_never_transcribed_still_gets_a_persona_from_the_judges_read()
+    {
+        var (match, report) = await FoughtAsync();
+        await _words.DeleteForFighterAsync(FighterId.From("KKK"));
+
+        var fighter = (await _fighters.GetAsync(FighterId.From("KKK")))!;
+        var corpus = SpokenCorpus.From(await _words.ListAsync(FighterId.From("KKK")));
+        var prompt = FighterPersonaWriter.BuildPrompt(fighter, StyleProfileBuilder.Build("KKK", []), report.Player1.Assessment, corpus, attempt: 0);
+
+        corpus.IsEmpty.Should().BeTrue();
+        prompt.User.Should().Contain("nothing of theirs was transcribed", "the model is told the evidence is thin rather than left to invent it");
+
+        await Writer().WriteAsync(match, report, CancellationToken.None);
+        (await _profiles.GetByIdAsync(ProfileId.From("KKK"))).Should().NotBeNull("a silent night is not a reason to have no card");
     }
 }

@@ -29,7 +29,7 @@ public sealed class SessionRegistryTests : IAsyncDisposable
     {
         var watchResults = new InMemoryWatchResultRepository();
         var fighterResults = new InMemoryFighterResultRepository();
-        var matches = new InMemoryMatchRepository(watchResults, fighterResults);
+        var matches = new InMemoryMatchRepository(watchResults, fighterResults, new InMemoryFighterWordsRepository());
 
         var services = new ServiceCollection();
         services.AddSingleton<IMatchRepository>(matches);

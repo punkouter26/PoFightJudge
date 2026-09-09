@@ -184,6 +184,7 @@ public sealed class WatchEndpoints : ICarterModule
         IWatchResultRepository watchResults,
         IFighterRepository fighters,
         IFighterResultRepository fighterResults,
+        IFighterWordsRepository fighterWords,
         IWatchAudioStore audio,
         TimeProvider clock,
         CancellationToken ct)
@@ -233,7 +234,7 @@ public sealed class WatchEndpoints : ICarterModule
         }
 
         var match = WatchMatch.Complete(matchId, request.Husband, request.Wife, userId, request.Topic, rounds, verdict.Winner, verdict.Verdict, husbandStats, wifeStats, now);
-        await PersistAsync(match, ai.IsFake, matches, watchResults, fighters, fighterResults, now, ct);
+        await PersistAsync(match, ai.IsFake, matches, watchResults, fighters, fighterResults, fighterWords, now, ct);
 
         return Results.Ok(new VerdictResponse(matchId, verdict.Winner, verdict.Verdict, verdict.HusbandScore, verdict.WifeScore, husbandStats.ToDto(), wifeStats.ToDto(), Persisted: true));
     }
@@ -245,6 +246,7 @@ public sealed class WatchEndpoints : ICarterModule
         IWatchResultRepository watchResults,
         IFighterRepository fighters,
         IFighterResultRepository fighterResults,
+        IFighterWordsRepository fighterWords,
         DateTimeOffset now,
         CancellationToken ct)
     {
@@ -292,11 +294,14 @@ public sealed class WatchEndpoints : ICarterModule
             {
                 // Their own record, and what this debate says about how they argue. A watch has no judge report per
                 // side, so the snapshot is built from their own lines: what they repeat, how they open, their best.
-                var spoken = match.Rounds.Where(r => string.Equals(r.Speaker, SpeakerOf(side, match), StringComparison.Ordinal)).Select(r => r.Text);
+                var spoken = match.Rounds.Where(r => string.Equals(r.Speaker, SpeakerOf(side, match), StringComparison.Ordinal)).Select(r => r.Text).ToList();
                 var style = FightStyleSnapshotExtractor.FromSpokenLines(spoken);
                 var seat = string.Equals(side.Id, match.Husband.Id, StringComparison.Ordinal) ? ProfileRole.Husband : ProfileRole.Wife;
                 await fighters.EnsureAsync(FighterId.From(side.Id), now, seat, ct);
                 await fighterResults.SaveAsync([new FighterResultDto(side.Id, match.UserId, match.Id, MatchMode.Watch, now, match.Topic ?? string.Empty, opponent.Id, won, draw, score, style)], ct);
+
+                // And the words themselves, so a persona written after any later debate has this one to read too.
+                await fighterWords.SaveAsync(SpokenDebate.From(side.Id, match.Id, now, MatchMode.Watch, spoken), ct);
             }
             else
             {

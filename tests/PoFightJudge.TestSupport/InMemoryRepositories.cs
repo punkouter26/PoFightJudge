@@ -162,8 +162,49 @@ public sealed class InMemoryFighterResultRepository : IFighterResultRepository
     }
 }
 
+/// <summary>What each person said, in memory. Same shape as the table: one row per (tag, match).</summary>
+public sealed class InMemoryFighterWordsRepository : IFighterWordsRepository
+{
+    private readonly ConcurrentDictionary<(string Tag, string Match), SpokenDebate> _rows = new();
+
+    public Task SaveAsync(SpokenDebate debate, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(debate);
+        if (!debate.IsEmpty)
+        {
+            _rows[(debate.Tag, debate.MatchId.Value)] = debate;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<SpokenDebate>> ListAsync(FighterId tag, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<SpokenDebate>>(
+            [.. _rows.Values.Where(d => string.Equals(d.Tag, tag.Value, StringComparison.Ordinal)).OrderByDescending(d => d.At)]);
+
+    public Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> tags, CancellationToken ct = default)
+    {
+        foreach (var tag in tags)
+        {
+            _rows.TryRemove((tag, matchId.Value), out _);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteForFighterAsync(FighterId tag, CancellationToken ct = default)
+    {
+        foreach (var key in _rows.Keys.Where(k => string.Equals(k.Tag, tag.Value, StringComparison.Ordinal)).ToList())
+        {
+            _rows.TryRemove(key, out _);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
 /// <summary>Matches, turns and analyses in memory, keeping the cascade honest: deleting a match takes its children.</summary>
-public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults, IFighterResultRepository fighterResults) : IMatchRepository
+public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults, IFighterResultRepository fighterResults, IFighterWordsRepository fighterWords) : IMatchRepository
 {
     private readonly ConcurrentDictionary<(string User, string Match), MatchDto> _matches = new();
     private readonly ConcurrentDictionary<string, List<TurnDto>> _turns = new(StringComparer.Ordinal);
@@ -292,6 +333,7 @@ public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults,
         await watchResults.DeleteForMatchAsync(id, match.Side1 is { IsHuman: false } ? [match.Side1.Id] : [], ct);
         await watchResults.DeleteForMatchAsync(id, match.Side2 is { IsHuman: false } ? [match.Side2.Id] : [], ct);
         await fighterResults.DeleteForMatchAsync(id, match.HumanSides.Select(s => s.Id), ct);
+        await fighterWords.DeleteForMatchAsync(id, match.HumanSides.Select(s => s.Id), ct);
         return true;
     }
 }

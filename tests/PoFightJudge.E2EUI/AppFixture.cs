@@ -210,6 +210,8 @@ internal sealed class HostFactory : WebApplicationFactory<Program>
             services.AddSingleton<IFighterResultRepository, InMemoryFighterResultRepository>();
             services.RemoveAll<IFighterRepository>();
             services.AddSingleton<IFighterRepository, InMemoryFighterRepository>();
+            services.RemoveAll<IFighterWordsRepository>();
+            services.AddSingleton<IFighterWordsRepository, InMemoryFighterWordsRepository>();
             services.RemoveAll<IMatchRepository>();
             services.AddSingleton<IMatchRepository, InMemoryMatchRepository>();
             services.RemoveAll<IWatchAudioStore>();
