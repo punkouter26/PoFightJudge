@@ -27,6 +27,11 @@ public static class WatchServiceExtensions
     {
         services.AddScoped<IWatchAudioStore, WatchAudioBlobService>();
 
+        // A watch rules inside the request that ends it, so the personas it rewrites are queued rather than awaited.
+        services.AddSingleton<WatchPersonaBacklog>();
+        services.AddSingleton<IWatchPersonaIntake>(sp => sp.GetRequiredService<WatchPersonaBacklog>());
+        services.AddHostedService(sp => sp.GetRequiredService<WatchPersonaBacklog>());
+
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

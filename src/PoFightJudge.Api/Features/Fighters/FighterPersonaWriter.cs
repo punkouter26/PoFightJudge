@@ -8,13 +8,17 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Api.Features.Fighters;
 
 /// <summary>
-/// Turns a real person's fights into a persona the CPU and 1P channels can put in a seat. It runs once the judge
-/// has ruled, for every human side of the match. A failure here costs them the persona and nothing else: the
-/// ruling and the record are already written by the time this is called.
+/// Turns a real person's debates into a persona the CPU and 1P channels can put in a seat. It runs once the debate
+/// has been ruled on, for every human side of it, in either engine. A failure here costs them the persona and
+/// nothing else: the ruling and the record are already written by the time this is called.
 /// </summary>
 public interface IFighterPersonaWriter
 {
-    Task WriteAsync(MatchDto match, AnalysisReportDto report, CancellationToken ct = default);
+    /// <summary>
+    /// Rewrites the persona of every real person in this debate. <paramref name="report"/> is the judge's read of
+    /// each of them, when the debate produced one — a 2P fight does, a watch does not.
+    /// </summary>
+    Task WriteAsync(MatchDto match, AnalysisReportDto? report, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -42,23 +46,22 @@ public sealed partial class FighterPersonaWriter(
 {
     public const string Operation = "fighter-persona";
 
-    public async Task WriteAsync(MatchDto match, AnalysisReportDto report, CancellationToken ct = default)
+    public async Task WriteAsync(MatchDto match, AnalysisReportDto? report, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(match);
-        ArgumentNullException.ThrowIfNull(report);
 
         if (match.Side1.IsHuman)
         {
-            await WriteOneAsync(match.Side1.Id, report.Player1.Assessment, ct);
+            await WriteOneAsync(match.Side1.Id, report?.Player1.Assessment, ct);
         }
 
         if (match.Side2.IsHuman)
         {
-            await WriteOneAsync(match.Side2.Id, report.Player2.Assessment, ct);
+            await WriteOneAsync(match.Side2.Id, report?.Player2.Assessment, ct);
         }
     }
 
-    private async Task WriteOneAsync(string tag, PlayerAssessmentDto assessment, CancellationToken ct)
+    private async Task WriteOneAsync(string tag, PlayerAssessmentDto? assessment, CancellationToken ct)
     {
         try
         {
@@ -127,11 +130,10 @@ public sealed partial class FighterPersonaWriter(
     /// The instructions never change; the evidence does. The split keeps the constant half cacheable across every
     /// persona this ever writes, the same way the generator's prompt is split.
     /// </summary>
-    public static GeminiPrompt BuildPrompt(Fighter fighter, StyleProfileDto style, PlayerAssessmentDto assessment, SpokenCorpus corpus, int attempt)
+    public static GeminiPrompt BuildPrompt(Fighter fighter, StyleProfileDto style, PlayerAssessmentDto? assessment, SpokenCorpus corpus, int attempt)
     {
         ArgumentNullException.ThrowIfNull(fighter);
         ArgumentNullException.ThrowIfNull(style);
-        ArgumentNullException.ThrowIfNull(assessment);
         ArgumentNullException.ThrowIfNull(corpus);
 
         const string system = """
@@ -145,11 +147,6 @@ public sealed partial class FighterPersonaWriter(
             Fill the JSON schema. Every field is required. Age 24-68 (a guess is fine). Sliders are 0-100.
             """;
 
-        var fallacies = assessment.Fallacies.Count == 0
-            ? "(none noted)"
-            : string.Join("\n", assessment.Fallacies.Select(f => $"  • {f.Name}: \"{f.Quote}\""));
-        var tips = assessment.CoachingTips.Count == 0 ? "(none)" : string.Join("; ", assessment.CoachingTips);
-        var tone = assessment.ToneDescriptors.Count == 0 ? "(not described)" : string.Join(", ", assessment.ToneDescriptors);
         var phrases = style.Phrases.Count == 0 ? "(none yet)" : string.Join(" / ", style.Phrases);
         var nudge = attempt == 0
             ? string.Empty
@@ -160,15 +157,7 @@ public sealed partial class FighterPersonaWriter(
 
             {Evidence(corpus)}
 
-            THE JUDGE'S READ OF THEM:
-              • tone: {tone}
-              • best line: "{assessment.BestMomentQuote}"
-              • weakest moment: "{assessment.WorstMomentQuote}"
-              • fallacies they leaned on:
-            {fallacies}
-              • language level: {assessment.Cefr} — {assessment.CefrJustification}
-              • logic {assessment.Logic}/10, persuasiveness {assessment.Persuasiveness}/10, aggression {assessment.Aggression}/10, listening {assessment.Listening}/10, politeness {assessment.Politeness}/10
-              • advice they were given: {tips}
+            {Judged(assessment)}
 
             ACROSS EVERY ARGUMENT SO FAR ({style.Debates.ToString(CultureInfo.InvariantCulture)} including this one):
               • {style.Digest}
@@ -184,11 +173,41 @@ public sealed partial class FighterPersonaWriter(
     /// </summary>
     private static string Evidence(SpokenCorpus corpus) =>
         corpus.IsEmpty
-            ? "WHAT THEY SAID: nothing of theirs was transcribed. Go on the judge's read of them alone."
+            ? "WHAT THEY SAID: nothing of theirs was transcribed. Go on whatever else is here."
             : $"""
                 EVERYTHING THEY HAVE SAID, across {corpus.Debates.ToString(CultureInfo.InvariantCulture)} argument(s), oldest first — their own words:
                 {corpus.Text}
                 """;
+
+    /// <summary>
+    /// What the judge made of them, when a judge read them one at a time. A watch is ruled on as a match rather
+    /// than per person, so there is nothing here to quote and the model is told that rather than left to guess.
+    /// </summary>
+    private static string Judged(PlayerAssessmentDto? assessment)
+    {
+        if (assessment is null)
+        {
+            return "THE JUDGE'S READ OF THEM: this argument was ruled on as a whole rather than person by person, so go on their own words.";
+        }
+
+        var fallacies = assessment.Fallacies.Count == 0
+            ? "(none noted)"
+            : string.Join("\n", assessment.Fallacies.Select(f => $"  • {f.Name}: \"{f.Quote}\""));
+        var tips = assessment.CoachingTips.Count == 0 ? "(none)" : string.Join("; ", assessment.CoachingTips);
+        var tone = assessment.ToneDescriptors.Count == 0 ? "(not described)" : string.Join(", ", assessment.ToneDescriptors);
+
+        return $"""
+            THE JUDGE'S READ OF THEM:
+              • tone: {tone}
+              • best line: "{assessment.BestMomentQuote}"
+              • weakest moment: "{assessment.WorstMomentQuote}"
+              • fallacies they leaned on:
+            {fallacies}
+              • language level: {assessment.Cefr} — {assessment.CefrJustification}
+              • logic {assessment.Logic}/10, persuasiveness {assessment.Persuasiveness}/10, aggression {assessment.Aggression}/10, listening {assessment.Listening}/10, politeness {assessment.Politeness}/10
+              • advice they were given: {tips}
+            """;
+    }
 
     [LoggerMessage(EventId = 5101, Level = LogLevel.Information, Message = "Persona {Tag}: written as the {Role} from {Debates} fight(s) and {Spoken} transcribed one(s)")]
     private static partial void LogWritten(ILogger logger, string tag, ProfileRole role, int debates, int spoken);

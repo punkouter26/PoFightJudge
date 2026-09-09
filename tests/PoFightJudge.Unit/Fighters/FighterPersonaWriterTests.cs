@@ -210,6 +210,41 @@ public sealed class FighterPersonaWriterTests
     }
 
     [Fact]
+    public async Task A_watch_writes_a_persona_too_even_though_nobody_judged_the_person_on_their_own()
+    {
+        var kdh = FighterId.From("KDH");
+        await _fighters.EnsureAsync(kdh, Now, ProfileRole.Wife);
+        var watch = new MatchDto(
+            MatchId.New(), "user-1", MatchMode.Watch, Now.AddMinutes(-4), Now,
+            "the thermostat", MatchSide.Persona("H01", "Matthew"), MatchSide.Human("KDH", "Kim"),
+            SessionPhase.Done, SessionStatus.Ready, "KDH", "Kim took it.", IsFake: false);
+        await _words.SaveAsync(SpokenDebate.From("KDH", watch.Id, Now, MatchMode.Watch, ["Look, the thing is, you agreed to it on Sunday"]));
+
+        await Writer().WriteAsync(watch, report: null, CancellationToken.None);
+
+        var kim = await _profiles.GetByIdAsync(ProfileId.From("KDH"));
+        kim.Should().NotBeNull("arguing a persona says as much about how somebody argues as arguing a person does");
+        kim!.FromFights.Should().BeTrue();
+        kim.Role.Should().Be(ProfileRole.Wife, "the seat they were in");
+        kim.Name.Should().Be("KDH", "the name is the one on the roster, never one a match or a model supplied");
+
+        (await _profiles.GetByIdAsync(ProfileId.From("H01"))).Should().BeNull("the persona they argued is not rewritten from its own match");
+    }
+
+    [Fact]
+    public void A_watch_tells_the_model_there_was_no_read_of_them_rather_than_leaving_it_to_guess()
+    {
+        var fighter = Fighter.Create(FighterId.From("KDH"), Now, "Kim", ProfileRole.Wife);
+        var corpus = SpokenCorpus.From([SpokenDebate.From("KDH", MatchId.New(), Now, MatchMode.Watch, ["you agreed to it on Sunday"])]);
+
+        var prompt = FighterPersonaWriter.BuildPrompt(fighter, StyleProfileBuilder.Build("KDH", []), assessment: null, corpus, attempt: 0);
+
+        prompt.User.Should().Contain("you agreed to it on Sunday", "their words are the whole of the evidence here");
+        prompt.User.Should().Contain("ruled on as a whole rather than person by person");
+        prompt.User.Should().NotContain("logic ", "there are no per-person scores in a watch to quote");
+    }
+
+    [Fact]
     public async Task Somebody_whose_words_were_never_transcribed_still_gets_a_persona_from_the_judges_read()
     {
         var (match, report) = await FoughtAsync();

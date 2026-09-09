@@ -84,6 +84,8 @@ Each was a deliberate decision made while building; the commit that made it says
 | T53 | one `Shared/Models` file per task | three (`LiveModels`, `RecordModels`, `ProfileModels`) | the seat travels from the 2P setup request, through the fighter row, to the persona the cast page shows; one contract per hop |
 | T65 | a crowd bed under the stage | no ambient loop at all | every mode has an open microphone, and continuous noise out of the speakers is what the recording picks up |
 | T67 | glass on the live chrome | glass, and the opaque floor kept underneath it | the contrast test reads tokens, not blurs; the floor is what the words are actually read against |
+| T89 | the persona reads the fight it was handed | it reads a new fighter-words table: every debate's words, both engines | "the total collection of words said in all the debate games" is the ask; a style snapshot is a reading of a debate, not the debate |
+| T90 | `WatchEndpoints` only | plus `WatchPersonaBacklog`, a hosted drain loop | a watch rules inside the request that ends it, and a model call per person there is time the room spends waiting on something it did not ask for |
 | T68 | a WebGPU pass on the verdict, WebGL2 as the fallback | WebGL2 only (`PoGfx.probe()` still reports WebGPU) | a second rendering backend for one cosmetic pass, which no tier here can exercise — headless Chromium has no `navigator.gpu` — is untested code for an effect nobody could tell apart |
 
 ## Still outstanding

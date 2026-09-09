@@ -130,6 +130,41 @@ public class WatchTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task A_person_who_argued_a_persona_comes_out_of_it_as_one_the_other_channels_can_seat()
+    {
+        using var client = User("watch-persona");
+        var (husband, _) = await CastAsync(client, "07");
+        var person = MatchSide.Human("KX", "Kim");
+
+        var response = await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, person, Transcript(6), "the thermostat"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Queued behind the reply on purpose — the room is not kept waiting on a model call for a card — so it is
+        // given the same moment the 2P persona is given.
+        var persona = await WaitForPersonaAsync(client, "KX");
+        persona.FromFights.Should().BeTrue("a 1P debate builds their profile exactly as a 2P fight does");
+        persona.Persona.Role.Should().Be(ProfileRole.Wife, "the seat they argued from");
+        persona.Persona.Name.Should().Be("KX", "the roster names them, not the match");
+    }
+
+    private static async Task<ProfileDto> WaitForPersonaAsync(HttpClient client, string initials)
+    {
+        const int Attempts = 100; // ten seconds, the same patience the 2P persona is given
+        for (var attempt = 0; attempt < Attempts; attempt++)
+        {
+            var cast = await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base) ?? [];
+            if (cast.Find(p => string.Equals(p.Persona.Initials, initials, StringComparison.Ordinal)) is { } persona)
+            {
+                return persona;
+            }
+
+            await Task.Delay(100);
+        }
+
+        throw new TimeoutException($"No persona was written for {initials} within 10s.");
+    }
+
+    [Fact]
     public async Task A_speaker_who_is_neither_side_is_refused_rather_than_quietly_becoming_the_wife()
     {
         using var client = User("watch-speaker");

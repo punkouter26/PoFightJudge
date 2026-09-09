@@ -185,6 +185,7 @@ public sealed class WatchEndpoints : ICarterModule
         IFighterRepository fighters,
         IFighterResultRepository fighterResults,
         IFighterWordsRepository fighterWords,
+        IWatchPersonaIntake personas,
         IWatchAudioStore audio,
         TimeProvider clock,
         CancellationToken ct)
@@ -235,6 +236,13 @@ public sealed class WatchEndpoints : ICarterModule
 
         var match = WatchMatch.Complete(matchId, request.Husband, request.Wife, userId, request.Topic, rounds, verdict.Winner, verdict.Verdict, husbandStats, wifeStats, now);
         await PersistAsync(match, ai.IsFake, matches, watchResults, fighters, fighterResults, fighterWords, now, ct);
+
+        // A person who argued here has said one more thing about how they argue, so their card is rewritten from
+        // everything they have said — after this reply, because the room is not waiting on it.
+        if (request.Husband.IsHuman || request.Wife.IsHuman)
+        {
+            await personas.SubmitAsync(userId, matchId, ct);
+        }
 
         return Results.Ok(new VerdictResponse(matchId, verdict.Winner, verdict.Verdict, verdict.HusbandScore, verdict.WifeScore, husbandStats.ToDto(), wifeStats.ToDto(), Persisted: true));
     }
