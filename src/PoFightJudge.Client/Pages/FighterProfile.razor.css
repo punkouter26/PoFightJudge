@@ -34,3 +34,10 @@
 .stacked .topic { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 
 .stacked .line-2 { font-size: var(--po-text-xs); }
+
+/* Same grid the verdict uses for its measured numbers; CSS isolation means it cannot be borrowed from there. */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--po-space-2); }
+
+.stats + .stats { margin-top: var(--po-space-2); }
+
+.counted { margin-block: 0 var(--po-space-3); font-size: var(--po-text-sm); }

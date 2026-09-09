@@ -81,6 +81,7 @@ public sealed class FighterEndpoints : ICarterModule
         ClaimsPrincipal user,
         IFighterRepository fighters,
         IFighterResultRepository results,
+        IFighterWordsRepository words,
         CancellationToken ct)
     {
         if (await fighters.GetAsync(tag, ct) is not { } fighter)
@@ -90,11 +91,16 @@ public sealed class FighterEndpoints : ICarterModule
 
         var rows = await results.ListForAsync(tag, user.UserId(), ct);
         var dto = fighter.ToDto();
+
+        // Every debate, not the model's bounded corpus: a career number that quietly stopped counting at twelve
+        // would be wrong in a way nobody could see from the page.
+        var spoken = await words.ListAsync(tag, ct);
         return Results.Ok(new FighterProfileDto(
             dto,
             FighterStatsBuilder.Build(dto, rows),
             StyleProfileBuilder.Build(dto.Tag, rows),
-            rows));
+            rows,
+            CareerWords.Compute(spoken)));
     }
     /// <summary>
     /// Only the display name can change. The tag is the identity every result is keyed on, so renaming that would

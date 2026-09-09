@@ -1,5 +1,6 @@
 @page "/fighters/{Tag}"
 @using System.Globalization
+@using PoFightJudge.Client.Stats
 @inject IApiClient Api
 @inject NavigationManager Nav
 @inject DialogService Dialogs
@@ -74,6 +75,26 @@
             </div>
 
             <StyleProfilePanel Style="@_profile.Style" />
+
+            @* Counted, not read. The panel above is a model's opinion of how they argue; this is arithmetic on the
+               words themselves, and it is only worth a heading once somebody has actually said something. *@
+            @if (!_profile.Words.IsEmpty)
+            {
+                <h2 class="po-display section">How they talk</h2>
+                <p class="po-muted counted">
+                    Counted across @(_profile.Words.Debates == 1 ? "one fight" : $"{_profile.Words.Debates} fights").
+                    Rates are per hundred words, so turning up more often does not inflate them.
+                </p>
+                @foreach (var group in new[] { StatGroup.Words, StatGroup.Manner })
+                {
+                    <div class="stats">
+                        @foreach (var stat in CareerStatFormat.Describe(_profile.Words).Where(s => s.Group == group))
+                        {
+                            <StatTile Stat="@stat" />
+                        }
+                    </div>
+                }
+            }
 
             <h2 class="po-display section">What they argued</h2>
             @if (_results.Count == 0)

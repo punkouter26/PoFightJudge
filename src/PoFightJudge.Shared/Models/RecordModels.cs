@@ -224,7 +224,63 @@ public sealed record StyleProfileDto(
 }
 
 /// <summary>Everything one fighter's page shows: who they are, their record, and how they argue.</summary>
-public sealed record FighterProfileDto(FighterDto Fighter, FighterStatsDto Stats, StyleProfileDto Style, IReadOnlyList<FighterResultDto> Results);
+/// <summary>
+/// What one person's whole speaking history adds up to, counted rather than read. The style profile is a model's
+/// opinion of how somebody argues; this is arithmetic on the words themselves, so it cannot flatter anybody.
+/// </summary>
+/// <remarks>
+/// Everything here is computed from stored text, which carries no word timings — so pace, pauses, interruptions and
+/// share of the room stay per-debate, where the timed transcript still exists. Rates are per hundred words so a
+/// regular's twentieth fight is comparable with somebody's first.
+/// </remarks>
+public sealed record CareerWordsDto(
+    int Debates,
+    int Words,
+
+    /// <summary>Flesch-Kincaid over everything they have said: roughly the school year needed to follow them.</summary>
+    double ReadingGrade,
+
+    /// <summary>Swearing as a percentage of every word spoken.</summary>
+    double OffensivePercent,
+
+    double BlamePer100,
+    double ApologyPer100,
+    double NameCallingPer100,
+
+    /// <summary>Numbers, money, days and times: how often they argue with specifics instead of generalities.</summary>
+    double ReceiptsPer100,
+
+    double IntensifierPer100,
+
+    /// <summary>
+    /// How the time-marked language splits. Shares of the markers found, not of every word — most words point at no
+    /// particular time, and counting those would flatten all three towards nothing.
+    /// </summary>
+    double PastShare,
+    double PresentShare,
+    double FutureShare,
+
+    /// <summary>Phrases they have used in more than one debate. A phrase repeated inside a single argument is a mood.</summary>
+    IReadOnlyList<string> Catchphrases,
+
+    /// <summary>Distinct words they have ever used, and how many of those were first said in their latest debate.</summary>
+    int VocabularySize,
+    int NewWordsLatest,
+
+    /// <summary>Reading grade per debate, oldest first, for a sparkline.</summary>
+    IReadOnlyList<double> GradeTrend,
+
+    /// <summary>Questions with an edge on them, against questions that wanted an answer.</summary>
+    int Challenges,
+    int GenuineQuestions)
+{
+    public static CareerWordsDto Empty { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], 0, 0, [], 0, 0);
+
+    /// <summary>Nothing said yet, so nothing to show. Keeps the profile from rendering a wall of zeroes.</summary>
+    public bool IsEmpty => Words == 0;
+}
+
+public sealed record FighterProfileDto(FighterDto Fighter, FighterStatsDto Stats, StyleProfileDto Style, IReadOnlyList<FighterResultDto> Results, CareerWordsDto Words);
 
 /// <summary>One persona's record from the watches they have argued in.</summary>
 public sealed record ProfileRecordDto(
