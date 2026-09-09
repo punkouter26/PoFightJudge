@@ -169,6 +169,71 @@ public sealed class WatchStreamingTests : BunitContext, IAsyncLifetime
         _ = _api.DidNotReceive().RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>());
     }
 
+    /// <summary>
+    /// The line after this one was already being written while this one played; its voice was not. Synthesis is the
+    /// longer of the two waits — CP4 measured 0.91 s for the first audio against a 1.06 s first token — so a
+    /// prefetched line still arrived and then stood silent for about a second before anybody heard it.
+    /// </summary>
+    [Fact(Timeout = 60_000)]
+    public async Task The_next_line_is_given_a_voice_while_this_one_is_still_being_spoken()
+    {
+        _simulation.Set(Matthew, Kimberly, null);
+        _openingLine.Writer.TryWrite(new RoundStreamPart(null, new GenerateRoundResponse("opening", "angry", "escalating", true)));
+        _openingLine.Writer.TryComplete();
+
+        var cut = Render<WatchPlay>();
+
+        // Nothing has advanced the clock, so the opening line is still inside its beat.
+        await cut.WaitForAssertionAsync(
+            () => _audioStreamed.Select(a => a.Text).Should().Contain("whole 1"),
+            TimeSpan.FromSeconds(10));
+        cut.FindAll("article.line").Should().HaveCount(1, "the second line has not been said yet — only synthesized");
+    }
+
+    /// <summary>Speculative, not duplicated: the clauses fetched ahead are the ones that get played.</summary>
+    [Fact(Timeout = 60_000)]
+    public async Task A_voice_fetched_ahead_is_played_rather_than_fetched_again()
+    {
+        _simulation.Set(Matthew, Kimberly, null);
+        _openingLine.Writer.TryWrite(new RoundStreamPart(null, new GenerateRoundResponse("opening", "angry", "escalating", true)));
+        _openingLine.Writer.TryComplete();
+
+        var cut = Render<WatchPlay>();
+        for (var beat = 0; beat < 24 && cut.FindAll("section.verdict").Count == 0; beat++)
+        {
+            await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(2)));
+        }
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll("section.verdict").Should().HaveCount(1), TimeSpan.FromSeconds(10));
+        _audioStreamed.Select(a => a.Text).Should().OnlyHaveUniqueItems("a line the page already has the voice for is not synthesized twice");
+        _audioStreamed.Should().HaveCount(WatchTurns.RoundsPerSide * 2, "every line is spoken exactly once");
+    }
+
+    /// <summary>
+    /// A slap throws the prefetched line away, and the voice fetched for it goes with it: what the slapped speaker
+    /// actually says next is a different line, and playing the discarded one would be the wrong words in their mouth.
+    /// </summary>
+    [Fact(Timeout = 60_000)]
+    public async Task A_slap_throws_away_the_voice_fetched_for_the_line_it_replaced()
+    {
+        _simulation.Set(Matthew, Kimberly, null);
+        _openingLine.Writer.TryWrite(new RoundStreamPart(null, new GenerateRoundResponse("opening", "angry", "escalating", true)));
+        _openingLine.Writer.TryComplete();
+
+        var cut = Render<WatchPlay>();
+        await cut.WaitForAssertionAsync(() => cut.FindAll("article.line").Should().HaveCount(1), TimeSpan.FromSeconds(10));
+        await cut.WaitForAssertionAsync(
+            () => _audioStreamed.Select(a => a.Text).Should().Contain("whole 1"),
+            TimeSpan.FromSeconds(10));
+
+        var slap = cut.FindComponent<PoFightJudge.Client.Components.InterjectionBar>();
+        await cut.InvokeAsync(() => slap.Instance.Throw.InvokeAsync(Interjections.All[0]));
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll("article.line").Should().HaveCount(2), TimeSpan.FromSeconds(10));
+        var reaction = cut.FindAll("article.line")[1].TextContent;
+        reaction.Should().NotContain("whole 1", "the reaction is a new line, not the one the slap interrupted");
+    }
+
     /// <summary>A replay plays a line back, so the clauses are archived as one clip rather than as the first phrase.</summary>
     [Fact(Timeout = 60_000)]
     public async Task The_clauses_are_archived_as_one_clip()

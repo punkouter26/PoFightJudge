@@ -341,21 +341,47 @@ public sealed partial class WatchPlay : IAsyncDisposable
             // synthesis fell behind playback. Accumulating durations onto "now" instead would push the end of the
             // line further out with every clause that arrived late, and the argument would sit through the drift.
             var endsAt = Clock.GetUtcNow();
-            await foreach (var chunk in Api.StreamRoundAudioAsync(new RoundAudioRequest(ProfileId.From(side.Id), round.Text), ct))
+
+            // The voice fetched ahead of this line, if there is one for these exact words. It is already whole, so
+            // its clauses go straight onto the schedule; otherwise they are scheduled as they arrive.
+#pragma warning disable VSTHRD003 // StartPrefetch started it, one turn earlier in this same loop.
+            var ahead = TryTakePrefetchedAudio(out var waiting) ? await waiting : null;
+#pragma warning restore VSTHRD003
+
+            // Only for these exact words: a voice fetched for a line a slap threw away must never be played over
+            // the line that replaced it.
+            if (ahead is not null
+                && string.Equals(ahead.SpeakerId, side.Id, StringComparison.Ordinal)
+                && string.Equals(ahead.Text, round.Text, StringComparison.Ordinal))
             {
-                if (chunk.Audio.IsEmpty)
+                foreach (var clause in ahead.Clauses)
                 {
-                    continue;
+                    await ScheduleAsync(clause);
+                }
+            }
+            else
+            {
+                await foreach (var chunk in Api.StreamRoundAudioAsync(new RoundAudioRequest(ProfileId.From(side.Id), round.Text), ct))
+                {
+                    await ScheduleAsync(chunk.Audio);
+                }
+            }
+
+            async Task ScheduleAsync(TtsAudioDto clause)
+            {
+                if (clause.IsEmpty)
+                {
+                    return;
                 }
 
-                clauses.Add(chunk.Audio);
-                var clause = await Audio.EnqueueAsync(chunk.Audio, ct);
+                clauses.Add(clause);
+                var spoken = await Audio.EnqueueAsync(clause, ct);
                 var now = Clock.GetUtcNow();
-                endsAt = (endsAt > now ? endsAt : now) + clause;
+                endsAt = (endsAt > now ? endsAt : now) + spoken;
 
                 // Re-read on every clause: the first is already playing while the rest are still being made, and
                 // the beat has to know how long the whole line runs, not how long its first phrase did.
-                _lineEndsAt = clauses.Count > 0 ? endsAt : null;
+                _lineEndsAt = endsAt;
 
                 // The line is being spoken now rather than merely written, and the stage says so — the speaking
                 // corner, the meter and the caret all read state this loop is the only thing moving.

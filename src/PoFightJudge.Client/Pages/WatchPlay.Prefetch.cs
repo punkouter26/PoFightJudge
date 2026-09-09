@@ -1,4 +1,5 @@
 using PoFightJudge.Client.Services;
+using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 
 namespace PoFightJudge.Client.Pages;
@@ -25,6 +26,26 @@ public sealed partial class WatchPlay
     private string? _arrivingSpeaker;
 
     /// <summary>
+    /// The voice for the speculative line, fetched behind it. Synthesis is the longer of the two waits, so a line
+    /// that arrived early and then stood silent had only moved the pause rather than closed it.
+    /// </summary>
+    private Task<PrefetchedVoice?>? _prefetchedAudio;
+
+    /// <summary>
+    /// The same, once its line has been taken off the prefetch and is about to be spoken. It moves here because the
+    /// very next thing the loop does is start prefetching the line after it, and that drops the speculative slot —
+    /// which used to take the voice for the line now being spoken with it, so every prefetched line was synthesized
+    /// twice.
+    /// </summary>
+    private Task<PrefetchedVoice?>? _takenAudio;
+
+    /// <summary>
+    /// A line's clauses with the line they were made from. Carried together rather than in fields beside the task:
+    /// the words are only known once the line resolves, and two continuations off the same task have no order.
+    /// </summary>
+    private sealed record PrefetchedVoice(string SpeakerId, string Text, IReadOnlyList<TtsAudioDto> Clauses);
+
+    /// <summary>
     /// The next line: the speculative fetch when it still fits, and otherwise a stream, because a line nobody has
     /// is a line somebody is watching an empty stage for.
     /// </summary>
@@ -37,6 +58,8 @@ public sealed partial class WatchPlay
         {
             _prefetched = null;
             _prefetchedSpeaker = null;
+            _takenAudio = _prefetchedAudio;
+            _prefetchedAudio = null;
             return await waiting;
         }
 
@@ -110,21 +133,81 @@ public sealed partial class WatchPlay
 
         _prefetchedSpeaker = speaker;
         _prefetchedHistory = _rounds.Count;
-        _prefetched = Api.GenerateRoundAsync(Request(speaker, null), ct);
+        var line = Api.GenerateRoundAsync(Request(speaker, null), ct);
+        _prefetched = line;
+        _prefetchedAudio = SpeakAheadAsync(line, SideOf(speaker), ct);
+    }
+
+    /// <summary>
+    /// Synthesizes the prefetched line as soon as it exists, so the voice is waiting rather than the listener. A
+    /// discarded one is not wasted work: the TTS cache is keyed on the words, so the line it was thrown away for
+    /// pays nothing to say the same thing again.
+    /// </summary>
+    private async Task<PrefetchedVoice?> SpeakAheadAsync(Task<GenerateRoundResponse> line, MatchSide side, CancellationToken ct)
+    {
+        try
+        {
+#pragma warning disable VSTHRD003 // StartPrefetch a few lines above is what started it; this is the same context.
+            var response = await line;
+#pragma warning restore VSTHRD003
+            return new PrefetchedVoice(side.Id, response.Text, await ClausesAsync(side, response.Text, ct));
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException or OperationCanceledException)
+        {
+            // The line itself failing is the loop's problem, not this one's; a voice that could not be fetched
+            // ahead is simply fetched again when the line is actually spoken.
+            return null;
+        }
+    }
+
+    /// <summary>Reads a line's clauses off the audio stream into a list. Used when nothing is waiting to play them yet.</summary>
+    private async Task<IReadOnlyList<TtsAudioDto>> ClausesAsync(MatchSide side, string text, CancellationToken ct)
+    {
+        var clauses = new List<TtsAudioDto>();
+        await foreach (var chunk in Api.StreamRoundAudioAsync(new RoundAudioRequest(ProfileId.From(side.Id), text), ct))
+        {
+            if (!chunk.Audio.IsEmpty)
+            {
+                clauses.Add(chunk.Audio);
+            }
+        }
+
+        return clauses;
+    }
+
+    /// <summary>
+    /// The voice fetched ahead for this exact line, or null when there is none to use. Matching on the words as
+    /// well as the speaker is what stops a discarded prefetch — a slap landed, a person spoke — being played over
+    /// the line that actually replaced it.
+    /// </summary>
+    private bool TryTakePrefetchedAudio(out Task<PrefetchedVoice?> voice)
+    {
+        if (_takenAudio is { } waiting)
+        {
+            voice = waiting;
+            _takenAudio = null;
+            return true;
+        }
+
+        voice = Task.FromResult<PrefetchedVoice?>(null);
+        return false;
     }
 
     /// <summary>Abandons a speculative fetch, observing its failure so a discarded request cannot surface elsewhere.</summary>
     private void DropPrefetch()
     {
         var abandoned = _prefetched;
+        var unspoken = _prefetchedAudio;
         _prefetched = null;
         _prefetchedSpeaker = null;
         _prefetchedHistory = 0;
+        _prefetchedAudio = null;
 
-        if (abandoned is not null)
-        {
-            _ = abandoned.ContinueWith(static t => _ = t.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
-        }
+        Observe(abandoned);
+        Observe(unspoken);
+
+        static void Observe(Task? dropped) =>
+            _ = dropped?.ContinueWith(static t => _ = t.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
     }
 
     /// <summary>
