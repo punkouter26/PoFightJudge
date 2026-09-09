@@ -38,11 +38,12 @@ public static class ConfigKeys
 
         /// <summary>
         /// Dev Entra config (separate from the prod keys so the prod app registration stays untouched). Keys are
-        /// mapped from Key Vault secrets <c>PoFightJudge--AzureAd--ClientId-Dev</c> and <c>--TenantId-Dev</c> by the
-        /// existing <see cref="Shared.PoFightJudgeSecretManager"/>.
+        /// mapped 1:1 from Key Vault secrets <c>PoFightJudge--AzureAd--ClientId-Dev</c> and <c>--TenantId-Dev</c> by
+        /// <see cref="Shared.PoFightJudgeSecretManager"/> (the trailing <c>-Dev</c> survives the prefix strip on
+        /// purpose — the secret name and the config key match exactly).
         /// </summary>
-        public const string DevClientId = $"{Root}:AzureAd:DevClientId";
-        public const string DevTenantId = $"{Root}:AzureAd:DevTenantId";
+        public const string DevClientId = $"{Root}:AzureAd:ClientId-Dev";
+        public const string DevTenantId = $"{Root}:AzureAd:TenantId-Dev";
     }
 
     /// <summary>Who may run <c>POST /api/seed/profiles</c> with a real login: a list of emails (Admin role always qualifies).</summary>
