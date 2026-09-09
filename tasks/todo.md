@@ -126,3 +126,6 @@
 - [x] T91 A spoken turn that the browser cannot read back says which step failed, and stops throwing the clip away
 - [x] T92 A watch turn is captured as PCM off the graph, the way a fight already is: no container, so nothing to decode
 - [x] T93 A persona read from debates says so, rather than claiming a 2P fight it may never have had
+
+## Phase O — Prune (2026-09-09)
+- [x] T94 The browser recogniser we stopped using: `ListenInterop`, `listen.js` and `HeardTranscript` deleted
