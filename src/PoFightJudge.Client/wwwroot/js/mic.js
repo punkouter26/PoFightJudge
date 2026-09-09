@@ -5,6 +5,9 @@ window.PoMic = (function () {
 
   const RATE = 16000;
 
+  /** How often the recorder hands over what it has. Short enough that a failure late in a turn costs a moment, not the turn. */
+  const SLICE_MS = 500;
+
   let stream = null;
   let recorder = null;
   let chunks = [];
@@ -187,7 +190,10 @@ window.PoMic = (function () {
           chunks.push(e.data);
         }
       };
-      recorder.start();
+
+      // Sliced rather than one blob at the end: a recorder that errors, or a final dataavailable that never
+      // arrives, then still leaves everything said up to that point instead of an empty turn.
+      recorder.start(SLICE_MS);
       listen();
       return "";
     } catch (err) {
@@ -196,11 +202,44 @@ window.PoMic = (function () {
     }
   }
 
-  // Stops and returns the clip as base64 WAV. An empty string means nothing was captured, which the page reports as
-  // "we did not catch that" rather than as a failure.
+  /** The name a browser gave a failure, in a form worth showing somebody. */
+  function nameOf(err) {
+    if (!err) {
+      return "Unknown";
+    }
+
+    return err.name || err.message || String(err);
+  }
+
+  // Down to 16 kHz through an offline context, which is where a browser will accept a sample rate its hardware does
+  // not run at. If it will not, the clip goes at whatever rate it decoded at rather than being thrown away: the
+  // transcribers read the rate out of the WAV header.
+  async function resample(decoded, rate) {
+    if (decoded.sampleRate === rate) {
+      return { data: decoded.getChannelData(0), rate: decoded.sampleRate };
+    }
+
+    try {
+      const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const frames = Math.max(1, Math.round(decoded.duration * rate));
+      const offline = new Offline(1, frames, rate);
+      const source = offline.createBufferSource();
+      source.buffer = decoded;
+      source.connect(offline.destination);
+      source.start();
+      const rendered = await offline.startRendering();
+      return { data: rendered.getChannelData(0), rate: rate };
+    } catch {
+      return { data: decoded.getChannelData(0), rate: decoded.sampleRate };
+    }
+  }
+
+  // Stops and returns { wav, error }: the clip as base64 WAV, or the reason there is not one. Every step that can
+  // fail says which step it was, because "nothing came through the microphone" is the wrong thing to tell somebody
+  // who watched the meter move for thirty seconds.
   async function stop() {
     if (!recorder) {
-      return "";
+      return { wav: "", error: "NotRecording" };
     }
 
     const active = recorder;
@@ -211,9 +250,9 @@ window.PoMic = (function () {
     try {
       active.stop();
       await finished;
-    } catch {
+    } catch (err) {
       release();
-      return "";
+      return { wav: "", error: "StopFailed:" + nameOf(err) };
     }
 
     const captured = chunks;
@@ -221,20 +260,32 @@ window.PoMic = (function () {
     release();
 
     if (captured.length === 0) {
-      return "";
+      return { wav: "", error: "NothingCaptured" };
     }
 
+    let decoded = null;
+    let ctx = null;
     try {
       const blob = new Blob(captured, { type: captured[0].type || "audio/webm" });
       const bytes = await blob.arrayBuffer();
-      // Decoding into a 16 kHz context is what resamples the clip; the browser does the rate conversion.
-      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: RATE });
-      const decoded = await ctx.decodeAudioData(bytes);
-      const wav = encodeWav(decoded.getChannelData(0), decoded.sampleRate);
-      await ctx.close();
-      return base64(wav);
-    } catch {
-      return "";
+
+      // Decoded at the browser's own rate. Asking for a 16 kHz context here is what a machine whose audio device
+      // will not run at 16 kHz refuses outright, and the clip was fine — it was the container that never opened.
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      decoded = await ctx.decodeAudioData(bytes);
+    } catch (err) {
+      return { wav: "", error: "DecodeFailed:" + nameOf(err) };
+    } finally {
+      if (ctx) {
+        ctx.close().catch(function () { /* already closing */ });
+      }
+    }
+
+    try {
+      const mono = await resample(decoded, RATE);
+      return { wav: base64(encodeWav(mono.data, mono.rate)), error: "" };
+    } catch (err) {
+      return { wav: "", error: "EncodeFailed:" + nameOf(err) };
     }
   }
 

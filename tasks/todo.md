@@ -123,3 +123,4 @@
 ## Phase N — A profile that grows (2026-09-09)
 - [x] T89 A persona is written from everything they have ever said: every debate keeps the words, both engines
 - [x] T90 A 1P debate rewrites the persona too: the judge's per-person read becomes optional, the write is queued
+- [x] T91 A spoken turn that the browser cannot read back says which step failed, and stops throwing the clip away

@@ -31,16 +31,20 @@ public sealed class MicInterop(IJSRuntime js) : IAsyncDisposable
         }
     }
 
-    /// <summary>Stops recording and returns the clip as base64 WAV; empty when nothing was captured.</summary>
-    public async Task<string> StopAsync(CancellationToken ct = default)
+    /// <summary>
+    /// Stops recording and returns the clip. An empty clip carries the reason it is empty: a microphone that heard
+    /// nothing and a browser that could not read the recording back are different problems, and telling somebody who
+    /// watched the meter move that nothing came through is the wrong one.
+    /// </summary>
+    public async Task<MicClip> StopAsync(CancellationToken ct = default)
     {
         try
         {
-            return await js.InvokeAsync<string>(Stop, ct) ?? string.Empty;
+            return await js.InvokeAsync<MicClip>(Stop, ct) ?? MicClip.Nothing("NoAnswer");
         }
-        catch (JSException)
+        catch (JSException ex)
         {
-            return string.Empty;
+            return MicClip.Nothing(ex.Message);
         }
     }
 
@@ -104,6 +108,18 @@ public sealed class MicInterop(IJSRuntime js) : IAsyncDisposable
             // Prerendering: there was never a browser holding a microphone.
         }
     }
+}
+
+/// <summary>
+/// One recorded turn. <paramref name="Wav"/> is base64 WAV when there is a clip; when there is not,
+/// <paramref name="Error"/> says which step gave up — <c>NothingCaptured</c>, or <c>DecodeFailed:{name}</c> and its
+/// kin, where the name is whatever the browser called it.
+/// </summary>
+public sealed record MicClip(string Wav, string Error)
+{
+    public static MicClip Nothing(string error) => new(string.Empty, error);
+
+    public bool IsEmpty => string.IsNullOrEmpty(Wav);
 }
 
 /// <summary>One microphone the browser is willing to name.</summary>

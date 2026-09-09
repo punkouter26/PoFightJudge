@@ -154,14 +154,14 @@ public sealed partial class WatchPlay
 
         try
         {
-            var wav = await Mic.StopAsync(_leaving.Token);
-            if (wav.Length == 0)
+            var clip = await Mic.StopAsync(_leaving.Token);
+            if (clip.IsEmpty)
             {
-                _micProblem = "Nothing came through the microphone. Try that again.";
+                _micProblem = ClipMessage(clip.Error);
                 return;
             }
 
-            var heard = await Api.TranscribeAsync(new TranscribeRequest(wav), _leaving.Token);
+            var heard = await Api.TranscribeAsync(new TranscribeRequest(clip.Wav), _leaving.Token);
             _isFake |= heard.IsFake;
 
             var said = heard.Text.Trim();
@@ -211,6 +211,35 @@ public sealed partial class WatchPlay
     }
 
     /// <summary>Turns a browser error name into advice a person can act on.</summary>
+    /// <summary>
+    /// Why there is no clip. A microphone that heard nothing is the ordinary case and reads as advice; anything
+    /// else is the browser having failed at a named step, and saying which one is the difference between somebody
+    /// trying again and somebody giving up on a feature that looked like it was working.
+    /// </summary>
+    private static string ClipMessage(string error)
+    {
+        if (error.StartsWith("DecodeFailed", StringComparison.Ordinal) || error.StartsWith("EncodeFailed", StringComparison.Ordinal))
+        {
+            return $"The recording could not be read back ({Detail(error)}). Try again, or type it.";
+        }
+
+        if (error.StartsWith("StopFailed", StringComparison.Ordinal))
+        {
+            return $"The microphone would not stop cleanly ({Detail(error)}). Try again, or type it.";
+        }
+
+        return error.Length == 0 || string.Equals(error, "NothingCaptured", StringComparison.Ordinal) || string.Equals(error, "NotRecording", StringComparison.Ordinal)
+            ? "Nothing came through the microphone. Try that again."
+            : $"The recording did not come back ({error}).";
+    }
+
+    /// <summary>The browser's own name for it, out of "Step:Name". Its name is the only part worth reading aloud.</summary>
+    private static string Detail(string error)
+    {
+        var colon = error.IndexOf(':', StringComparison.Ordinal);
+        return colon >= 0 && colon < error.Length - 1 ? error[(colon + 1)..] : error;
+    }
+
     private static string MicMessage(string error) => error switch
     {
         "NotAllowedError" or "SecurityError" => "The microphone was blocked. Allow it for this site and try again.",

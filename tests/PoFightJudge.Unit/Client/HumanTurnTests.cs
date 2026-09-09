@@ -112,7 +112,7 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     [Fact(Timeout = 60_000)]
     public async Task A_recorded_turn_is_transcribed_into_the_box_rather_than_said_for_them()
     {
-        JSInterop.Setup<string>(MicInterop.Stop).SetResult(Clip);
+        JSInterop.Setup<MicClip>(MicInterop.Stop).SetResult(new MicClip(Clip, string.Empty));
         _api.TranscribeAsync(Arg.Any<TranscribeRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TranscribeResponse("I did not touch the freezer.", true)));
         // The turn opens the microphone by itself; the only thing left to do is say when you have finished.
@@ -130,7 +130,7 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     [Fact(Timeout = 60_000)]
     public async Task A_clip_with_no_words_in_it_says_so_instead_of_sending_silence()
     {
-        JSInterop.Setup<string>(MicInterop.Stop).SetResult(Clip);
+        JSInterop.Setup<MicClip>(MicInterop.Stop).SetResult(new MicClip(Clip, string.Empty));
         _api.TranscribeAsync(Arg.Any<TranscribeRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TranscribeResponse(string.Empty, true)));
         var cut = await AtTheirTurnAsync();
@@ -142,6 +142,33 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
         Typed(cut).Should().BeEmpty();
         Button(cut, "Say it").HasAttribute("disabled").Should().BeTrue("there is nothing to say yet");
         Button(cut, "Speak it").Should().NotBeNull("and there is a way to try again");
+    }
+
+    [Fact(Timeout = 60_000)]
+    public async Task A_recording_the_browser_could_not_read_back_names_the_step_rather_than_blaming_the_microphone()
+    {
+        JSInterop.Setup<MicClip>(MicInterop.Stop).SetResult(MicClip.Nothing("DecodeFailed:NotSupportedError"));
+        var cut = await AtTheirTurnAsync();
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Listening"), TimeSpan.FromSeconds(10));
+        await Button(cut, "Done").ClickAsync(new());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("could not be read back"), TimeSpan.FromSeconds(10));
+        cut.Markup.Should().Contain("NotSupportedError", "somebody who watched the meter move is owed the actual reason");
+        cut.Markup.Should().NotContain("Nothing came through the microphone", "because something did come through");
+        await _api.DidNotReceive().TranscribeAsync(Arg.Any<TranscribeRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact(Timeout = 60_000)]
+    public async Task A_microphone_that_truly_heard_nothing_still_says_so_plainly()
+    {
+        JSInterop.Setup<MicClip>(MicInterop.Stop).SetResult(MicClip.Nothing("NothingCaptured"));
+        var cut = await AtTheirTurnAsync();
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Listening"), TimeSpan.FromSeconds(10));
+        await Button(cut, "Done").ClickAsync(new());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Nothing came through the microphone"), TimeSpan.FromSeconds(10));
     }
 
     [Fact(Timeout = 60_000)]
