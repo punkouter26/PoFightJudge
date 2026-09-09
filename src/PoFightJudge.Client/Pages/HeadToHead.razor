@@ -5,6 +5,9 @@
 @inject NavigationManager Nav
 @inject SetupMemory Memory
 
+@inject Viewport Viewport
+@implements IDisposable
+
 <PageTitle>@Title · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Head to head" Title="@Title" Lead="@Lead">
@@ -63,17 +66,33 @@
             <h2 class="po-eyebrow">Every time</h2>
             <RadzenDataGrid Data="@_h2h.Recent" TItem="MeetingDto" AllowSorting="true" class="meetings">
                 <Columns>
-                    <RadzenDataGridColumn TItem="MeetingDto" Title="When" Width="10rem" Property="@nameof(MeetingDto.At)">
+                    @* 33rem of declared width on a 356 px screen. Stacked on a phone, the same five facts. *@
+                    <RadzenDataGridColumn TItem="MeetingDto" Title="Meeting" Visible="@Viewport.IsPhone" Sortable="false">
+                        <Template Context="meeting">
+                            <div class="stacked">
+                                <span class="line-1">
+                                    <ModeBadge Mode="@meeting.Mode" />
+                                    <span class="topic">@meeting.Topic</span>
+                                </span>
+                                <span class="line-2 po-muted">
+                                    @meeting.At.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)
+                                    · @meeting.Score—@meeting.OpponentScore
+                                    · @(meeting.IsDraw ? "a draw" : $"{meeting.Winner} took it")
+                                </span>
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MeetingDto" Title="When" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(MeetingDto.At)">
                         <Template Context="meeting">@meeting.At.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MeetingDto" Title="Kind" Width="7rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="MeetingDto" Title="Kind" Width="7rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="meeting"><ModeBadge Mode="@meeting.Mode" /></Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MeetingDto" Title="About" Property="@nameof(MeetingDto.Topic)" />
-                    <RadzenDataGridColumn TItem="MeetingDto" Title="Score" Width="8rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="MeetingDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(MeetingDto.Topic)" />
+                    <RadzenDataGridColumn TItem="MeetingDto" Title="Score" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="meeting">@meeting.Score <span class="po-muted">—</span> @meeting.OpponentScore</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MeetingDto" Title="Took it" Width="8rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="MeetingDto" Title="Took it" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="meeting">
                             @if (meeting.IsDraw)
                             {
@@ -116,6 +135,15 @@
         : _h2h.IsAhead ? $"{_h2h.DisplayName} leads {_h2h.Wins}–{_h2h.Losses}"
         : $"{_h2h.OpponentDisplayName} leads {_h2h.Losses}–{_h2h.Wins}";
 
+    protected override async Task OnInitializedAsync()
+    {
+        Viewport.Changed += OnViewportChanged;
+        await Viewport.InitializeAsync();
+    }
+
+    /// <summary>Which columns exist is a render decision, and a rotated phone is a different set of them.</summary>
+    private void OnViewportChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
@@ -150,4 +178,6 @@
         Memory.Rematch(new FightCard(_h2h.Tag, _h2h.OpponentTag, string.Empty, ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Referee));
         Nav.NavigateTo("2p");
     }
+
+    public void Dispose() => Viewport.Changed -= OnViewportChanged;
 }

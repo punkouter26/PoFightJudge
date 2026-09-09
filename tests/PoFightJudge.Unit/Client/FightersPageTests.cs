@@ -27,6 +27,8 @@ public class FightersPageTests : BunitContext
     {
         Services.AddRadzenComponents();
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
+        Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns(
         [
@@ -89,6 +91,8 @@ public class FighterProfilePageTests : BunitContext
     {
         Services.AddRadzenComponents();
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
+        Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetFighterProfileAsync(FighterId.From("AB"), Arg.Any<CancellationToken>()).Returns(Profile());
     }

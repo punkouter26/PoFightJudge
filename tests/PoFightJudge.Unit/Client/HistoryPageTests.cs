@@ -31,6 +31,8 @@ public class HistoryPageTests : BunitContext
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
+        Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetMatchPageAsync(Arg.Any<MatchQuery>(), Arg.Any<CancellationToken>()).Returns(_ => Page(Both()));
     }
@@ -215,6 +217,8 @@ public class LeaderboardPageTests : BunitContext
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
+        Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetLeaderboardAsync(MatchMode.Watch, Arg.Any<CancellationToken>())
             .Returns([Row("MAH", "Married Husband", 5, 4), Row("KSH", "Karen", 5, 1)]);
@@ -280,6 +284,8 @@ public class ProfileRecordPageTests : BunitContext
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
+        Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetProfileAsync(ProfileId.From("MAH"), Arg.Any<CancellationToken>()).Returns(new ProfileDto
         {

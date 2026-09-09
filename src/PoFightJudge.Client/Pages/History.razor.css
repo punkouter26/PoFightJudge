@@ -14,3 +14,39 @@
 .narrow .find {
   flex: 1 1 16rem;
 }
+
+/* The phone's one column: the same five facts, stacked, in reading order rather than in table order. */
+.stacked {
+  display: grid;
+  gap: var(--po-space-1);
+  min-width: 0;
+}
+
+.stacked .line-1 {
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-2);
+  min-width: 0;
+}
+
+.stacked .topic {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.stacked .line-2 { font-size: var(--po-text-xs); }
+
+.stacked .line-3 {
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-2);
+  font-size: var(--po-text-sm);
+}
+
+/* Radzen pads a cell for a table that has room to spare; a phone does not. */
+@media (max-width: 40rem) {
+  ::deep .history .rz-cell-data { padding-block: var(--po-space-2); }
+
+  .row-actions { gap: 0; }
+}

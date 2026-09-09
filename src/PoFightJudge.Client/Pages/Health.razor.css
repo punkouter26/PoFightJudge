@@ -14,3 +14,15 @@ h2 {
   border: 1px solid var(--po-border);
   border-radius: var(--po-radius-md);
 }
+
+/* On a phone the detail sits under the name it explains rather than in a column off the side of the screen. */
+.check {
+  display: grid;
+  gap: var(--po-space-1);
+  min-width: 0;
+}
+
+.check .detail {
+  font-size: var(--po-text-xs);
+  overflow-wrap: anywhere;
+}

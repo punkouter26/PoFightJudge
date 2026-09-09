@@ -40,6 +40,7 @@ builder.Services.AddScoped<SetupMemory>();
 builder.Services.AddScoped<SaveInterop>();
 builder.Services.AddScoped<ConnectionState>();
 builder.Services.AddScoped<FeatureGate>();
+builder.Services.AddScoped<Viewport>();
 builder.Services.AddScoped<ConnectionWatchHandler>();
 // The same rules the API enforces, for <FluentValidationValidator> (registered explicitly: no assembly scanning under trimming).
 builder.Services.AddScoped<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();

@@ -5,6 +5,9 @@
 @inject DialogService Dialogs
 @inject NotificationService Notifications
 
+@inject Viewport Viewport
+@implements IDisposable
+
 <PageTitle>@Title · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Fighter" Title="@Title" Lead="@Lead">
@@ -81,15 +84,30 @@
             {
                 <RadzenDataGrid Data="@_results" TItem="FighterResultDto" AllowSorting="true" AllowPaging="true" PageSize="10" class="results">
                     <Columns>
-                        <RadzenDataGridColumn TItem="FighterResultDto" Title="When" Width="10rem" Property="@nameof(FighterResultDto.At)">
+                        @* 33rem of declared width on a 356 px screen. Stacked on a phone, the same five facts. *@
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Result" Visible="@Viewport.IsPhone" Sortable="false">
+                            <Template Context="row">
+                                <div class="stacked">
+                                    <span class="line-1">
+                                        <ModeBadge Mode="@row.Mode" />
+                                        <span class="topic">@row.Topic</span>
+                                    </span>
+                                    <span class="line-2 po-muted">
+                                        vs @row.Opponent · @(row.Draw ? "draw" : row.Won ? "won" : "lost") @row.Score
+                                        · @row.At.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)
+                                    </span>
+                                </div>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="When" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.At)">
                             <Template Context="row">@row.At.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)</Template>
                         </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Kind" Width="7rem" Sortable="false">
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Kind" Width="7rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                             <Template Context="row"><ModeBadge Mode="@row.Mode" /></Template>
                         </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Against" Width="8rem" Property="@nameof(FighterResultDto.Opponent)" />
-                        <RadzenDataGridColumn TItem="FighterResultDto" Title="About" Property="@nameof(FighterResultDto.Topic)" />
-                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Result" Width="8rem" Sortable="false">
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Against" Width="8rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.Opponent)" />
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.Topic)" />
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Result" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                             <Template Context="row">@(row.Draw ? "Draw" : row.Won ? "Won" : "Lost") <span class="po-muted">@row.Score</span></Template>
                         </RadzenDataGridColumn>
                     </Columns>
@@ -126,6 +144,15 @@
         > 0 => $"won {_profile.Stats.Streak} in a row",
         _ => $"lost {-_profile.Stats.Streak} in a row",
     };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Viewport.Changed += OnViewportChanged;
+        await Viewport.InitializeAsync();
+    }
+
+    /// <summary>Which columns exist is a render decision, and a rotated phone is a different set of them.</summary>
+    private void OnViewportChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -201,4 +228,6 @@
             Notifications.Notify(NotificationSeverity.Error, "Not forgotten", ex.Summary);
         }
     }
+
+    public void Dispose() => Viewport.Changed -= OnViewportChanged;
 }

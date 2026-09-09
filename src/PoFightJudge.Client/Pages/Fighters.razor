@@ -3,6 +3,9 @@
 @inject IApiClient Api
 @inject NavigationManager Nav
 
+@inject Viewport Viewport
+@implements IDisposable
+
 <PageTitle>Fighters · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="The card" Title="Fighters"
@@ -32,10 +35,37 @@
             <RadzenDataGrid Data="@_roster" TItem="FighterStatsDto" AllowSorting="true" AllowPaging="true" PageSize="20" class="roster"
                             RowClick="@(args => Open(args.Data))" RowRender="@(args => args.Attributes["class"] = "openable")">
                 <Columns>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Tag" Width="5.5rem" Property="@nameof(FighterStatsDto.Tag)">
+                    @* 5.5 + 6 + 6 + 9 + 10rem of declared width, before the name column, is 744 px of table. A phone
+                       gets the tag, the name, the record and the form in one cell; nothing is dropped, it is stacked. *@
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fighter" Visible="@Viewport.IsPhone" Sortable="false">
+                        <Template Context="row">
+                            <div class="stacked">
+                                <span class="line-1">
+                                    <span class="tag po-display">@row.Tag</span>
+                                    @if (string.Equals(row.DisplayName, row.Tag, StringComparison.Ordinal))
+                                    {
+                                        <span class="po-muted">no name yet</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="name">@row.DisplayName</span>
+                                    }
+                                </span>
+                                <span class="line-2 po-muted">
+                                    @row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty) over @row.Fights
+                                    @if (row.LastFoughtAt is { } seen)
+                                    {
+                                        @($" · last {seen.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)}")
+                                    }
+                                </span>
+                                <FormSparkline Scores="@row.Form" />
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Tag" Width="5.5rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Tag)">
                         <Template Context="row"><span class="tag po-display">@row.Tag</span></Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Name" Property="@nameof(FighterStatsDto.DisplayName)">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Name" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.DisplayName)">
                         <Template Context="row">
                             @if (string.Equals(row.DisplayName, row.Tag, StringComparison.Ordinal))
                             {
@@ -47,14 +77,14 @@
                             }
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fights" Width="6rem" Property="@nameof(FighterStatsDto.Fights)" />
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="W–L" Width="6rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fights" Width="6rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Fights)" />
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="W–L" Width="6rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="row">@row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty)</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Form" Width="9rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Form" Width="9rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="row"><FormSparkline Scores="@row.Form" /></Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Last seen" Width="10rem" Property="@nameof(FighterStatsDto.LastFoughtAt)">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Last seen" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.LastFoughtAt)">
                         <Template Context="row">
                             @if (row.LastFoughtAt is { } seen)
                             {
@@ -79,6 +109,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Viewport.Changed += OnViewportChanged;
+        await Viewport.InitializeAsync();
         try
         {
             _roster = await Api.GetRosterAsync();
@@ -104,4 +136,9 @@
             Nav.NavigateTo($"fighters/{row.Tag}");
         }
     }
+
+    /// <summary>Which columns exist is a render decision, and a rotated phone is a different set of them.</summary>
+    private void OnViewportChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Viewport.Changed -= OnViewportChanged;
 }

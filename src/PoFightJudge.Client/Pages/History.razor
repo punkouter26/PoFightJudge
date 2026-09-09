@@ -5,6 +5,7 @@
 @inject DialogService Dialogs
 @inject SetupMemory Memory
 @implements IDisposable
+@inject Viewport Viewport
 
 <PageTitle>History · PoFightJudge</PageTitle>
 
@@ -79,17 +80,48 @@
             <RadzenDataGrid Data="@_matches" TItem="MatchDto" AllowSorting="true" AllowPaging="true"
                             Count="@_total" PageSize="@MatchQuery.DefaultTake" LoadData="@OnPageAsync" class="history">
                 <Columns>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="When" Width="11rem" Property="@nameof(MatchDto.StartedAt)">
+                    @* A phone gets the same five facts stacked into one cell. Hiding the columns with CSS is not
+                       enough: the grid lays itself out from the widths they declare, so a hidden column is still
+                       576 px of table on a 356 px screen. Not declared is the only way to not be measured. *@
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Argument" Visible="@Viewport.IsPhone" Sortable="false">
+                        <Template Context="match">
+                            <div class="stacked">
+                                <span class="line-1">
+                                    <ModeBadge Mode="@match.Mode" />
+                                    <span class="topic">@match.Topic</span>
+                                </span>
+                                <span class="line-2 po-muted">
+                                    @match.Side1.DisplayName vs @match.Side2.DisplayName
+                                    · @match.StartedAt.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)
+                                </span>
+                                <span class="line-3">
+                                    @if (match.IsDraw)
+                                    {
+                                        <span class="po-muted">Nobody took it</span>
+                                    }
+                                    else
+                                    {
+                                        <strong>@match.Winner</strong>
+                                    }
+                                    @if (match.IsFake)
+                                    {
+                                        <span class="po-chip" title="Argued with no key, so nothing here was really judged.">rehearsal</span>
+                                    }
+                                </span>
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchDto" Title="When" Width="11rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(MatchDto.StartedAt)">
                         <Template Context="match">@match.StartedAt.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="Kind" Width="7rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Kind" Width="7rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="match"><ModeBadge Mode="@match.Mode" /></Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="Who" Sortable="false">
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Who" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="match">@match.Side1.DisplayName <span class="po-muted">vs</span> @match.Side2.DisplayName</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="About" Property="@nameof(MatchDto.Topic)" />
-                    <RadzenDataGridColumn TItem="MatchDto" Title="Result" Width="9rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="MatchDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(MatchDto.Topic)" />
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Result" Width="9rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="match">
                             @if (match.IsDraw)
                             {
@@ -105,7 +137,7 @@
                             }
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="" Width="9rem" Sortable="false">
+                    <RadzenDataGridColumn TItem="MatchDto" Title="" Width="@(Viewport.IsPhone ? "5.5rem" : "9rem")" Sortable="false">
                         <Template Context="match">
                             <div class="row-actions">
                                 @if (match.Mode == MatchMode.Fight)
@@ -152,10 +184,19 @@
     /// <summary>Whether anything has been asked of the list. Decides which empty state is the true one.</summary>
     private bool IsNarrowed => _text.Trim().Length > 0 || _from is not null || _to is not null;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        Viewport.Changed += OnViewportChanged;
+        await Viewport.InitializeAsync();
+        await LoadAsync();
+    }
+
+    /// <summary>Which columns exist is a render decision, and a rotated phone is a different set of them.</summary>
+    private void OnViewportChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
+        Viewport.Changed -= OnViewportChanged;
         _leaving.Cancel();
         _leaving.Dispose();
         _typing?.Dispose();

@@ -43,7 +43,11 @@
 
 .worst p { margin: 0; }
 
+/* The one table on this page. It has a claim, a verdict and a note, and the last two are short — the claim takes
+   whatever is left rather than the table taking more than the screen. */
 ::deep .claims { width: 100%; }
+
+::deep .claims .rz-cell-data { overflow-wrap: anywhere; white-space: normal; }
 
 ::deep .problem { margin: 0; }
 
