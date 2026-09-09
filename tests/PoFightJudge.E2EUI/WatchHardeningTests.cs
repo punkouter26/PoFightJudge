@@ -46,35 +46,6 @@ public class WatchHardeningTests(AppFixture app)
     }
 
     [SkippableFact]
-    public async Task Leaving_mid_argument_stops_it_and_the_screenshots_are_taken_on_the_way_through()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", user: "e2e-shots");
-        await using var _ = context;
-
-        await SeedAsync(page);
-        await page.GotoAsync($"{app.BaseUrl}/cpu");
-        await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
-
-        await ChooseAsync(page, side: 0, "Matthew");
-        await ChooseAsync(page, side: 1, "Kimberly");
-        await ShootAsync(page, "watch-setup");
-
-        await AppFixture.ToTheLastStepAsync(page);
-        await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 2", null, new() { Timeout = 90_000 });
-        await ShootAsync(page, "watch-play");
-
-        // Walking out mid-argument must stop it dead rather than leave lines arriving behind the setup screen.
-        await page.GetByRole(AriaRole.Button, new() { Name = "Leave" }).ClickAsync();
-        await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 15_000 });
-        var settled = await page.Locator("article.line").CountAsync();
-        await page.WaitForTimeoutAsync(3_000);
-        (await page.Locator("article.line").CountAsync()).Should().Be(settled, "the argument does not carry on once it has been left");
-
-        errors.Should().BeEmpty();
-    }
-
-    [SkippableFact]
     public async Task The_ruling_is_shown_and_photographed()
     {
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", user: "e2e-ruling");

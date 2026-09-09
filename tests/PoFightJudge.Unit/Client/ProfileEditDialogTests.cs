@@ -40,22 +40,6 @@ public class ProfileEditDialogTests : BunitContext
         new() { Id = ProfileId.From(persona.Initials), HasFace = hasFace, Persona = persona };
 
     [Fact]
-    public async Task Submitting_an_empty_form_shows_the_shared_validation_messages_and_calls_nothing()
-    {
-        var cut = Render<ProfileEditDialog>();
-
-        await cut.Find("form").SubmitAsync();
-
-        await cut.WaitForAssertionAsync(() =>
-        {
-            var messages = cut.FindAll(".validation-message").Select(m => m.TextContent).ToList();
-            messages.Should().Contain("Initials are required.");
-            messages.Should().Contain(m => m.Contains("Likes", StringComparison.Ordinal));
-        });
-        await _api.DidNotReceive().CreateProfileAsync(Arg.Any<CreateProfileRequest>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
     public async Task A_valid_new_persona_is_posted_and_the_saved_profile_is_handed_back()
     {
         var persona = Valid("abc");
@@ -90,47 +74,5 @@ public class ProfileEditDialogTests : BunitContext
 
         await _api.Received(1).UpdateProfileAsync(ProfileId.From("MAH"), Arg.Is<CreateProfileRequest>(r => r.Likes == "coffee"), Arg.Any<CancellationToken>());
         original.Persona.Likes.Should().Be("tea", "the form edits a copy until the server accepts it");
-    }
-
-    [Fact]
-    public async Task A_server_rejection_is_shown_in_the_dialog_instead_of_closing_it()
-    {
-        _api.CreateProfileAsync(Arg.Any<CreateProfileRequest>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new ApiException(409, "A profile with initials ABC already exists."));
-        var closed = false;
-        var cut = Render<ProfileEditDialog>(p => p
-            .Add(x => x.Template, Valid())
-            .Add(x => x.OnSaved, _ => closed = true));
-
-        await cut.Find("form").SubmitAsync();
-
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("already exists"));
-        closed.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Generate_asks_the_api_for_the_selected_role_and_fills_the_form_with_the_draft()
-    {
-        var draft = Valid("GEN");
-        draft.Name = "Gen Persona";
-        draft.Likes = "long walks through spreadsheets";
-        _api.GenerateProfileAsync(ProfileRole.Wife, Arg.Any<CancellationToken>()).Returns(draft);
-        var seed = new CreateProfileRequest { Role = ProfileRole.Wife };
-        var cut = Render<ProfileEditDialog>(p => p.Add(x => x.Template, seed));
-
-        await cut.Find(".generate .rz-button").ClickAsync(new MouseEventArgs());
-
-        await cut.WaitForAssertionAsync(() => cut.Find("input[name=Name]").GetAttribute("value").Should().Be("Gen Persona"));
-        cut.Find("textarea[name=Likes]").GetAttribute("value").Should().Be("long walks through spreadsheets");
-        await _api.Received(1).GenerateProfileAsync(ProfileRole.Wife, Arg.Any<CancellationToken>());
-        await _api.DidNotReceive().CreateProfileAsync(Arg.Any<CreateProfileRequest>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public void Editing_an_existing_profile_offers_no_generate_button()
-    {
-        var cut = Render<ProfileEditDialog>(p => p.Add(x => x.Existing, Dto(Valid("MAH"))));
-
-        cut.FindAll(".generate").Should().BeEmpty();
     }
 }

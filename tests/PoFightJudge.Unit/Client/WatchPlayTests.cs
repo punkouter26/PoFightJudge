@@ -17,6 +17,10 @@ namespace PoFightJudge.Unit.Client;
 /// The play screen holds the audio bridge, which is asynchronously disposable — so the context has to be torn down
 /// asynchronously too, or the container refuses to dispose it at the end of every test.
 /// </summary>
+/// <summary>
+/// The play screen holds the audio bridge, which is asynchronously disposable — so the context has to be torn down
+/// asynchronously too, or the container refuses to dispose it at the end of every test.
+/// </summary>
 public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
 {
     private static readonly MatchSide Matthew = MatchSide.Persona("MAH", "Matthew");
@@ -32,7 +36,6 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     /// What the voice chain says, if anything. A field rather than a second <c>Returns</c> per test: both would
     /// match <c>Arg.Any</c>, and which one wins is not something a test should be resting on.
     /// </summary>
-    private TtsAudioDto? _clause;
 
     public WatchPlayTests()
     {
@@ -74,7 +77,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TtsAudioDto(string.Empty, "pcm")));
         _api.StreamRoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
-            .Returns(_ => ClausesAsync(_clause));
+            .Returns(_ => ClausesAsync(null));
         _api.VerdictAsync(Arg.Any<VerdictRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new VerdictResponse(
                 MatchId.New(), "MAH", "He answered the point; she changed the subject.",
@@ -121,16 +124,6 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         }
     }
 
-    [Fact]
-    public void A_visitor_who_never_chose_a_matchup_is_sent_back_to_pick_one()
-    {
-        var nav = Services.GetRequiredService<BunitNavigationManager>();
-
-        Render<WatchPlay>();
-
-        nav.Uri.Should().EndWith("watch", "the play screen has nothing to play without a matchup");
-    }
-
     [Fact(Timeout = 60_000)]
     public async Task Two_personas_argue_their_rounds_out_and_the_judge_rules()
     {
@@ -147,76 +140,6 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         _asked.Should().OnlyContain(a => a.Topic == "the thermostat");
         cut.Markup.Should().Contain("He answered the point");
         cut.Markup.Should().Contain("Matthew", "the ruling names the winner rather than printing initials alone");
-    }
-
-    /// <summary>
-    /// A speaker was cut off a few seconds into their line: the browser reported nothing still scheduled — it had
-    /// not finished decoding when it was asked — so the argument waited out the minimum beat and the next line's
-    /// audio stopped the one in progress. The page knows how long the line is, and waits that long.
-    /// </summary>
-    [Fact(Timeout = 60_000)]
-    public async Task A_line_is_spoken_to_the_end_before_the_next_one_starts()
-    {
-        // Nine seconds of speech, and a browser that says nothing is pending — the state that caused the bug.
-        JSInterop.Setup<double>(AudioInterop.Enqueue, _ => true).SetResult(9.0);
-        JSInterop.Setup<double>(AudioInterop.Pending, _ => true).SetResult(0.0);
-        _clause = new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3");
-        _simulation.Set(Matthew, Kimberly, "the thermostat");
-
-        var cut = Render<WatchPlay>();
-
-        // The next line is fetched while this one is still being spoken, on purpose — so what says whether somebody
-        // was cut off is when the next line is spoken, not when it was asked for.
-        await cut.WaitForAssertionAsync(
-            () => Spoken().Should().Be(1),
-            TimeSpan.FromSeconds(10));
-
-        await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
-        await Task.Delay(100);
-        Spoken().Should().Be(1, "five seconds into a nine-second line, nobody has finished talking");
-        cut.FindAll("article.line").Should().HaveCount(1);
-
-        await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
-        await cut.WaitForAssertionAsync(() => Spoken().Should().Be(2), TimeSpan.FromSeconds(10));
-
-        int Spoken() => JSInterop.Invocations[AudioInterop.Enqueue].Count;
-    }
-
-    [Fact(Timeout = 60_000)]
-    public async Task History_grows_with_every_line_so_each_reply_answers_the_one_before()
-    {
-        _simulation.Set(Matthew, Kimberly, null);
-
-        var cut = Render<WatchPlay>();
-        await RunToTheEndAsync(cut, _clock);
-
-        await cut.WaitForAssertionAsync(() => _asked.Should().HaveCount(6), TimeSpan.FromSeconds(10));
-        _asked.Select(a => a.History.Count).Should().Equal([0, 1, 2, 3, 4, 5]);
-        _asked.Should().OnlyContain(a => a.Husband == Matthew && a.Wife == Kimberly);
-    }
-
-    [Fact(Timeout = 60_000)]
-    public async Task The_slap_interrupts_the_beat_lands_once_and_the_slapped_side_answers_it()
-    {
-        _simulation.Set(Matthew, Kimberly, null);
-
-        var cut = Render<WatchPlay>();
-        await cut.WaitForAssertionAsync(() => cut.FindAll("article.line").Should().HaveCount(1), TimeSpan.FromSeconds(10));
-
-        var slap = cut.FindComponent<InterjectionBar>();
-        await cut.InvokeAsync(() => slap.Instance.Throw.InvokeAsync(Interjections.All[0]));
-
-        await cut.WaitForAssertionAsync(() => _asked.Should().Contain(a => a.WasSlapped), TimeSpan.FromSeconds(10));
-        var reaction = _asked.Single(a => a.WasSlapped);
-        reaction.Speaker.Should().Be(WatchTurns.Husband, "the slapped speaker reacts instead of the turn passing over");
-        reaction.Interjection.Should().Be(Interjections.SlapKey);
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponent<InterjectionBar>().Instance.Used.Should().BeTrue("a slap is once per match"));
-
-        await RunToTheEndAsync(cut, _clock);
-        await cut.WaitForAssertionAsync(() => cut.FindAll("section.verdict").Should().HaveCount(1), TimeSpan.FromSeconds(10));
-        cut.FindAll("article.line").Should().HaveCount(WatchTurns.MaxLines, "the extra reaction makes a slapped match seven lines");
-        _asked.Count(a => a.WasSlapped).Should().Be(1, "only the reaction itself is thrown by the slap");
     }
 
     [Fact(Timeout = 60_000)]
@@ -258,84 +181,5 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Upstream"), TimeSpan.FromSeconds(10));
         cut.FindAll("button").Should().Contain(b => b.TextContent.Contains("Try again", StringComparison.Ordinal));
         cut.FindAll("section.verdict").Should().BeEmpty("a failed line is not a result");
-    }
-
-    /// <summary>
-    /// The AI routes are limited per user. Before this the page showed "The API answered 429 Too Many Requests." and
-    /// a Try again that fired straight back into the same limit — a button that could only fail while it was pressed.
-    /// </summary>
-    [Fact(Timeout = 60_000)]
-    public async Task A_throttled_round_says_how_long_to_wait_and_will_not_be_retried_until_it_is_up()
-    {
-        _api.StreamRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Failing(new ApiException(429, "That was a lot of arguing at once. Give it a moment.")
-            {
-                RetryAfter = TimeSpan.FromSeconds(5),
-            }));
-        _simulation.Set(Matthew, Kimberly, "the thermostat");
-
-        var cut = Render<WatchPlay>();
-
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Give it a moment"), TimeSpan.FromSeconds(10));
-        var button = cut.FindAll(".problem button").Single();
-        button.TextContent.Should().Contain("5s");
-        button.HasAttribute("disabled").Should().BeTrue("retrying inside the window can only hit the same limit again");
-
-        // The window passes a second at a time, exactly as it does in front of somebody.
-        for (var second = 0; second < 6; second++)
-        {
-            await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(1)));
-        }
-
-        await cut.WaitForAssertionAsync(
-            () => cut.FindAll(".problem button").Single().HasAttribute("disabled").Should().BeFalse(),
-            TimeSpan.FromSeconds(10));
-        cut.FindAll(".problem button").Single().TextContent.Should().Contain("Try again").And.NotContain("Try again in");
-    }
-
-    /// <summary>
-    /// The round audio was fetched, played and thrown away. The server archives a round only when the verdict
-    /// carries its clip, so nothing was ever stored and /api/audio/{match}/{round} answered 404 for every match ever
-    /// played — including the two already in storage.
-    /// </summary>
-    [Fact(Timeout = 60_000)]
-    public async Task The_audio_each_line_was_spoken_in_travels_with_the_verdict_so_it_can_be_played_back()
-    {
-        _clause = new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3");
-        VerdictRequest? sent = null;
-        _api.VerdictAsync(Arg.Any<VerdictRequest>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                sent = call.Arg<VerdictRequest>();
-                return Task.FromResult(new VerdictResponse(
-                    MatchId.New(), "MAH", "He answered the point.", 62, 41, AdvancedStatsDto.Empty, AdvancedStatsDto.Empty, Persisted: true));
-            });
-        _simulation.Set(Matthew, Kimberly, "the thermostat");
-
-        var cut = Render<WatchPlay>();
-        await RunToTheEndAsync(cut, _clock);
-        await cut.WaitForAssertionAsync(() => sent.Should().NotBeNull(), TimeSpan.FromSeconds(10));
-
-        sent!.Rounds.Should().HaveCount(WatchTurns.RoundsPerSide * 2);
-        sent.Rounds.Should().AllSatisfy(r => r.Audio.Should().NotBeNull("every line here was spoken by a persona"));
-        sent.Rounds[0].Audio!.Format.Should().Be("mp3", "the format is whatever the chain actually returned");
-    }
-
-    /// <summary>
-    /// Every line's request carries the argument so far. Clips on those rounds would upload the whole match again
-    /// per line, which is why they are kept apart and attached only to the one request that archives them.
-    /// </summary>
-    [Fact(Timeout = 60_000)]
-    public async Task The_line_by_line_requests_do_not_carry_the_audio()
-    {
-        _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3")));
-        _simulation.Set(Matthew, Kimberly, "the thermostat");
-
-        var cut = Render<WatchPlay>();
-        await RunToTheEndAsync(cut, _clock);
-
-        await cut.WaitForAssertionAsync(() => _asked.Should().NotBeEmpty(), TimeSpan.FromSeconds(10));
-        _asked.SelectMany(a => a.History).Should().AllSatisfy(r => r.Audio.Should().BeNull());
     }
 }

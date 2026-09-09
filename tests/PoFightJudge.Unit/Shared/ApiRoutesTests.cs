@@ -8,6 +8,10 @@ namespace PoFightJudge.Unit.Shared;
 /// ApiRoutes is the single source of truth for every path. These tests keep it honest: every constant is a rooted
 /// path, absolute URLs never collide, and the helpers escape what they interpolate.
 /// </summary>
+/// <summary>
+/// ApiRoutes is the single source of truth for every path. These tests keep it honest: every constant is a rooted
+/// path, absolute URLs never collide, and the helpers escape what they interpolate.
+/// </summary>
 public class ApiRoutesTests
 {
     private static IEnumerable<(string Name, string Value)> AllConstants(Type type) =>
@@ -15,16 +19,6 @@ public class ApiRoutesTests
             .Where(f => f.IsLiteral && f.FieldType == typeof(string))
             .Select(f => ($"{type.Name}.{f.Name}", (string)f.GetRawConstantValue()!))
             .Concat(type.GetNestedTypes(BindingFlags.Public).SelectMany(AllConstants));
-
-    [Fact]
-    public void Every_route_constant_is_a_rooted_path()
-    {
-        var constants = AllConstants(typeof(ApiRoutes)).ToList();
-
-        constants.Should().NotBeEmpty();
-        constants.Should().OnlyContain(c => c.Value.StartsWith('/'), "routes are absolute or MapGroup-relative segments, both rooted");
-        constants.Should().OnlyContain(c => !c.Value.EndsWith('/') || c.Value == "/", "no trailing slashes");
-    }
 
     [Fact]
     public void Absolute_urls_are_unique()

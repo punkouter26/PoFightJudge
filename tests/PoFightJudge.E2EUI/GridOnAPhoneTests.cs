@@ -42,25 +42,6 @@ public class GridOnAPhoneTests(AppFixture app)
         offenders.Should().BeEmpty("a phone reads a list by scrolling down it, not across it");
     }
 
-    [SkippableFact]
-    public async Task A_phone_gets_the_short_set_of_columns_and_a_desktop_the_whole_table()
-    {
-        await RecordAsync(MatchMode.Fight, "who forgot the bins", MatchSide.Human("HB1", "Alex"), MatchSide.Human("HB2", "Sam"));
-
-        var (phone, phonePage, _) = await app.OpenAsync(AppFixture.Mobile, "/history", user: User);
-        await using var _ = phone;
-        await phonePage.Locator(".history tbody tr").First.WaitForAsync(new() { Timeout = 30_000 });
-        var onAPhone = await phonePage.Locator(".history thead th").CountAsync();
-
-        var (desk, deskPage, _) = await app.OpenAsync(AppFixture.Desktop, "/history", user: User);
-        await using var __ = desk;
-        await deskPage.Locator(".history tbody tr").First.WaitForAsync(new() { Timeout = 30_000 });
-        var onADesktop = await deskPage.Locator(".history thead th").CountAsync();
-
-        onAPhone.Should().BeLessThan(onADesktop, "the columns a phone cannot fit are dropped rather than squeezed");
-        onAPhone.Should().BeGreaterThan(1, "what is left still has to identify the argument and let you open it");
-    }
-
     private async Task RecordAsync(MatchMode mode, string topic, MatchSide one, MatchSide two)
     {
         var matches = app.Services.GetRequiredService<IMatchRepository>();

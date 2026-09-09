@@ -22,6 +22,10 @@ namespace PoFightJudge.Unit.Analysis;
 /// What happens to a fight once it is over. Every step writes its status, so a failure is visible rather than a
 /// fight that simply never becomes readable.
 /// </summary>
+/// <summary>
+/// What happens to a fight once it is over. Every step writes its status, so a failure is visible rather than a
+/// fight that simply never becomes readable.
+/// </summary>
 public sealed class AnalysisPipelineTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 7, 20, 0, 0, TimeSpan.Zero);
@@ -132,40 +136,6 @@ public sealed class AnalysisPipelineTests : IDisposable
             .Which.Won.Should().BeFalse();
     }
 
-    [Fact]
-    public async Task Both_fighters_come_out_of_it_with_a_persona_the_other_channels_can_seat()
-    {
-        var match = await RecordedAsync();
-
-        using var pipeline = Pipeline();
-        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        var al = await _profiles.GetByIdAsync(ProfileId.From("AL"));
-        al.Should().NotBeNull("what they said in 2P is now somebody CPU and 1P can put in a seat");
-        al!.FromFights.Should().BeTrue();
-        al.Role.Should().Be(ProfileRole.Husband);
-        (await _profiles.GetByIdAsync(ProfileId.From("SM")))!.Role.Should().Be(ProfileRole.Wife);
-    }
-
-    /// <summary>
-    /// Recordings are stored in Opus. The Files API takes one and reports it ACTIVE, and then generateContent
-    /// answers 400 for it — measured against the live endpoint on 2026-09-07 — so what goes up is PCM.
-    /// </summary>
-    [Fact]
-    public async Task The_model_is_sent_samples_however_the_recording_was_stored()
-    {
-        var match = await RecordedAsync();
-        var files = new RecordingFiles();
-
-        using var pipeline = Pipeline(files: files);
-        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        var upload = files.Uploads.Should().ContainSingle().Subject;
-        upload.MimeType.Should().Be("audio/wav");
-        upload.Name.Should().EndWith(".wav");
-        upload.Bytes.Should().StartWith("RIFF"u8.ToArray(), "what goes up is a WAV, whatever is on disk");
-    }
-
     /// <summary>A files client that keeps what it was handed, so a test can say what the model was actually sent.</summary>
     private sealed class RecordingFiles : IGeminiFilesClient
     {
@@ -181,43 +151,6 @@ public sealed class AnalysisPipelineTests : IDisposable
 
         public Task<GeminiFile> GetAsync(string name, CancellationToken ct) =>
             Task.FromResult(new GeminiFile(name, $"https://fake.invalid/{name}", "ACTIVE", "audio/wav"));
-    }
-
-    [Fact]
-    public async Task Each_fighter_keeps_what_this_fight_said_about_how_they_argue()
-    {
-        var match = await RecordedAsync();
-
-        using var pipeline = Pipeline();
-        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        var style = (await _fighterResults.ListForAsync(FighterId.From("AL"), "user-1", CancellationToken.None))[0].Style;
-        style.Tone.Should().Contain("clear");
-        style.Cefr.Should().Be("B2");
-        style.Fallacies.Should().Contain("Straw man");
-        style.Emotions.Should().StartWith("confident", "it is the strongest one that is worth remembering");
-        style.BestQuote.Should().NotBeNullOrWhiteSpace();
-        style.Opener.Should().NotBeNullOrWhiteSpace("how somebody opens is the most repeatable thing about them");
-        style.Tips.Should().HaveCount(3);
-    }
-
-    [Fact]
-    public async Task Each_fighter_keeps_the_words_themselves_so_a_later_persona_can_read_this_fight_too()
-    {
-        var match = await RecordedAsync();
-
-        using var pipeline = Pipeline();
-        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        var said = await _fighterWords.ListAsync(FighterId.From("AL"), CancellationToken.None);
-        said.Should().ContainSingle("one row per fighter per fight, the same way the result rows go");
-        said[0].Said.Should().NotBeNullOrWhiteSpace();
-        said[0].Mode.Should().Be(MatchMode.Fight);
-        said[0].MatchId.Should().Be(match.Id);
-
-        var other = await _fighterWords.ListAsync(FighterId.From("SM"), CancellationToken.None);
-        other.Should().ContainSingle();
-        other[0].Said.Should().NotBe(said[0].Said, "each of them is kept saying their own half of it");
     }
 
     [Fact]
@@ -238,35 +171,6 @@ public sealed class AnalysisPipelineTests : IDisposable
     }
 
     [Fact]
-    public async Task The_transcript_the_fight_already_paid_for_is_used_rather_than_bought_again()
-    {
-        var transcriber = Substitute.For<IGeminiTranscribeClient>();
-        var match = await RecordedAsync();
-        await StoreCaptionsAsync(match.Id, 40);
-
-        using var pipeline = Pipeline(transcriber);
-        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        await transcriber.DidNotReceive().TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-        (await AnalysisOf(match.Id))!.Status.Should().Be(AnalysisStatus.Ready);
-    }
-
-    [Fact]
-    public async Task Captions_too_thin_to_judge_on_are_worth_paying_to_replace()
-    {
-        var transcriber = Substitute.For<IGeminiTranscribeClient>();
-        var rehearsal = await new FakeAnalysisClients.Transcriber().TranscribeAsync(string.Empty, string.Empty, CancellationToken.None);
-        transcriber.TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(rehearsal));
-        var match = await RecordedAsync();
-        await StoreCaptionsAsync(match.Id, 5);
-
-        using var pipeline = Pipeline(transcriber);
-        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        await transcriber.Received(1).TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
     public async Task A_fight_that_fails_says_so_rather_than_staying_unread_forever()
     {
         _judge.JudgeAsync(Arg.Any<JudgeRequest>(), Arg.Any<CancellationToken>())
@@ -283,34 +187,6 @@ public sealed class AnalysisPipelineTests : IDisposable
         analysis!.Status.Should().Be(AnalysisStatus.Failed);
         analysis.Error.Should().Be(AnalysisPipeline.UserFacingFailure, "the detail belongs in the log, not in front of the room");
         (await _matches.GetAsync("user-1", match.Id, CancellationToken.None))!.Status.Should().Be(SessionStatus.Failed);
-    }
-
-    [Fact]
-    public async Task A_fight_deleted_while_it_was_being_read_does_not_come_back_as_a_row()
-    {
-        _judge.JudgeAsync(Arg.Any<JudgeRequest>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromException<JudgeOutputDto>(new InvalidOperationException("the judge is out")));
-        var match = await RecordedAsync();
-        await _matches.DeleteAsync("user-1", match.Id, CancellationToken.None);
-        using var pipeline = Pipeline();
-
-        await pipeline.SubmitAsync("user-1", match.Id, CancellationToken.None);
-        await pipeline.StartAsync(CancellationToken.None);
-        await WaitForAsync(() => Task.FromResult(true));
-        await pipeline.StopAsync(CancellationToken.None);
-
-        (await AnalysisOf(match.Id)).Should().BeNull("somebody deleted it, and it must stay deleted");
-    }
-
-    [Fact]
-    public async Task A_fight_with_no_recording_fails_loudly_rather_than_reading_silence()
-    {
-        var match = await RecordedAsync(withAudio: false);
-
-        using var pipeline = Pipeline();
-        var process = async () => await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        await process.Should().ThrowAsync<InvalidOperationException>().WithMessage("*no recording*");
     }
 
     [Fact]

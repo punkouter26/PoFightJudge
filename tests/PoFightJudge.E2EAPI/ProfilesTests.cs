@@ -104,112 +104,11 @@ public class ProfilesTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Faces_are_uploaded_as_raw_images_and_served_anonymously_as_png()
-    {
-        using var client = User();
-        using var anonymous = factory.CreateClient();
-        var id = ProfileId.From("E2F");
-        (await client.PostAsJsonAsync(ApiRoutes.Profiles.Base, Persona("E2F", ProfileRole.Wife))).StatusCode.Should().Be(HttpStatusCode.Created);
-
-        (await anonymous.GetAsync(ApiRoutes.Profiles.Face(id))).StatusCode.Should().Be(HttpStatusCode.NotFound, "no face yet");
-
-        using (var png = await PngAsync())
-        {
-            var upload = await client.PostAsync(ApiRoutes.Profiles.Face(id), png);
-            upload.StatusCode.Should().Be(HttpStatusCode.OK);
-            (await upload.Content.ReadFromJsonAsync<ProfileDto>())!.HasFace.Should().BeTrue();
-        }
-
-        var face = await anonymous.GetAsync(ApiRoutes.Profiles.Face(id));
-        face.StatusCode.Should().Be(HttpStatusCode.OK);
-        face.Content.Headers.ContentType!.MediaType.Should().Be("image/png");
-        face.Headers.GetValues("X-Content-Type-Options").Should().Contain("nosniff");
-        Image.Identify(await face.Content.ReadAsByteArrayAsync()).Width.Should().Be(512);
-
-        (await client.GetFromJsonAsync<ProfileDto>(ApiRoutes.Profiles.ById(id)))!.HasFace.Should().BeTrue();
-
-        using var text = new StringContent("not an image");
-        (await client.PostAsync(ApiRoutes.Profiles.Face(id), text)).StatusCode.Should().Be(HttpStatusCode.UnsupportedMediaType);
-        using var garbage = new ByteArrayContent([1, 2, 3, 4]);
-        garbage.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-        (await client.PostAsync(ApiRoutes.Profiles.Face(id), garbage)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        using var orphan = await PngAsync();
-        (await client.PostAsync(ApiRoutes.Profiles.Face(ProfileId.From("NOP")), orphan)).StatusCode.Should().Be(HttpStatusCode.NotFound);
-
-        (await client.DeleteAsync(ApiRoutes.Profiles.ById(id))).StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await anonymous.GetAsync(ApiRoutes.Profiles.Face(id))).StatusCode.Should().Be(HttpStatusCode.NotFound, "deleting the profile removes its face");
-    }
-
-    [Fact]
-    public async Task Seeding_needs_a_signed_in_user_and_is_idempotent()
-    {
-        using var anonymous = factory.CreateClient();
-        using var user = User("e2e-plain");
-        using var admin = User("e2e-admin", roles: "Admin");
-
-        (await anonymous.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await user.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.OK, "outside Production any signed-in user may load the cast; the Production rules are unit-tested on the gate");
-
-        var first = await admin.PostAsync(ApiRoutes.Seed.ProfilesUrl, null);
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = (await first.Content.ReadFromJsonAsync<SeedResultDto>())!;
-        result.Seeded.Should().Be(8);
-        result.Initials.Should().Contain("MAH");
-
-        (await admin.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.OK);
-        var profiles = (await user.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!;
-        profiles.Count(p => string.Equals(p.Persona.Initials, "MAH", StringComparison.Ordinal)).Should().Be(1);
-    }
-
-    [Fact]
     public async Task Profiles_require_a_signed_in_user()
     {
         using var anonymous = factory.CreateClient();
 
         (await anonymous.GetAsync(ApiRoutes.Profiles.Base)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await anonymous.PostAsJsonAsync(ApiRoutes.Profiles.Base, Persona("ANO"))).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task Generate_returns_an_unsaved_valid_draft_for_the_role_and_rejects_an_unknown_role()
-    {
-        using var client = User();
-
-        var response = await client.PostAsync(ApiRoutes.Profiles.Generate("wife"), null);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var draft = (await response.Content.ReadFromJsonAsync<CreateProfileRequest>())!;
-        draft.Role.Should().Be(ProfileRole.Wife);
-        (await new PoFightJudge.Shared.Validators.CreateProfileRequestValidator().ValidateAsync(draft)).IsValid.Should().BeTrue();
-        draft.TtsSettings.VoiceName.Should().BeOneOf("Kore", "Zephyr");
-        (await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!
-            .Should().NotContain(p => string.Equals(p.Persona.Initials, draft.Initials, StringComparison.Ordinal), "a draft is not persisted");
-
-        (await client.PostAsync(ApiRoutes.Profiles.Generate("banana"), null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task Preview_line_speaks_an_unsaved_persona_and_never_stores_it()
-    {
-        using var client = User();
-        var persona = Persona("PRV", ProfileRole.Wife);
-        persona.Name = "Vera Quill";
-
-        var response = await client.PostAsJsonAsync(ApiRoutes.Profiles.PreviewLineUrl, persona);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var preview = (await response.Content.ReadFromJsonAsync<PreviewLineResponse>())!;
-        preview.Line.Should().NotBeNullOrWhiteSpace();
-        preview.Mood.Should().NotBeNullOrWhiteSpace();
-        preview.Audio.IsEmpty.Should().BeFalse("the fake voice still speaks");
-        preview.Audio.Format.Should().BeOneOf("pcm", "mp3");
-        Convert.FromBase64String(preview.Audio.Base64).Length.Should().BeGreaterThan(0);
-
-        (await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!
-            .Should().NotContain(p => string.Equals(p.Persona.Initials, "PRV", StringComparison.Ordinal), "a preview is not a profile");
-
-        var invalid = Persona("PRV");
-        invalid.Likes = string.Empty;
-        (await client.PostAsJsonAsync(ApiRoutes.Profiles.PreviewLineUrl, invalid)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

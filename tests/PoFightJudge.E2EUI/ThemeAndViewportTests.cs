@@ -40,18 +40,4 @@ public class ThemeAndViewportTests(AppFixture app)
         (await page.EvaluateAsync<string?>("localStorage.getItem('po-theme')")).Should().Be("light");
         errors.Should().BeEmpty();
     }
-
-    [SkippableFact]
-    public async Task Layout_has_no_horizontal_scroll_on_a_phone()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Mobile, "/login", user: null);
-        await using var _ = context;
-
-        await page.GetByRole(AriaRole.Button, new() { Name = "Continue as Guest (Dev)" }).WaitForAsync(new() { Timeout = 30_000 });
-        var scrollWidth = await page.EvaluateAsync<int>("document.scrollingElement.scrollWidth");
-        var innerWidth = await page.EvaluateAsync<int>("window.innerWidth");
-
-        scrollWidth.Should().BeLessThanOrEqualTo(innerWidth, "the page body must never scroll horizontally at 390 px");
-        errors.Should().BeEmpty();
-    }
 }

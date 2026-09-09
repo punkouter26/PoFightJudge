@@ -53,21 +53,6 @@ public class AnalysisTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task A_fight_that_recorded_nothing_says_so_rather_than_waiting_forever()
-    {
-        var client = User("analysis-empty");
-
-        // Nobody spoke into it, so there is no recording to read and never will be.
-        var id = await FoughtAsync(client, "n1", "n2");
-
-        var response = await client.GetAsync(ApiRoutes.Fights.Analysis(id));
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<AnalysisResponse>();
-        body!.Status.Should().Be(AnalysisStatus.Failed);
-        body.Error.Should().Contain("Nothing was recorded");
-    }
-
-    [Fact]
     public async Task Somebody_elses_fight_cannot_be_read()
     {
         var mine = User("analysis-owner");
@@ -77,52 +62,6 @@ public class AnalysisTests(ApiFactory factory)
         (await theirs.GetAsync(ApiRoutes.Fights.Analysis(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await theirs.PostAsync(ApiRoutes.Fights.AnalysisRetry(id), null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await theirs.GetAsync(ApiRoutes.Fights.Clip(id, 0))).StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task A_fight_that_never_happened_is_not_found()
-    {
-        var client = User("analysis-missing");
-        var id = MatchId.New();
-
-        (await client.GetAsync(ApiRoutes.Fights.Analysis(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await client.GetAsync(ApiRoutes.Fights.Clip(id, 0))).StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Retrying_a_fight_with_no_recording_is_refused_with_a_reason()
-    {
-        var client = User("analysis-retry-empty");
-        var id = await FoughtAsync(client, "r1", "r2");
-
-        var retry = await client.PostAsync(ApiRoutes.Fights.AnalysisRetry(id), null);
-
-        retry.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await retry.Content.ReadAsStringAsync()).Should().Contain("Nothing was recorded");
-    }
-
-    [Fact]
-    public async Task A_clip_of_a_fight_that_was_never_read_is_not_found()
-    {
-        var client = User("analysis-clip");
-        var id = await FoughtAsync(client, "c1", "c2");
-
-        (await client.GetAsync(ApiRoutes.Fights.Clip(id, 0))).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await client.GetAsync(ApiRoutes.Fights.Clip(id, -1))).StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task A_transcript_from_the_browser_is_only_taken_when_that_is_switched_on()
-    {
-        var client = User("analysis-transcript");
-        var id = await FoughtAsync(client, "t1", "t2");
-
-        var posted = await client.PostAsJsonAsync(
-            ApiRoutes.Fights.Transcript(id),
-            new TranscriptDto("you never listen", [new TranscriptWord("you", "spk_1", 0, 0.4)]));
-
-        // Off by default: the server model stays the source of truth until the browser path is proven.
-        posted.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

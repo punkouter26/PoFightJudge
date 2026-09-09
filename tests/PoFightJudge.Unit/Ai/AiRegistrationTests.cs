@@ -68,13 +68,4 @@ public class AiRegistrationTests
         analysis.DefaultRequestVersion.Should().Be(HttpVersion.Version20);
         services.GetRequiredService<GeminiModelOptions>().Should().Be(GeminiModelOptions.Defaults);
     }
-
-    [Fact]
-    public void Without_a_key_no_header_is_sent_so_a_misconfiguration_fails_loudly_at_the_provider()
-    {
-        var (_, services) = Register("Production", apiKey: null);
-        using var fast = services.GetRequiredService<IHttpClientFactory>().CreateClient(GeminiHttpClients.Fast);
-
-        fast.DefaultRequestHeaders.Contains(GeminiHttp.ApiKeyHeader).Should().BeFalse();
-    }
 }

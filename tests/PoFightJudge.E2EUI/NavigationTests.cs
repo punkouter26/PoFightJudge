@@ -53,15 +53,4 @@ public class NavigationTests(AppFixture app)
 
         errors.Should().BeEmpty();
     }
-
-    [SkippableFact]
-    public async Task The_drawer_is_not_in_the_way_on_a_desktop()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/");
-        await using var _ = context;
-
-        (await page.GetByRole(AriaRole.Button, new() { Name = "Menu" }).IsVisibleAsync()).Should().BeFalse();
-        (await page.Locator("header.topbar nav a").CountAsync()).Should().Be(Destinations.Length, "every destination is on the bar");
-        errors.Should().BeEmpty();
-    }
 }

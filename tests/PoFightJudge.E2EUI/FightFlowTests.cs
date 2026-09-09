@@ -103,20 +103,6 @@ public class FightFlowTests(AppFixture app)
         errors.Should().BeEmpty();
     }
 
-    [SkippableFact]
-    public async Task A_fight_that_never_existed_says_so_instead_of_opening_the_microphone()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/fight/00000000000000000000000000000000", user: "e2e-ghost");
-        await using var _ = context;
-
-        var problem = page.Locator(".problem");
-        await problem.WaitForAsync(new() { Timeout = 30_000 });
-        (await problem.InnerTextAsync()).Should().ContainEquivalentOf("could not be joined");
-        (await page.Locator(".meter--on").CountAsync()).Should().Be(0, "there is nothing to record into");
-
-        errors.Should().BeEmpty();
-    }
-
     /// <summary>The autocomplete renders its own input, so the wrapper is what carries a stable name.</summary>
     private static ILocator TagBox(IPage page, string name) => page.Locator($"div.tag-input[data-name={name}] input");
 

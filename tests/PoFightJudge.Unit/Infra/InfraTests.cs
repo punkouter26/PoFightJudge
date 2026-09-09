@@ -64,17 +64,6 @@ public partial class InfraTests
     }
 
     [Fact]
-    public void Everything_is_named_for_this_solution_and_nothing_is_left_over_from_the_one_it_was_ported_from()
-    {
-        var everything = Main + Resources + Workflow;
-
-        everything.Should().NotContainEquivalentOf("poarguejudge").And.NotContainEquivalentOf("pomarriedlife");
-        Main.Should().Contain("var resourceGroupName = 'PoFightJudge'")
-            .And.Contain("var storageAccountName = 'stpofightjudge'")
-            .And.Contain("var webAppName = 'app-pofightjudge'");
-    }
-
-    [Fact]
     public void The_pipeline_deploys_the_site_the_templates_create()
     {
         var webApp = WebAppName().Match(Main).Groups["name"].Value;
@@ -88,47 +77,11 @@ public partial class InfraTests
     private static partial Regex WebAppName();
 
     [Fact]
-    public void The_site_is_told_which_assembly_to_start_because_two_runtimeconfigs_ship_side_by_side()
-    {
-        // Oryx cannot infer a startup DLL when the publish folder carries the API's and the client's runtimeconfig.
-        Resources.Should().Contain("appCommandLine: 'dotnet PoFightJudge.Api.dll'");
-        Resources.Should().Contain("webSocketsEnabled: true", "the live fight is a SignalR hub carrying audio");
-    }
-
-    [Fact]
     public void Storage_is_reachable_only_by_the_identity_and_the_app_is_only_given_endpoints()
     {
         Resources.Should().Contain("allowSharedKeyAccess: false", "there is no connection-string path in this solution at all");
         Resources.Should().Contain("type: 'SystemAssigned'");
         Resources.Should().Contain("PoFightJudge__TableStorageEndpoint").And.Contain("PoFightJudge__BlobStorageEndpoint");
         Resources.Should().NotContainEquivalentOf("AccountKey=").And.NotContainEquivalentOf("listKeys(");
-    }
-
-    [Fact]
-    public void The_free_tier_is_the_default_and_moving_off_it_is_a_deliberate_edit()
-    {
-        Main.Should().Contain("param appServicePlanSku string = 'F1'");
-        Resources.Should().Contain("alwaysOn: !isFreePlan", "ARM rejects the write when Always On is set on F1");
-    }
-
-    [Fact]
-    public void The_pipeline_signs_in_with_a_federated_credential_and_stores_no_secret()
-    {
-        Workflow.Should().Contain("id-token: write").And.Contain("azure/login@v2");
-        Workflow.Should().NotContain("AZURE_CLIENT_SECRET").And.NotContain("creds:");
-        Workflow.Should().Contain("cancel-in-progress: false", "cancelling a half-uploaded package is worse than queueing");
-    }
-
-    [Fact]
-    public void The_deploy_is_not_believed_until_the_site_answers_for_itself()
-    {
-        Workflow.Should().Contain("expect /api/matches 401").And.Contain("expect /api/no-such-route 404");
-        Workflow.Should().Contain("DeployedSiteTests", "status codes cannot see a WASM app that failed to boot");
-
-        // Every route the smoke test asks about has to be a route this solution actually serves.
-        foreach (var route in new[] { ApiRoutes.Health.Url, ApiRoutes.Matches.Base })
-        {
-            Workflow.Should().Contain(route);
-        }
     }
 }

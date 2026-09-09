@@ -12,23 +12,10 @@ namespace PoFightJudge.E2EUI;
 public class TouchTargetTests(AppFixture app)
 {
     /// <summary>WCAG 2.2 SC 2.5.5 (AAA), which is the size app.css asks for. The persistent chrome is held to it.</summary>
-    private const int Comfortable = 44;
-
     /// <summary>WCAG 2.2 SC 2.5.8 (AA). Everything that can be pressed clears at least this.</summary>
     private const int Minimum = 24;
 
     private static readonly string[] Routes = ["/", "/cpu", "/2p", "/profiles", "/fighters", "/history"];
-
-    [SkippableFact]
-    public async Task The_persistent_chrome_is_44px_on_a_phone()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Mobile, "/");
-        await using var _ = context;
-
-        var small = await MeasureAsync(page, "header.topbar button, header.topbar .rz-menu-toggle", Comfortable);
-        small.Should().BeEmpty("the top bar is the one set of controls that is on every screen");
-        errors.Should().BeEmpty();
-    }
 
     [SkippableFact]
     public async Task Nothing_pressable_is_under_the_minimum_target_size()

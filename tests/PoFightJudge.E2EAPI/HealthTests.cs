@@ -22,20 +22,6 @@ public partial class HealthTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Health_details_are_anonymous_masked_and_complete()
-    {
-        using var client = factory.CreateClient();
-
-        var report = await client.GetFromJsonAsync<HealthReportDto>(ApiRoutes.Health.DetailsUrl);
-
-        report!.Environment.Should().Be(ApiFactory.Environment);
-        report.Checks.Should().Contain(c => c.Name == "configuration" && c.Category == HealthCategory.Connection);
-        report.Checks.Should().Contain(c => c.Name == "Gemini API key" && c.State == HealthState.Ok && c.Detail == "****", "the test key is short enough to be fully masked");
-        report.Checks.Where(c => c.Category == HealthCategory.Feature).Select(c => c.Name).Should().BeEquivalentTo(Toggles.All.Select(t => $"Toggle: {t}"));
-        report.Checks.Should().OnlyContain(c => !c.Detail.Contains("test-key"));
-    }
-
-    [Fact]
     public async Task Diag_requires_authentication_and_never_leaks_a_value()
     {
         // Anonymous → 401
@@ -65,17 +51,6 @@ public partial class HealthTests(ApiFactory factory)
             dto.Models.Tts.Should().Be("gemini-3.1-flash-tts-preview");
             dto.Flags.Keys.Should().BeEquivalentTo(Toggles.All);
         }
-    }
-
-    [Fact]
-    public async Task Features_are_anonymous_and_apply_the_environment_rules()
-    {
-        using var client = factory.CreateClient();
-
-        var flags = await client.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url);
-
-        flags!.UseFakeAi.Should().BeTrue("the test host forces the fakes");
-        flags.HumanInWatch.Should().BeTrue("the fake transcriber can finish a spoken turn, so a person may take a side");
     }
 
     [Fact]

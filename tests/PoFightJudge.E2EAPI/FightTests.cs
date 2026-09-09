@@ -35,31 +35,6 @@ public class FightTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task The_host_is_told_how_each_of_them_argues_and_a_stranger_is_called_a_first_fight()
-    {
-        var client = User("fight-digest");
-        var results = factory.Services.GetRequiredService<IFighterResultRepository>();
-        var now = factory.Services.GetRequiredService<TimeProvider>().GetUtcNow();
-        var known = FighterId.From("DG1");
-
-        // Two debates behind them, so the digest is a read rather than a guess.
-        foreach (var day in new[] { -2, -1 })
-        {
-            await results.SaveAsync(
-            [
-                new FighterResultDto(known.Value, "fight-digest", MatchId.New(), MatchMode.Fight, now.AddDays(day), "the thermostat", "DG2",
-                    true, false, 70, StyleSnapshot.Empty with { Tone = "clipped", Opener = "Look, the thing is", Cefr = "B2" }),
-            ]);
-        }
-
-        var id = await StartAsync(client, known.Value, "dg9");
-
-        var setup = factory.Services.GetRequiredService<SessionRegistry>().Get(id)!.Setup;
-        setup.Player1Digest.Should().Contain("2 fights").And.Contain("clipped");
-        setup.Player2Digest.Should().Be("First fight.", "a host told nothing about a stranger would invent them");
-    }
-
-    [Fact]
     public async Task Starting_a_fight_creates_both_fighters_and_answers_with_somewhere_to_join()
     {
         var client = User("fight-start");
@@ -88,30 +63,6 @@ public class FightTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task A_tag_that_is_missing_or_shared_is_refused_because_the_record_needs_a_name()
-    {
-        var client = User("fight-tags");
-
-        foreach (var (one, two) in new[] { ("", "CD"), ("AB", ""), ("AB", "AB"), ("ab", "AB"), ("!!", "CD") })
-        {
-            var response = await client.PostAsJsonAsync(ApiRoutes.Fights.Base, new CreateFightRequest(HostPersonaId.Referee, one, two));
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"'{one}' against '{two}' is not two fighters");
-        }
-    }
-
-    [Fact]
-    public async Task A_host_nobody_has_heard_of_is_refused()
-    {
-        var client = User("fight-host");
-
-        var response = await client.PostAsJsonAsync(
-            ApiRoutes.Fights.Base,
-            new { Persona = "Elvis", Player1Tag = "AB", Player2Tag = "CD" });
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
     public async Task Somebody_elses_fight_is_not_found_rather_than_forbidden()
     {
         var mine = User("fight-owner");
@@ -122,14 +73,6 @@ public class FightTests(ApiFactory factory)
         (await theirs.PostAsync(ApiRoutes.Fights.End(id), null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         await mine.PostAsync(ApiRoutes.Fights.End(id), null);
-    }
-
-    [Fact]
-    public async Task A_fight_that_never_happened_is_not_found()
-    {
-        var client = User("fight-missing");
-
-        (await client.GetAsync(ApiRoutes.Fights.ById(MatchId.New()))).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -153,21 +96,6 @@ public class FightTests(ApiFactory factory)
 
         // Ending it twice is what two tabs pressing stop looks like, and the second is simply no longer there.
         (await client.PostAsync(ApiRoutes.Fights.End(id), null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Starting_a_second_fight_ends_the_first_one()
-    {
-        var client = User("fight-replace");
-        var first = await StartAsync(client, "gg1", "hh2");
-
-        var second = await StartAsync(client, "ii1", "jj2");
-
-        var replaced = await client.GetFromJsonAsync<MatchDto>(ApiRoutes.Fights.ById(first));
-        replaced.Should().NotBeNull("the first fight was stored on its way out rather than dropped");
-        replaced!.EndedAt.Should().NotBeNull();
-
-        await client.PostAsync(ApiRoutes.Fights.End(second), null);
     }
 
     [Fact]

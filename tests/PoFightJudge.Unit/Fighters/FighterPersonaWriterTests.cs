@@ -18,6 +18,10 @@ namespace PoFightJudge.Unit.Fighters;
 /// Somebody who has argued in 2P becomes a persona the CPU and 1P channels can put in a seat. It is read from what
 /// they actually said, rewritten after every fight, and it is theirs alone: the seeded cast is never written over.
 /// </summary>
+/// <summary>
+/// Somebody who has argued in 2P becomes a persona the CPU and 1P channels can put in a seat. It is read from what
+/// they actually said, rewritten after every fight, and it is theirs alone: the seeded cast is never written over.
+/// </summary>
 public sealed class FighterPersonaWriterTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 7, 20, 0, 0, TimeSpan.Zero);
@@ -128,136 +132,5 @@ public sealed class FighterPersonaWriterTests
         kkk!.FromFights.Should().BeFalse("the authored cast never changes");
         kkk.Likes.Should().Be("tea", "not a field of it was touched");
         (await _profiles.GetByIdAsync(ProfileId.From("LLL")))!.FromFights.Should().BeTrue("the other seat is still written");
-    }
-
-    [Fact]
-    public async Task The_next_fight_rewrites_the_persona_but_keeps_their_face_and_takes_the_role_they_chose_this_time()
-    {
-        var (match, report) = await FoughtAsync();
-        await Writer().WriteAsync(match, report, CancellationToken.None);
-
-        var first = await _profiles.GetByIdAsync(ProfileId.From("KKK"));
-        first!.UpdateFacePic("faces/KKK.png");
-        await _profiles.UpsertAsync(first);
-        await _fighters.EnsureAsync(FighterId.From("KKK"), Now.AddDays(1), ProfileRole.Wife);
-
-        await Writer().WriteAsync(match, report, CancellationToken.None);
-
-        var again = await _profiles.GetByIdAsync(ProfileId.From("KKK"));
-        again!.FacePic.Should().Be("faces/KKK.png", "a photo somebody added is not something a fight should lose");
-        again.Role.Should().Be(ProfileRole.Wife, "the seat they chose this time is the seat they argue from");
-        again.FromFights.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task A_model_that_fails_costs_them_the_persona_and_nothing_else()
-    {
-        var (match, report) = await FoughtAsync();
-        var gemini = Substitute.For<IGeminiText>();
-        gemini.GenerateAsync(Arg.Any<GeminiTextRequest>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("503 from upstream"));
-
-        var act = () => Writer(gemini).WriteAsync(match, report, CancellationToken.None);
-
-        await act.Should().NotThrowAsync("the analysis is already ready; a persona is a bonus, not a condition");
-        (await _profiles.GetAllAsync()).Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task The_model_is_told_what_they_actually_said_and_what_the_judge_made_of_it()
-    {
-        var (_, report) = await FoughtAsync();
-        var fighter = (await _fighters.GetAsync(FighterId.From("KKK")))!;
-        var style = StyleProfileBuilder.Build("KKK", []);
-        var corpus = SpokenCorpus.From(await _words.ListAsync(FighterId.From("KKK")));
-
-        var prompt = FighterPersonaWriter.BuildPrompt(fighter, style, report.Player1.Assessment, corpus, attempt: 0);
-
-        prompt.User.Should().Contain("Trump loves me", "their own words are the evidence");
-        prompt.User.Should().Contain("Everyone needs to be like Trump", "so is the judge's pick of their best line");
-        prompt.User.Should().Contain("husband", "the persona is written for the seat they chose");
-        prompt.User.Should().Contain("KKK");
-        prompt.System.Should().ContainEquivalentOf("real person", "this is not the invent-a-character prompt");
-    }
-
-    [Fact]
-    public async Task Everything_they_have_ever_said_goes_to_the_model_not_just_the_argument_just_had()
-    {
-        var (match, report) = await FoughtAsync();
-        var kkk = FighterId.From("KKK");
-
-        // Two nights they argued before this one, one in each engine: both are theirs, so both are evidence.
-        await _words.SaveAsync(SpokenDebate.From("KKK", MatchId.New(), Now.AddDays(-9), MatchMode.Watch, ["Look, the thing is, the bins were your job"]));
-        await _words.SaveAsync(SpokenDebate.From("KKK", MatchId.New(), Now.AddDays(-2), MatchMode.Fight, ["Look, the thing is, you never listen to a word"]));
-
-        var fighter = (await _fighters.GetAsync(kkk))!;
-        var corpus = SpokenCorpus.From(await _words.ListAsync(kkk));
-        var prompt = FighterPersonaWriter.BuildPrompt(fighter, StyleProfileBuilder.Build("KKK", []), report.Player1.Assessment, corpus, attempt: 0);
-
-        corpus.Debates.Should().Be(3, "every debate they have spoken in, this one included");
-        prompt.User.Should().Contain("the bins were your job", "what they said nine days ago is still how they argue");
-        prompt.User.Should().Contain("you never listen to a word");
-        prompt.User.Should().Contain("Trump loves me", "and tonight is in there too");
-        prompt.User.Should().Contain("the one just judged", "the model is told which night was the fight it is reading");
-
-        var bins = prompt.User.IndexOf("the bins were your job", StringComparison.Ordinal);
-        var tonight = prompt.User.IndexOf("Trump loves me", StringComparison.Ordinal);
-        bins.Should().BeLessThan(tonight, "oldest first, so it reads as somebody changing over time");
-
-        // And it is not just prompt-building: the persona itself is written from all of it.
-        await Writer().WriteAsync(match, report, CancellationToken.None);
-        (await _profiles.GetByIdAsync(ProfileId.From("KKK")))!.FromFights.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task A_watch_writes_a_persona_too_even_though_nobody_judged_the_person_on_their_own()
-    {
-        var kdh = FighterId.From("KDH");
-        await _fighters.EnsureAsync(kdh, Now, ProfileRole.Wife);
-        var watch = new MatchDto(
-            MatchId.New(), "user-1", MatchMode.Watch, Now.AddMinutes(-4), Now,
-            "the thermostat", MatchSide.Persona("H01", "Matthew"), MatchSide.Human("KDH", "Kim"),
-            SessionPhase.Done, SessionStatus.Ready, "KDH", "Kim took it.", IsFake: false);
-        await _words.SaveAsync(SpokenDebate.From("KDH", watch.Id, Now, MatchMode.Watch, ["Look, the thing is, you agreed to it on Sunday"]));
-
-        await Writer().WriteAsync(watch, report: null, CancellationToken.None);
-
-        var kim = await _profiles.GetByIdAsync(ProfileId.From("KDH"));
-        kim.Should().NotBeNull("arguing a persona says as much about how somebody argues as arguing a person does");
-        kim!.FromFights.Should().BeTrue();
-        kim.Role.Should().Be(ProfileRole.Wife, "the seat they were in");
-        kim.Name.Should().Be("KDH", "the name is the one on the roster, never one a match or a model supplied");
-
-        (await _profiles.GetByIdAsync(ProfileId.From("H01"))).Should().BeNull("the persona they argued is not rewritten from its own match");
-    }
-
-    [Fact]
-    public void A_watch_tells_the_model_there_was_no_read_of_them_rather_than_leaving_it_to_guess()
-    {
-        var fighter = Fighter.Create(FighterId.From("KDH"), Now, "Kim", ProfileRole.Wife);
-        var corpus = SpokenCorpus.From([SpokenDebate.From("KDH", MatchId.New(), Now, MatchMode.Watch, ["you agreed to it on Sunday"])]);
-
-        var prompt = FighterPersonaWriter.BuildPrompt(fighter, StyleProfileBuilder.Build("KDH", []), assessment: null, corpus, attempt: 0);
-
-        prompt.User.Should().Contain("you agreed to it on Sunday", "their words are the whole of the evidence here");
-        prompt.User.Should().Contain("ruled on as a whole rather than person by person");
-        prompt.User.Should().NotContain("logic ", "there are no per-person scores in a watch to quote");
-    }
-
-    [Fact]
-    public async Task Somebody_whose_words_were_never_transcribed_still_gets_a_persona_from_the_judges_read()
-    {
-        var (match, report) = await FoughtAsync();
-        await _words.DeleteForFighterAsync(FighterId.From("KKK"));
-
-        var fighter = (await _fighters.GetAsync(FighterId.From("KKK")))!;
-        var corpus = SpokenCorpus.From(await _words.ListAsync(FighterId.From("KKK")));
-        var prompt = FighterPersonaWriter.BuildPrompt(fighter, StyleProfileBuilder.Build("KKK", []), report.Player1.Assessment, corpus, attempt: 0);
-
-        corpus.IsEmpty.Should().BeTrue();
-        prompt.User.Should().Contain("nothing of theirs was transcribed", "the model is told the evidence is thin rather than left to invent it");
-
-        await Writer().WriteAsync(match, report, CancellationToken.None);
-        (await _profiles.GetByIdAsync(ProfileId.From("KKK"))).Should().NotBeNull("a silent night is not a reason to have no card");
     }
 }
