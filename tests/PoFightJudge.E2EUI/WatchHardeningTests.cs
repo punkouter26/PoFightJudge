@@ -24,6 +24,7 @@ public class WatchHardeningTests(AppFixture app)
         // Arguing with a wife leaves the husband's seat, which opens the argument: the very first turn is theirs.
         await ChooseAsync(page, side: 0, "Kimberly");
         await page.Locator("input[name=yourTag]").FillAsync("AB");
+        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 
         var turn = page.Locator("section.your-turn");
@@ -58,6 +59,7 @@ public class WatchHardeningTests(AppFixture app)
         await ChooseAsync(page, side: 1, "Kimberly");
         await ShootAsync(page, "watch-setup");
 
+        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
         await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 2", null, new() { Timeout = 90_000 });
         await ShootAsync(page, "watch-play");
@@ -83,6 +85,7 @@ public class WatchHardeningTests(AppFixture app)
         await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
         await ChooseAsync(page, side: 0, "Donald");
         await ChooseAsync(page, side: 1, "Hillary");
+        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 
         var verdict = page.Locator("section.verdict");

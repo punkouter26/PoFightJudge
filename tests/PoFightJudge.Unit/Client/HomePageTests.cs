@@ -26,6 +26,8 @@ public class HomePageTests : BunitContext
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout.
+        Services.AddScoped<Viewport>();
         Services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 9, 6, 20, 41, 0, TimeSpan.Zero)));
         JSInterop.Mode = JSRuntimeMode.Loose;
     }

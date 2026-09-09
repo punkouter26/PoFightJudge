@@ -31,6 +31,8 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
         Services.AddScoped<SfxInterop>();
         Services.AddSingleton(TimeProvider.System);
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout.
+        Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetFightersAsync(Arg.Any<CancellationToken>()).Returns(Roster());
     }
@@ -61,13 +63,55 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
         await cut.InvokeAsync(() => input.Instance.TagChanged.InvokeAsync(tag));
     }
 
-    private static IElement StartButton(IRenderedComponent<FightPage> cut) =>
-        cut.FindAll("button").Single(b => b.TextContent.Contains("Start the fight", StringComparison.Ordinal));
+    /// <summary>
+    /// The setup is three steps, so the button that starts a fight is on the third one and reaching it is part of
+    /// using the page. Radzen renders only the selected step, and refuses a step the page has said is not ready.
+    /// </summary>
+    private static async Task<IElement> StartButtonAsync(IRenderedComponent<FightPage> cut)
+    {
+        await GoToTheEndAsync(cut);
+        return cut.FindAll("button").Single(b => b.TextContent.Contains("Start the fight", StringComparison.Ordinal));
+    }
+
+    /// <summary>The topic is the second step's question, so getting to it is part of asking it.</summary>
+    private static async Task<IElement> TopicBoxAsync(IRenderedComponent<FightPage> cut)
+    {
+        if (cut.FindAll("input[name=topic]").SingleOrDefault() is null)
+        {
+            await cut.FindAll("button.rz-steps-next").Single().ClickAsync(new());
+        }
+
+        return cut.Find("input[name=topic]");
+    }
+
+    private static async Task GoToTheEndAsync(IRenderedComponent<FightPage> cut)
+    {
+        for (var step = 0; step < 2; step++)
+        {
+            var next = cut.FindAll("button.rz-steps-next").SingleOrDefault();
+            if (next is null || next.HasAttribute("disabled"))
+            {
+                return;
+            }
+
+            await next.ClickAsync(new());
+        }
+    }
+
+    /// <summary>Whether the page will let anyone past the first question. The disabled reason is stated beside it.</summary>
+    private static bool CanGoOn(IRenderedComponent<FightPage> cut) =>
+        cut.FindAll("button.rz-steps-next").SingleOrDefault() is { } next && !next.HasAttribute("disabled");
 
     [Fact]
-    public void The_referee_is_hosting_unless_somebody_picks_otherwise()
+    public async Task The_referee_is_hosting_unless_somebody_picks_otherwise()
     {
         var cut = RenderSetup();
+
+        // The host is picked on the second step, beside the topic — both are questions about the show rather than
+        // about who is in it.
+        await TypeTagAsync(cut, second: false, "AB");
+        await TypeTagAsync(cut, second: true, "CD");
+        await cut.FindAll("button.rz-steps-next").Single().ClickAsync(new());
 
         cut.FindComponent<HostPersonaPicker>().Instance.Persona.Should().Be(HostPersonaId.Referee);
         cut.Markup.Should().Contain("The Referee").And.Contain("Roastmaster", "every host is on offer");
@@ -79,7 +123,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
         var cut = RenderSetup();
 
         cut.Markup.Should().Contain("Both fighters need a tag.");
-        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+        CanGoOn(cut).Should().BeFalse("the first question is not answered, so there is nothing past it");
     }
 
     [Fact]
@@ -91,7 +135,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
         await TypeTagAsync(cut, second: true, "AB");
 
         cut.Markup.Should().Contain("Two people cannot share one tag.");
-        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+        CanGoOn(cut).Should().BeFalse("the first question is not answered, so there is nothing past it");
     }
 
     [Fact]
@@ -120,9 +164,9 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
 
         await TypeTagAsync(cut, second: false, "AB");
         await TypeTagAsync(cut, second: true, "CD");
-        await cut.Find("input[name=topic]").InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "who does the dishes" });
+        await (await TopicBoxAsync(cut)).InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "who does the dishes" });
         await cut.InvokeAsync(() => cut.FindComponent<HostPersonaPicker>().Instance.PersonaChanged.InvokeAsync(HostPersonaId.Roastmaster));
-        await StartButton(cut).ClickAsync(new());
+        await (await StartButtonAsync(cut)).ClickAsync(new());
 
         await _api.Received(1).StartFightAsync(
             Arg.Is<CreateFightRequest>(r => r.Player1Tag == "AB" && r.Player2Tag == "CD"
@@ -149,7 +193,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
         await TypeTagAsync(cut, second: true, "LLL");
         await cut.InvokeAsync(() => seats[0].Instance.ValueChanged.InvokeAsync(ProfileRole.Wife));
         await cut.InvokeAsync(() => seats[1].Instance.ValueChanged.InvokeAsync(ProfileRole.Husband));
-        await StartButton(cut).ClickAsync(new());
+        await (await StartButtonAsync(cut)).ClickAsync(new());
 
         await _api.Received(1).StartFightAsync(
             Arg.Is<CreateFightRequest>(r => r.Player1Role == ProfileRole.Wife && r.Player2Role == ProfileRole.Husband),
@@ -165,7 +209,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
 
         await TypeTagAsync(cut, second: false, "AB");
         await TypeTagAsync(cut, second: true, "CD");
-        await StartButton(cut).ClickAsync(new());
+        await (await StartButtonAsync(cut)).ClickAsync(new());
 
         await _api.Received(1).StartFightAsync(Arg.Is<CreateFightRequest>(r => r.Topic == null), Arg.Any<CancellationToken>());
     }
@@ -181,18 +225,23 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
 
         await TypeTagAsync(cut, second: false, "AB");
         await TypeTagAsync(cut, second: true, "CD");
-        await StartButton(cut).ClickAsync(new());
+        await (await StartButtonAsync(cut)).ClickAsync(new());
 
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("That host has left the building."));
         nav.Uri.Should().Be(startingUri);
-        StartButton(cut).HasAttribute("disabled").Should().BeFalse("it can be tried again");
+        (await StartButtonAsync(cut)).HasAttribute("disabled").Should().BeFalse("it can be tried again");
     }
 
     [Fact]
-    public void The_microphone_is_not_opened_before_anyone_presses_start()
+    public async Task The_microphone_is_not_opened_before_anyone_presses_start()
     {
         var cut = RenderSetup();
 
+        await TypeTagAsync(cut, second: false, "AB");
+        await TypeTagAsync(cut, second: true, "CD");
+
+        // The promise is on the last step, beside the sound check and the button it is about.
+        await GoToTheEndAsync(cut);
         cut.Markup.Should().Contain("only opens once you press start");
         JSInterop.Invocations.Should().NotContain(i => i.Identifier.StartsWith("PoLive", StringComparison.Ordinal));
     }
@@ -202,7 +251,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
     /// tags again, which is the tax on the same two people arguing most nights.
     /// </summary>
     [Fact]
-    public void The_setup_opens_on_the_card_that_was_played_last()
+    public async Task The_setup_opens_on_the_card_that_was_played_last()
     {
         var storage = Services.GetRequiredService<ILocalStorageService>();
         storage.GetItemAsync<FightCard>(SetupMemory.FightKey, Arg.Any<CancellationToken>())
@@ -210,8 +259,12 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
 
         var cut = RenderSetup();
 
-        cut.WaitForAssertion(() => StartButton(cut).HasAttribute("disabled").Should().BeFalse("both tags came back, so it can start"));
-        cut.Markup.Should().Contain("the bins");
+        // Both tags came back, so the first question is already answered and the rest of the setup is reachable.
+        await cut.WaitForAssertionAsync(() => CanGoOn(cut).Should().BeTrue("both tags came back, so the setup can go on"));
+        await cut.FindAll("button.rz-steps-next").Single().ClickAsync(new());
+        cut.Markup.Should().Contain("the bins", "and so is the topic they were arguing about");
+
+        (await StartButtonAsync(cut)).HasAttribute("disabled").Should().BeFalse("nothing is left to answer");
     }
 
     [Fact]
@@ -224,7 +277,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
         await TypeTagAsync(cut, second: false, "AB");
         await TypeTagAsync(cut, second: true, "CD");
 
-        await StartButton(cut).ClickAsync(new());
+        await (await StartButtonAsync(cut)).ClickAsync(new());
 
         await storage.Received(1).SetItemAsync(
             SetupMemory.FightKey,

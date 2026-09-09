@@ -19,6 +19,7 @@ public class WatchFlowTests(AppFixture app)
         await ChooseAsync(page, side: 0, "Matthew");
         await ChooseAsync(page, side: 1, "Kimberly");
 
+        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 
         // Six lines, spoken one after another, then the judge.
@@ -47,6 +48,7 @@ public class WatchFlowTests(AppFixture app)
         await ChooseAsync(page, side: 0, "Matthew");
         await page.Locator("input[name=yourTag]").FillAsync("KD");
 
+        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 
         var turn = page.Locator("section.your-turn");

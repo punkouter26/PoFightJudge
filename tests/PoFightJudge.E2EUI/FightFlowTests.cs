@@ -27,9 +27,13 @@ public class FightFlowTests(AppFixture app)
         await TagBox(page, "player1Tag").WaitForAsync(new() { Timeout = 30_000 });
         await TypeTagAsync(page, "player1Tag", "AL");
         await TypeTagAsync(page, "player2Tag", "SM");
-        await page.Locator("input[name=topic]").FillAsync("who does the dishes");
         await ShootAsync(page, "fight-setup");
 
+        // The topic is the second of the three questions the setup asks.
+        await page.Locator("button.rz-steps-next").ClickAsync();
+        await page.Locator("input[name=topic]").FillAsync("who does the dishes");
+
+        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();
 
         // The fight page owns the microphone from here; the fake device plays the fixture into it.
@@ -89,6 +93,7 @@ public class FightFlowTests(AppFixture app)
         await TagBox(page, "player1Tag").WaitForAsync(new() { Timeout = 30_000 });
         await TypeTagAsync(page, "player1Tag", "ZA");
         await TypeTagAsync(page, "player2Tag", "ZB");
+        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();
 
         await page.Locator(".meter--on").WaitForAsync(new() { Timeout = 60_000 });

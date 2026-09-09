@@ -103,6 +103,6 @@
 - [x] T73 Nothing jumps after first paint: the banners hold their slot
 - [x] T74 A grid a phone can read: cards below 40rem, columns above it
 - [x] T75 A live fight that renders what changed, not the page
-- [ ] T76 Setup as three steps, so each one is a screen
+- [x] T76 Setup as three steps, so each one is a screen
 - [ ] T77 Radzen does the layout: a sidebar on mobile, stacks instead of hand-rolled grid
 - [ ] T78 Every route measured at both viewports, on every run

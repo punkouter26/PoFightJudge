@@ -25,6 +25,18 @@ dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
 - Report faithfully. A failing test is reported as failing, with the output.
 - Never invent an API's shape. Check the documentation or ask.
 
+## Session rules
+
+- **master only.** All work goes on `master`. Another branch happens only when it is asked for by name.
+- **Restart and check.** After a code change, restart the app and confirm it came back up before saying it works.
+- **Read `DOCS/` first.** The summary of what this project is and where it got to lives there.
+- **No `dotnet user-secrets`.** Local settings go in `appsettings*.json`; anything secret goes in Azure Key Vault.
+- **Never push.** `git push` happens only when the words **`git sync`** are typed. On a `git sync`: commit with a
+  short, plain, American-sounding subject that reads like a person wrote it, then push.
+- **TL;DR.** Any answer over 100 words ends with a 20-word summary.
+- **Run the tests the change touched**, not the whole suite.
+- **Do not hand over commands to type.** If it can be run here, run it.
+
 ## Ask before
 
 Any `az` write (Key Vault, app registration, deployment, role assignment) · creating the GitHub repository or its

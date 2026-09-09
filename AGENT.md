@@ -110,3 +110,15 @@ The four test tiers spend nothing: every AI seam has a deterministic stand-in, a
 skip unless a variable says otherwise — `GEMINI_API_KEY` for the live smoke, `POFIGHTJUDGE_E2E_REAL=1` for a
 browser fight against the real service, `POFIGHTJUDGE_SMOKE_URL` for the deployed-site check. Those are worth
 running when the wire format or a schema changes, and not otherwise.
+
+## Session rules
+
+- **master only.** All work goes on `master`. Another branch happens only when it is asked for by name.
+- **Restart and check.** After a code change, restart the app and confirm it came back up before saying it works.
+- **Read `DOCS/` first.** The summary of what this project is and where it got to lives there.
+- **No `dotnet user-secrets`.** Local settings go in `appsettings*.json`; anything secret goes in Azure Key Vault.
+- **Never push.** `git push` happens only when the words **`git sync`** are typed. On a `git sync`: commit with a
+  short, plain, American-sounding subject that reads like a person wrote it, then push.
+- **TL;DR.** Any answer over 100 words ends with a 20-word summary.
+- **Run the tests the change touched**, not the whole suite.
+- **Do not hand over commands to type.** If it can be run here, run it.

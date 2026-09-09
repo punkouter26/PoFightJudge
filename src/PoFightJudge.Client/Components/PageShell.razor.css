@@ -52,6 +52,16 @@ h1 {
   }
 
   .head {
-    margin-bottom: var(--po-space-4);
+    margin-bottom: var(--po-space-3);
+  }
+
+  h1 {
+    font-size: var(--po-text-2xl);
+  }
+
+  /* The lead says what the page is for, at 96 px — an eighth of a phone screen, above the fold, on every page.
+     The eyebrow and the title say the same thing in the room the phone has, and what is under them is the page. */
+  .lead {
+    display: none;
   }
 }

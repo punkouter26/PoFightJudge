@@ -51,3 +51,14 @@
   .tags { grid-template-columns: 1fr 1fr; }
   .preview { grid-template-columns: 1fr auto 1fr; }
 }
+
+/* Side by side on a phone too. Stacked, the two cards and the "vs" between them were 329 px of a screen whose
+   whole job is one question. */
+@media (max-width: 40rem) {
+  .preview {
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--po-space-2);
+  }
+
+  .versus { font-size: var(--po-text-lg); }
+}

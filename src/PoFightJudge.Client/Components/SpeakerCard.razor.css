@@ -62,3 +62,29 @@ p {
   gap: var(--po-space-2);
   font-size: var(--po-text-sm);
 }
+
+/* On a phone the card stacks and drops the blurb: the two of them sit side by side on the setup screen, where the
+   question is which two, not what either of them is like. */
+@media (max-width: 40rem) {
+  .speaker {
+    grid-template-columns: 1fr;
+    grid-template-areas: "face" "who";
+    justify-items: center;
+    gap: var(--po-space-1);
+    text-align: center;
+  }
+
+  .role { display: none; }
+
+  ::deep .face,
+  .face {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  h2 { font-size: var(--po-text-md); }
+
+  p { display: none; }
+
+  .meta { justify-content: center; font-size: var(--po-text-xs); }
+}

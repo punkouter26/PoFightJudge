@@ -29,61 +29,70 @@
         }
         else
         {
-            <div class="setup">
-                <section class="sides">
-                    @if (IsOnePlayer)
-                    {
-                        @* One choice: who you are arguing with. Which seat that leaves you is a consequence of
-                           their role, not a second question. *@
-                        <ProfilePicker Cast="@_cast" AnyRole="true" AllowHuman="false" Caption="Who are you arguing with?"
-                                       Side="@_opponent" SideChanged="@OpponentChosenAsync" />
-                        <div class="you po-card po-card--quiet">
-                            <span class="po-eyebrow">You</span>
-                            <span class="seat po-display">@YourSeat</span>
-                            <RadzenFormField Text="Your tag" Variant="Variant.Outlined">
+            @* Two steps rather than one column: the cast, then what they argue about. The pickers, two speaker
+               cards and a topic field came to more than a phone screen, and the button that starts it was under
+               the fold. *@
+            <RadzenSteps @bind-SelectedIndex="_step" ShowStepsButtons="true" class="wizard" NextText="Next" PreviousText="Back">
+                <Steps>
+                    <RadzenStepsItem Text="Cast">
+                        <section class="sides">
+                            @if (IsOnePlayer)
+                            {
+                                @* One choice: who you are arguing with. Which seat that leaves you is a consequence of
+                                   their role, not a second question. *@
+                                <ProfilePicker Cast="@_cast" AnyRole="true" AllowHuman="false" Caption="Who are you arguing with?"
+                                               Side="@_opponent" SideChanged="@OpponentChosenAsync" />
+                                <div class="you po-card po-card--quiet">
+                                    <span class="po-eyebrow">You</span>
+                                    <span class="seat po-display">@YourSeat</span>
+                                    <RadzenFormField Text="Your tag" Variant="Variant.Outlined">
+                                        <ChildContent>
+                                            @* Published on every keystroke, so Start answers the tag as it is typed. *@
+                                            <RadzenTextBox Value="@_tag" ValueChanged="@TagChangedAsync"
+                                                           @oninput="@(e => TagChangedAsync(e.Value?.ToString() ?? string.Empty))"
+                                                           Name="yourTag" MaxLength="@Initials.MaxLength" Placeholder="AB"
+                                                           aria-label="Your fighter tag" />
+                                        </ChildContent>
+                                        <Helper><span class="po-muted">1–3 letters or digits. The same tag you argue under, so this counts towards your record.</span></Helper>
+                                    </RadzenFormField>
+                                </div>
+                            }
+                            else
+                            {
+                                <ProfilePicker Cast="@_cast" IsWife="false" AllowHuman="false" Excluded="@_wife?.Id" Side="@_husband" SideChanged="@(s => _husband = s)" />
+                                <ProfilePicker Cast="@_cast" IsWife="true" AllowHuman="false" Excluded="@_husband?.Id" Side="@_wife" SideChanged="@(s => _wife = s)" />
+                            }
+                        </section>
+
+                        <section class="preview" aria-label="The matchup">
+                            <SpeakerCard Side="@_husband" Profile="@ProfileFor(_husband)" IsWife="false" />
+                            <div class="versus po-display" aria-hidden="true">vs</div>
+                            <SpeakerCard Side="@_wife" Profile="@ProfileFor(_wife)" IsWife="true" />
+                        </section>
+
+                        @if (Problem is { Length: > 0 })
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
+                        }
+                    </RadzenStepsItem>
+
+                    <RadzenStepsItem Text="About" Disabled="@(Problem is not null)">
+                        <section class="topic">
+                            <RadzenFormField Text="What is the fight about?" Variant="Variant.Outlined">
                                 <ChildContent>
-                                    @* Published on every keystroke, so Start answers the tag as it is typed. *@
-                                    <RadzenTextBox Value="@_tag" ValueChanged="@TagChangedAsync"
-                                                   @oninput="@(e => TagChangedAsync(e.Value?.ToString() ?? string.Empty))"
-                                                   Name="yourTag" MaxLength="@Initials.MaxLength" Placeholder="AB"
-                                                   aria-label="Your fighter tag" />
+                                    <RadzenTextBox @bind-Value="_topic" Name="topic" MaxLength="200" Placeholder="the thermostat" />
                                 </ChildContent>
-                                <Helper><span class="po-muted">1–3 letters or digits. The same tag you argue under, so this counts towards your record.</span></Helper>
+                                <Helper><span class="po-muted">Leave it blank and they will find something.</span></Helper>
                             </RadzenFormField>
+                            <RadzenButton Text="Random" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@PickRandomTopic" />
+                        </section>
+
+                        <div class="go">
+                            <RadzenButton Text="Start the argument" Icon="theaters" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large" Disabled="@(Problem is not null)" Click="@Start" />
                         </div>
-                    }
-                    else
-                    {
-                        <ProfilePicker Cast="@_cast" IsWife="false" AllowHuman="false" Excluded="@_wife?.Id" Side="@_husband" SideChanged="@(s => _husband = s)" />
-                        <ProfilePicker Cast="@_cast" IsWife="true" AllowHuman="false" Excluded="@_husband?.Id" Side="@_wife" SideChanged="@(s => _wife = s)" />
-                    }
-                </section>
-
-                <section class="preview" aria-label="The matchup">
-                    <SpeakerCard Side="@_husband" Profile="@ProfileFor(_husband)" IsWife="false" />
-                    <div class="versus po-display" aria-hidden="true">vs</div>
-                    <SpeakerCard Side="@_wife" Profile="@ProfileFor(_wife)" IsWife="true" />
-                </section>
-
-                <section class="topic">
-                    <RadzenFormField Text="What is the fight about?" Variant="Variant.Outlined">
-                        <ChildContent>
-                            <RadzenTextBox @bind-Value="_topic" Name="topic" MaxLength="200" Placeholder="the thermostat" />
-                        </ChildContent>
-                        <Helper><span class="po-muted">Leave it blank and they will find something.</span></Helper>
-                    </RadzenFormField>
-                    <RadzenButton Text="Random" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@PickRandomTopic" />
-                </section>
-
-                @if (Problem is { Length: > 0 })
-                {
-                    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
-                }
-
-                <div class="go">
-                    <RadzenButton Text="Start the argument" Icon="theaters" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large" Disabled="@(Problem is not null)" Click="@Start" />
-                </div>
-            </div>
+                    </RadzenStepsItem>
+                </Steps>
+            </RadzenSteps>
         }
     </ChildContent>
 </PageShell>
@@ -107,6 +116,9 @@
     private bool _loading = true;
     private string? _loadError;
     private bool? _channel;
+
+    /// <summary>Which of the two questions is on screen.</summary>
+    private int _step;
 
     /// <summary>
     /// Which channel this is. One screen serves both, because they are the same argument with the same cast and
@@ -198,6 +210,7 @@
             _wife = null;
             _opponent = null;
             _tag = string.Empty;
+            _step = 0;
         }
 
         _channel = IsOnePlayer;

@@ -6,77 +6,88 @@
 
 <PageTitle>2P · PoFightJudge</PageTitle>
 
-<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Channel 2P" Title="2P"
-           Lead="The two of you, one microphone, and a judge who hosts the argument, questions you both and rules at the end. Your initials are your record: whoever has argued here before is remembered by them.">
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Channel 2P" Title="2P" Lead="@Lead">
     <ChildContent>
-        <div class="setup">
-            <section class="tags">
-                <div class="fighter-setup">
-                    <FighterTagInput Label="Fighter one" Name="player1Tag" Tag="@_one" TagChanged="@OnOneChanged" Known="@_known" Excluded="@_two" />
-                    @* 2P has no husband or wife. The seat is for afterwards: what they say here becomes a persona that
-                       CPU and 1P can put in an argument, and those channels pit a husband against a wife. *@
-                    <div class="seat">
-                        <span class="po-eyebrow">Argues as</span>
-                        <RadzenSelectBar @bind-Value="_oneRole" TValue="ProfileRole" Name="player1Role" Size="ButtonSize.Small" aria-label="Fighter one argues as">
-                            <Items>
-                                <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
-                                <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
-                            </Items>
-                        </RadzenSelectBar>
+        @* Three steps rather than one column. The whole thing was 1755 px on a phone: the sound check sat below the
+           fold, under the button it is supposed to come before, which is how a fight dies on a muted headset.
+           RadzenSteps keeps each question to a screen and keeps them in the order they are asked. *@
+        <RadzenSteps @bind-SelectedIndex="_step" ShowStepsButtons="true" class="wizard"
+                     NextText="Next" PreviousText="Back">
+            <Steps>
+                <RadzenStepsItem Text="Who">
+                    <section class="tags">
+                        <div class="fighter-setup">
+                            <FighterTagInput Label="Fighter one" Name="player1Tag" Tag="@_one" TagChanged="@OnOneChanged" Known="@_known" Excluded="@_two" />
+                            @* 2P has no husband or wife. The seat is for afterwards: what they say here becomes a persona that
+                               CPU and 1P can put in an argument, and those channels pit a husband against a wife. *@
+                            <div class="seat">
+                                <span class="po-eyebrow">Argues as</span>
+                                <RadzenSelectBar @bind-Value="_oneRole" TValue="ProfileRole" Name="player1Role" Size="ButtonSize.Small" aria-label="Fighter one argues as">
+                                    <Items>
+                                        <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
+                                        <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
+                                    </Items>
+                                </RadzenSelectBar>
+                            </div>
+                        </div>
+                        <div class="fighter-setup">
+                            <FighterTagInput Label="Fighter two" Name="player2Tag" Tag="@_two" TagChanged="@OnTwoChanged" Known="@_known" Excluded="@_one" />
+                            <div class="seat">
+                                <span class="po-eyebrow">Argues as</span>
+                                <RadzenSelectBar @bind-Value="_twoRole" TValue="ProfileRole" Name="player2Role" Size="ButtonSize.Small" aria-label="Fighter two argues as">
+                                    <Items>
+                                        <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
+                                        <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
+                                    </Items>
+                                </RadzenSelectBar>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="preview" aria-label="Who is arguing">
+                        <FighterCard Tag="@_one" Fighter="@Known(_one)" />
+                        <div class="versus po-display" aria-hidden="true">vs</div>
+                        <FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" />
+                    </section>
+
+                    @if (Problem is { Length: > 0 })
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
+                    }
+                </RadzenStepsItem>
+
+                <RadzenStepsItem Text="About" Disabled="@(Problem is not null)">
+                    <section class="topic">
+                        <RadzenFormField Text="What are you arguing about?" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <RadzenTextBox Value="@_topic" @oninput="@OnTopicTyped" Name="topic" MaxLength="200" Placeholder="who does the dishes" />
+                            </ChildContent>
+                            <Helper><span class="po-muted">Leave it blank and the host will ask you both at the top of the show.</span></Helper>
+                        </RadzenFormField>
+                    </section>
+
+                    <HostPersonaPicker Persona="@_persona" PersonaChanged="@(p => _persona = p)" />
+                </RadzenStepsItem>
+
+                <RadzenStepsItem Text="Sound" Disabled="@(Problem is not null)">
+                    @* Before the bell, not after it: a fight that dies on a muted headset is three minutes nobody gets back. *@
+                    <MicCheck DeviceId="@_device" DeviceIdChanged="@(d => _device = d)" />
+
+                    @if (_error is not null)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@_error</RadzenAlert>
+                    }
+
+                    <div class="go">
+                        <RadzenButton Text="@(_starting ? "Starting…" : "Start the fight")" Icon="mic"
+                                      ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
+                                      Disabled="@(Problem is not null || _starting)" Click="@StartAsync" />
                     </div>
-                </div>
-                <div class="fighter-setup">
-                    <FighterTagInput Label="Fighter two" Name="player2Tag" Tag="@_two" TagChanged="@OnTwoChanged" Known="@_known" Excluded="@_one" />
-                    <div class="seat">
-                        <span class="po-eyebrow">Argues as</span>
-                        <RadzenSelectBar @bind-Value="_twoRole" TValue="ProfileRole" Name="player2Role" Size="ButtonSize.Small" aria-label="Fighter two argues as">
-                            <Items>
-                                <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
-                                <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
-                            </Items>
-                        </RadzenSelectBar>
-                    </div>
-                </div>
-            </section>
 
-            <section class="preview" aria-label="Who is arguing">
-                <FighterCard Tag="@_one" Fighter="@Known(_one)" />
-                <div class="versus po-display" aria-hidden="true">vs</div>
-                <FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" />
-            </section>
-
-            <section class="topic">
-                <RadzenFormField Text="What are you arguing about?" Variant="Variant.Outlined">
-                    <ChildContent>
-                        <RadzenTextBox Value="@_topic" @oninput="@OnTopicTyped" Name="topic" MaxLength="200" Placeholder="who does the dishes" />
-                    </ChildContent>
-                    <Helper><span class="po-muted">Leave it blank and the host will ask you both at the top of the show.</span></Helper>
-                </RadzenFormField>
-            </section>
-
-            <HostPersonaPicker Persona="@_persona" PersonaChanged="@(p => _persona = p)" />
-
-            @* Before the bell, not after it: a fight that dies on a muted headset is three minutes nobody gets back. *@
-            <MicCheck DeviceId="@_device" DeviceIdChanged="@(d => _device = d)" />
-
-            @if (Problem is { Length: > 0 })
-            {
-                <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
-            }
-
-            @if (_error is not null)
-            {
-                <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@_error</RadzenAlert>
-            }
-
-            <div class="go">
-                <RadzenButton Text="@(_starting ? "Starting…" : "Start the fight")" Icon="mic"
-                              ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
-                              Disabled="@(Problem is not null || _starting)" Click="@StartAsync" />
-            </div>
-
-            <p class="po-muted note">The microphone only opens once you press start, and it closes when the fight ends. Afterwards each of you becomes a persona in the cast, read from what you said, for the CPU and 1P channels.</p>
-        </div>
+                    <p class="po-muted note">The microphone only opens once you press start, and it closes when the fight ends. Afterwards each of you becomes a persona in the cast, read from what you said, for the CPU and 1P channels.</p>
+                </RadzenStepsItem>
+            </Steps>
+        </RadzenSteps>
     </ChildContent>
 </PageShell>
 
@@ -93,6 +104,11 @@
     private string? _device;
     private bool _starting;
     private string? _error;
+
+    /// <summary>Which of the three questions is on screen.</summary>
+    private int _step;
+
+    private const string Lead = "The two of you, one microphone, and a judge who hosts the argument, questions you both and rules at the end. Your initials are your record: whoever has argued here before is remembered by them.";
 
     /// <summary>Why the fight cannot start yet, or null when it can.</summary>
     private string? Problem =>

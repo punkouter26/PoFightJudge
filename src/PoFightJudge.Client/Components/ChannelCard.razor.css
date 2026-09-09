@@ -43,6 +43,8 @@ p {
   max-width: 40ch;
 }
 
+.short { display: none; }
+
 .channel ::deep .cta {
   align-self: flex-start;
   color: var(--po-fg-invert);
@@ -52,17 +54,48 @@ p {
 .channel.p2 ::deep .cta { background: var(--po-p2); }
 .channel.accent ::deep .cta { background: var(--po-accent); color: var(--po-accent-fg); }
 
+/* On a phone the card is a row rather than a poster: the mark, the name, one line about it, and the button that
+   opens it. Three of these and the two lists below them then fit on one screen. */
 @media (max-width: 40rem) {
   .channel {
-    min-height: 170px;
-    padding: var(--po-space-4);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "mark title cta" "mark blurb cta";
+    align-items: center;
+    justify-content: unset;
+    gap: var(--po-space-1) var(--po-space-3);
+    min-height: 0;
+    padding: var(--po-space-3) var(--po-space-4);
+  }
+
+  .badge { display: none; }
+
+  .number {
+    position: static;
+    grid-area: mark;
+    z-index: auto;
+    font-size: var(--po-text-2xl);
+    opacity: 1;
   }
 
   h2 {
-    font-size: var(--po-text-3xl);
+    grid-area: title;
+    font-size: var(--po-text-xl);
+    align-self: end;
+  }
+
+  .full { display: none; }
+
+  .short {
+    display: block;
+    grid-area: blurb;
+    align-self: start;
+    font-size: var(--po-text-xs);
+    max-width: none;
   }
 
   .channel ::deep .cta {
-    align-self: stretch;
+    grid-area: cta;
+    align-self: center;
   }
 }

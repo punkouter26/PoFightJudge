@@ -45,3 +45,30 @@
   align-items: center;
   font-size: var(--po-text-sm);
 }
+
+/* On a phone the card is compact and the two of them sit side by side, which is what "vs" means anyway. 139 px
+   each stacked was 329 px of the setup screen spent on two names. */
+@media (max-width: 40rem) {
+  .fighter {
+    grid-template-columns: 1fr;
+    grid-template-areas: "badge" "who";
+    justify-items: center;
+    gap: var(--po-space-1);
+    padding: var(--po-space-3);
+    text-align: center;
+  }
+
+  .corner { display: none; }
+
+  .badge {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-inline: auto;
+    font-size: var(--po-text-xl);
+  }
+
+  .who h2 { font-size: var(--po-text-md); }
+
+  .who p,
+  .meta .po-muted { display: none; }
+}

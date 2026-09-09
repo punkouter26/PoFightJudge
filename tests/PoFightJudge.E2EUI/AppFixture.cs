@@ -132,6 +132,26 @@ public sealed class AppFixture : IAsyncLifetime
         return (context, page, errors);
     }
 
+    /// <summary>
+    /// Walks a setup wizard to its last step. Both setup screens are a RadzenSteps since T76, so the button that
+    /// starts an argument is on the last one; Radzen refuses a step the page has said is not ready, and the loop
+    /// stops there rather than pretending it got through.
+    /// </summary>
+    public static async Task ToTheLastStepAsync(IPage page)
+    {
+        for (var step = 0; step < 4; step++)
+        {
+            var next = page.Locator("button.rz-steps-next");
+            if (await next.CountAsync() == 0 || !await next.IsEnabledAsync())
+            {
+                return;
+            }
+
+            await next.ClickAsync();
+            await page.WaitForTimeoutAsync(120);
+        }
+    }
+
     /// <summary>The layout's top bar is rendered by Blazor, so its presence is the app having booted.</summary>
     public static async Task WaitForAppAsync(IPage page, IReadOnlyCollection<string> errors)
     {

@@ -53,3 +53,19 @@
   font-size: var(--po-text-xl);
   color: var(--po-accent-text);
 }
+
+/* Side by side on a phone too. Stacked, the two cards and the "vs" between them were 329 px of a screen whose
+   whole job is one question. */
+@media (max-width: 40rem) {
+  .preview {
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--po-space-2);
+  }
+
+  .versus { font-size: var(--po-text-lg); }
+
+  /* The helper under the tag box is three lines about a two-character field. The placeholder says the same. */
+  .you ::deep .rz-form-field-helper { display: none; }
+
+  .you .seat { font-size: var(--po-text-md); }
+}

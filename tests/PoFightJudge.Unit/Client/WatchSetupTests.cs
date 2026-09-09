@@ -28,6 +28,8 @@ public class WatchSetupTests : BunitContext
         Services.AddSingleton(Substitute.For<ILocalStorageService>());
         Services.AddScoped<SetupMemory>();
         Services.AddSingleton(_api);
+        // Under bunit JS is loose, so the viewport reports the wide layout.
+        Services.AddScoped<Viewport>();
         // Program.cs loads the gate before the first render; under bunit the component's own fallback load does it.
         Services.AddSingleton<FeatureGate>();
         Services.AddSingleton(_simulation);
@@ -135,10 +137,11 @@ public class WatchSetupTests : BunitContext
 
         await ChooseOpponentAsync(cut, "MAH");
         cut.Markup.Should().Contain("Say who you are");
-        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+        CanGoOn(cut).Should().BeFalse("the cast is not settled, so there is nothing past it");
 
         await TypeTagAsync(cut, "KD");
-        StartButton(cut).HasAttribute("disabled").Should().BeFalse();
+        CanGoOn(cut).Should().BeTrue();
+        (await StartButtonAsync(cut)).HasAttribute("disabled").Should().BeFalse();
     }
 
     [Fact]
@@ -157,13 +160,14 @@ public class WatchSetupTests : BunitContext
         var cut = RenderSetup();
 
         cut.Markup.Should().Contain("Pick both sides.");
-        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+        CanGoOn(cut).Should().BeFalse();
 
         await ChooseAsync(cut, wife: false, MatchSide.Persona("MAH", "Matthew"));
-        StartButton(cut).HasAttribute("disabled").Should().BeTrue("one side is still empty");
+        CanGoOn(cut).Should().BeFalse("one side is still empty");
 
         await ChooseAsync(cut, wife: true, MatchSide.Persona("KSH", "Kimberly"));
-        StartButton(cut).HasAttribute("disabled").Should().BeFalse();
+        CanGoOn(cut).Should().BeTrue();
+        (await StartButtonAsync(cut)).HasAttribute("disabled").Should().BeFalse();
     }
 
     [Fact]
@@ -175,7 +179,7 @@ public class WatchSetupTests : BunitContext
         await ChooseAsync(cut, wife: true, MatchSide.Persona("MAH", "Matthew"));
 
         cut.Markup.Should().Contain("Both sides cannot be the same.");
-        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+        CanGoOn(cut).Should().BeFalse();
     }
 
     [Fact]
@@ -186,8 +190,8 @@ public class WatchSetupTests : BunitContext
 
         await ChooseOpponentAsync(cut, "MAH");
         await TypeTagAsync(cut, "KD");
-        await cut.Find("input[name=topic]").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "the thermostat" });
-        await StartButton(cut).ClickAsync(new());
+        await (await TopicBoxAsync(cut)).ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "the thermostat" });
+        await (await StartButtonAsync(cut)).ClickAsync(new());
 
         _simulation.IsReady.Should().BeTrue();
         _simulation.Husband!.Id.Should().Be("MAH", "the profile keeps its own seat");
@@ -219,6 +223,32 @@ public class WatchSetupTests : BunitContext
     private static async Task TypeTagAsync(IRenderedComponent<WatchPage> cut, string tag) =>
         await cut.Find("input[name=yourTag]").InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = tag });
 
-    private static IElement StartButton(IRenderedComponent<WatchPage> cut) =>
-        cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal));
+    /// <summary>
+    /// The setup is two steps — who, then what about — so the button that starts an argument is on the second one
+    /// and reaching it is part of using the page. Radzen refuses a step the page has said is not ready.
+    /// </summary>
+    private static async Task<IElement> StartButtonAsync(IRenderedComponent<WatchPage> cut)
+    {
+        if (cut.FindAll("button.rz-steps-next").SingleOrDefault() is { } next && !next.HasAttribute("disabled"))
+        {
+            await next.ClickAsync(new());
+        }
+
+        return cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal));
+    }
+
+    /// <summary>Whether the page will let anyone past the cast. The reason it will not is stated beside it.</summary>
+    private static bool CanGoOn(IRenderedComponent<WatchPage> cut) =>
+        cut.FindAll("button.rz-steps-next").SingleOrDefault() is { } next && !next.HasAttribute("disabled");
+
+    /// <summary>The topic is the second step's question, so getting to it is part of asking it.</summary>
+    private static async Task<IElement> TopicBoxAsync(IRenderedComponent<WatchPage> cut)
+    {
+        if (cut.FindAll("input[name=topic]").SingleOrDefault() is null)
+        {
+            await cut.FindAll("button.rz-steps-next").Single().ClickAsync(new());
+        }
+
+        return cut.Find("input[name=topic]");
+    }
 }
