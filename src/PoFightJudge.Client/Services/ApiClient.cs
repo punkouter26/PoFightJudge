@@ -2,6 +2,9 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -49,8 +52,18 @@ public interface IApiClient
     /// <summary>The next line of a WATCH match, for the persona whose turn it is.</summary>
     Task<GenerateRoundResponse> GenerateRoundAsync(GenerateRoundRequest request, CancellationToken ct = default);
 
+    /// <summary>
+    /// The same line, as it is written: fragments while the model is still generating, then one closing part
+    /// carrying the finished line. For a line somebody is waiting on — the speculative fetch asks for a whole one,
+    /// because nothing is rendering it while it arrives.
+    /// </summary>
+    IAsyncEnumerable<RoundStreamPart> StreamRoundAsync(GenerateRoundRequest request, CancellationToken ct = default);
+
     /// <summary>Speaks a line that has already been generated.</summary>
     Task<TtsAudioDto> RoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default);
+
+    /// <summary>The same audio, clause by clause, so playback starts on the first phrase instead of the whole line.</summary>
+    IAsyncEnumerable<RoundAudioChunkDto> StreamRoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default);
 
     /// <summary>Ends the match: the judge rules and the whole thing is recorded.</summary>
     Task<VerdictResponse> VerdictAsync(VerdictRequest request, CancellationToken ct = default);
@@ -227,6 +240,9 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
     private readonly HttpClient http = clients.CreateClient(HttpClients.Api);
     private readonly HttpClient anonymous = clients.CreateClient(HttpClients.Anonymous);
 
+    /// <summary>Web defaults, so the NDJSON streams read the same camelCase the endpoints write.</summary>
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task<AuthMeDto> GetMeAsync(CancellationToken ct = default) =>
         await http.GetFromJsonAsync<AuthMeDto>(ApiRoutes.Auth.Me, ct) ?? AuthMeDto.Anonymous;
 
@@ -244,7 +260,7 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
     }
 
     public async Task<FeatureFlagsDto> GetFeaturesAsync(CancellationToken ct = default) =>
-        await anonymous.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url, ct) ?? new FeatureFlagsDto(false, false, false, false);
+        await anonymous.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url, ct) ?? new FeatureFlagsDto(false, false, false, false, false);
 
     public Task<HealthReportDto?> GetHealthDetailsAsync(CancellationToken ct = default) =>
         http.GetFromJsonAsync<HealthReportDto>(ApiRoutes.Health.DetailsUrl, ct);
@@ -316,10 +332,55 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         return await ReadAsync<GenerateRoundResponse>(response, ct);
     }
 
+    public async IAsyncEnumerable<RoundStreamPart> StreamRoundAsync(
+        GenerateRoundRequest request,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        await foreach (var line in NdjsonAsync(ApiRoutes.Watch.GenerateRoundStreamUrl, request, ct))
+        {
+            using var parsed = TryParse(line);
+            if (parsed is null)
+            {
+                continue;
+            }
+
+            // A fragment carries "delta" and nothing else; the closing object is the whole response. Switching on
+            // the property rather than on arrival order is what lets a one-chunk answer be a complete stream.
+            if (parsed.RootElement.TryGetProperty("delta", out var delta))
+            {
+                if (delta.GetString() is { Length: > 0 } text)
+                {
+                    yield return new RoundStreamPart(text, null);
+                }
+
+                continue;
+            }
+
+            if (parsed.Deserialize<GenerateRoundResponse>(JsonOptions) is { } final)
+            {
+                yield return new RoundStreamPart(null, final);
+            }
+        }
+    }
+
     public async Task<TtsAudioDto> RoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default)
     {
         using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Watch.RoundAudioUrl), request, ct);
         return await ReadAsync<TtsAudioDto>(response, ct);
+    }
+
+    public async IAsyncEnumerable<RoundAudioChunkDto> StreamRoundAudioAsync(
+        RoundAudioRequest request,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        await foreach (var line in NdjsonAsync(ApiRoutes.Watch.RoundAudioStreamUrl, request, ct))
+        {
+            using var parsed = TryParse(line);
+            if (parsed?.Deserialize<RoundAudioChunkDto>(JsonOptions) is { } chunk)
+            {
+                yield return chunk;
+            }
+        }
     }
 
     public async Task<VerdictResponse> VerdictAsync(VerdictRequest request, CancellationToken ct = default)
@@ -555,6 +616,55 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
     }
 
     private static Uri Relative(string path) => new(path, UriKind.Relative);
+
+    /// <summary>
+    /// Posts a request and reads the newline-delimited JSON that comes back, one line at a time, as the bytes
+    /// arrive. <see cref="HttpCompletionOption.ResponseHeadersRead"/> is what makes it a stream rather than a
+    /// buffered body read a line at a time.
+    /// </summary>
+    private async IAsyncEnumerable<string> NdjsonAsync<TRequest>(
+        string url,
+        TRequest request,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, Relative(url))
+        {
+            Content = JsonContent.Create(request, options: JsonOptions),
+        };
+
+        using var response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await ApiException.FromAsync(response, ct);
+        }
+
+        await using var body = await response.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(body, Encoding.UTF8);
+        while (await reader.ReadLineAsync(ct) is { } line)
+        {
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                yield return line;
+            }
+        }
+    }
+
+    /// <summary>
+    /// One NDJSON line as a document, or null when it will not parse. These bodies are written a line at a time
+    /// from a response that is already open, so a cancelled or truncated stream ends in a partial line — and losing
+    /// the clause the connection died on is not a reason to lose the clauses that did arrive.
+    /// </summary>
+    private static JsonDocument? TryParse(string line)
+    {
+        try
+        {
+            return JsonDocument.Parse(line);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {

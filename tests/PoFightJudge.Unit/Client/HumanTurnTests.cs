@@ -50,8 +50,27 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
         Flags(human: true, browser: true);
         _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GenerateRoundResponse("You left it open all night.", "angry", "escalating", true)));
+
+        // The persona's opening line has nothing prefetched behind it, so it arrives on the stream.
+        _api.StreamRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => OpeningLineAsync());
         _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TtsAudioDto(string.Empty, "pcm")));
+        _api.StreamRoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => NoAudioAsync());
+    }
+
+    private static async IAsyncEnumerable<RoundStreamPart> OpeningLineAsync()
+    {
+        await Task.Yield();
+        yield return new RoundStreamPart(null, new GenerateRoundResponse("You left it open all night.", "angry", "escalating", true));
+    }
+
+    /// <summary>This suite is about the person's turn; the persona's voice is beside the point.</summary>
+    private static async IAsyncEnumerable<RoundAudioChunkDto> NoAudioAsync()
+    {
+        await Task.Yield();
+        yield break;
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

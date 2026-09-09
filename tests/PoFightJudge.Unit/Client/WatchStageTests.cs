@@ -46,12 +46,31 @@ public sealed class WatchStageTests : BunitContext, IAsyncLifetime
 
         _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
             .Returns(_ => Task.FromResult(new GenerateRoundResponse("a line", "angry", "escalating", true)));
+
+        // The opening line has nothing prefetched behind it, so it arrives on the stream.
+        _api.StreamRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => OneLineAsync());
         _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TtsAudioDto(string.Empty, "pcm")));
+        _api.StreamRoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => NoAudioAsync());
         _api.VerdictAsync(Arg.Any<VerdictRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new VerdictResponse(
                 MatchId.New(), "MAH", "He answered the point.", 62, 41,
                 AdvancedStatsDto.Empty, AdvancedStatsDto.Empty, Persisted: true)));
+    }
+
+    private static async IAsyncEnumerable<RoundStreamPart> OneLineAsync()
+    {
+        await Task.Yield();
+        yield return new RoundStreamPart(null, new GenerateRoundResponse("a line", "angry", "escalating", true));
+    }
+
+    /// <summary>This suite is about the light and the noise, not the voice.</summary>
+    private static async IAsyncEnumerable<RoundAudioChunkDto> NoAudioAsync()
+    {
+        await Task.Yield();
+        yield break;
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

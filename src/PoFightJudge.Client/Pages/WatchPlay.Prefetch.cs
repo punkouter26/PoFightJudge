@@ -1,3 +1,4 @@
+using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Models;
 
 namespace PoFightJudge.Client.Pages;
@@ -17,7 +18,16 @@ public sealed partial class WatchPlay
     private string? _prefetchedSpeaker;
     private int _prefetchedHistory;
 
-    /// <summary>The next line, taken from the speculative fetch when it still fits, and asked for outright when it does not.</summary>
+    /// <summary>The line currently being written, as far as it has got. Rendered under the rounds, never as one.</summary>
+    private readonly System.Text.StringBuilder _arriving = new();
+
+    /// <summary>Whose line that is, so it renders in their colour and on their side.</summary>
+    private string? _arrivingSpeaker;
+
+    /// <summary>
+    /// The next line: the speculative fetch when it still fits, and otherwise a stream, because a line nobody has
+    /// is a line somebody is watching an empty stage for.
+    /// </summary>
     private async Task<GenerateRoundResponse> NextLineAsync(string speaker, string? interjection, CancellationToken ct)
     {
         if (interjection is null
@@ -31,7 +41,54 @@ public sealed partial class WatchPlay
         }
 
         DropPrefetch();
-        return await Api.GenerateRoundAsync(Request(speaker, interjection), ct);
+        return await StreamLineAsync(speaker, interjection, ct);
+    }
+
+    /// <summary>
+    /// Reads the line as it is written, publishing each fragment so the stage fills in rather than sitting empty.
+    /// The closing part is what the round is made from: the fragments are the decoded prefix of a JSON value still
+    /// being written, and only the final object has been parsed.
+    /// </summary>
+    private async Task<GenerateRoundResponse> StreamLineAsync(string speaker, string? interjection, CancellationToken ct)
+    {
+        _arrivingSpeaker = speaker;
+        _arriving.Clear();
+        GenerateRoundResponse? final = null;
+
+        await foreach (var part in Api.StreamRoundAsync(Request(speaker, interjection), ct))
+        {
+            if (part.Delta is { Length: > 0 } fragment)
+            {
+                _arriving.Append(fragment);
+                StateHasChanged();
+                continue;
+            }
+
+            if (part.Final is { } whole)
+            {
+                final = whole;
+            }
+        }
+
+        if (final is { } complete)
+        {
+            return complete;
+        }
+
+        // The stream was cut off before the closing object. What did arrive is still the line — losing a sentence
+        // the viewer has already read, to a missing wrapper, is worse than a line whose mood had to be guessed.
+        // Nothing at all is a different thing entirely, and goes to the error path rather than adding a blank round.
+        var partial = _arriving.ToString().Trim();
+        return partial.Length > 0
+            ? new GenerateRoundResponse(partial, string.Empty, string.Empty, _isFake)
+            : throw new ApiException(0, "The line stopped arriving before anybody said anything.");
+    }
+
+    /// <summary>The line stops arriving the moment it is a round, or the moment it fails.</summary>
+    private void ClearArriving()
+    {
+        _arriving.Clear();
+        _arrivingSpeaker = null;
     }
 
     /// <summary>Starts fetching the line after this one, when the next turn is one the client can predict.</summary>

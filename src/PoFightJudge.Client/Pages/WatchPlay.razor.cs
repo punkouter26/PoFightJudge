@@ -303,6 +303,12 @@ public sealed partial class WatchPlay : IAsyncDisposable
         {
             return Failed($"The line could not be fetched ({ex.Message}).");
         }
+        finally
+        {
+            // Whatever happened to it, the line is no longer arriving: the round below replaces it, and a failure
+            // must not leave half a sentence on the page under a Try again.
+            ClearArriving();
+        }
 
         var round = new WatchRoundDto(speaker, response.Text, WatchTurns.NormalizeMood(response.Mood));
         _rounds.Add(round);
@@ -326,18 +332,41 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
         try
         {
-            var audio = await Api.RoundAudioAsync(new RoundAudioRequest(ProfileId.From(side.Id), round.Text), ct);
-            if (!audio.IsEmpty)
+            // Clause by clause: each one is scheduled the moment it arrives, so the line starts on its first phrase
+            // rather than after the last one is synthesized. PoAudio butts them up against each other, so what the
+            // listener hears is still one continuous utterance.
+            var clauses = new List<TtsAudioDto>();
+
+            // Mirrors PoAudio's own schedule clock: a clause starts where the previous one ends, or now if
+            // synthesis fell behind playback. Accumulating durations onto "now" instead would push the end of the
+            // line further out with every clause that arrived late, and the argument would sit through the drift.
+            var endsAt = Clock.GetUtcNow();
+            await foreach (var chunk in Api.StreamRoundAudioAsync(new RoundAudioRequest(ProfileId.From(side.Id), round.Text), ct))
             {
-                // Kept as well as played: the same bytes are what the verdict archives and a replay plays back.
-                var index = _rounds.IndexOf(round);
-                if (index >= 0)
+                if (chunk.Audio.IsEmpty)
                 {
-                    _clips[index] = audio;
+                    continue;
                 }
 
-                var speaking = await Audio.PlayAsync(audio, ct);
-                _lineEndsAt = speaking > TimeSpan.Zero ? Clock.GetUtcNow() + speaking : null;
+                clauses.Add(chunk.Audio);
+                var clause = await Audio.EnqueueAsync(chunk.Audio, ct);
+                var now = Clock.GetUtcNow();
+                endsAt = (endsAt > now ? endsAt : now) + clause;
+
+                // Re-read on every clause: the first is already playing while the rest are still being made, and
+                // the beat has to know how long the whole line runs, not how long its first phrase did.
+                _lineEndsAt = clauses.Count > 0 ? endsAt : null;
+
+                // The line is being spoken now rather than merely written, and the stage says so — the speaking
+                // corner, the meter and the caret all read state this loop is the only thing moving.
+                StateHasChanged();
+            }
+
+            // Kept as well as played: the same bytes are what the verdict archives and a replay plays back.
+            var index = _rounds.IndexOf(round);
+            if (index >= 0 && TtsAudioDto.Join(clauses) is { } whole)
+            {
+                _clips[index] = whole;
             }
         }
         catch (ApiException)

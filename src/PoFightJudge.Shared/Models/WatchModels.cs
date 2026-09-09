@@ -78,6 +78,27 @@ public sealed record GenerateRoundResponse(string Text, string Mood, string Atti
 public sealed record RoundAudioRequest(ProfileId Speaker, string Text);
 
 /// <summary>
+/// One fragment of a line as it is being written, off the round stream. The server emits these while the model is
+/// still generating, so the viewer reads the line arriving rather than watching a spinner for the whole round trip.
+/// </summary>
+public sealed record RoundDeltaDto(string Delta);
+
+/// <summary>
+/// One clause of a line's audio, off the audio stream. Each chunk carries its own format because the provider chain
+/// can fall back mid-line, and <paramref name="Index"/> is the clause's position so playback can never reorder them.
+/// </summary>
+public sealed record RoundAudioChunkDto(int Index, string Base64, string Format, bool IsLast)
+{
+    public TtsAudioDto Audio => new(Base64, Format);
+}
+
+/// <summary>
+/// One item off the round stream: a fragment while the line is being written, then exactly one final response
+/// carrying the whole line. Never both — a reader switches on whichever half is set.
+/// </summary>
+public sealed record RoundStreamPart(string? Delta, GenerateRoundResponse? Final);
+
+/// <summary>
 /// Ends a match: the judge rules on the transcript and the whole thing is persisted. A persona side gets a watch
 /// result; a person's side gets a fighter result, so their profile grows from this debate too.
 /// <paramref name="MatchId"/> is only for re-judging a match the caller already owns.

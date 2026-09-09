@@ -101,7 +101,7 @@ public sealed class WatchEndpoints : ICarterModule
         {
             if (part.Delta is { } delta)
             {
-                await WriteLineAsync(http, new { delta }, ct);
+                await WriteLineAsync(http, new RoundDeltaDto(delta), ct);
             }
             else if (part.Final is { } final)
             {
@@ -139,7 +139,7 @@ public sealed class WatchEndpoints : ICarterModule
         http.Response.ContentType = "application/x-ndjson";
         await foreach (var chunk in voice.GenerateTtsStreamAsync(request.Text, persona.TtsSettings, ct))
         {
-            await WriteLineAsync(http, new { index = chunk.Index, base64 = chunk.Audio.Base64, format = chunk.Audio.Format, isLast = chunk.IsLast }, ct);
+            await WriteLineAsync(http, new RoundAudioChunkDto(chunk.Index, chunk.Audio.Base64, chunk.Audio.Format, chunk.IsLast), ct);
         }
     }
 

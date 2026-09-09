@@ -29,6 +29,12 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     private readonly FakeTimeProvider _clock = new();
     private readonly List<GenerateRoundRequest> _asked = [];
 
+    /// <summary>
+    /// What the voice chain says, if anything. A field rather than a second <c>Returns</c> per test: both would
+    /// match <c>Arg.Any</c>, and which one wins is not something a test should be resting on.
+    /// </summary>
+    private TtsAudioDto? _clause;
+
     public WatchPlayTests()
     {
         Services.AddRadzenComponents();
@@ -56,12 +62,52 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
                 _asked.Add(request);
                 return Task.FromResult(new GenerateRoundResponse($"line {_asked.Count}", "angry", "escalating", true));
             });
+
+        // A line with nothing prefetched behind it is streamed, and one the prefetch holds is not. Both are the
+        // same question asked of the same model, so both land in _asked: these tests are about the argument the
+        // page has, not about which of the two transports carried a given line.
+        _api.StreamRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                var request = call.Arg<GenerateRoundRequest>();
+                _asked.Add(request);
+                return OneLineAsync($"line {_asked.Count}");
+            });
         _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TtsAudioDto(string.Empty, "pcm")));
+        _api.StreamRoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ClausesAsync(_clause));
         _api.VerdictAsync(Arg.Any<VerdictRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new VerdictResponse(
                 MatchId.New(), "MAH", "He answered the point; she changed the subject.",
                 62, 41, AdvancedStatsDto.Empty, AdvancedStatsDto.Empty, Persisted: true)));
+    }
+
+    /// <summary>A stream that fails on the first read, which is how a refused round reaches the page.</summary>
+    private static async IAsyncEnumerable<RoundStreamPart> Failing(ApiException failure)
+    {
+        await Task.Yield();
+        throw failure;
+#pragma warning disable CS0162 // Required to make the method an iterator; the throw above is the whole body.
+        yield break;
+#pragma warning restore CS0162
+    }
+
+    /// <summary>A stream that answered in one chunk, which is a complete stream and the shape a fake produces.</summary>
+    private static async IAsyncEnumerable<RoundStreamPart> OneLineAsync(string line)
+    {
+        await Task.Yield();
+        yield return new RoundStreamPart(null, new GenerateRoundResponse(line, "angry", "escalating", true));
+    }
+
+    /// <summary>The line as the chain said it — one clause, or nothing at all, which is still a line.</summary>
+    private static async IAsyncEnumerable<RoundAudioChunkDto> ClausesAsync(TtsAudioDto? audio)
+    {
+        await Task.Yield();
+        if (audio is not null)
+        {
+            yield return new RoundAudioChunkDto(0, audio.Base64, audio.Format, IsLast: true);
+        }
     }
 
     /// <summary>Plays the argument out by letting each beat elapse until the page stops asking for lines.</summary>
@@ -114,17 +160,18 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     public async Task A_line_is_spoken_to_the_end_before_the_next_one_starts()
     {
         // Nine seconds of speech, and a browser that says nothing is pending — the state that caused the bug.
-        JSInterop.Setup<double>(AudioInterop.Play, _ => true).SetResult(9.0);
+        JSInterop.Setup<double>(AudioInterop.Enqueue, _ => true).SetResult(9.0);
         JSInterop.Setup<double>(AudioInterop.Pending, _ => true).SetResult(0.0);
-        _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3")));
+        _clause = new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3");
         _simulation.Set(Matthew, Kimberly, "the thermostat");
 
         var cut = Render<WatchPlay>();
 
         // The next line is fetched while this one is still being spoken, on purpose — so what says whether somebody
         // was cut off is when the next line is spoken, not when it was asked for.
-        await cut.WaitForAssertionAsync(() => Spoken().Should().Be(1), TimeSpan.FromSeconds(10));
+        await cut.WaitForAssertionAsync(
+            () => Spoken().Should().Be(1),
+            TimeSpan.FromSeconds(10));
 
         await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
         await Task.Delay(100);
@@ -134,7 +181,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         await cut.InvokeAsync(() => _clock.Advance(TimeSpan.FromSeconds(5)));
         await cut.WaitForAssertionAsync(() => Spoken().Should().Be(2), TimeSpan.FromSeconds(10));
 
-        int Spoken() => JSInterop.Invocations[AudioInterop.Play].Count;
+        int Spoken() => JSInterop.Invocations[AudioInterop.Enqueue].Count;
     }
 
     [Fact(Timeout = 60_000)]
@@ -205,8 +252,8 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     public async Task A_line_that_cannot_be_generated_is_reported_and_the_argument_can_be_picked_up_again()
     {
         _simulation.Set(Matthew, Kimberly, null);
-        _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromException<GenerateRoundResponse>(new ApiException(500, "Upstream", null)));
+        _api.StreamRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Failing(new ApiException(500, "Upstream", null)));
 
         var cut = Render<WatchPlay>();
 
@@ -222,11 +269,11 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     [Fact(Timeout = 60_000)]
     public async Task A_throttled_round_says_how_long_to_wait_and_will_not_be_retried_until_it_is_up()
     {
-        _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
-            .Returns<Task<GenerateRoundResponse>>(_ => throw new ApiException(429, "That was a lot of arguing at once. Give it a moment.")
+        _api.StreamRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Failing(new ApiException(429, "That was a lot of arguing at once. Give it a moment.")
             {
                 RetryAfter = TimeSpan.FromSeconds(5),
-            });
+            }));
         _simulation.Set(Matthew, Kimberly, "the thermostat");
 
         var cut = Render<WatchPlay>();
@@ -256,8 +303,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     [Fact(Timeout = 60_000)]
     public async Task The_audio_each_line_was_spoken_in_travels_with_the_verdict_so_it_can_be_played_back()
     {
-        _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3")));
+        _clause = new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3");
         VerdictRequest? sent = null;
         _api.VerdictAsync(Arg.Any<VerdictRequest>(), Arg.Any<CancellationToken>())
             .Returns(call =>

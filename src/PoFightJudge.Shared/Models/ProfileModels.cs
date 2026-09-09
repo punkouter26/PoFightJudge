@@ -144,6 +144,49 @@ public sealed record TtsAudioDto(string Base64, string Format)
     public static TtsAudioDto None { get; } = new(string.Empty, "pcm");
 
     public bool IsEmpty => string.IsNullOrEmpty(Base64);
+
+    /// <summary>
+    /// Joins the clauses of one streamed line back into a single clip, so what a replay plays back is the whole
+    /// line rather than its first phrase. The bytes are concatenated, never the base64: two padded strings glued
+    /// together do not decode.
+    /// </summary>
+    /// <remarks>
+    /// Only parts that agree on a format can be joined — 16-bit PCM appends sample by sample and MP3 frame by
+    /// frame, but one of each is not a clip in either format. A chain that fell back mid-line therefore archives
+    /// nothing, which the replay already reads as a line that has no audio.
+    /// </remarks>
+    public static TtsAudioDto? Join(IReadOnlyList<TtsAudioDto> parts)
+    {
+        ArgumentNullException.ThrowIfNull(parts);
+
+        var usable = parts.Where(p => !p.IsEmpty).ToList();
+        if (usable.Count == 0)
+        {
+            return null;
+        }
+
+        var format = usable[0].Format;
+        if (usable.Any(p => !string.Equals(p.Format, format, StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
+        if (usable.Count == 1)
+        {
+            return usable[0];
+        }
+
+        var decoded = usable.Select(p => Convert.FromBase64String(p.Base64)).ToList();
+        var joined = new byte[decoded.Sum(b => b.Length)];
+        var at = 0;
+        foreach (var bytes in decoded)
+        {
+            bytes.CopyTo(joined, at);
+            at += bytes.Length;
+        }
+
+        return new TtsAudioDto(Convert.ToBase64String(joined), format);
+    }
 }
 
 /// <summary>One in-character line spoken in the persona's own voice, for auditioning a persona before it is saved.</summary>
