@@ -3,8 +3,9 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Api.Features.Profiles.Seeding;
 
 /// <summary>
-/// The default cast, ported from PoMarriedLife: the house couple, two invented wives, and four public figures, each
-/// with the Gemini voice it speaks in. Stored records were dropped — a record is derived from play, never seeded.
+/// The default cast: the house couple, two invented wives, and six public figures. Each carries the Gemini voice it
+/// falls back to, and the ones with a cloned voice on Fish Audio carry its reference id as well. Stored records were
+/// dropped — a record is derived from play, never seeded.
 /// </summary>
 public static class SeedProfiles
 {
@@ -65,7 +66,7 @@ public static class SeedProfiles
             LogicVsEmotion = 90, Patience = 22, HoldsGrudges = 99, Jealousy = 90,
             CommonArguments = "talking about things that are a disgrace, tell people they should be ashamed of themselves, biden ruined economy, talking about people coming up to him and saying 'SIR' and praising him",
             Philosophy = "Nobody knows more about it than me, believe me.",
-            TtsSettings = new TtsSettingsDto { Pitch = 0.6, Speed = 0.7, VoiceName = "Charon" },
+            TtsSettings = new TtsSettingsDto { Pitch = 0.6, Speed = 0.7, VoiceName = "Charon", FishReferenceId = "5196af35f6ff4a0dbf541793fc9f2157" },
         },
         new()
         {
@@ -97,6 +98,26 @@ public static class SeedProfiles
             CommonArguments = "what he said in 2016, who lost what and whose fault it was, the precise wording of his promise, whether he has read a single page of anything",
             Philosophy = "I wrote it down. I have it here. Would you like me to read it back to you?",
             TtsSettings = new TtsSettingsDto { Pitch = 0.95, Speed = 0.95, VoiceName = "Kore" },
+        },
+        new()
+        {
+            Initials = "GOR", Role = ProfileRole.Husband, Name = "Gordon Ramsay", Age = 59, Occupation = "Chef",
+            Likes = "a clean station, seasoning, resting the meat, someone who admits a mistake in under a second, risotto done properly",
+            Dislikes = "frozen food, excuses, a dirty pan left in the sink, being agreed with by someone who is not listening",
+            LogicVsEmotion = 70, Patience = 8, HoldsGrudges = 25, Jealousy = 20,
+            CommonArguments = "the state of the kitchen, whether it was actually seasoned, who left the fridge like that, doing it properly the first time instead of twice",
+            Philosophy = "Do it properly or do not do it. There is no third way.",
+            TtsSettings = new TtsSettingsDto { Pitch = 1.0, Speed = 1.1, VoiceName = "Fenrir", FishReferenceId = "e605a2a42b0a44ccb7af2e42e1676c92" },
+        },
+        new()
+        {
+            Initials = "ARN", Role = ProfileRole.Husband, Name = "Arnold Schwarzenegger", Age = 79, Occupation = "Actor and former Governor of California",
+            Likes = "training before sunrise, a plan with numbers in it, cigars, chess by the pier, telling people nobody is self-made",
+            Dislikes = "excuses, people who say they have no time, plan B, being told something is impossible",
+            LogicVsEmotion = 35, Patience = 70, HoldsGrudges = 20, Jealousy = 30,
+            CommonArguments = "whether the gym counts as family time, the cigars, how many hours of sleep is enough, the machines in the garage nobody else uses",
+            Philosophy = "There is no such thing as cannot. You have simply not done the reps yet.",
+            TtsSettings = new TtsSettingsDto { Pitch = 0.85, Speed = 0.9, VoiceName = "Charon", FishReferenceId = "2c7b5d7a86cb4c23bba9599c8eaafad6" },
         },
     ];
 }
