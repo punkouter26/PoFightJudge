@@ -94,11 +94,9 @@
                         <div class="ways">
                             @if (_recording)
                             {
-                                @* The microphone opened with the turn. The meter is what says so; the button is for
-                                   somebody who has finished and does not want to wait out the pause. *@
+                                @* The microphone opened with the turn and closes itself on a pause. The meter is
+                                   the whole interface: there is nothing here to press. *@
                                 <LevelMeter Listening="true" Caption="Listening — just talk" />
-                                <RadzenButton Text="Done" Icon="check" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Filled"
-                                              Click="@StopRecordingAsync" />
                             }
                             else if (_transcribing)
                             {
@@ -106,6 +104,9 @@
                             }
                             else
                             {
+                                @* Only reached when the automatic path could not finish it — the microphone failed,
+                                   nothing was made out, or they started typing. A turn that cannot be spoken still
+                                   has to be finishable, so the controls come back for exactly those cases. *@
                                 @if (CanRecord)
                                 {
                                     <RadzenButton Text="@(_line.Trim().Length == 0 ? "Speak it" : "Speak it again")"
@@ -129,10 +130,13 @@
                             </RadzenAlert>
                         }
 
-                        <div class="go">
-                            <RadzenButton Text="Say it" Icon="record_voice_over" ButtonStyle="ButtonStyle.Primary"
-                                          Size="ButtonSize.Large" Disabled="@(_line.Trim().Length == 0 || _transcribing)" Click="@SayAsync" />
-                        </div>
+                        @if (!_recording && !_transcribing)
+                        {
+                            <div class="go">
+                                <RadzenButton Text="Say it" Icon="record_voice_over" ButtonStyle="ButtonStyle.Primary"
+                                              Size="ButtonSize.Large" Disabled="@(_line.Trim().Length == 0)" Click="@SayAsync" />
+                            </div>
+                        }
                     </section>
                 }
 

@@ -24,7 +24,20 @@ public sealed partial class WatchPlay
     /// How long a pause has to run before the turn is taken as finished. Long enough to think mid-sentence, short
     /// enough that nobody wonders whether the thing is still listening.
     /// </summary>
-    private static readonly TimeSpan SilenceToEnd = TimeSpan.FromSeconds(2.5);
+    internal static readonly TimeSpan SilenceToEnd = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Whether a pause has run long enough to finish the turn. Nobody is cut off before they have started, so a
+    /// silence only counts once something has actually been said into it.
+    /// </summary>
+    public static bool PauseEndsTurn(bool heardSomething, TimeSpan quietFor) =>
+        heardSomething && quietFor >= SilenceToEnd;
+
+    /// <summary>
+    /// Whether a transcript is worth sending on. Blank is what a clip with no words in it comes back as, and
+    /// sending that would put an empty turn on somebody's record.
+    /// </summary>
+    public static bool WorthSending(string? transcript) => !string.IsNullOrWhiteSpace(transcript);
 
     /// <summary>Nobody is cut off before they have started: silence only ends a turn once something was said.</summary>
     private bool _heardSomething;
@@ -84,7 +97,7 @@ public sealed partial class WatchPlay
                         _heardSomething = true;
                         quietSince = now;
                     }
-                    else if (_heardSomething && now - quietSince >= SilenceToEnd)
+                    else if (PauseEndsTurn(_heardSomething, now - quietSince))
                     {
                         await StopRecordingAsync();
                         return;
@@ -149,6 +162,7 @@ public sealed partial class WatchPlay
         _transcribing = true;
         StateHasChanged();
 
+        var written = false;
         try
         {
             var clip = await Mic.StopAsync(_leaving.Token);
@@ -162,14 +176,16 @@ public sealed partial class WatchPlay
             _isFake |= heard.IsFake;
 
             var said = heard.Text.Trim();
-            if (said.Length == 0)
+            if (!WorthSending(said))
             {
                 // A legitimate outcome, not an error: the transcriber heard the clip and there were no words in it.
+                // Nothing goes anywhere by itself, and the controls come back so the turn can still be finished.
                 _heardNothing = true;
                 return;
             }
 
             _line = _line.Trim().Length == 0 ? said : $"{_line.Trim()} {said}";
+            written = true;
         }
         catch (ApiException ex)
         {
@@ -183,6 +199,14 @@ public sealed partial class WatchPlay
         {
             _transcribing = false;
             StateHasChanged();
+        }
+
+        // Written down, so it goes. Reading it back before it counted was the last step standing between speaking
+        // and being answered; every failure above returns instead, and those are the only times anything is asked
+        // of the person whose turn it is.
+        if (written)
+        {
+            await SayAsync();
         }
     }
 

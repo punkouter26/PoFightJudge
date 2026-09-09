@@ -137,3 +137,6 @@
 - [x] T100 The standings live under the roster they rank: three stats pages deleted, nav down to seven
 - [x] T101 The suites capped: 96 Unit, 26 Integration, 24 API, 24 UI — one test per decision, not per branch
 - [x] T102 Six documents, not thirteen: the checkpoint reports, the build plan and an unbuilt design deleted
+
+## Phase P — The spoken turn (2026-09-09)
+- [x] T103 A turn you only have to talk into: the microphone opens, a two-second pause ends it, and the line sends itself
