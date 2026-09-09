@@ -1,28 +1,34 @@
-// Records one spoken turn and hands it back as a 16 kHz mono WAV. The server's transcribers take WAV and nothing
-// else, so the conversion happens here rather than shipping a container the API would have to unpack.
+// Records one spoken turn and hands it back as a 16 kHz mono WAV.
+//
+// The samples are taken straight off the Web Audio graph through the same `pcm-capture` worklet a live fight uses,
+// rather than recorded into a container and decoded back out. MediaRecorder writes WebM/Opus, and asking
+// decodeAudioData to read that back fails outright on some machines (EncodingError) — which looks, from the page,
+// exactly like a microphone that heard nothing. There is no container in this path, so there is nothing to decode:
+// what the worklet hands over is already 16 kHz little-endian Int16, and all that is left is a WAV header.
 window.PoMic = (function () {
   "use strict";
 
+  /** What the worklet resamples to, and therefore what the header says. */
   const RATE = 16000;
-
-  /** How often the recorder hands over what it has. Short enough that a failure late in a turn costs a moment, not the turn. */
-  const SLICE_MS = 500;
-
-  let stream = null;
-  let recorder = null;
-  let chunks = [];
-
-  // The meter runs off the live stream rather than the recording, so the page can show that the microphone is
-  // working while somebody is still deciding what to say.
-  let meterContext = null;
-  let analyser = null;
-  let samples = null;
-
-  let meterFrame = 0;
-  let spectrum = null;
 
   /** How many bars the meter draws. Eight is enough to see a voice move and few enough to stay legible at 6 rem. */
   const BANDS = 8;
+
+  let stream = null;
+  let ctx = null;
+  let source = null;
+  let worklet = null;
+  let capturing = false;
+
+  /** The turn so far: 100 ms frames of little-endian Int16 at RATE, in the order they were spoken. */
+  let frames = [];
+
+  // The meter runs off a second tap on the same source, so the page can show that the microphone is working while
+  // somebody is still deciding what to say.
+  let analyser = null;
+  let samples = null;
+  let spectrum = null;
+  let meterFrame = 0;
 
   function publish(value) {
     try {
@@ -80,22 +86,6 @@ window.PoMic = (function () {
     meterFrame = requestAnimationFrame(pump);
   }
 
-  function listen() {
-    try {
-      meterContext = new (window.AudioContext || window.webkitAudioContext)();
-      analyser = meterContext.createAnalyser();
-      analyser.fftSize = 1024;
-      analyser.smoothingTimeConstant = 0.6;
-      samples = new Float32Array(analyser.fftSize);
-      spectrum = new Uint8Array(analyser.frequencyBinCount);
-      meterContext.createMediaStreamSource(stream).connect(analyser);
-      meterFrame = requestAnimationFrame(pump);
-    } catch {
-      // No meter, but the recording itself is unaffected: level() answers 0 and the page simply shows no movement.
-      analyser = null;
-    }
-  }
-
   function release() {
     if (meterFrame) {
       cancelAnimationFrame(meterFrame);
@@ -105,20 +95,41 @@ window.PoMic = (function () {
     publish(0);
     clearBands();
 
+    if (worklet) {
+      try {
+        worklet.port.onmessage = null;
+        worklet.disconnect();
+      } catch {
+        // Already torn down with its context.
+      }
+
+      worklet = null;
+    }
+
+    if (source) {
+      try {
+        source.disconnect();
+      } catch {
+        // Same.
+      }
+
+      source = null;
+    }
+
     if (stream) {
       stream.getTracks().forEach(function (t) { t.stop(); });
       stream = null;
     }
 
-    if (meterContext) {
-      meterContext.close().catch(function () { /* already closing */ });
-      meterContext = null;
+    if (ctx) {
+      ctx.close().catch(function () { /* already closing */ });
+      ctx = null;
     }
 
     analyser = null;
     samples = null;
     spectrum = null;
-    recorder = null;
+    capturing = false;
   }
 
   /** How loud the microphone is right now, 0 to 1. Root-mean-square, so it tracks speech rather than clicks. */
@@ -137,8 +148,15 @@ window.PoMic = (function () {
     return Math.min(1, Math.sqrt(sum / samples.length) * 8);
   }
 
-  // Returns "" when recording started, or the DOMException name when it did not. The caller turns that name into a
-  // sentence: a refused permission and a missing device need different advice.
+  /** The name a browser gave a failure, in a form worth showing somebody. */
+  function nameOf(err) {
+    if (!err) {
+      return "Unknown";
+    }
+
+    return err.name || err.message || String(err);
+  }
+
   // The chosen microphone, when there is one. `exact` on purpose: silently falling back to the default is how
   // somebody ends up recording on the wrong device after deliberately picking one.
   function constrain(deviceId) {
@@ -169,147 +187,106 @@ window.PoMic = (function () {
     }
   }
 
+  // Returns "" when recording started, or the browser's error name when it did not. The caller turns that name into
+  // a sentence: a refused permission and a missing device need different advice.
   async function start(deviceId) {
     try {
-      if (recorder) {
+      if (capturing) {
         return "";
       }
 
-      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function" || typeof AudioWorkletNode === "undefined") {
         return "NotSupportedError";
       }
 
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: constrain(deviceId),
-      });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: constrain(deviceId) });
 
-      chunks = [];
-      recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = function (e) {
-        if (e.data && e.data.size > 0) {
-          chunks.push(e.data);
+      // The device's own rate, not one asked for: a context pinned to 16 kHz is refused outright where the audio
+      // device will not run at it. The worklet does the rate conversion, and it does it the same way for everyone.
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === "suspended") {
+        try {
+          await ctx.resume();
+        } catch {
+          // Needs a gesture. The click that started the match is usually enough; stop() says so if it was not.
+        }
+      }
+
+      // Absolute: a watch lives at /watch/play, where a relative path would resolve to /watch/js/...
+      await ctx.audioWorklet.addModule("/js/pcm-worklet.js");
+
+      source = ctx.createMediaStreamSource(stream);
+
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.6;
+      samples = new Float32Array(analyser.fftSize);
+      spectrum = new Uint8Array(analyser.frequencyBinCount);
+      source.connect(analyser);
+
+      frames = [];
+      worklet = new AudioWorkletNode(ctx, "pcm-capture", { numberOfInputs: 1, numberOfOutputs: 0 });
+      worklet.port.onmessage = function (e) {
+        if (e.data && e.data.pcm) {
+          frames.push(e.data.pcm);
         }
       };
 
-      // Sliced rather than one blob at the end: a recorder that errors, or a final dataavailable that never
-      // arrives, then still leaves everything said up to that point instead of an empty turn.
-      recorder.start(SLICE_MS);
-      listen();
+      source.connect(worklet);
+      capturing = true;
+      meterFrame = requestAnimationFrame(pump);
       return "";
     } catch (err) {
       release();
-      return (err && err.name) || "NotAllowedError";
-    }
-  }
-
-  /** The name a browser gave a failure, in a form worth showing somebody. */
-  function nameOf(err) {
-    if (!err) {
-      return "Unknown";
-    }
-
-    return err.name || err.message || String(err);
-  }
-
-  // Down to 16 kHz through an offline context, which is where a browser will accept a sample rate its hardware does
-  // not run at. If it will not, the clip goes at whatever rate it decoded at rather than being thrown away: the
-  // transcribers read the rate out of the WAV header.
-  async function resample(decoded, rate) {
-    if (decoded.sampleRate === rate) {
-      return { data: decoded.getChannelData(0), rate: decoded.sampleRate };
-    }
-
-    try {
-      const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-      const frames = Math.max(1, Math.round(decoded.duration * rate));
-      const offline = new Offline(1, frames, rate);
-      const source = offline.createBufferSource();
-      source.buffer = decoded;
-      source.connect(offline.destination);
-      source.start();
-      const rendered = await offline.startRendering();
-      return { data: rendered.getChannelData(0), rate: rate };
-    } catch {
-      return { data: decoded.getChannelData(0), rate: decoded.sampleRate };
+      return nameOf(err);
     }
   }
 
   // Stops and returns { wav, error }: the clip as base64 WAV, or the reason there is not one. Every step that can
   // fail says which step it was, because "nothing came through the microphone" is the wrong thing to tell somebody
   // who watched the meter move for thirty seconds.
-  async function stop() {
-    if (!recorder) {
+  function stop() {
+    if (!capturing) {
       return { wav: "", error: "NotRecording" };
     }
 
-    const active = recorder;
-    const finished = new Promise(function (resolve) {
-      active.onstop = resolve;
-    });
-
-    try {
-      active.stop();
-      await finished;
-    } catch (err) {
-      release();
-      return { wav: "", error: "StopFailed:" + nameOf(err) };
-    }
-
-    const captured = chunks;
-    chunks = [];
+    const captured = frames;
+    frames = [];
+    const state = ctx ? ctx.state : "closed";
     release();
 
     if (captured.length === 0) {
-      return { wav: "", error: "NothingCaptured" };
-    }
-
-    let decoded = null;
-    let ctx = null;
-    try {
-      const blob = new Blob(captured, { type: captured[0].type || "audio/webm" });
-      const bytes = await blob.arrayBuffer();
-
-      // Decoded at the browser's own rate. Asking for a 16 kHz context here is what a machine whose audio device
-      // will not run at 16 kHz refuses outright, and the clip was fine — it was the container that never opened.
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-      decoded = await ctx.decodeAudioData(bytes);
-    } catch (err) {
-      return { wav: "", error: "DecodeFailed:" + nameOf(err) };
-    } finally {
-      if (ctx) {
-        ctx.close().catch(function () { /* already closing */ });
-      }
+      // A suspended context produces no frames at all, and that is a browser waiting for a gesture rather than a
+      // room that stayed quiet. They are different problems and they get different names.
+      return { wav: "", error: state === "running" ? "NothingCaptured" : "ContextSuspended" };
     }
 
     try {
-      const mono = await resample(decoded, RATE);
-      return { wav: base64(encodeWav(mono.data, mono.rate)), error: "" };
+      return { wav: base64(wav(captured, RATE)), error: "" };
     } catch (err) {
       return { wav: "", error: "EncodeFailed:" + nameOf(err) };
     }
   }
 
   function cancel() {
-    try {
-      if (recorder && recorder.state !== "inactive") {
-        recorder.onstop = null;
-        recorder.stop();
-      }
-    } catch {
-      // Already stopped; releasing the tracks below is all that is left to do.
-    }
-
-    chunks = [];
+    frames = [];
     release();
   }
 
   function recording() {
-    return recorder !== null;
+    return capturing;
   }
 
-  function encodeWav(samples, rate) {
-    const bytes = new ArrayBuffer(44 + (samples.length * 2));
-    const view = new DataView(bytes);
+  // The frames, with a WAV header in front of them. Nothing is converted here: the worklet already produced 16 kHz
+  // little-endian mono Int16, which is what the header goes on to describe.
+  function wav(chunks, rate) {
+    let length = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      length += chunks[i].length;
+    }
+
+    const out = new Uint8Array(44 + length);
+    const view = new DataView(out.buffer);
 
     function text(offset, s) {
       for (let i = 0; i < s.length; i++) {
@@ -318,7 +295,7 @@ window.PoMic = (function () {
     }
 
     text(0, "RIFF");
-    view.setUint32(4, 36 + (samples.length * 2), true);
+    view.setUint32(4, 36 + length, true);
     text(8, "WAVE");
     text(12, "fmt ");
     view.setUint32(16, 16, true);
@@ -329,16 +306,15 @@ window.PoMic = (function () {
     view.setUint16(32, 2, true);
     view.setUint16(34, 16, true);
     text(36, "data");
-    view.setUint32(40, samples.length * 2, true);
+    view.setUint32(40, length, true);
 
     let at = 44;
-    for (let i = 0; i < samples.length; i++) {
-      const s = Math.max(-1, Math.min(1, samples[i]));
-      view.setInt16(at, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-      at += 2;
+    for (let i = 0; i < chunks.length; i++) {
+      out.set(chunks[i], at);
+      at += chunks[i].length;
     }
 
-    return new Uint8Array(bytes);
+    return out;
   }
 
   // Chunked so a minute of speech does not blow the argument limit of String.fromCharCode.

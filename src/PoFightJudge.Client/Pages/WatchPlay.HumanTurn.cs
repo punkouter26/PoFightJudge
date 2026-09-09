@@ -223,9 +223,9 @@ public sealed partial class WatchPlay
             return $"The recording could not be read back ({Detail(error)}). Try again, or type it.";
         }
 
-        if (error.StartsWith("StopFailed", StringComparison.Ordinal))
+        if (string.Equals(error, "ContextSuspended", StringComparison.Ordinal))
         {
-            return $"The microphone would not stop cleanly ({Detail(error)}). Try again, or type it.";
+            return "The browser had not woken the microphone up yet. Press Speak it and try again.";
         }
 
         return error.Length == 0 || string.Equals(error, "NothingCaptured", StringComparison.Ordinal) || string.Equals(error, "NotRecording", StringComparison.Ordinal)

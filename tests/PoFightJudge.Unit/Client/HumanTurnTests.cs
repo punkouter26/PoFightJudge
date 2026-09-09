@@ -160,6 +160,19 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     }
 
     [Fact(Timeout = 60_000)]
+    public async Task A_browser_that_never_woke_the_microphone_up_is_told_how_to_wake_it()
+    {
+        JSInterop.Setup<MicClip>(MicInterop.Stop).SetResult(MicClip.Nothing("ContextSuspended"));
+        var cut = await AtTheirTurnAsync();
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Listening"), TimeSpan.FromSeconds(10));
+        await Button(cut, "Done").ClickAsync(new());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("had not woken the microphone up"), TimeSpan.FromSeconds(10));
+        cut.Markup.Should().Contain("Speak it", "and the way to wake it is the button right there");
+    }
+
+    [Fact(Timeout = 60_000)]
     public async Task A_microphone_that_truly_heard_nothing_still_says_so_plainly()
     {
         JSInterop.Setup<MicClip>(MicInterop.Stop).SetResult(MicClip.Nothing("NothingCaptured"));
