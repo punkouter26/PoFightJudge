@@ -125,3 +125,4 @@
 - [x] T90 A 1P debate rewrites the persona too: the judge's per-person read becomes optional, the write is queued
 - [x] T91 A spoken turn that the browser cannot read back says which step failed, and stops throwing the clip away
 - [x] T92 A watch turn is captured as PCM off the graph, the way a fight already is: no container, so nothing to decode
+- [x] T93 A persona read from debates says so, rather than claiming a 2P fight it may never have had
