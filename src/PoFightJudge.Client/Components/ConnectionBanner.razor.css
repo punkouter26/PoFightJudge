@@ -9,12 +9,12 @@
 
 .down {
   background: var(--po-danger);
-  color: var(--po-bg);
+  color: var(--po-danger-fg);
 }
 
 .degraded {
   background: var(--po-accent);
-  color: var(--po-on-accent);
+  color: var(--po-accent-fg);
 }
 
 /* The two banners sit above everything, in the same place the fake-AI one does. */

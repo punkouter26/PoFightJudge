@@ -2,6 +2,6 @@
 
 .line { width: 5rem; height: 1.5rem; }
 
-.last { color: var(--po-text); font-variant-numeric: tabular-nums; }
+.last { color: var(--po-fg); font-variant-numeric: tabular-nums; }
 
 .none { font-size: var(--po-text-xs); }

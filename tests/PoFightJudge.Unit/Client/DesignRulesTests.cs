@@ -55,6 +55,55 @@ public partial class DesignRulesTests
         problems.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Every <c>var(--po-*)</c> must name a token that exists. A <c>var()</c> on an undefined property drops the
+    /// whole declaration silently, so a typo is invisible in review and shows up as a square corner or, in the one
+    /// that prompted this test, white text on the yellow degraded banner.
+    /// </summary>
+    [Fact]
+    public void Every_design_token_reference_resolves()
+    {
+        var cssFiles = StyleSheets();
+        var defined = cssFiles
+            .SelectMany(f => TokenDefinition().Matches(File.ReadAllText(f)).Select(m => m.Groups["name"].Value))
+            .ToHashSet(StringComparer.Ordinal);
+        defined.Should().NotBeEmpty();
+
+        var unresolved = new List<string>();
+        foreach (var file in cssFiles)
+        {
+            var name = Path.GetRelativePath(ClientRoot, file);
+            foreach (Match m in TokenReference().Matches(File.ReadAllText(file)))
+            {
+                var token = m.Groups["name"].Value;
+                if (!defined.Contains(token) && !PublishedAtRuntime.Contains(token))
+                {
+                    unresolved.Add($"{name}: var({token})");
+                }
+            }
+        }
+
+        unresolved.Should().BeEmpty("a var() on an undefined token drops the declaration without an error");
+    }
+
+    /// <summary>
+    /// Tokens no stylesheet declares because JavaScript sets them on an element every frame. They are listed rather
+    /// than pattern-matched so that adding one is a decision somebody makes.
+    /// </summary>
+    private static readonly HashSet<string> PublishedAtRuntime = new(StringComparer.Ordinal)
+    {
+        "--po-speak-level",
+        "--po-mic-level",
+        "--po-host-level",
+        "--po-band-0", "--po-band-1", "--po-band-2", "--po-band-3",
+        "--po-band-4", "--po-band-5", "--po-band-6", "--po-band-7",
+    };
+
+    private static List<string> StyleSheets() =>
+        [.. Directory.EnumerateFiles(ClientRoot, "*.css", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                     && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))];
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -72,4 +121,10 @@ public partial class DesignRulesTests
 
     [GeneratedRegex(@"@media[^{]*?\((?:max|min)-width:\s*(?<value>[\d.]+(?:rem|px|em))\)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
     private static partial Regex MediaWidth();
+
+    [GeneratedRegex(@"(?<name>--po-[a-z0-9-]+)\s*:", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    private static partial Regex TokenDefinition();
+
+    [GeneratedRegex(@"var\(\s*(?<name>--po-[a-z0-9-]+)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    private static partial Regex TokenReference();
 }

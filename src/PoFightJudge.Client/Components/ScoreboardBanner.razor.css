@@ -10,7 +10,7 @@
   gap: var(--po-space-1);
   justify-items: center;
   padding: var(--po-space-4);
-  border-radius: var(--po-radius-2);
+  border-radius: var(--po-radius-md);
   border-top: 3px solid transparent;
   transition: transform var(--po-dur-slow) ease, filter var(--po-dur-slow) ease;
 }

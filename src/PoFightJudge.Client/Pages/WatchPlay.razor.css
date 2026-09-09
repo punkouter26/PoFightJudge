@@ -133,7 +133,7 @@
   display: grid;
   gap: var(--po-space-1);
   padding: var(--po-space-3);
-  border-radius: var(--po-radius-2);
+  border-radius: var(--po-radius-md);
   background: var(--po-surface-2);
 }
 
