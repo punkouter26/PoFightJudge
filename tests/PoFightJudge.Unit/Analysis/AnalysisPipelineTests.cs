@@ -60,7 +60,7 @@ public sealed class AnalysisPipelineTests : IDisposable
     private AnalysisPipeline Pipeline(IGeminiTranscribeClient? transcriber = null, IGeminiFilesClient? files = null) => new(
         _services.GetRequiredService<IServiceScopeFactory>(),
         files ?? new FakeAnalysisClients.Files(),
-        transcriber ?? new FakeAnalysisClients.Transcriber(),
+        new GeminiRecordingTranscriber(transcriber ?? new FakeAnalysisClients.Transcriber()),
         _judge,
         _clock,
         Options.Create(_options),

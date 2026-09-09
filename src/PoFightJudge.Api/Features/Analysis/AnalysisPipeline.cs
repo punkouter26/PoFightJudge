@@ -19,7 +19,7 @@ namespace PoFightJudge.Api.Features.Analysis;
 public sealed partial class AnalysisPipeline(
     IServiceScopeFactory scopes,
     IGeminiFilesClient files,
-    IGeminiTranscribeClient transcriber,
+    IRecordingTranscriber transcriber,
     IGeminiJudgeClient judge,
     TimeProvider clock,
     IOptions<AnalysisOptions> options,
@@ -109,9 +109,17 @@ public sealed partial class AnalysisPipeline(
             file = await files.UploadAndWaitAsync(recording.Content, recording.Length, MimeType, $"{matchId.Value}-players.wav", clock, ct);
         }
 
+        // The uploaded file for the transcriber that reads one, and a way back to the bytes for the one that has to
+        // send them. Opened only if it is actually reached, which on most fights it is not.
+        var reference = new RecordingRef(
+            file.Uri,
+            MimeType,
+            token => RecordingSource.OpenAsync(blobs, blobName, DebateOrchestrator.PlayerSampleRate, token));
+
         // The cheapest usable transcript wins. Only a fight that produced neither is worth paying to diarize.
         var (existing, source) = await ReadExistingTranscriptAsync(blobs, matchId, ct);
-        var transcript = existing ?? await transcriber.TranscribeAsync(file.Uri, MimeType, ct);
+        var transcript = existing ?? await transcriber.TranscribeAsync(reference, ct);
+        source = existing is null ? transcriber.Name : source;
         var turns = await turnsTask;
         var mapped = SpeakerMapper.Map(transcript, turns);
         LogTranscribed(logger, matchId.Value, transcript.Words.Count, source, mapped.Note);

@@ -97,8 +97,11 @@ Each was a deliberate decision made while building; the commit that made it says
   subject (`repo:punkouter26@121304072/PoFightJudge@1360738000:…`), so the `PoFightJudge-GitHub-OIDC` registration
   carries a second pair of federated credentials in that form beside the original ones; and the client's
   `wwwroot/appsettings.json` had shipped with empty MSAL values, which curl cannot see but `DeployedSiteTests` did.
-- The **transcription fallback** has never run against the real service: both real fights had usable live
-  captions, which the pipeline prefers.
+- The **transcription fallback** had never run against the real service, and T87 moved it off the model that was
+  the reason to worry: `gemini-3.5-transcribe` is documented in its own remarks as answering 200 with an empty part
+  while billing the audio. A fight now goes to Azure fast transcription whenever a Speech key is configured, which
+  is the same service every WATCH turn already uses. Still unrun end to end on a real fight — both real fights had
+  usable live captions, which the pipeline prefers — but it is now a service that is known to answer.
 - The judge's **explicit context cache** (T81) has never run against the real service either. The shape is from the
   published reference, the fallback to inline parts is tested, and a refusal is logged rather than fatal — but
   whether a real fight's prefix clears the minimum token count is a measurement nobody has taken. The log line at

@@ -132,9 +132,9 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
     var ai = builder.Services.AddPoAi(builder.Configuration, builder.Environment);
-    builder.Services.AddPoVoice(builder.Configuration, ai);
+    var azureSpeech = builder.Services.AddPoVoice(builder.Configuration, ai);
     builder.Services.AddPoFight(builder.Configuration, ai);
-    builder.Services.AddPoAnalysis(builder.Configuration, ai);
+    builder.Services.AddPoAnalysis(builder.Configuration, ai, azureSpeech);
     Log.Information("AI providers: {Mode} ({Reason})", ai.UseFakes ? "fakes" : "real", ai.Reason);
     builder.Services.TryAddSingleton(TimeProvider.System);
     builder.Services.AddFeatureManagement();

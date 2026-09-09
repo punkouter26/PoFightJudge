@@ -21,7 +21,8 @@ public static class VoiceServiceExtensions
     public const int AzureAttemptSeconds = 10;
     public const int AzureTotalSeconds = 22;
 
-    public static IServiceCollection AddPoVoice(this IServiceCollection services, IConfiguration configuration, AiMode mode)
+    /// <summary>Returns the Azure Speech settings it resolved, because the analysis slice picks its transcriber from the same ones.</summary>
+    public static AzureSpeechOptions AddPoVoice(this IServiceCollection services, IConfiguration configuration, AiMode mode)
     {
         var fishKey = configuration[ConfigKeys.Ai.FishAudioApiKey];
         var fish = new FishAudioOptions(!string.IsNullOrWhiteSpace(fishKey), configuration[ConfigKeys.Ai.FishDefaultReferenceId]);
@@ -79,7 +80,7 @@ public static class VoiceServiceExtensions
             services.AddSingleton<ITranscriptionService, GeminiTranscriptionService>();
         }
 
-        return services;
+        return azure;
     }
 
     private static IHttpClientBuilder AddVoicePipeline(this IHttpClientBuilder builder, int attemptSeconds, int totalSeconds, int baseDelayMs)
