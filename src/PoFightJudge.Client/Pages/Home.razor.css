@@ -87,3 +87,46 @@ h2 {
 ::deep .replay .topic { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .fighter-list .tag { margin-inline-end: var(--po-space-2); letter-spacing: 0.06em; }
+
+/* In the tab panel a phone gives these rows about 320 px, and a topic, two names and a date do not fit across it —
+   the row overflowed its own box, which the route sweep caught. Two lines instead of one, and the topic wraps
+   rather than being cut off at an ellipsis. */
+@media (max-width: 40rem) {
+  ::deep .replay {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "badge topic" "who when";
+    gap: var(--po-space-1) var(--po-space-2);
+    align-items: baseline;
+  }
+
+  ::deep .replay > :first-child { grid-area: badge; }
+
+  ::deep .replay .topic {
+    grid-area: topic;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+  }
+
+  ::deep .replay .who {
+    grid-area: who;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--po-text-xs);
+  }
+
+  ::deep .replay .when {
+    grid-area: when;
+    justify-self: end;
+    font-size: var(--po-text-xs);
+    white-space: nowrap;
+  }
+
+  .fighter-list ::deep a {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--po-space-1) var(--po-space-2);
+  }
+}

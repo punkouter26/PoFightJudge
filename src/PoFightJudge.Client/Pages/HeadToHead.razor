@@ -85,7 +85,7 @@
                     <RadzenDataGridColumn TItem="MeetingDto" Title="When" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(MeetingDto.At)">
                         <Template Context="meeting">@meeting.At.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MeetingDto" Title="Kind" Width="7rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
+                    <RadzenDataGridColumn TItem="MeetingDto" Title="Kind" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="meeting"><ModeBadge Mode="@meeting.Mode" /></Template>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="MeetingDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(MeetingDto.Topic)" />

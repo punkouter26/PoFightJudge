@@ -114,7 +114,9 @@
                     <RadzenDataGridColumn TItem="MatchDto" Title="When" Width="11rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(MatchDto.StartedAt)">
                         <Template Context="match">@match.StartedAt.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="Kind" Width="7rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
+                    @* 8rem, not 7: the mode badge is a chip, a chip does not wrap, and "Fight" with its icon needs 86 px inside
+                       a cell that 7rem left 80 px of. *@
+                    <RadzenDataGridColumn TItem="MatchDto" Title="Kind" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="match"><ModeBadge Mode="@match.Mode" /></Template>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="MatchDto" Title="Who" Visible="@(!Viewport.IsPhone)" Sortable="false">
@@ -137,7 +139,9 @@
                             }
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="" Width="@(Viewport.IsPhone ? "5.5rem" : "9rem")" Sortable="false">
+                    @* The actions column: two icon buttons at the 44 px they are held to since T71, plus the
+                       cell's own padding, which is what sets its width on a phone. *@
+                    <RadzenDataGridColumn TItem="MatchDto" Title="" Width="@(Viewport.IsPhone ? "7rem" : "9rem")" Sortable="false">
                         <Template Context="match">
                             <div class="row-actions">
                                 @if (match.Mode == MatchMode.Fight)

@@ -308,6 +308,17 @@ a:hover { color: var(--po-fg); }
 .rz-layout, .rz-body { background: var(--po-bg) !important; color: var(--po-fg) !important; }
 .rz-card { box-shadow: none !important; border: 1px solid var(--po-border) !important; }
 .rz-button { font-family: var(--po-font-display) !important; font-weight: 700 !important; letter-spacing: 0.06em; text-transform: uppercase; }
+/* Radzen gives an icon a box of 1em and draws the glyph at whatever the font resolves it to, and inside a button
+   with a label beside it the two disagreed: a 20 px box around a 24 px glyph, on every page with such a button.
+   The box sizes to what is in it instead — pinning it to --rz-icon-size fixes that one and breaks the small
+   buttons, whose icons Radzen deliberately draws smaller. !important because <RadzenTheme> injects its stylesheet
+   at runtime, after this file, which is what the rest of this section is working around too. */
+.rz-button .rzi {
+  width: auto !important;
+  min-width: 1em;
+  flex: none;
+}
+
 .rz-menu { border: 0 !important; box-shadow: none !important; }
 .rz-navigation-item-link { font-family: var(--po-font-body) !important; }
 .rz-notification-item { background: var(--po-surface) !important; color: var(--po-fg) !important; border: 1px solid var(--po-border) !important; }
@@ -318,6 +329,23 @@ a:hover { color: var(--po-fg); }
   color: var(--po-fg) !important;
   border: 1px solid var(--po-border) !important;
   box-shadow: var(--po-shadow-2) !important;
+}
+
+/* ── Grid cells wrap ──
+   Radzen clips a cell that does not fit and marks the loss with an ellipsis. A topic cut off after four words is
+   not a topic, and a row that is one line taller costs less than the half of a sentence it hides — on a phone,
+   where T74 stacks the columns into one cell of three lines, and on a desktop, where "who forgot the bins and left
+   them out all week" was reaching the About column as "who forgot the bins and…".
+
+   The truncating class is named directly: Radzen puts `rz-text-truncate` on the cell itself, so a rule reaching it
+   through a grid-root ancestor never applied. !important because <RadzenTheme> injects its stylesheet after this
+   file. Scoped to cells, so the utility class keeps its meaning anywhere else it is used. */
+.rz-cell-data,
+.rz-cell-data.rz-text-truncate {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
 }
 
 /* ── Focus visibility (keyboard users): one token-driven ring app-wide ── */

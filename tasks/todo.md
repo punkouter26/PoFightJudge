@@ -106,7 +106,7 @@
 - [x] T75 A live fight that renders what changed, not the page
 - [x] T76 Setup as three steps, so each one is a screen
 - [x] T77 Radzen does the layout: a sidebar on mobile, stacks instead of hand-rolled grid
-- [ ] T78 Every route measured at both viewports, on every run
+- [x] T78 Every route measured at both viewports, on every run
 
 ## Phase M — AI pipeline audit (2026-09-09)
 - [x] T79 WATCH reads the streams it already serves: the line as it is written, the audio clause by clause

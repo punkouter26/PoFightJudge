@@ -101,3 +101,18 @@ h3 {
   color: var(--po-danger);
 }
 
+/* A chip does not wrap — that is what makes it a chip — but "MAH · Husband" beside a portrait in a phone-width
+   card is wider than the column it is in, and the block then overflowed its own box. On a phone the chips get to
+   break, which is the lesser of the two. */
+@media (max-width: 40rem) {
+  .who,
+  .meta {
+    min-width: 0;
+  }
+
+  .meta ::deep .po-chip,
+  .meta .po-chip {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

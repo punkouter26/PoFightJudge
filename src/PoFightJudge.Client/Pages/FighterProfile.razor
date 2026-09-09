@@ -102,7 +102,7 @@
                         <RadzenDataGridColumn TItem="FighterResultDto" Title="When" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.At)">
                             <Template Context="row">@row.At.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)</Template>
                         </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Kind" Width="7rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="Kind" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                             <Template Context="row"><ModeBadge Mode="@row.Mode" /></Template>
                         </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="FighterResultDto" Title="Against" Width="8rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.Opponent)" />

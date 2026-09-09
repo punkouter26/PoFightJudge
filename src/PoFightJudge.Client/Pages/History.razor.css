@@ -1,6 +1,11 @@
 ::deep .history { width: 100%; }
 
+/* The two buttons do not shrink. Radzen does not mark these icon-only — they carry a label span either way — so
+   the 44 px floor from T71 does not reach them, and in a 7rem cell flex squeezed each to 28 px around 51 px of
+   content: a button three times taller than it is wide, with its own icon hanging out of it. */
 .row-actions { display: flex; gap: var(--po-space-1); justify-content: flex-end; }
+
+.row-actions ::deep .rz-button { flex: none; }
 
 .narrow {
   display: flex;
@@ -47,6 +52,9 @@
 /* Radzen pads a cell for a table that has room to spare; a phone does not. */
 @media (max-width: 40rem) {
   ::deep .history .rz-cell-data { padding-block: var(--po-space-2); }
+
+  /* The two buttons are 44 px wide each and the column is 7rem; the cell keeps its own padding out of the way. */
+  ::deep .history td .rz-cell-data { padding-inline: 0; }
 
   .row-actions { gap: 0; }
 }
