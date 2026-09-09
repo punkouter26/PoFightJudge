@@ -1,7 +1,6 @@
 using Carter;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.FeatureManagement;
 using PoFightJudge.Api.Common;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Configuration;
@@ -27,7 +26,7 @@ public sealed class HealthEndpoints : ICarterModule
         app.MapHealthChecks(ApiRoutes.Health.ProbeUrl, ready).AllowAnonymous();
         app.MapHealthChecks(ApiRoutes.Health.ReadyProbeUrl, ready).AllowAnonymous();
 
-        app.MapGet(ApiRoutes.Health.DetailsUrl, async (HealthCheckService health, IConfiguration config, IHostEnvironment env, IFeatureManager features, TimeProvider clock, CancellationToken ct) =>
+        app.MapGet(ApiRoutes.Health.DetailsUrl, async (HealthCheckService health, IConfiguration config, IHostEnvironment env, TimeProvider clock, CancellationToken ct) =>
         {
             var report = await health.CheckHealthAsync(ct);
             var checks = new List<HealthCheckDto>();
@@ -43,9 +42,9 @@ public sealed class HealthEndpoints : ICarterModule
             checks.Add(new HealthCheckDto("Table endpoint", string.IsNullOrWhiteSpace(config[ConfigKeys.Storage.TableEndpoint]) ? HealthState.Failed : HealthState.Ok, SecretMasker.MaskHost(config[ConfigKeys.Storage.TableEndpoint]), HealthCategory.Configuration));
             checks.Add(new HealthCheckDto("Blob endpoint", string.IsNullOrWhiteSpace(config[ConfigKeys.Storage.BlobEndpoint]) ? HealthState.Failed : HealthState.Ok, SecretMasker.MaskHost(config[ConfigKeys.Storage.BlobEndpoint]), HealthCategory.Configuration));
 
-            foreach (var flag in Flags.All)
+            foreach (var toggle in Toggles.All)
             {
-                checks.Add(new HealthCheckDto($"Feature: {flag}", HealthState.Ok, (await features.IsEnabledAsync(flag)) ? "on" : "off", HealthCategory.Feature));
+                checks.Add(new HealthCheckDto($"Toggle: {toggle}", HealthState.Ok, config.GetValue<bool>(toggle) ? "on" : "off", HealthCategory.Feature));
             }
 
             return Results.Ok(new HealthReportDto(env.EnvironmentName, Aggregate(checks), clock.GetUtcNow(), checks));

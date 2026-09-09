@@ -112,12 +112,9 @@
                                                   Icon="mic" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Filled"
                                                   Click="@ListenAgainAsync" />
                                 }
-                                @if (CanDictate)
-                                {
-                                    @* The browser's own recogniser, for anyone who would rather watch the words appear. *@
-                                    <RadzenSpeechToTextButton Change="@OnDictated" Title="Dictate in the browser" StopTitle="Stop dictating"
-                                                              ButtonStyle="ButtonStyle.Base" />
-                                }
+                                @* The browser's own recogniser, for anyone who would rather watch the words appear. *@
+                                <RadzenSpeechToTextButton Change="@OnDictated" Title="Dictate in the browser" StopTitle="Stop dictating"
+                                                          ButtonStyle="ButtonStyle.Base" />
                             }
                         </div>
 

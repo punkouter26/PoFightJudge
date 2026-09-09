@@ -4,7 +4,6 @@ using Carter;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.FeatureManagement;
 using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Ai;
 using PoFightJudge.Api.Features.Analysis;
@@ -77,13 +76,13 @@ try
     // ── Local Azurite override ────────────────────────────────────────────────────────────────────────────────────
     // After Key Vault on purpose: configuration is last-wins and KV carries the real dev endpoints. Swaps the ENDPOINTS
     // only — Azurite runs `--oauth basic` over HTTPS, so the same DefaultAzureCredential flow authenticates against it.
-    if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>($"{Flags.Section}:{Flags.UseAzurite}"))
+    if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>(Toggles.UseAzurite))
     {
         var table = builder.Configuration[ConfigKeys.Azurite.TableEndpoint];
         var blob = builder.Configuration[ConfigKeys.Azurite.BlobEndpoint];
         if (string.IsNullOrWhiteSpace(table) || string.IsNullOrWhiteSpace(blob))
         {
-            Log.Error("{Flag} is on but {TableKey}/{BlobKey} are not set — falling back to the REAL storage endpoints", Flags.UseAzurite, ConfigKeys.Azurite.TableEndpoint, ConfigKeys.Azurite.BlobEndpoint);
+            Log.Error("{Toggle} is on but {TableKey}/{BlobKey} are not set — falling back to the REAL storage endpoints", Toggles.UseAzurite, ConfigKeys.Azurite.TableEndpoint, ConfigKeys.Azurite.BlobEndpoint);
         }
         else
         {
@@ -138,7 +137,6 @@ try
     builder.Services.AddPoAnalysis(builder.Configuration, ai);
     Log.Information("AI providers: {Mode} ({Reason})", ai.UseFakes ? "fakes" : "real", ai.Reason);
     builder.Services.TryAddSingleton(TimeProvider.System);
-    builder.Services.AddFeatureManagement();
     builder.Services.AddHybridCache();
     builder.Services.AddCarter();
     builder.Services.AddOpenApi();

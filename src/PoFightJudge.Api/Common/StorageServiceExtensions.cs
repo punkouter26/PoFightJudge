@@ -5,7 +5,6 @@ using Azure.Core.Pipeline;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage.Blobs;
-using Microsoft.FeatureManagement;
 using PoFightJudge.Api.Features.Diagnostics;
 using PoFightJudge.Api.Features.Storage;
 using PoFightJudge.Shared.Configuration;
@@ -34,7 +33,7 @@ public static class StorageServiceExtensions
     /// </summary>
     public static IServiceCollection AddPoStorage(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        var azurite = environment.IsDevelopment() && configuration.GetValue<bool>($"{Flags.Section}:{Flags.UseAzurite}");
+        var azurite = environment.IsDevelopment() && configuration.GetValue<bool>(Toggles.UseAzurite);
 
         // Locally the cloud-only providers (environment, workload identity, IMDS) only add seconds of probing before
         // `az login` is tried; Production keeps the full chain, where managed identity is the one that answers.

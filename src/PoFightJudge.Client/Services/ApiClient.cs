@@ -260,7 +260,7 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
     }
 
     public async Task<FeatureFlagsDto> GetFeaturesAsync(CancellationToken ct = default) =>
-        await anonymous.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url, ct) ?? new FeatureFlagsDto(false, false, false, false, false);
+        await anonymous.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url, ct) ?? new FeatureFlagsDto(false, false, false, false);
 
     public Task<HealthReportDto?> GetHealthDetailsAsync(CancellationToken ct = default) =>
         http.GetFromJsonAsync<HealthReportDto>(ApiRoutes.Health.DetailsUrl, ct);

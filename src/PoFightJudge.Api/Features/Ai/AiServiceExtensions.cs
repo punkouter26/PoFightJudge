@@ -24,12 +24,12 @@ public static class AiServiceExtensions
     {
         var apiKey = configuration[ConfigKeys.Ai.GeminiApiKey];
         var hasKey = !string.IsNullOrWhiteSpace(apiKey);
-        var forced = configuration.GetValue<bool>($"{Flags.Section}:{Flags.UseFakeAi}");
-        var useFakes = DiagEndpoints.IsFakeAi(environment, configuration, forced);
+        var forced = configuration.GetValue<bool>(Toggles.UseFakes);
+        var useFakes = DiagEndpoints.IsFakeAi(environment, configuration);
 
         var reason = (useFakes, hasKey, forced) switch
         {
-            (true, _, true) => $"{Flags.Section}:{Flags.UseFakeAi} is on",
+            (true, _, true) => $"{Toggles.UseFakes} is on",
             (true, _, _) => "no Gemini key configured outside Production",
             (false, true, _) => "Gemini key present",
             (false, false, _) => "Production without a Gemini key — AI calls fail until the secret is set (degraded mode)",

@@ -20,7 +20,7 @@ public class AiRegistrationTests
 
         if (forceFakes)
         {
-            values[$"{Flags.Section}:{Flags.UseFakeAi}"] = "true";
+            values[Toggles.UseFakes] = "true";
         }
 
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();

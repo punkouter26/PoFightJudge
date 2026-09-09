@@ -46,7 +46,7 @@ public class ApiClientTests
             var path = request.RequestUri!.AbsolutePath;
             requests.Add((name, path));
             var body = string.Equals(path, ApiRoutes.Features.Url, StringComparison.Ordinal)
-                ? JsonContent.Create(new FeatureFlagsDto(true, false, false, false, DevEntraEnabled: false))
+                ? JsonContent.Create(new FeatureFlagsDto(true, false, false, DevEntraEnabled: false))
                 : JsonContent.Create(new HealthReportDto("Test", HealthState.Ok, DateTimeOffset.UnixEpoch, []));
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = body });
         }

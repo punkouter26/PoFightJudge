@@ -31,7 +31,7 @@ public partial class HealthTests(ApiFactory factory)
         report!.Environment.Should().Be(ApiFactory.Environment);
         report.Checks.Should().Contain(c => c.Name == "configuration" && c.Category == HealthCategory.Connection);
         report.Checks.Should().Contain(c => c.Name == "Gemini API key" && c.State == HealthState.Ok && c.Detail == "****", "the test key is short enough to be fully masked");
-        report.Checks.Where(c => c.Category == HealthCategory.Feature).Select(c => c.Name).Should().BeEquivalentTo(Flags.All.Select(f => $"Feature: {f}"));
+        report.Checks.Where(c => c.Category == HealthCategory.Feature).Select(c => c.Name).Should().BeEquivalentTo(Toggles.All.Select(t => $"Toggle: {t}"));
         report.Checks.Should().OnlyContain(c => !c.Detail.Contains("test-key"));
     }
 
@@ -63,7 +63,7 @@ public partial class HealthTests(ApiFactory factory)
             dto.Models.Live.Should().Be("gemini-3.1-flash-live-preview");
             dto.Models.Round.Should().Be("gemini-3.1-flash-lite");
             dto.Models.Tts.Should().Be("gemini-3.1-flash-tts-preview");
-            dto.Flags.Keys.Should().BeEquivalentTo(Flags.All);
+            dto.Flags.Keys.Should().BeEquivalentTo(Toggles.All);
         }
     }
 
@@ -76,8 +76,6 @@ public partial class HealthTests(ApiFactory factory)
 
         flags!.UseFakeAi.Should().BeTrue("the test host forces the fakes");
         flags.HumanInWatch.Should().BeTrue("the fake transcriber can finish a spoken turn, so a person may take a side");
-        flags.HumanInWatch.Should().BeTrue();
-        flags.BrowserSpeechRecognition.Should().BeTrue();
     }
 
     [Fact]

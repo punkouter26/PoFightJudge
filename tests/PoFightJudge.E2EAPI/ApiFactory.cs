@@ -29,11 +29,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting(ConfigKeys.KeyVault.Uri, string.Empty);
         builder.UseSetting(ConfigKeys.Ai.GeminiApiKey, "test-key");
         builder.UseSetting(ConfigKeys.Auth.AllowFakeAuth, "true");
-        builder.UseSetting($"{Flags.Section}:{Flags.UseAzurite}", "false");
+        builder.UseSetting(Toggles.UseAzurite, "false");
         // No storage account in this host, so the blob TTS cache would spend its retry budget on every call.
-        builder.UseSetting($"{Flags.Section}:{Flags.TtsCacheEnabled}", "false");
+        builder.UseSetting(Toggles.TtsCache, "false");
         // The key above exercises the real registration path; the flag still routes every AI call to the deterministic fakes.
-        builder.UseSetting($"{Flags.Section}:{Flags.UseFakeAi}", "true");
+        builder.UseSetting(Toggles.UseFakes, "true");
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IProfileRepository>();

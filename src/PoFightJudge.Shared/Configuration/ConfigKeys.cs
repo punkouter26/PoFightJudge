@@ -134,43 +134,22 @@ public static class ConfigKeys
 }
 
 /// <summary>
-/// Feature flag names, read through <c>Microsoft.FeatureManagement</c> from the <c>FeatureManagement</c> section and
-/// reported by <c>GET /api/features</c>. The client's <c>&lt;FeatureGate&gt;</c> uses the same names.
+/// The three switches that are genuinely settable: everything else the app used to call a "feature flag" was really a
+/// question about the environment or the configuration, and is answered where it is asked instead.
 /// </summary>
-public static class Flags
+public static class Toggles
 {
-    public const string Section = "FeatureManagement";
+    public const string Section = $"{ConfigKeys.Root}:Toggles";
 
-    /// <summary>Force the deterministic fakes (Development/Test only; Production ignores it).</summary>
-    public const string UseFakeAi = "UseFakeAi";
-
-    /// <summary>Development-only guest sign-in.</summary>
-    public const string DevGuestEnabled = "DevGuestEnabled";
-
-    /// <summary>Offer the SELF (live human) player in WATCH.</summary>
-    public const string HumanInWatch = "HumanInWatch";
-
-    /// <summary>Try the browser's Web Speech API for a SELF turn before posting the clip to the server.</summary>
-    public const string BrowserSpeechRecognition = "BrowserSpeechRecognition";
-
-    /// <summary>Content-addressed blob cache of synthesized speech.</summary>
-    public const string TtsCacheEnabled = "TtsCacheEnabled";
+    /// <summary>Force the deterministic fakes even with a key present (Development/Test only; Production ignores it).</summary>
+    public const string UseFakes = $"{Section}:UseFakes";
 
     /// <summary>Development-only: point storage at the local Azurite container.</summary>
-    public const string UseAzurite = "UseAzurite";
+    public const string UseAzurite = $"{Section}:UseAzurite";
 
-    /// <summary>Require the admin role for /api/diag even in Development.</summary>
-    public const string DiagRequiresAdminInDev = "DiagRequiresAdminInDev";
+    /// <summary>Content-addressed blob cache of synthesized speech. Off is what a prompt-tuning session wants.</summary>
+    public const string TtsCache = $"{Section}:TtsCache";
 
-    /// <summary>
-    /// True when the API is running the dev Entra OIDC scheme (Development AND <c>PoFightJudge:Auth:AllowDevEntra</c>
-    /// AND a dev client id is configured). The client renders the 'Sign in with Microsoft' button when this is on,
-    /// otherwise the guest button is the only door.
-    /// </summary>
-    public const string DevEntraEnabled = "DevEntraEnabled";
-
-    public static readonly IReadOnlyList<string> All =
-    [
-        UseFakeAi, DevGuestEnabled, HumanInWatch, BrowserSpeechRecognition, TtsCacheEnabled, UseAzurite, DiagRequiresAdminInDev, DevEntraEnabled,
-    ];
+    /// <summary>Reported by <c>/api/diag</c> and <c>/api/health/details</c>, so a running app can say what it is set to.</summary>
+    public static readonly IReadOnlyList<string> All = [UseFakes, UseAzurite, TtsCache];
 }

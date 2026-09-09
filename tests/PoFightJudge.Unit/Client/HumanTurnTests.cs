@@ -45,7 +45,7 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
         JSInterop.Mode = JSRuntimeMode.Loose;
 
         _simulation.Set(Matthew, Person, "the freezer");
-        Flags(human: true, browser: true);
+        Flags(human: true);
         _api.GenerateRoundAsync(Arg.Any<GenerateRoundRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GenerateRoundResponse("You left it open all night.", "angry", "escalating", true)));
 
@@ -75,9 +75,9 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
 
     public new async Task DisposeAsync() => await base.DisposeAsync().ConfigureAwait(false);
 
-    private void Flags(bool human, bool browser) =>
+    private void Flags(bool human) =>
         _api.GetFeaturesAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new FeatureFlagsDto(true, true, human, browser, DevEntraEnabled: false)));
+            .Returns(Task.FromResult(new FeatureFlagsDto(true, true, human, DevEntraEnabled: false)));
 
     /// <summary>Renders the page and plays on until the argument is waiting for the person.</summary>
     private async Task<IRenderedComponent<WatchPlay>> AtTheirTurnAsync()
@@ -98,12 +98,11 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
     [Fact(Timeout = 60_000)]
     public async Task The_microphone_is_offered_only_when_the_server_can_finish_the_turn()
     {
-        Flags(human: false, browser: false);
+        Flags(human: false);
 
         var cut = await AtTheirTurnAsync();
 
         cut.FindAll("button").Should().NotContain(b => b.TextContent.Contains("Speak it", StringComparison.Ordinal));
-        cut.FindComponents<RadzenSpeechToTextButton>().Should().BeEmpty();
         cut.Find("textarea[name=line]").Should().NotBeNull("the line can always be typed");
     }
 

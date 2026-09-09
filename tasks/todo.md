@@ -132,3 +132,4 @@
 - [x] T95 A search nothing called: the fight-embedding chain and `/api/matches/search` deleted
 - [x] T96 Keys nobody presses: the command palette, the shortcut sheet and `HotKeys2` deleted
 - [x] T97 One voice, one transcriber, one text model: the provider fan-out collapsed onto Gemini and the fakes
+- [x] T98 Three toggles, not nine flags: `Microsoft.FeatureManagement` gone, the rest answered where they are asked

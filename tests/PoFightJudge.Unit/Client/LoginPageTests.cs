@@ -32,7 +32,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void Dev_with_only_guest_flag_on_shows_the_guest_button_only()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, true, DevEntraEnabled: false));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, DevEntraEnabled: false));
 
         var cut = Render<Login>();
 
@@ -43,7 +43,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void Dev_with_only_dev_entra_flag_on_shows_the_microsoft_button_only()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, true, DevEntraEnabled: true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, DevEntraEnabled: true));
 
         var cut = Render<Login>();
 
@@ -54,7 +54,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void Dev_with_both_flags_on_shows_both_buttons()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, true, DevEntraEnabled: true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, DevEntraEnabled: true));
 
         var cut = Render<Login>();
 
@@ -68,7 +68,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void Without_either_flag_the_page_explains_how_to_turn_either_door_on()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, true, DevEntraEnabled: false));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, DevEntraEnabled: false));
 
         var cut = Render<Login>();
 
@@ -79,7 +79,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public async Task Continue_as_guest_signs_in_and_returns_to_a_safe_url_only()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, true, DevEntraEnabled: false));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, DevEntraEnabled: false));
         _api.GuestSignInAsync(Arg.Any<CancellationToken>()).Returns(new AuthMeDto(true, "GUEST-1", "GUEST-1", "DevGuest"));
         var nav = Services.GetRequiredService<BunitNavigationManager>();
 
@@ -97,7 +97,7 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void Dev_microsoft_button_navigates_to_the_dev_oidc_endpoint_with_a_full_page_load()
     {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, true, DevEntraEnabled: true));
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, DevEntraEnabled: true));
         var nav = Services.GetRequiredService<BunitNavigationManager>();
         nav.NavigateTo("login?returnUrl=%2Fwatch");
         var cut = Render<Login>();

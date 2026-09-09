@@ -17,10 +17,10 @@ public static class VoiceServiceExtensions
 
         services.AddSingleton(new TtsRoutingOptions(
             WireFormat: TtsAudioFormats.Normalize(configuration[ConfigKeys.Ai.TtsWireFormat]),
-            CacheEnabled: configuration.GetValue<bool>($"{Flags.Section}:{Flags.TtsCacheEnabled}")));
+            CacheEnabled: configuration.GetValue<bool>(Toggles.TtsCache)));
 
         // Caching is a flag: off means every line is synthesized fresh, which is what a prompt-tuning session wants.
-        if (configuration.GetValue<bool>($"{Flags.Section}:{Flags.TtsCacheEnabled}"))
+        if (configuration.GetValue<bool>(Toggles.TtsCache))
         {
             services.AddSingleton<ITtsCache, BlobTtsCache>();
         }

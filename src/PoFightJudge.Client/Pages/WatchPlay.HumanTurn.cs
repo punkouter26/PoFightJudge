@@ -38,9 +38,6 @@ public sealed partial class WatchPlay
     /// <summary>Recording is offered only when the server has a transcriber to finish the turn.</summary>
     private bool CanRecord => Features.Flags.HumanInWatch;
 
-    /// <summary>The browser's own recogniser, when this browser has one and the server has not turned it off.</summary>
-    private bool CanDictate => Features.Flags.BrowserSpeechRecognition;
-
     /// <summary>Opens the microphone for a turn that has just begun. A failure here leaves the box to type in.</summary>
     private async Task BeginListeningAsync()
     {
