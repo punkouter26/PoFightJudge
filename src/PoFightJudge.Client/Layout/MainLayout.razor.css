@@ -119,15 +119,18 @@
   min-width: 0;
 }
 
-/* ── Nav switches at 64rem: seven tabs, a brand and a session block do not fit sooner. ── */
+/* The toggle belongs to the drawer, so it is not on a screen wide enough for the bar. Through ::deep: RadzenButton
+   renders its own markup in Radzen's assembly, which carries no scope attribute of ours. */
+.session ::deep .drawer-toggle { display: none; }
+
+/* ── Nav switches at 64rem: eight tabs, a brand and a session block do not fit sooner. ── */
 @media (max-width: 64rem) {
-  /* Closed until Radzen says open. Radzen collapses the menu by adding `rz-menu-closed` from its own JS, after it
-     has measured the bar — so until that ran, all eight items were in flow and the top bar was 269 px tall on a
-     phone instead of 64. Everything below it then jumped 205 px, which was the whole of the home page's CLS.
-     Starting from the closed state in CSS means the first paint is already the settled one. */
-  .nav ::deep .rz-menu:not(.rz-menu-open) .rz-navigation-item {
-    display: none;
-  }
+  /* The bar goes, the drawer's button arrives. Both are decided here rather than by Radzen's own responsive menu,
+     which makes the same choice from JavaScript after measuring the bar — and until that ran, the first paint had
+     all eight items in flow and a 269 px top bar that then jumped 205 px when it collapsed. */
+  .nav { display: none; }
+
+  .session ::deep .drawer-toggle { display: inline-flex; }
 
   .topbar {
     grid-template-columns: auto 1fr auto;
@@ -169,4 +172,56 @@
   display: flex;
   gap: var(--po-space-3);
   flex-wrap: wrap;
+}
+
+/* ── The drawer ──
+   A sheet from the leading edge, over a scrim, above the sticky bar. Only in the document while it is open, so it
+   costs nothing on a screen that never asks for it. */
+.po-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--po-scrim);
+  animation: po-fade var(--po-dur-fast) var(--po-ease);
+}
+
+.po-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 21;
+  width: min(18rem, 82vw);
+  padding: var(--po-space-4) var(--po-space-3);
+  padding-block-start: calc(var(--po-space-4) + var(--po-safe-t));
+  padding-inline-start: max(var(--po-space-3), var(--po-safe-l));
+  overflow-y: auto;
+  background: var(--po-bg-elev);
+  border-inline-end: 1px solid var(--po-border);
+  box-shadow: var(--po-shadow-3);
+  animation: po-slide-in var(--po-dur-base) var(--po-ease);
+}
+
+.po-drawer ::deep .rz-navigation-item-link {
+  min-height: 48px;
+  border-radius: var(--po-radius-sm);
+  color: var(--po-fg);
+  font-family: var(--po-font-body);
+}
+
+.po-drawer ::deep .rz-navigation-item-link:hover {
+  background: var(--po-surface-2);
+}
+
+.po-drawer ::deep .rz-navigation-item-wrapper-active > .rz-navigation-item-link {
+  background: var(--po-surface-2);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--po-accent);
+}
+
+@keyframes po-fade {
+  from { opacity: 0; }
+}
+
+@keyframes po-slide-in {
+  from { transform: translateX(-100%); }
 }

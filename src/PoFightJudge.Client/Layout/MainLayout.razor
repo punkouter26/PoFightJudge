@@ -13,19 +13,22 @@
             </span>
             <span class="wordmark">PoFight <em>Judge</em></span>
         </a>
+        @* The bar above 64rem, a drawer below it. Responsive="false" on both: Radzen's own responsive menu decides
+           which to show from JavaScript, after measuring the bar, and until that ran the first paint on a phone had
+           all eight items in flow and a 269 px top bar. Which one is in the document is a media query here, so the
+           first frame is already the right one. *@
         <nav class="nav" aria-label="Primary">
-            <RadzenMenu Responsive="true">
-                <RadzenMenuItem Text="Home" Path="" Icon="home" />
-                <RadzenMenuItem Text="CPU" Path="cpu" Icon="theaters" />
-                <RadzenMenuItem Text="1P" Path="1p" Icon="record_voice_over" />
-                <RadzenMenuItem Text="2P" Path="2p" Icon="mic" />
-                <RadzenMenuItem Text="Profiles" Path="profiles" Icon="groups" />
-                <RadzenMenuItem Text="Fighters" Path="fighters" Icon="person" />
-                <RadzenMenuItem Text="History" Path="history" Icon="history" />
-                <RadzenMenuItem Text="Leaderboard" Path="leaderboard" Icon="leaderboard" />
+            <RadzenMenu Responsive="false">
+                @foreach (var (text, path, icon) in Destinations)
+                {
+                    <RadzenMenuItem Text="@text" Path="@path" Icon="@icon" />
+                }
             </RadzenMenu>
         </nav>
         <div class="session">
+            <RadzenButton class="drawer-toggle" Icon="menu" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
+                          aria-label="Menu" title="Menu" aria-expanded="@(_drawer ? "true" : "false")"
+                          Click="@(() => _drawer = !_drawer)" />
             <AuthorizeView>
                 <Authorized>
                     <span class="user"><RadzenIcon Icon="person" /> @context.User.Identity?.Name</span>
@@ -37,6 +40,21 @@
             <ThemeToggle />
         </div>
     </header>
+    @* Opened by the toggle above, and closed by anything that leads out of it. Rendered only when it is open, so a
+       phone that never asks for the nav never pays for it and a screen reader is never offered a hidden copy of
+       every destination. *@
+    @if (_drawer)
+    {
+        <div class="po-drawer-scrim" @onclick="@(() => _drawer = false)"></div>
+        <nav class="po-drawer" aria-label="Primary">
+            <RadzenPanelMenu Click="@(_ => _drawer = false)" AriaLabel="Primary">
+                @foreach (var (text, path, icon) in Destinations)
+                {
+                    <RadzenPanelMenuItem Text="@text" Path="@path" Icon="@icon" Match="@(path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
+                }
+            </RadzenPanelMenu>
+        </nav>
+    }
     <main class="content" id="main">
         @* One unhandled render exception used to drop the whole app to index.html's error strip, which offers a
            reload and loses whatever was in progress. The boundary keeps the shell, the nav and the banner. *@
@@ -65,7 +83,23 @@
 </div>
 
 @code {
+    /// <summary>The eight destinations, written once and rendered twice: as the bar, and as the drawer.</summary>
+    private static readonly (string Text, string Path, string Icon)[] Destinations =
+    [
+        ("Home", "", "home"),
+        ("CPU", "cpu", "theaters"),
+        ("1P", "1p", "record_voice_over"),
+        ("2P", "2p", "mic"),
+        ("Profiles", "profiles", "groups"),
+        ("Fighters", "fighters", "person"),
+        ("History", "history", "history"),
+        ("Leaderboard", "leaderboard", "leaderboard"),
+    ];
+
     private bool _signingOut;
+
+    /// <summary>Whether the phone's nav drawer is open.</summary>
+    private bool _drawer;
 
     private ErrorBoundary? _boundary;
 
@@ -75,8 +109,15 @@
     /// </summary>
     private int _attempt;
 
-    /// <summary>Navigating away is its own recovery: the boundary is latched until something resets it.</summary>
-    protected override void OnParametersSet() => _boundary?.Recover();
+    /// <summary>
+    /// Navigating away is its own recovery: the boundary is latched until something resets it. It also closes the
+    /// drawer, which covers the case of a destination reached some other way while it was open.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        _drawer = false;
+        _boundary?.Recover();
+    }
 
     private void Recover()
     {
