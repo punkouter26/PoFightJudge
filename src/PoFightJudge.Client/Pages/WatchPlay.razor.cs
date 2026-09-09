@@ -20,6 +20,9 @@ public sealed partial class WatchPlay : IAsyncDisposable
     /// </summary>
     internal static readonly TimeSpan MinimumBeat = TimeSpan.FromSeconds(1.2);
 
+    /// <summary>The element the aura and the slap are drawn on. One selector, used to mount it and to take it down.</summary>
+    public const string StageSelector = ".stage";
+
     private readonly List<WatchRoundDto> _rounds = [];
 
     /// <summary>
@@ -46,6 +49,15 @@ public sealed partial class WatchPlay : IAsyncDisposable
     private string? _pendingInterjection;
     private bool _slapUsed;
     private bool _isFake;
+
+    /// <summary>How many rounds have been rung in. The bell is the husband opening one, and it rings once each.</summary>
+    private int _bellsRung;
+
+    /// <summary>Whether the browser took the stage effects. It answers no on a phone that cannot, and under reduced motion.</summary>
+    private bool _drawn;
+
+    /// <summary>Who the aura is currently pointed at, so it is only re-aimed when the speaker actually changes.</summary>
+    private string? _aimedAt;
     private string _line = string.Empty;
     private string? _error;
 
@@ -77,6 +89,10 @@ public sealed partial class WatchPlay : IAsyncDisposable
     [Inject] private AudioInterop Audio { get; set; } = default!;
 
     [Inject] private FxInterop Fx { get; set; } = default!;
+
+    [Inject] private SfxInterop Sound { get; set; } = default!;
+
+    [Inject] private GfxInterop Gfx { get; set; } = default!;
 
     [Inject] private MicInterop Mic { get; set; } = default!;
 
@@ -121,8 +137,35 @@ public sealed partial class WatchPlay : IAsyncDisposable
         _keys = HotKeys.CreateContext()
             .Add(Code.S, SlapAsync, new() { Description = "Slap the speaker", Exclude = Exclude.Default });
 
+        // The click that started this match is the gesture the audio context needs; taking it now means the first
+        // bell rings on time rather than being swallowed by the autoplay policy.
+        await Sound.ArmAsync(_leaving.Token);
+
         await LoadCastAsync();
         await RunAsync();
+    }
+
+    /// <summary>
+    /// Mounts the stage effects once, then keeps the aura pointed at whoever is speaking. The aim is measured in
+    /// the browser from the card itself, so it follows the layout rather than assuming one: the two corners are
+    /// side by side on a laptop and stacked on a phone.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _drawn = await Gfx.MountAsync(StageSelector, Shaders.Stage, GfxInterop.WatchLevel, _leaving.Token);
+        }
+
+        if (!_drawn || string.Equals(_aimedAt, _speaking, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _aimedAt = _speaking;
+        var side = _speaking is null ? 0 : WatchTurns.IsHusband(_speaking) ? -1 : 1;
+        await Gfx.SetAsync(StageSelector, "side", side, _leaving.Token);
+        await Gfx.FocusAsync(StageSelector, _speaking is null ? null : ".corner.speaking", _leaving.Token);
     }
 
     /// <summary>
@@ -176,11 +219,16 @@ public sealed partial class WatchPlay : IAsyncDisposable
                 }
 
                 var speaker = WatchTurns.NextSpeaker(_rounds.Count, _slapUsed);
+                await RingRoundAsync(speaker, ct);
                 if (SideOf(speaker).IsHuman)
                 {
                     _stage = Stage.WaitingForPerson;
                     _speaking = null;
                     StateHasChanged();
+
+                    // Their turn, announced: somebody watching the transcript rather than the stage has no other
+                    // way of knowing the argument has stopped and is waiting for them.
+                    await Sound.PlayAsync(Sfx.Cue, ct: ct);
 
                     // Their turn opens the microphone: pressing a button before you may speak is a step nobody
                     // asked for, and the meter is what says it is working.
@@ -200,6 +248,27 @@ public sealed partial class WatchPlay : IAsyncDisposable
         {
             // The page is being left; the argument goes no further.
         }
+    }
+
+    /// <summary>
+    /// Rings a round in. A round is the husband opening one, so it is his turn that carries the bell — and it is
+    /// counted rather than derived, because a slap inserts a line without advancing anything.
+    /// </summary>
+    private async Task RingRoundAsync(string speaker, CancellationToken ct)
+    {
+        if (!WatchTurns.IsHusband(speaker))
+        {
+            return;
+        }
+
+        var round = _rounds.Count(r => WatchTurns.IsHusband(r.Speaker)) + 1;
+        if (round <= _bellsRung || round > WatchTurns.RoundsPerSide)
+        {
+            return;
+        }
+
+        _bellsRung = round;
+        await Sound.PlayAsync(Sfx.Bell, ct: ct);
     }
 
     /// <summary>Asks for one line, shows it, and speaks it. False when it could not be generated.</summary>
@@ -309,6 +378,11 @@ public sealed partial class WatchPlay : IAsyncDisposable
         _pendingInterjection = heckle.Key;
         DropPrefetch();
         await Fx.BurstAsync(heckle.Key, _leaving.Token);
+
+        // The crack lands over the top of the line it interrupts, and the ring goes out from the middle of the
+        // stage — one gesture in three places, which is the only reason it reads as a hit rather than a glitch.
+        await Sound.PlayOverAsync(Sfx.Slap, 0.6, _leaving.Token);
+        await Gfx.ShockAsync(StageSelector, _leaving.Token);
         await Audio.StopAsync(_leaving.Token);
         if (_beat is { } interrupted)
         {
@@ -350,12 +424,16 @@ public sealed partial class WatchPlay : IAsyncDisposable
         _speaking = null;
         StateHasChanged();
 
+        // Three rings: that is the end of the argument, whatever the judge goes on to make of it.
+        await Sound.PlayAsync(Sfx.BellThree, ct: ct);
+
         try
         {
             var topic = Simulation.Topic.Length == 0 ? null : Simulation.Topic;
             _verdict = await Api.VerdictAsync(new VerdictRequest(Simulation.Husband!, Simulation.Wife!, WithClips(), topic), ct);
             _stage = Stage.Done;
             _error = null;
+            await Sound.PlayOverAsync(Sfx.GavelThree, 0.9, ct);
         }
         catch (ApiException ex)
         {
@@ -387,6 +465,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         _slapUsed = false;
         _pendingInterjection = null;
         _isFake = false;
+        _bellsRung = 0;
         _stage = Stage.Arguing;
         DropPrefetch();
         await RunAsync();
@@ -476,6 +555,10 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
         // The microphone goes first: a recording light left on after the page is gone is not something to explain.
         await Mic.CancelAsync(CancellationToken.None);
+
+        // Then the canvas, before anything that might take its time: it holds a GL context and a frame loop, and
+        // both of those outlive a page that only half finished tidying itself up.
+        await Gfx.UnmountAsync(StageSelector, CancellationToken.None);
 
         // The beat owns its own lifetime through a using in BeatAsync; disposing it again here is free and is what
         // proves the field cannot outlive the page.

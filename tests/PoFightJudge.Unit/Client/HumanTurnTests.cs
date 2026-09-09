@@ -1,4 +1,5 @@
 using AngleSharp.Dom;
+using Blazored.LocalStorage;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
@@ -35,6 +36,10 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
         Services.AddSingleton<TimeProvider>(_clock);
         Services.AddScoped<AudioInterop>();
         Services.AddScoped<FxInterop>();
+        // The stage makes a noise and draws on itself; both are best-effort, and under bunit both are no-ops.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SfxInterop>();
+        Services.AddScoped<GfxInterop>();
         Services.AddScoped<MicInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
 

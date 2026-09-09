@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,10 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         Services.AddSingleton<TimeProvider>(_clock);
         Services.AddScoped<AudioInterop>();
         Services.AddScoped<FxInterop>();
+        // The stage makes a noise and draws on itself; both are best-effort, and under bunit both are no-ops.
+        Services.AddSingleton(Substitute.For<ILocalStorageService>());
+        Services.AddScoped<SfxInterop>();
+        Services.AddScoped<GfxInterop>();
         Services.AddScoped<MicInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
 

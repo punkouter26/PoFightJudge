@@ -8,6 +8,10 @@ const PoAudio = (() => {
   const DUCK_TO = 0.32;
   let context = null;
   let bus = null;
+  let analyser = null;
+  let levelData = null;
+  let currentLevel = 0;
+  let meterFrame = 0;
   let nextStartTime = 0;
   let sources = [];
   let endedCallback = null;
@@ -19,13 +23,50 @@ const PoAudio = (() => {
       // Everything spoken goes through one gain rather than straight out, so PoSfx can dip the voice under a bell
       // without touching the sources that are already scheduled.
       bus = context.createGain();
-      bus.connect(context.destination);
+      analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.35;
+      levelData = new Uint8Array(analyser.fftSize);
+      bus.connect(analyser);
+      analyser.connect(context.destination);
     }
     if (context.state === 'suspended') {
       // Autoplay policy: a click has already happened by the time anything plays.
       context.resume();
     }
     return context;
+  }
+
+  // How loud the line being spoken is, right now. Published as a custom property so a card can glow with it without
+  // anything crossing into .NET, and read straight off by PoGfx for the aura behind whoever is talking. The loop
+  // only runs while something is actually scheduled: a silent page costs nothing.
+  function pumpLevel() {
+    if (!analyser || sources.length === 0) {
+      currentLevel = 0;
+      publishLevel(0);
+      meterFrame = 0;
+      return;
+    }
+
+    analyser.getByteTimeDomainData(levelData);
+    let sum = 0;
+    for (let i = 0; i < levelData.length; i++) {
+      const v = (levelData[i] - 128) / 128;
+      sum += v * v;
+    }
+
+    // The same curve the live meter uses: a linear RMS sits near zero for ordinary speech and says nothing.
+    currentLevel = Math.min(1, Math.pow(Math.sqrt(sum / levelData.length) * 3.2, 0.7));
+    publishLevel(currentLevel);
+    meterFrame = requestAnimationFrame(pumpLevel);
+  }
+
+  function publishLevel(value) {
+    try {
+      document.documentElement.style.setProperty('--po-speak-level', value.toFixed(3));
+    } catch {
+      // No document (a worker, a test host): nothing glows, and nothing breaks.
+    }
   }
 
   function base64ToBytes(base64) {
@@ -90,6 +131,9 @@ const PoAudio = (() => {
       source.start(startAt);
       nextStartTime = startAt + buffer.duration;
       sources.push(source);
+      if (!meterFrame) {
+        meterFrame = requestAnimationFrame(pumpLevel);
+      }
       source.onended = () => {
         sources = sources.filter((s) => s !== source);
         if (sources.length === 0 && endedCallback) {
@@ -118,6 +162,13 @@ const PoAudio = (() => {
       sources = [];
       endedCallback = null;
       nextStartTime = context ? context.currentTime : 0;
+      currentLevel = 0;
+      publishLevel(0);
+    },
+
+    /** How loud the current line is, 0 to 1 — what the aura behind the speaker breathes with. */
+    level() {
+      return currentLevel;
     },
 
     /**

@@ -91,6 +91,6 @@
 
 ## Phase K — Sound and light (2026-09-08)
 - [x] T65 A sound bus that makes its own noise: synthesized SFX, one master switch, ducking over the voices
-- [ ] T66 The slap lands and the bell rings: WATCH gets its shockwave, its round chrome and a stage that hears the voice
+- [x] T66 The slap lands and the bell rings: WATCH gets its shockwave, its round chrome and a stage that hears the voice
 - [ ] T67 The live stage as a broadcast: a shader backdrop, glass over it, phase stingers and a mic that shows itself
 - [ ] T68 The reveal: particles, a counting scoreboard and a courtroom finish on the verdict

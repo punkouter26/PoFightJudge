@@ -3,11 +3,23 @@
   gap: var(--po-space-5);
 }
 
+/* Positioned, because PoGfx hangs an absolutely-positioned canvas in here for the aura and the slap. It is not a
+   grid item — an absolutely-positioned child of a grid container is out of flow — and it is not styled from this
+   file either: a canvas the browser created carries no scope attribute, so it dresses itself. */
 .stage {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--po-space-4);
   align-items: center;
+}
+
+/* Above the canvas. Without this the aura would be painted over the faces rather than behind them. */
+.corner,
+.middle {
+  position: relative;
+  z-index: 1;
 }
 
 .middle {
@@ -20,9 +32,12 @@
   transition: transform var(--po-dur-slow) ease, filter var(--po-dur-slow) ease;
 }
 
-/* Whoever has the floor is the one in focus; the other side waits in the dark. */
+/* Whoever has the floor is the one in focus; the other side waits in the dark. The glow is the voice itself:
+   --po-speak-level is republished by the player every frame a line is being spoken. */
 .corner.speaking {
   transform: scale(1.02);
+  border-radius: var(--po-radius-md);
+  box-shadow: 0 0 calc(1rem + var(--po-speak-level, 0) * 3rem) color-mix(in srgb, var(--po-accent) calc(20% + var(--po-speak-level, 0) * 55%), transparent);
 }
 
 .stage:has(.speaking) .corner:not(.speaking) {
@@ -151,7 +166,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .corner { transition: none; }
-  .corner.speaking { transform: none; }
+  /* A ring that says who is speaking, rather than one that breathes with them. PoGfx mounts nothing at all here. */
+  .corner.speaking { transform: none; box-shadow: 0 0 0 2px var(--po-accent); }
   .stage.fx-slap { animation: none; outline: 3px solid var(--po-danger); }
 }
 
