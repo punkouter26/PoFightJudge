@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -5,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using PoFightJudge.Api.Features.Ai;
+using PoFightJudge.Api.Features.Diagnostics;
 
 using PoFightJudge.Shared.Models;
 
@@ -53,8 +55,21 @@ public sealed partial class GeminiJudgeClient(
     IHttpClientFactory factory,
     GeminiModelOptions models,
     IOptions<AnalysisOptions> options,
+    AiLatencyTracker latency,
     ILogger<GeminiJudgeClient> logger) : IGeminiJudgeClient
 {
+    /// <summary>
+    /// One player's assessment. Held apart from the WATCH judge's "judge": that one rules on six lines of dialogue
+    /// in about a second, this one reads a whole recording, and averaging the two describes neither.
+    /// </summary>
+    public const string AssessOperation = "judge.assess";
+
+    /// <summary>The small text-only call that rules on the two assessments.</summary>
+    public const string RuleOperation = "judge.rule";
+
+    /// <summary>Uploading the shared prefix. Measured separately because it is time the assessments do not spend.</summary>
+    public const string CacheOperation = "judge.cache";
+
     private const string ServiceTierField = "service_tier";
 
     private const string CachedContentField = "cachedContent";
@@ -97,13 +112,13 @@ public sealed partial class GeminiJudgeClient(
             PlayerAssessmentDto player2;
             if (cache is null)
             {
-                player1 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models), ct);
-                player2 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models), ct);
+                player1 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models), AssessOperation, ct);
+                player2 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models), AssessOperation, ct);
             }
             else
             {
-                var first = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models, cache), ct);
-                var second = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models, cache), ct);
+                var first = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models, cache), AssessOperation, ct);
+                var second = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models, cache), AssessOperation, ct);
                 player1 = await first;
                 player2 = await second;
             }
@@ -138,8 +153,11 @@ public sealed partial class GeminiJudgeClient(
         {
             using var http = factory.CreateClient(GeminiHttpClients.Analysis);
             using var content = new StringContent(BuildCacheRequest(request, models, ttl), Encoding.UTF8, "application/json");
+
+            var started = Stopwatch.GetTimestamp();
             using var response = await http.PostAsync(new Uri(CachePath, UriKind.Relative), content, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
+            latency.Record(CacheOperation, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             if (!response.IsSuccessStatusCode)
             {
                 var detail = GeminiHttp.Truncate(body, 200);
@@ -184,14 +202,14 @@ public sealed partial class GeminiJudgeClient(
     }
 
     private Task<JudgeOverallDto> RuleAsync(JudgeRequest request, PlayerAssessmentDto p1, PlayerAssessmentDto p2, CancellationToken ct) =>
-        PostAsync<JudgeOverallDto>(BuildOverallRequest(request, p1, p2, models), ct);
+        PostAsync<JudgeOverallDto>(BuildOverallRequest(request, p1, p2, models), RuleOperation, ct);
 
-    private async Task<T> PostAsync<T>(string body, CancellationToken ct)
+    private async Task<T> PostAsync<T>(string body, string operation, CancellationToken ct)
         where T : class
     {
         try
         {
-            return await SendAsync<T>(body, ct);
+            return await SendAsync<T>(body, operation, ct);
         }
         catch (Exception ex) when (IsTierBusy(ex, ct) && WithoutServiceTier(body) is { } standard)
         {
@@ -200,18 +218,60 @@ public sealed partial class GeminiJudgeClient(
             // were all refused on 2026-09-07, and the fight was left with no report at all. Paying full price for
             // the rare analysis that lands during a spike is the better end of that trade.
             LogFlexBusy(logger, ex);
-            return await SendAsync<T>(standard, ct);
+            return await SendAsync<T>(standard, operation, ct);
         }
     }
 
-    private async Task<T> SendAsync<T>(string body, CancellationToken ct)
+    private async Task<T> SendAsync<T>(string body, string operation, CancellationToken ct)
         where T : class
     {
         using var http = factory.CreateClient(GeminiHttpClients.Analysis);
         using var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+        var started = Stopwatch.GetTimestamp();
         using var response = await http.PostAsync(new Uri($"v1beta/models/{models.Judge}:generateContent", UriKind.Relative), content, ct);
-        await GeminiHttp.EnsureSuccessAsync(response, "judge.generateContent", ct);
-        return Parse<T>(await response.Content.ReadAsStringAsync(ct));
+        var raw = await response.Content.ReadAsStringAsync(ct);
+        latency.Record(operation, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+
+        await EnsureSuccessAsync(response, raw, ct);
+        RecordUsage(operation, raw);
+        return Parse<T>(raw);
+    }
+
+    /// <summary>
+    /// The same failure <see cref="GeminiHttp.EnsureSuccessAsync"/> raises, off a body that has already been read.
+    /// Reading it twice would give the second reader nothing, and the tier-busy check reads the message.
+    /// </summary>
+    private static Task EnsureSuccessAsync(HttpResponseMessage response, string body, CancellationToken ct)
+    {
+        _ = ct;
+        return response.IsSuccessStatusCode
+            ? Task.CompletedTask
+            : throw new HttpRequestException(
+                $"Gemini judge.generateContent failed: {(int)response.StatusCode} {GeminiHttp.Truncate(body)}",
+                null,
+                response.StatusCode);
+    }
+
+    /// <summary>
+    /// What this call cost, onto the ledger /api/diag reads. Until now the largest prompt in the app reported
+    /// nothing at all, so there was no way to tell whether its shared prefix was ever being served from cache.
+    /// </summary>
+    private void RecordUsage(string operation, string raw)
+    {
+        try
+        {
+            if (JsonNode.Parse(raw) is JsonObject body)
+            {
+                var usage = GeminiUsage.Read(body["usageMetadata"] as JsonObject);
+                latency.RecordUsage(operation, usage.PromptTokens, usage.OutputTokens, usage.CachedTokens);
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            // A body that will not parse is the parser's problem, reported a few lines later. It is not worth
+            // losing a report over a missing token count.
+        }
     }
 
     /// <summary>

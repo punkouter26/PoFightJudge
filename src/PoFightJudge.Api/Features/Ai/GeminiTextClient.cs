@@ -189,15 +189,8 @@ public sealed partial class GeminiTextClient(IHttpClientFactory httpClients, AiL
             return;
         }
 
-        static int Count(JsonObject usage, string key) => usage[key] is JsonValue v && v.TryGetValue<int>(out var n) ? n : 0;
-
-        // Thinking tokens bill as output and are invisible in the text, so folding them in is the only place the
-        // cost of a raised thinkingLevel becomes visible.
-        latency.RecordUsage(
-            operation,
-            promptTokens: Count(usage, "promptTokenCount"),
-            outputTokens: Count(usage, "candidatesTokenCount") + Count(usage, "thoughtsTokenCount"),
-            cachedTokens: Count(usage, "cachedContentTokenCount"));
+        var read = GeminiUsage.Read(usage);
+        latency.RecordUsage(operation, read.PromptTokens, read.OutputTokens, read.CachedTokens);
     }
 
     [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "Gemini {Model} {Operation} completed in {ElapsedMs:F0}ms with {Status}")]

@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace PoFightJudge.Api.Features.Ai;
 
 /// <summary>
@@ -46,4 +48,39 @@ public static class GeminiHttp
     }
 
     public static string Truncate(string s, int max = 400) => s.Length <= max ? s : string.Concat(s.AsSpan(0, max), "…");
+}
+
+/// <summary>
+/// The token counts a <c>generateContent</c> answer reports, as the ledger wants them. Shared rather than private
+/// to one client: the judge sends by far the largest prompt in the app and used to report none of this, because it
+/// builds its own payloads and never went past <see cref="GeminiTextClient"/>.
+/// </summary>
+/// <param name="PromptTokens">Everything sent, cached or not.</param>
+/// <param name="OutputTokens">
+/// What came back, with thinking folded in. Thinking tokens bill as output and are invisible in the text, so
+/// leaving them out is what would hide the cost of a raised <c>thinkingLevel</c>.
+/// </param>
+/// <param name="CachedTokens">
+/// The slice of the prompt served from the provider's context cache — the number that says whether cache-friendly
+/// prompt ordering, and the judge's explicit cache, are actually paying.
+/// </param>
+[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Auto)]
+public readonly record struct GeminiUsage(int PromptTokens, int OutputTokens, int CachedTokens)
+{
+    /// <summary>Reads what is there. Anything missing, or not a number, counts as nothing rather than as a failure.</summary>
+    public static GeminiUsage Read(JsonObject? usage)
+    {
+        if (usage is null)
+        {
+            return default;
+        }
+
+        return new GeminiUsage(
+            Count(usage, "promptTokenCount"),
+            Count(usage, "candidatesTokenCount") + Count(usage, "thoughtsTokenCount"),
+            Count(usage, "cachedContentTokenCount"));
+
+        static int Count(JsonObject usage, string key) =>
+            usage[key] is JsonValue v && v.TryGetValue<int>(out var n) ? n : 0;
+    }
 }
