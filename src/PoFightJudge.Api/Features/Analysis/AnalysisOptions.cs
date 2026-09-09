@@ -53,4 +53,11 @@ public sealed class AnalysisOptions
     /// why it is minutes rather than hours.
     /// </summary>
     public int JudgeCacheTtlSeconds { get; set; } = 600;
+
+    /// <summary>
+    /// How long after a fight ended its unfinished analysis is still worth picking back up on startup. Past this it
+    /// is failed and says so: a day-old spinner is not something anybody is still watching, and the recording it
+    /// would need may not be in storage any more.
+    /// </summary>
+    public int ResumeMaxAgeHours { get; set; } = 24;
 }

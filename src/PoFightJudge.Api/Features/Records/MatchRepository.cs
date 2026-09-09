@@ -31,6 +31,12 @@ public interface IMatchRepository
 
     Task<AnalysisRecordDto?> GetAnalysisAsync(MatchId id, CancellationToken ct = default);
 
+    /// <summary>
+    /// Every fight, whoever it belongs to, still marked <see cref="SessionStatus.Analyzing"/> — what a process that
+    /// died mid-read left behind. Deliberately not per-user: nobody is signed in when this is asked.
+    /// </summary>
+    Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default);
+
     /// <summary>Removes the match and everything hanging off it. Returns false when there was nothing to delete.</summary>
     Task<bool> DeleteAsync(string userId, MatchId id, CancellationToken ct = default);
 }
@@ -157,6 +163,25 @@ public sealed class MatchRepository(TableServiceClient tables) : IMatchRepositor
             // The zero-padded row key already orders them; the sort makes that a property of the repository rather
             // than of the key format.
             return [.. turns.OrderBy(t => t.Index)];
+        }, ct);
+
+    /// <summary>
+    /// A cross-partition scan, which is what finding these costs: the status is not a key, and the partition is the
+    /// account. It runs once per startup over a table with one row per fight ever argued, which on this scale is
+    /// cheaper than keeping a second index honest.
+    /// </summary>
+    public Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default) =>
+        StorageBootstrap.WithTableAsync<IReadOnlyList<MatchDto>>(tables, TableNames.Matches, async token =>
+        {
+            var filter = TableClient.CreateQueryFilter($"Status eq {nameof(SessionStatus.Analyzing)}");
+            var stranded = new List<MatchDto>();
+            await foreach (var entity in Table(TableNames.Matches).QueryAsync<MatchEntity>(filter, cancellationToken: token))
+            {
+                stranded.Add(entity.ToDto());
+            }
+
+            // Oldest first, so the fight that has been waiting longest is read first.
+            return [.. stranded.OrderBy(m => m.StartedAt)];
         }, ct);
 
     public Task SaveAnalysisAsync(AnalysisRecordDto analysis, CancellationToken ct = default) =>

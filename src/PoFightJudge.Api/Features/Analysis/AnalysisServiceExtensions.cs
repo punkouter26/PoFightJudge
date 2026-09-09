@@ -33,6 +33,10 @@ public static class AnalysisServiceExtensions
         services.AddSingleton<AnalysisPipeline>();
         services.AddSingleton<IAnalysisIntake>(sp => sp.GetRequiredService<AnalysisPipeline>());
         services.AddHostedService(sp => sp.GetRequiredService<AnalysisPipeline>());
+
+        // The repository is scoped, so the resumer is too; the hosted service opens a scope for its one pass.
+        services.AddScoped<AnalysisResumer>();
+        services.AddHostedService<AnalysisResumeService>();
         return services;
     }
 }

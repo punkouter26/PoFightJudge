@@ -255,6 +255,11 @@ public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults,
     public Task<AnalysisRecordDto?> GetAnalysisAsync(MatchId id, CancellationToken ct = default) =>
         Task.FromResult(_analyses.GetValueOrDefault(id.Value));
 
+    /// <summary>Everything left mid-read, oldest first — the same order the table query returns.</summary>
+    public Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MatchDto>>(
+            [.. _matches.Values.Where(m => m.Status == SessionStatus.Analyzing).OrderBy(m => m.StartedAt)]);
+
     public async Task<bool> DeleteAsync(string userId, MatchId id, CancellationToken ct = default)
     {
         if (!_matches.TryRemove((userId, id.Value), out var match))

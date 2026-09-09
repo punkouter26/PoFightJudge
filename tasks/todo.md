@@ -114,3 +114,4 @@
 - [x] T81 The judge caches its shared prefix by name and assesses both players at once
 - [x] T82 What the judge spends is on the ledger, so the cached share can be read rather than assumed
 - [x] T83 The recording goes to the model without being copied through memory four times
+- [x] T84 An analysis the host died halfway through is picked back up on the next start
