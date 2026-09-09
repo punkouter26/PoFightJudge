@@ -1,0 +1,32 @@
+@inject SfxInterop Sound
+
+@* The one switch for everything this app makes a noise with that is not somebody talking. Next to the theme
+   toggle because it is the same kind of choice: how the app presents itself, kept between visits. *@
+<RadzenButton class="po-sound-toggle"
+              ButtonStyle="ButtonStyle.Base"
+              Variant="Variant.Text"
+              Size="ButtonSize.Medium"
+              Icon="@(Sound.IsOn ? "volume_up" : "volume_off")"
+              Click="ToggleAsync"
+              aria-pressed="@(Sound.IsOn ? "true" : "false")"
+              aria-label="@(Sound.IsOn ? "Turn the sound effects off" : "Turn the sound effects on")"
+              title="Sound effects" />
+
+@code {
+    protected override async Task OnInitializedAsync() => await Sound.InitializeAsync();
+
+    private async Task ToggleAsync()
+    {
+        await Sound.ToggleAsync();
+
+        // The click that turns it on is the gesture the audio context needs, and hearing something is the only
+        // confirmation that means anything for a sound switch.
+        if (Sound.IsOn)
+        {
+            await Sound.ArmAsync();
+            await Sound.PlayAsync(Sfx.Tick);
+        }
+
+        StateHasChanged();
+    }
+}

@@ -151,6 +151,24 @@ window.PoLive = (function () {
     return !!ctx && nextStart > ctx.currentTime;
   }
 
+  /**
+   * Dips the host for `seconds` and brings them back, so a phase stinger lands over the top of them rather than
+   * fighting them. Called by PoSfx on the same beat as the effect; the microphone is untouched.
+   */
+  function duck(seconds) {
+    if (!ctx || !hostIn) {
+      return;
+    }
+
+    const now = ctx.currentTime;
+    const span = seconds > 0 ? seconds : 0.35;
+    hostIn.gain.cancelScheduledValues(now);
+    hostIn.gain.setValueAtTime(hostIn.gain.value, now);
+    hostIn.gain.linearRampToValueAtTime(0.32, now + 0.04);
+    hostIn.gain.setValueAtTime(0.32, now + span);
+    hostIn.gain.linearRampToValueAtTime(1, now + span + 0.25);
+  }
+
   async function stop() {
     clear();
     dotnet = null;
@@ -185,6 +203,7 @@ window.PoLive = (function () {
     startCapture: startCapture,
     play: play,
     clear: clear,
+    duck: duck,
     isPlaying: isPlaying,
     stop: stop,
     micLevel: function () { return Math.min(1, Math.pow(micLevel * 3.2, 0.7)); },

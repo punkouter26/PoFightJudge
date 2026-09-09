@@ -28,6 +28,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IApiClient, ApiClient>();
 builder.Services.AddScoped<AudioInterop>();
 builder.Services.AddScoped<FxInterop>();
+builder.Services.AddScoped<SfxInterop>();
 builder.Services.AddScoped<MicInterop>();
 builder.Services.AddScoped<ILiveAudio, LiveAudio>();
 builder.Services.AddScoped(sp => new LiveConnectionFactory(sp, new Uri(builder.HostEnvironment.BaseAddress)));

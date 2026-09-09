@@ -3,7 +3,11 @@
 // captures through mic.js and plays the host through live-audio.js, which owns its own context and bus.
 const PoAudio = (() => {
   const SAMPLE_RATE = 24000; // raw PCM from Gemini TTS / the fake is always 24 kHz mono 16-bit
+
+  /** How far a line is dipped while an effect lands over it. Under it, not silenced: the words still matter. */
+  const DUCK_TO = 0.32;
   let context = null;
+  let bus = null;
   let nextStartTime = 0;
   let sources = [];
   let endedCallback = null;
@@ -12,6 +16,10 @@ const PoAudio = (() => {
     if (!context) {
       const Ctor = window.AudioContext || window.webkitAudioContext;
       context = new Ctor();
+      // Everything spoken goes through one gain rather than straight out, so PoSfx can dip the voice under a bell
+      // without touching the sources that are already scheduled.
+      bus = context.createGain();
+      bus.connect(context.destination);
     }
     if (context.state === 'suspended') {
       // Autoplay policy: a click has already happened by the time anything plays.
@@ -77,7 +85,7 @@ const PoAudio = (() => {
       const buffer = await toBuffer(ctx, base64, format);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(ctx.destination);
+      source.connect(bus);
       const startAt = Math.max(nextStartTime, ctx.currentTime);
       source.start(startAt);
       nextStartTime = startAt + buffer.duration;
@@ -110,6 +118,23 @@ const PoAudio = (() => {
       sources = [];
       endedCallback = null;
       nextStartTime = context ? context.currentTime : 0;
+    },
+
+    /**
+     * Dips the spoken line for `seconds` and brings it back. Called by PoSfx, not by .NET: an effect and the duck
+     * under it have to be scheduled on the same beat, and a round trip is longer than the effect.
+     */
+    duck(seconds) {
+      if (!context || !bus) {
+        return;
+      }
+      const now = context.currentTime;
+      const span = seconds > 0 ? seconds : 0.35;
+      bus.gain.cancelScheduledValues(now);
+      bus.gain.setValueAtTime(bus.gain.value, now);
+      bus.gain.linearRampToValueAtTime(DUCK_TO, now + 0.04);
+      bus.gain.setValueAtTime(DUCK_TO, now + span);
+      bus.gain.linearRampToValueAtTime(1, now + span + 0.25);
     },
 
     /** Seconds of audio still scheduled ahead of now. */
