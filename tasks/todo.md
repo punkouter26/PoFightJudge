@@ -87,3 +87,4 @@
 - [x] T61 History that scales: search, filters and server-side paging
 - [x] T62 An error that does not lose the page: ErrorBoundary and a degraded banner
 - [x] T63 Before the bell: a microphone check and a device to pick (the reconnect banner already existed)
+- [x] T64 The round audio is archived: the verdict carries each line's clip, so a replay has something to play

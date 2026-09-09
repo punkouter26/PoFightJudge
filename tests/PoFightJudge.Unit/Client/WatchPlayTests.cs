@@ -239,4 +239,51 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
             TimeSpan.FromSeconds(10));
         cut.FindAll(".problem button").Single().TextContent.Should().Contain("Try again").And.NotContain("Try again in");
     }
+
+    /// <summary>
+    /// The round audio was fetched, played and thrown away. The server archives a round only when the verdict
+    /// carries its clip, so nothing was ever stored and /api/audio/{match}/{round} answered 404 for every match ever
+    /// played — including the two already in storage.
+    /// </summary>
+    [Fact(Timeout = 60_000)]
+    public async Task The_audio_each_line_was_spoken_in_travels_with_the_verdict_so_it_can_be_played_back()
+    {
+        _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3")));
+        VerdictRequest? sent = null;
+        _api.VerdictAsync(Arg.Any<VerdictRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                sent = call.Arg<VerdictRequest>();
+                return Task.FromResult(new VerdictResponse(
+                    MatchId.New(), "MAH", "He answered the point.", 62, 41, AdvancedStatsDto.Empty, AdvancedStatsDto.Empty, Persisted: true));
+            });
+        _simulation.Set(Matthew, Kimberly, "the thermostat");
+
+        var cut = Render<WatchPlay>();
+        await RunToTheEndAsync(cut, _clock);
+        await cut.WaitForAssertionAsync(() => sent.Should().NotBeNull(), TimeSpan.FromSeconds(10));
+
+        sent!.Rounds.Should().HaveCount(WatchTurns.RoundsPerSide * 2);
+        sent.Rounds.Should().AllSatisfy(r => r.Audio.Should().NotBeNull("every line here was spoken by a persona"));
+        sent.Rounds[0].Audio!.Format.Should().Be("mp3", "the format is whatever the chain actually returned");
+    }
+
+    /// <summary>
+    /// Every line's request carries the argument so far. Clips on those rounds would upload the whole match again
+    /// per line, which is why they are kept apart and attached only to the one request that archives them.
+    /// </summary>
+    [Fact(Timeout = 60_000)]
+    public async Task The_line_by_line_requests_do_not_carry_the_audio()
+    {
+        _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new TtsAudioDto("bm90IHNpbGVuY2U=", "mp3")));
+        _simulation.Set(Matthew, Kimberly, "the thermostat");
+
+        var cut = Render<WatchPlay>();
+        await RunToTheEndAsync(cut, _clock);
+
+        await cut.WaitForAssertionAsync(() => _asked.Should().NotBeEmpty(), TimeSpan.FromSeconds(10));
+        _asked.SelectMany(a => a.History).Should().AllSatisfy(r => r.Audio.Should().BeNull());
+    }
 }

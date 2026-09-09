@@ -21,6 +21,14 @@ public sealed partial class WatchPlay : IAsyncDisposable
     internal static readonly TimeSpan MinimumBeat = TimeSpan.FromSeconds(1.2);
 
     private readonly List<WatchRoundDto> _rounds = [];
+
+    /// <summary>
+    /// Each round's spoken audio, by index, kept for the verdict. It is deliberately not held on the rounds
+    /// themselves: every generate-round request carries the whole history, and clips on those would upload the
+    /// entire match again per line. Only the verdict — sent once, at the end — needs them, and archiving them there
+    /// is what a replay plays back.
+    /// </summary>
+    private readonly Dictionary<int, TtsAudioDto> _clips = [];
     private readonly CancellationTokenSource _leaving = new();
 
     private IReadOnlyList<ProfileDto> _cast = [];
@@ -244,6 +252,13 @@ public sealed partial class WatchPlay : IAsyncDisposable
             var audio = await Api.RoundAudioAsync(new RoundAudioRequest(ProfileId.From(side.Id), round.Text), ct);
             if (!audio.IsEmpty)
             {
+                // Kept as well as played: the same bytes are what the verdict archives and a replay plays back.
+                var index = _rounds.IndexOf(round);
+                if (index >= 0)
+                {
+                    _clips[index] = audio;
+                }
+
                 var speaking = await Audio.PlayAsync(audio, ct);
                 _lineEndsAt = speaking > TimeSpan.Zero ? Clock.GetUtcNow() + speaking : null;
             }
@@ -338,7 +353,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         try
         {
             var topic = Simulation.Topic.Length == 0 ? null : Simulation.Topic;
-            _verdict = await Api.VerdictAsync(new VerdictRequest(Simulation.Husband!, Simulation.Wife!, _rounds, topic), ct);
+            _verdict = await Api.VerdictAsync(new VerdictRequest(Simulation.Husband!, Simulation.Wife!, WithClips(), topic), ct);
             _stage = Stage.Done;
             _error = null;
         }
@@ -366,6 +381,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
     {
         await Audio.StopAsync(_leaving.Token);
         _rounds.Clear();
+        _clips.Clear();
         _verdict = null;
         _error = null;
         _slapUsed = false;
@@ -377,6 +393,13 @@ public sealed partial class WatchPlay : IAsyncDisposable
     }
 
     private void Leave() => Nav.NavigateTo("watch");
+
+    /// <summary>
+    /// The argument with each line's audio attached, for the one request that archives it. A line nobody spoke —
+    /// a person's turn, or one the voice chain could not manage — simply travels without a clip.
+    /// </summary>
+    private IReadOnlyList<WatchRoundDto> WithClips() =>
+        [.. _rounds.Select((round, index) => _clips.TryGetValue(index, out var clip) ? round with { Audio = clip } : round)];
 
     /// <summary>Records a failure and stops the loop. Always false, so a caller can return it directly.</summary>
     private bool Failed(string message)
