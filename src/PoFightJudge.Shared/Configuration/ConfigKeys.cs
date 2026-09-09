@@ -28,22 +28,6 @@ public static class ConfigKeys
         /// <summary>Explicit opt-in for FakeAuth + guest sign-in; honoured only outside Production.</summary>
         public const string AllowFakeAuth = $"{Root}:Auth:AllowFakeAuth";
 
-        /// <summary>
-        /// Explicit opt-in for the real Entra ID cookie scheme in Development. When <c>true</c> and the environment is
-        /// Development, the API registers an OIDC code-flow handler alongside the existing guest cookie endpoint, and
-        /// the WASM client shows a 'Sign in with Microsoft' button. Test and Production ignore this flag — Test keeps
-        /// FakeAuth for deterministic impersonation; Production already runs the prod Entra registration through MSAL.
-        /// </summary>
-        public const string AllowDevEntra = $"{Root}:Auth:AllowDevEntra";
-
-        /// <summary>
-        /// Dev Entra config (separate from the prod keys so the prod app registration stays untouched). Keys are
-        /// mapped 1:1 from Key Vault secrets <c>PoFightJudge--AzureAd--ClientId-Dev</c> and <c>--TenantId-Dev</c> by
-        /// <see cref="Shared.PoFightJudgeSecretManager"/> (the trailing <c>-Dev</c> survives the prefix strip on
-        /// purpose — the secret name and the config key match exactly).
-        /// </summary>
-        public const string DevClientId = $"{Root}:AzureAd:ClientId-Dev";
-        public const string DevTenantId = $"{Root}:AzureAd:TenantId-Dev";
     }
 
     /// <summary>Who may run <c>POST /api/seed/profiles</c> with a real login: a list of emails (Admin role always qualifies).</summary>

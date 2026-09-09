@@ -36,15 +36,12 @@ public static class ApiRoutes
         public const string Url = $"{ApiPrefix}/features";
     }
 
-    /// <summary>BFF-facing auth routes, mounted at the root. Production sign-in goes through MSAL's <c>/authentication/*</c> client routes; Development sign-in goes through the OIDC cookie scheme registered when <c>PoFightJudge:Auth:AllowDevEntra</c> is on.</summary>
+    /// <summary>BFF-facing auth routes, mounted at the root. Production sign-in goes through MSAL's <c>/authentication/*</c> client routes; outside it, the guest door is the only door.</summary>
     public static class Auth
     {
         public const string Me = "/auth/me";
         public const string Guest = "/auth/guest";
         public const string Logout = "/auth/logout";
-
-        /// <summary>Triggers the OIDC code-flow challenge against the dev Entra registration. Development only.</summary>
-        public const string DevLogin = "/auth/login/dev";
     }
 
     public static class Profiles

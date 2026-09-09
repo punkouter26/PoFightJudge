@@ -77,7 +77,7 @@ public sealed class HumanTurnTests : BunitContext, IAsyncLifetime
 
     private void Flags(bool human) =>
         _api.GetFeaturesAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new FeatureFlagsDto(true, true, human, DevEntraEnabled: false)));
+            .Returns(Task.FromResult(new FeatureFlagsDto(true, true, human)));
 
     /// <summary>Renders the page and plays on until the argument is waiting for the person.</summary>
     private async Task<IRenderedComponent<WatchPlay>> AtTheirTurnAsync()

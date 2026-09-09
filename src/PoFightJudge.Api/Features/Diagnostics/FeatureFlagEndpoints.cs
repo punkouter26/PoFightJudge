@@ -7,10 +7,10 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Api.Features.Diagnostics;
 
 /// <summary>
-/// The four answers the WASM client cannot work out for itself — whether the fakes are speaking, whether the guest
-/// door is open, whether a person can take a side in WATCH, and whether the dev Microsoft door is wired. Anonymous,
-/// because the Login page reads it before anybody has signed in. Every one is derived here from the environment and
-/// the configuration, so the client never has to know the rules.
+/// The three answers the WASM client cannot work out for itself — whether the fakes are speaking, whether the guest
+/// door is open, and whether a person can take a side in WATCH. Anonymous, because the Login page reads it before
+/// anybody has signed in. Every one is derived here from the environment and the configuration, so the client never
+/// has to know the rules.
 /// </summary>
 public sealed class FeatureFlagEndpoints : ICarterModule
 {
@@ -24,12 +24,6 @@ public sealed class FeatureFlagEndpoints : ICarterModule
 
                 // A spoken turn is only offered when a transcriber can actually finish it. The client ANDs this with
                 // its own microphone check.
-                HumanInWatch: transcription.IsEnabled,
-
-                // Dev Entra: Development, the AllowDevEntra setting, and a dev client id. The client id check is what
-                // makes the gate fail-closed if Key Vault is unavailable locally.
-                DevEntraEnabled: env.IsDevelopment()
-                    && config.GetValue<bool>(ConfigKeys.Auth.AllowDevEntra)
-                    && !string.IsNullOrWhiteSpace(config[ConfigKeys.Auth.DevClientId]))))
+                HumanInWatch: transcription.IsEnabled)))
             .AllowAnonymous().WithTags("Diagnostics");
 }
