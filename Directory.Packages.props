@@ -27,7 +27,6 @@
     <PackageVersion Include="Radzen.Blazor" Version="11.3.2" />
     <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageVersion Include="Blazored.FluentValidation" Version="2.2.0" />
-    <PackageVersion Include="Toolbelt.Blazor.HotKeys2" Version="6.2.1" />
   </ItemGroup>
 
   <ItemGroup Label="Contracts">

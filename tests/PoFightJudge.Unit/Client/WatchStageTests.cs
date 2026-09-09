@@ -8,7 +8,6 @@ using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 using Radzen;
-using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 namespace PoFightJudge.Unit.Client;
 
@@ -29,7 +28,6 @@ public sealed class WatchStageTests : BunitContext, IAsyncLifetime
     public WatchStageTests()
     {
         Services.AddRadzenComponents();
-        Services.AddHotKeys2();
         Services.AddSingleton(_api);
         // Program.cs loads the gate before the first render; under bunit the component's own fallback load does it.
         Services.AddSingleton<FeatureGate>();

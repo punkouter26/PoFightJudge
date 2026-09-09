@@ -11,7 +11,6 @@ using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Models;
 using PoFightJudge.Shared.Validators;
 using Radzen;
-using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -23,7 +22,6 @@ var baseAddress = new Uri(builder.HostEnvironment.BaseAddress);
 builder.Services.AddHttpClient(HttpClients.Anonymous, c => c.BaseAddress = baseAddress);
 builder.Services.AddRadzenComponents();
 builder.Services.AddBlazoredLocalStorage();
-builder.Services.AddHotKeys2();
 builder.Services.AddScoped<ThemeInterop>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IApiClient, ApiClient>();

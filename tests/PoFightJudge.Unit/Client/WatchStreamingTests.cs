@@ -9,7 +9,6 @@ using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 using Radzen;
-using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 namespace PoFightJudge.Unit.Client;
 
@@ -41,7 +40,6 @@ public sealed class WatchStreamingTests : BunitContext, IAsyncLifetime
     public WatchStreamingTests()
     {
         Services.AddRadzenComponents();
-        Services.AddHotKeys2();
         Services.AddSingleton(_api);
         Services.AddSingleton<FeatureGate>();
         Services.AddSingleton(_simulation);

@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
-using Toolbelt.Blazor.HotKeys2;
 
 namespace PoFightJudge.Client.Pages;
 
@@ -70,7 +69,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
     private Task? _countdown;
 
     /// <summary>S throws the slap. It is the one thing on this page somebody wants to reach without aiming.</summary>
-    private HotKeysContext? _keys;
     private VerdictResponse? _verdict;
 
     private enum Stage
@@ -103,8 +101,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
     [Inject] private NavigationManager Nav { get; set; } = default!;
 
-    [Inject] private HotKeys HotKeys { get; set; } = default!;
-
     /// <summary>The side a real person is arguing, when there is one.</summary>
     private MatchSide? Person => Simulation.Human;
 
@@ -136,10 +132,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
             return;
         }
 
-        // Excluded from anything being typed into: S is a letter, and the human turn on this page is a text box.
-        _keys = HotKeys.CreateContext()
-            .Add(Code.S, SlapAsync, new() { Description = "Slap the speaker", Exclude = Exclude.Default });
-
         // The click that started this match is the gesture the audio context needs; taking it now means the first
         // bell rings on time rather than being swallowed by the autoplay policy.
         await Sound.ArmAsync(_leaving.Token);
@@ -169,18 +161,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
         var side = _speaking is null ? 0 : WatchTurns.IsHusband(_speaking) ? -1 : 1;
         await Gfx.SetAsync(StageSelector, "side", side, _leaving.Token);
         await Gfx.FocusAsync(StageSelector, _speaking is null ? null : ".corner.speaking", _leaving.Token);
-    }
-
-    /// <summary>
-    /// The keyboard's way in to the one thing on this page that is time-sensitive. It goes through the same guard
-    /// the button does, so a key pressed at the wrong moment is as harmless as a click at the wrong moment.
-    /// </summary>
-    private async ValueTask SlapAsync()
-    {
-        if (Interjections.All.FirstOrDefault(i => string.Equals(i.Key, Interjections.SlapKey, StringComparison.Ordinal)) is { } slap)
-        {
-            await InvokeAsync(() => ThrowAsync(slap));
-        }
     }
 
     /// <summary>
@@ -646,12 +626,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
         _beat?.Dispose();
         _beat = null;
         _countdown = null;
-
-        if (_keys is not null)
-        {
-            await _keys.DisposeAsync();
-            _keys = null;
-        }
 
         StopLevelWatch();
         _leaving.Dispose();
