@@ -109,3 +109,26 @@ public class RecordingUploadTests
             Task.CompletedTask;
     }
 }
+
+/// <summary>
+/// The one knob in <see cref="AnalysisOptions"/> that can stop the pipeline dead.
+/// </summary>
+public class ClientTranscriptWaitTests
+{
+    /// <summary>
+    /// The wait runs on TimeProvider, so a non-zero value against a clock nobody advances never returns — which is
+    /// exactly what happened the moment AcceptClientTranscript was turned on with the old three-second default:
+    /// every pipeline test whose fight had no live captions hung instead of failing.
+    ///
+    /// Zero means "take it if it is already there", which is the case that actually happens: the browser posts as
+    /// the fight ends, and the recording's upload runs ahead of this check.
+    /// </summary>
+    [Fact]
+    public void The_browser_transcript_is_taken_if_it_is_there_and_never_waited_for_by_default()
+    {
+        var options = new AnalysisOptions();
+
+        options.AcceptClientTranscript.Should().BeTrue("the browser half exists now, and it is free");
+        options.ClientTranscriptWaitSeconds.Should().Be(0, "a wait on a clock nobody advances is a hang, not a delay");
+    }
+}

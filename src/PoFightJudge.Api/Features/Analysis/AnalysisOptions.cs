@@ -27,17 +27,28 @@ public sealed class AnalysisOptions
     public int MinCaptionTranscriptWords { get; set; } = 30;
 
     /// <summary>
-    /// Accept a word-level transcript produced in the browser instead of calling the transcribe model. Off by
-    /// default: that path is best-effort, and the server model stays the source of truth until it is proven.
+    /// Accept a word-level transcript produced in the browser instead of calling the transcribe model. On since
+    /// T85, when the browser half was finally written: it sits behind the host's own live captions and in front of
+    /// the paid diarization, so the only fight it changes is one whose captions came out too thin to judge on —
+    /// which used to be the only fight that paid. What arrives is bounded by <see cref="ClientTranscript"/> before
+    /// it is stored, and the source every run actually used is logged.
     /// </summary>
-    public bool AcceptClientTranscript { get; set; }
+    public bool AcceptClientTranscript { get; set; } = true;
 
     /// <summary>
-    /// How long to wait for that transcript to arrive. The browser posts it as the fight ends, which is the same
-    /// moment the analysis is queued, so the upload usually covers the wait. Bounded, so a browser that closed
-    /// mid-fight costs a few seconds rather than the analysis.
+    /// How long to wait for that transcript to arrive, on top of the time the recording's upload already takes.
     /// </summary>
-    public double ClientTranscriptWaitSeconds { get; set; } = 3;
+    /// <remarks>
+    /// Zero by default, which means "take it if it is already there". The browser posts it as the fight ends —
+    /// before it navigates away, which is the same moment the analysis is queued — and the upload of the recording
+    /// then runs ahead of this check, so in practice it has arrived. Waiting longer buys the rare late post at the
+    /// cost of delaying every fight, including the ones whose live captions were going to win anyway.
+    ///
+    /// It is also the one knob here that can stop the pipeline dead: the wait runs on <c>TimeProvider</c>, so a
+    /// non-zero value against a clock nobody advances never returns. That is a test concern rather than a
+    /// production one, but it is the reason the default is the value that does not wait.
+    /// </remarks>
+    public double ClientTranscriptWaitSeconds { get; set; }
 
     /// <summary>
     /// Upload the two assessments' shared prefix — the instructions, the recording and the session data — once as a
