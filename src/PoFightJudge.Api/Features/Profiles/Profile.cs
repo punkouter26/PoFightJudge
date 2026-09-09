@@ -199,7 +199,7 @@ public sealed class Profile
 }
 
 /// <summary>Value object for TTS voice configuration. Voice names are the Gemini prebuilt voices, split by role.</summary>
-public sealed record TtsSettings(double Pitch, double Speed, string VoiceName, string? FishReferenceId = null)
+public sealed record TtsSettings(double Pitch, double Speed, string VoiceName)
 {
     private static readonly string[] HusbandVoices = ["Charon", "Puck", "Fenrir"];
     private static readonly string[] WifeVoices = ["Kore", "Zephyr"];

@@ -17,7 +17,6 @@ public sealed class CreateProfileRequestValidator : AbstractValidator<CreateProf
     public const double MinProsody = 0.5;
     public const double MaxProsody = 2.0;
     public const int MaxVoiceNameLength = 40;
-    public const int MaxFishReferenceLength = 64;
 
     public CreateProfileRequestValidator()
     {
@@ -62,9 +61,5 @@ public sealed class TtsSettingsDtoValidator : AbstractValidator<TtsSettingsDto>
         RuleFor(t => t.Pitch).InclusiveBetween(CreateProfileRequestValidator.MinProsody, CreateProfileRequestValidator.MaxProsody);
         RuleFor(t => t.Speed).InclusiveBetween(CreateProfileRequestValidator.MinProsody, CreateProfileRequestValidator.MaxProsody);
         RuleFor(t => t.VoiceName).NotEmpty().MaximumLength(CreateProfileRequestValidator.MaxVoiceNameLength);
-        RuleFor(t => t.FishReferenceId)
-            .MaximumLength(CreateProfileRequestValidator.MaxFishReferenceLength)
-            .Must(v => v!.All(char.IsAsciiLetterOrDigit)).WithMessage("A Fish reference id is letters and digits only.")
-            .When(t => !string.IsNullOrEmpty(t.FishReferenceId));
     }
 }

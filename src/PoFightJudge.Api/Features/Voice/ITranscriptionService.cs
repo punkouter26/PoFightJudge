@@ -5,7 +5,7 @@ namespace PoFightJudge.Api.Features.Voice;
 /// </summary>
 public interface ITranscriptionService
 {
-    /// <summary>Short stable name for logs and the diag page ("azure-fast", "gemini", "fake").</summary>
+    /// <summary>Short stable name for logs and the diag page ("gemini" or "fake").</summary>
     string Name { get; }
 
     /// <summary>True when this implementation can actually transcribe. Surfaced through <c>/api/features</c> so the client hides the SELF player rather than offering a match it cannot finish.</summary>

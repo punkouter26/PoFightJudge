@@ -2,8 +2,8 @@ namespace PoFightJudge.Api.Features.Voice;
 
 /// <summary>
 /// One synthesized utterance and the wire format it is actually in. The format travels with the bytes because the
-/// provider chain is a fallback chain: a request that asked for mp3 can still come back as PCM when Fish is down and
-/// Gemini TTS — which only emits raw PCM — answers instead. The client decodes on this value, never on what it asked for.
+/// provider decides what it can honour: a request that asked for mp3 still comes back as PCM from Gemini TTS, which
+/// only emits raw PCM. The client decodes on this value, never on what it asked for.
 /// </summary>
 /// <param name="Base64">Base64-encoded audio bytes; empty when nothing was synthesized.</param>
 /// <param name="Format">One of <see cref="TtsAudioFormats"/>.</param>

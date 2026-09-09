@@ -155,12 +155,6 @@
                 </ChildContent>
                 <Helper><ValidationMessage For="@(() => _model.TtsSettings.VoiceName)" /></Helper>
             </RadzenFormField>
-            <RadzenFormField Text="Fish Audio voice id (optional)" Variant="Variant.Outlined">
-                <ChildContent>
-                    <RadzenTextBox @bind-Value="_model.TtsSettings.FishReferenceId" Name="FishReferenceId" Placeholder="e.g. 3fe974cd9c6f4bd4b499fbf7332f5695" MaxLength="@CreateProfileRequestValidator.MaxFishReferenceLength" />
-                </ChildContent>
-                <Helper><ValidationMessage For="@(() => _model.TtsSettings.FishReferenceId)" /></Helper>
-            </RadzenFormField>
             <div class="slider">
                 <div class="slider-head"><span>Pitch</span><span class="po-num">@_model.TtsSettings.Pitch.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span><span></span></div>
                 <RadzenSlider TValue="double" Min="@((decimal)CreateProfileRequestValidator.MinProsody)" Max="@((decimal)CreateProfileRequestValidator.MaxProsody)" Step="0.05" @bind-Value="_model.TtsSettings.Pitch" aria-label="Pitch" />
@@ -170,7 +164,6 @@
                 <RadzenSlider TValue="double" Min="@((decimal)CreateProfileRequestValidator.MinProsody)" Max="@((decimal)CreateProfileRequestValidator.MaxProsody)" Step="0.05" @bind-Value="_model.TtsSettings.Speed" aria-label="Speed" />
             </div>
         </div>
-        <p class="po-muted hint">With a Fish voice id the persona speaks with that cloned voice; the Gemini voice is the fallback.</p>
     </RadzenFieldset>
 
     @if (_error is not null)

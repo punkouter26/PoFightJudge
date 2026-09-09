@@ -3,10 +3,8 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Api.Features.Profiles.Seeding;
 
 /// <summary>
-/// The default cast, ported from PoMarriedLife: the house couple, two invented wives, and four public figures with
-/// public Fish Audio voice models (the reference id is the model id from its fish.audio/m/{id} page; the Gemini voice
-/// named alongside is the fallback when Fish is off, keyless, or fails mid-round). Stored records were dropped — a
-/// record is derived from play, never seeded.
+/// The default cast, ported from PoMarriedLife: the house couple, two invented wives, and four public figures, each
+/// with the Gemini voice it speaks in. Stored records were dropped — a record is derived from play, never seeded.
 /// </summary>
 public static class SeedProfiles
 {
@@ -82,7 +80,7 @@ public static class SeedProfiles
             IsMessy = 70, SpendsMoneyFreely = 99, HoldsGrudges = 99, Patience = 22,
             CommonArguments = "talking about things that are a disgrace, tell people they should be ashamed of themselves, biden ruined economy, talking about people coming up to him and saying 'SIR' and praising him",
             Philosophy = "Nobody knows more about it than me, believe me.",
-            TtsSettings = new TtsSettingsDto { Pitch = 0.6, Speed = 0.7, VoiceName = "Charon", FishReferenceId = "3fe974cd9c6f4bd4b499fbf7332f5695" },
+            TtsSettings = new TtsSettingsDto { Pitch = 0.6, Speed = 0.7, VoiceName = "Charon" },
         },
         new()
         {
@@ -95,8 +93,8 @@ public static class SeedProfiles
             IsMessy = 5, SpendsMoneyFreely = 95, HoldsGrudges = 85, Patience = 90,
             CommonArguments = "his volume at dinner, the guest list, whether she is required to attend, him redecorating the one room she liked, how long he can talk about himself without stopping",
             Philosophy = "I do not have to raise my voice. I simply stop speaking to you.",
-            // Slow and level on purpose: the Fish model is already measured; the low speed reads as bored, not merely quiet.
-            TtsSettings = new TtsSettingsDto { Pitch = 1.0, Speed = 0.85, VoiceName = "Kore", FishReferenceId = "8e24767e0a5b4a36bfe75414202d308c" },
+            // Slow and level on purpose: the low speed reads as bored, not merely quiet.
+            TtsSettings = new TtsSettingsDto { Pitch = 1.0, Speed = 0.85, VoiceName = "Kore" },
         },
         new()
         {
@@ -109,7 +107,7 @@ public static class SeedProfiles
             IsMessy = 20, SpendsMoneyFreely = 50, HoldsGrudges = 55, Patience = 45,
             CommonArguments = "who actually did the work, being interrupted mid-sentence, whose turn it was to handle it, the gap between what he said and what he meant",
             Philosophy = "Let me be clear: I am going to finish my sentence.",
-            TtsSettings = new TtsSettingsDto { Pitch = 1.05, Speed = 1.0, VoiceName = "Kore", FishReferenceId = "0c3324527cfa475491da6f471843e90d" },
+            TtsSettings = new TtsSettingsDto { Pitch = 1.05, Speed = 1.0, VoiceName = "Kore" },
         },
         new()
         {
@@ -122,7 +120,7 @@ public static class SeedProfiles
             IsMessy = 15, SpendsMoneyFreely = 40, HoldsGrudges = 98, Patience = 60,
             CommonArguments = "what he said in 2016, who lost what and whose fault it was, the precise wording of his promise, whether he has read a single page of anything",
             Philosophy = "I wrote it down. I have it here. Would you like me to read it back to you?",
-            TtsSettings = new TtsSettingsDto { Pitch = 0.95, Speed = 0.95, VoiceName = "Kore", FishReferenceId = "72ab53e481e14cc0931bff698aa098b6" },
+            TtsSettings = new TtsSettingsDto { Pitch = 0.95, Speed = 0.95, VoiceName = "Kore" },
         },
     ];
 }

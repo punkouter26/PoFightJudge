@@ -54,9 +54,6 @@ $Plan = @(
     @{ Target = 'PoFightJudge--GeminiApiKey';        Sources = @('PoArgueJudge--GeminiApiKey', 'PoMarriedLife--GeminiApiKey'); Required = $true }
     @{ Target = 'PoFightJudge--AzureAd--TenantId';   Sources = @('PoArgueJudge--AzureAd--TenantId', 'PoMarriedLife--AzureAd--TenantId'); Required = $true }
     @{ Target = 'PoFightJudge--AzureAd--ClientId';   Sources = @('PoArgueJudge--AzureAd--ClientId', 'PoMarriedLife--AzureAd--ClientId'); Required = $true }
-    @{ Target = 'PoFightJudge--FishAudioApiKey';     Sources = @('PoMarriedLife--FishAudioApiKey'); Required = $false }
-    @{ Target = 'PoFightJudge--AzureSpeechKey';      Sources = @('PoMarriedLife--AzureSpeechKey'); Required = $false }
-    @{ Target = 'PoFightJudge--AzureSpeechRegion';   Sources = @('PoMarriedLife--AzureSpeechRegion'); Required = $false }
 )
 
 function Write-Plan($Message) { Write-Host "  $Message" -ForegroundColor Gray }

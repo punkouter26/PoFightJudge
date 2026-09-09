@@ -20,13 +20,16 @@ namespace PoFightJudge.Api.Features.Analysis;
 public sealed partial class AnalysisPipeline(
     IServiceScopeFactory scopes,
     IGeminiFilesClient files,
-    IRecordingTranscriber transcriber,
+    IGeminiTranscribeClient transcriber,
     IGeminiJudgeClient judge,
     TimeProvider clock,
     IOptions<AnalysisOptions> options,
     ILogger<AnalysisPipeline> logger) : BackgroundService, IAnalysisIntake
 {
     public const string UserFacingFailure = "The analysis could not be completed. Try again in a moment.";
+
+    /// <summary>What the log line calls a transcript the model read back, as against one the room already had.</summary>
+    public const string GeminiTranscribeSource = "gemini-transcribe";
 
     /// <summary>Below this the judge is not called: an empty recording invites it to invent a fight that never happened.</summary>
     public const int MinWordsForJudging = 30;
@@ -111,17 +114,10 @@ public sealed partial class AnalysisPipeline(
             file = await files.UploadAndWaitAsync(recording.Content, recording.Length, MimeType, $"{matchId.Value}-players.wav", clock, ct);
         }
 
-        // The uploaded file for the transcriber that reads one, and a way back to the bytes for the one that has to
-        // send them. Opened only if it is actually reached, which on most fights it is not.
-        var reference = new RecordingRef(
-            file.Uri,
-            MimeType,
-            token => RecordingSource.OpenAsync(blobs, blobName, DebateOrchestrator.PlayerSampleRate, token));
-
-        // The cheapest usable transcript wins. Only a fight that produced neither is worth paying to diarize.
+        // The cheapest usable transcript wins. Only a fight that produced neither is worth paying to read back.
         var (existing, source) = await ReadExistingTranscriptAsync(blobs, matchId, ct);
-        var transcript = existing ?? await transcriber.TranscribeAsync(reference, ct);
-        source = existing is null ? transcriber.Name : source;
+        var transcript = existing ?? await transcriber.TranscribeAsync(file.Uri, MimeType, ct);
+        source = existing is null ? GeminiTranscribeSource : source;
         var turns = await turnsTask;
         var mapped = SpeakerMapper.Map(transcript, turns);
         LogTranscribed(logger, matchId.Value, transcript.Words.Count, source, mapped.Note);

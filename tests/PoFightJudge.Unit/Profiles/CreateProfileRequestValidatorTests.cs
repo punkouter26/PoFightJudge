@@ -33,7 +33,6 @@ public class CreateProfileRequestValidatorTests
         { $"{nameof(CreateProfileRequest.TtsSettings)}.{nameof(TtsSettingsDto.Pitch)}", r => r.TtsSettings.Pitch = 2.5 },
         { $"{nameof(CreateProfileRequest.TtsSettings)}.{nameof(TtsSettingsDto.Speed)}", r => r.TtsSettings.Speed = 0.1 },
         { $"{nameof(CreateProfileRequest.TtsSettings)}.{nameof(TtsSettingsDto.VoiceName)}", r => r.TtsSettings.VoiceName = "" },
-        { $"{nameof(CreateProfileRequest.TtsSettings)}.{nameof(TtsSettingsDto.FishReferenceId)}", r => r.TtsSettings.FishReferenceId = "not valid!" },
     };
 
     [Theory]

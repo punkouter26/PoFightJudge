@@ -159,7 +159,6 @@ public class ProfilesTests(ApiFactory factory)
         (await admin.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.OK);
         var profiles = (await user.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!;
         profiles.Count(p => string.Equals(p.Persona.Initials, "MAH", StringComparison.Ordinal)).Should().Be(1);
-        profiles.Single(p => string.Equals(p.Persona.Initials, "DJT", StringComparison.Ordinal)).Persona.TtsSettings.FishReferenceId.Should().NotBeNullOrEmpty();
     }
 
     [Fact]

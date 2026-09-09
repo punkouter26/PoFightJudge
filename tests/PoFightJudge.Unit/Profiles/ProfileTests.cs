@@ -34,7 +34,7 @@ public class ProfileTests
         Patience = 15,
         CommonArguments = "the thermostat",
         Philosophy = "say it once, loudly",
-        TtsSettings = new TtsSettingsDto { Pitch = 0.9, Speed = 1.1, VoiceName = "Zephyr", FishReferenceId = "ref123" },
+        TtsSettings = new TtsSettingsDto { Pitch = 0.9, Speed = 1.1, VoiceName = "Zephyr" },
     };
 
     [Fact]
@@ -75,13 +75,12 @@ public class ProfileTests
     }
 
     [Fact]
-    public void Tts_normalize_keeps_the_voice_inside_the_role_set_and_preserves_the_fish_reference()
+    public void Tts_normalize_keeps_the_voice_inside_the_role_set()
     {
-        var wifeWithHusbandVoice = new TtsSettings(1.0, 1.0, "Charon", "abc123ref").Normalize(ProfileRole.Wife);
+        var wifeWithHusbandVoice = new TtsSettings(1.0, 1.0, "Charon").Normalize(ProfileRole.Wife);
         var husbandWithValidVoice = new TtsSettings(0.8, 1.2, "Puck").Normalize(ProfileRole.Husband);
 
         wifeWithHusbandVoice.VoiceName.Should().Be("Kore");
-        wifeWithHusbandVoice.FishReferenceId.Should().Be("abc123ref");
         husbandWithValidVoice.Should().Be(new TtsSettings(0.8, 1.2, "Puck"));
     }
 
@@ -116,7 +115,7 @@ public class ProfileTests
         entity.Role.Should().Be("Wife");
         entity.LoveLanguage.Should().Be("QualityTime");
         entity.StressResponse.Should().BeNull();
-        entity.TtsSettingsJson.Should().Contain("\"Zephyr\"").And.Contain("ref123");
+        entity.TtsSettingsJson.Should().Contain("\"Zephyr\"");
         back.ToDto().Should().BeEquivalentTo(profile.ToDto());
         back.FacePic.Should().Be("faces/ABC.png");
     }

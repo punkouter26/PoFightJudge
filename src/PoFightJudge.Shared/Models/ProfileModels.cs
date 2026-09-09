@@ -46,9 +46,6 @@ public sealed class TtsSettingsDto
     public double Speed { get; set; } = 1.0;
 
     public string VoiceName { get; set; } = "Charon";
-
-    /// <summary>Optional Fish Audio voice reference id. Set: the persona speaks with a cloned Fish voice; empty: Gemini's prebuilt voice.</summary>
-    public string? FishReferenceId { get; set; }
 }
 
 /// <summary>

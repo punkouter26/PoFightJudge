@@ -64,9 +64,9 @@ try
         }
     }
 
-    // GEMINI_API_KEY / FISH_API_KEY are accepted aliases; fold them into the canonical keys so diag, validation and
+    // GEMINI_API_KEY is an accepted alias; fold it into the canonical key so diag, validation and
     // clients all agree on one source of truth.
-    foreach (var (key, envVar) in new[] { (ConfigKeys.Ai.GeminiApiKey, ConfigKeys.Ai.GeminiApiKeyEnvVar), (ConfigKeys.Ai.FishAudioApiKey, ConfigKeys.Ai.FishAudioApiKeyEnvVar) })
+    foreach (var (key, envVar) in new[] { (ConfigKeys.Ai.GeminiApiKey, ConfigKeys.Ai.GeminiApiKeyEnvVar) })
     {
         if (string.IsNullOrWhiteSpace(builder.Configuration[key]) && Environment.GetEnvironmentVariable(envVar) is { Length: > 0 } fromEnv)
         {
@@ -133,9 +133,9 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProfileRequestValidator>(ServiceLifetime.Singleton);
     builder.Services.AddHostedService<StartupSecretValidator>();
     var ai = builder.Services.AddPoAi(builder.Configuration, builder.Environment);
-    var azureSpeech = builder.Services.AddPoVoice(builder.Configuration, ai);
+    builder.Services.AddPoVoice(builder.Configuration, ai);
     builder.Services.AddPoFight(builder.Configuration, ai);
-    builder.Services.AddPoAnalysis(builder.Configuration, ai, azureSpeech);
+    builder.Services.AddPoAnalysis(builder.Configuration, ai);
     Log.Information("AI providers: {Mode} ({Reason})", ai.UseFakes ? "fakes" : "real", ai.Reason);
     builder.Services.TryAddSingleton(TimeProvider.System);
     builder.Services.AddFeatureManagement();

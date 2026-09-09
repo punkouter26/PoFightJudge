@@ -36,8 +36,6 @@ public sealed class DiagEndpoints : ICarterModule
                 health.MissingKeys,
                 IsFakeAi(env, config, flags[Flags.UseFakeAi]),
                 SecretMasker.Presence(config[ConfigKeys.Ai.GeminiApiKey]),
-                SecretMasker.Presence(config[ConfigKeys.Ai.FishAudioApiKey]),
-                SecretMasker.Presence(config[ConfigKeys.Ai.AzureSpeechKey]),
                 SecretMasker.Presence(config[ConfigKeys.Storage.TableEndpoint]),
                 SecretMasker.Presence(config[ConfigKeys.Storage.BlobEndpoint]),
                 new ModelIdsDto(

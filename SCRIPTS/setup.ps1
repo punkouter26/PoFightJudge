@@ -97,11 +97,6 @@ $required = @(
     'PoFightJudge--AzureAd--TenantId',
     'PoFightJudge--AzureAd--ClientId'
 )
-$optional = @(
-    'PoFightJudge--FishAudioApiKey',
-    'PoFightJudge--AzureSpeechKey',
-    'PoFightJudge--AzureSpeechRegion'
-)
 
 $names = az keyvault secret list --vault-name kv-poshared --query '[].name' -o tsv 2>$null
 if (-not $names) {
@@ -115,10 +110,6 @@ if (-not $names) {
             Write-Todo "secret $name is missing. Locally: dotnet user-secrets set `"$key`" <value> --project src/PoFightJudge.Api"
             Write-Host '      Or copy them all across: ./SCRIPTS/seed-secrets.ps1 prints the plan, -Apply carries it out' -ForegroundColor DarkGray
         }
-    }
-
-    foreach ($name in $optional) {
-        if ($names -contains $name) { Write-Ok "secret $name" } else { Write-Host "  -- $name absent (that voice provider is simply not used)" -ForegroundColor DarkGray }
     }
 }
 

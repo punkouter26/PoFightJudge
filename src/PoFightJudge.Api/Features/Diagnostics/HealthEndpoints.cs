@@ -38,8 +38,6 @@ public sealed class HealthEndpoints : ICarterModule
             }
 
             AddPresence(checks, "Gemini API key", config[ConfigKeys.Ai.GeminiApiKey], required: env.IsProduction());
-            AddPresence(checks, "Fish Audio API key", config[ConfigKeys.Ai.FishAudioApiKey], required: false);
-            AddPresence(checks, "Azure Speech key", config[ConfigKeys.Ai.AzureSpeechKey], required: false);
             AddPresence(checks, "Entra client id", config[ConfigKeys.AzureAd.ClientId], required: env.IsProduction());
             checks.Add(new HealthCheckDto("Key Vault", string.IsNullOrWhiteSpace(config[ConfigKeys.KeyVault.Uri]) ? HealthState.NotConfigured : HealthState.Ok, SecretMasker.MaskHost(config[ConfigKeys.KeyVault.Uri]), HealthCategory.Configuration));
             checks.Add(new HealthCheckDto("Table endpoint", string.IsNullOrWhiteSpace(config[ConfigKeys.Storage.TableEndpoint]) ? HealthState.Failed : HealthState.Ok, SecretMasker.MaskHost(config[ConfigKeys.Storage.TableEndpoint]), HealthCategory.Configuration));
@@ -101,11 +99,6 @@ public static class DiagnosticsServiceExtensions
             .AddCheck<ConfigurationHealthCheck>("configuration", tags: [ReadyTagName]);
 
         AddReachability(checks, "gemini-reachable", "https://generativelanguage.googleapis.com/");
-        AddReachability(checks, "fish-audio-reachable", "https://api.fish.audio/");
-        if (configuration[ConfigKeys.Ai.AzureSpeechRegion] is { Length: > 0 } region)
-        {
-            AddReachability(checks, "azure-speech-reachable", $"https://{region}.tts.speech.microsoft.com/");
-        }
 
         return services;
     }

@@ -5,7 +5,7 @@ using System.Text;
 namespace PoFightJudge.TestSupport;
 
 /// <summary>
-/// Scriptable <see cref="HttpMessageHandler"/> for the Gemini/Fish/Azure clients: enqueue responses (or a responder
+/// Scriptable <see cref="HttpMessageHandler"/> for the Gemini clients: enqueue responses (or a responder
 /// that inspects the request), then assert on what was sent. Bodies are captured eagerly because the clients dispose
 /// their request content.
 /// </summary>

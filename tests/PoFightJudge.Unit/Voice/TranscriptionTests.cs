@@ -75,52 +75,6 @@ public class FakeTranscriptionTests
     }
 }
 
-public class AzureTranscriptionServiceTests
-{
-    private readonly FakeHttpHandler _http = new();
-
-    private AzureTranscriptionService Sut(bool enabled = true)
-    {
-        var factory = Substitute.For<IHttpClientFactory>();
-        factory.CreateClient(AzureSpeechService.ClientName).Returns(_ => _http.CreateClient("https://eastus.api.cognitive.microsoft.com/"));
-        return new AzureTranscriptionService(factory, new AzureSpeechOptions(enabled, "secret-key", "eastus"), new AiLatencyTracker(), NullLogger<AzureTranscriptionService>.Instance);
-    }
-
-    [Fact]
-    public async Task Posts_the_clip_and_a_locale_definition_then_reads_the_combined_phrases()
-    {
-        _http.Enqueue(HttpStatusCode.OK, """{"combinedPhrases":[{"text":"You left the freezer open."},{"text":"Again."}],"duration":3000}""");
-        var wav = new byte[64];
-        "RIFF"u8.CopyTo(wav);
-        "WAVE"u8.CopyTo(wav.AsSpan(8));
-
-        var text = await Sut().TranscribeAsync(wav);
-
-        text.Should().Be("You left the freezer open. Again.");
-        var sent = _http.Requests.Should().ContainSingle().Which;
-        sent.Uri!.ToString().Should().Contain("speechtotext/transcriptions:transcribe").And.Contain($"api-version={AzureTranscriptionService.ApiVersion}");
-        sent.Headers["Ocp-Apim-Subscription-Key"].Should().Be("secret-key");
-        sent.Body.Should().Contain("\"locales\"").And.Contain("en-US", "without a locale the service guesses and transcribes English phonetically into another language");
-    }
-
-    [Fact]
-    public async Task An_unknown_shape_is_an_empty_transcript_but_an_http_error_is_not_swallowed()
-    {
-        AzureTranscriptionService.ExtractText("""{"unexpected":true}""").Should().BeEmpty();
-        AzureTranscriptionService.ExtractText("not json").Should().BeEmpty();
-
-        var wav = new byte[64];
-        "RIFF"u8.CopyTo(wav);
-        "WAVE"u8.CopyTo(wav.AsSpan(8));
-        _http.Enqueue(HttpStatusCode.Unauthorized, "bad key");
-        var act = () => Sut().TranscribeAsync(wav);
-        (await act.Should().ThrowAsync<HttpRequestException>()).Which.Message.Should().Contain("bad key");
-
-        (await Sut().TranscribeAsync([])).Should().BeEmpty("an empty clip never reaches the wire");
-        Sut(enabled: false).IsEnabled.Should().BeFalse();
-    }
-}
-
 public class GeminiTranscriptionServiceTests
 {
     private readonly FakeHttpHandler _http = new();

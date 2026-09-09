@@ -29,7 +29,7 @@ public class ProfileRepositoryTests(AzuriteFixture azurite)
             Patience = 12,
             CommonArguments = "budget",
             Philosophy = "stoic",
-            TtsSettings = new TtsSettingsDto { Pitch = 0.8, Speed = 1.3, VoiceName = role == ProfileRole.Wife ? "Zephyr" : "Puck", FishReferenceId = "fish01" },
+            TtsSettings = new TtsSettingsDto { Pitch = 0.8, Speed = 1.3, VoiceName = role == ProfileRole.Wife ? "Zephyr" : "Puck" },
         }.ToDomain();
         profile.UpdateFacePic($"faces/{initials}.png");
         return profile;

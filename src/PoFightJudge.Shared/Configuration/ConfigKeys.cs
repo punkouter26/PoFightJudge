@@ -59,11 +59,6 @@ public static class ConfigKeys
 
         public const string GeminiApiKey = $"{Root}:GeminiApiKey";
         public const string GeminiApiKeyEnvVar = "GEMINI_API_KEY";
-        public const string FishAudioApiKey = $"{Root}:FishAudioApiKey";
-        public const string FishAudioApiKeyEnvVar = "FISH_API_KEY";
-        public const string FishDefaultReferenceId = $"{Root}:Fish:DefaultReferenceId";
-        public const string AzureSpeechKey = $"{Root}:AzureSpeechKey";
-        public const string AzureSpeechRegion = $"{Root}:AzureSpeechRegion";
 
         public const string RoundModel = $"{Section}:RoundModel";
         public const string JudgeModel = $"{Section}:JudgeModel";
@@ -71,21 +66,12 @@ public static class ConfigKeys
         public const string TtsModel = $"{Section}:TtsModel";
         public const string LiveModel = $"{Section}:LiveModel";
         public const string TranscribeModel = $"{Section}:TranscribeModel";
-
-        /// <summary>What a fight's summary is embedded with, so a history can be searched by meaning.</summary>
-        public const string EmbeddingModel = $"{Section}:EmbeddingModel";
         public const string Voice = $"{Section}:Voice";
         public const string JudgeThinkingLevel = $"{Section}:JudgeThinkingLevel";
         public const string JudgeServiceTier = $"{Section}:JudgeServiceTier";
 
-        /// <summary>Wire format the voice chain asks providers for: <c>mp3</c> (default) or <c>pcm</c>.</summary>
+        /// <summary>Wire format the voice asks for: <c>mp3</c> (default) or <c>pcm</c>.</summary>
         public const string TtsWireFormat = $"{Section}:TtsWireFormat";
-
-        /// <summary>
-        /// A local Ollama daemon serving the text seam instead of the fakes, outside Production. Bound as a section
-        /// because it carries an endpoint and a model name rather than one value.
-        /// </summary>
-        public const string OllamaSection = $"{Section}:Ollama";
     }
 
     /// <summary>
@@ -167,9 +153,6 @@ public static class Flags
     /// <summary>Try the browser's Web Speech API for a SELF turn before posting the clip to the server.</summary>
     public const string BrowserSpeechRecognition = "BrowserSpeechRecognition";
 
-    /// <summary>Fastest configured voice provider first (Azure before default-Fish).</summary>
-    public const string PreferFastVoice = "PreferFastVoice";
-
     /// <summary>Content-addressed blob cache of synthesized speech.</summary>
     public const string TtsCacheEnabled = "TtsCacheEnabled";
 
@@ -188,6 +171,6 @@ public static class Flags
 
     public static readonly IReadOnlyList<string> All =
     [
-        UseFakeAi, DevGuestEnabled, HumanInWatch, BrowserSpeechRecognition, PreferFastVoice, TtsCacheEnabled, UseAzurite, DiagRequiresAdminInDev, DevEntraEnabled,
+        UseFakeAi, DevGuestEnabled, HumanInWatch, BrowserSpeechRecognition, TtsCacheEnabled, UseAzurite, DiagRequiresAdminInDev, DevEntraEnabled,
     ];
 }

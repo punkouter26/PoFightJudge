@@ -35,45 +35,13 @@ public static class AiServiceExtensions
             (false, false, _) => "Production without a Gemini key — AI calls fail until the secret is set (degraded mode)",
         };
 
-        // Decided before the mode is built, so /api/diag can say which runtime is actually answering rather than
-        // reporting "no Gemini key" while a local model writes every line.
-        var ollamaOptions = configuration.GetSection(OllamaOptions.Section).Get<OllamaOptions>() ?? new OllamaOptions();
-        var ollamaServes = useFakes && OllamaOptions.ShouldUse(ollamaOptions, environment.IsProduction());
-        if (ollamaServes)
-        {
-            reason = $"no Gemini key; text served by Ollama ({ollamaOptions.Model}) at {ollamaOptions.Endpoint}";
-        }
-
         var mode = new AiMode(useFakes, hasKey, reason);
         services.AddSingleton(mode);
         services.AddSingleton(GeminiModelOptions.FromConfiguration(configuration));
         services.AddSingleton<AiLatencyTracker>();
         services.AddGeminiClients(apiKey);
 
-        // A local runtime, where one is asked for and allowed. It replaces the fakes at the text seam only: it
-        // writes the dialogue and the WATCH ruling, and everything else — the voice, the live host, the analysis —
-        // stays exactly where it was, because those are not text calls and Ollama does not serve them.
-        var useOllama = ollamaServes;
-        if (useOllama)
-        {
-            services.AddSingleton(ollamaOptions);
-            services.AddHttpClient(OllamaOptions.ClientName, client =>
-            {
-                client.BaseAddress = ollamaOptions.Endpoint;
-
-                // A model on a laptop is slow in a way a hosted one is not, and the first call also loads it into
-                // memory. This is a development convenience; it is allowed to take its time.
-                client.Timeout = TimeSpan.FromMinutes(5);
-            });
-        }
-
-        if (useOllama)
-        {
-            services.AddSingleton<IGeminiText, OllamaTextClient>();
-            services.AddSingleton<ITtsProvider, FakeTts>();
-            services.AddSingleton<IWatchAi, WatchAi>();
-        }
-        else if (useFakes)
+        if (useFakes)
         {
             services.AddSingleton<IGeminiText>(sp => new FakeGeminiText(sp.GetRequiredService<AiLatencyTracker>()));
             services.AddSingleton<ITtsProvider, FakeTts>();

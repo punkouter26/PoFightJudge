@@ -121,7 +121,7 @@ public sealed class ProfileEndpoints : ICarterModule
 
     /// <summary>
     /// One in-character line from the persona as it stands in the editor, spoken in its own voice — the quickest way
-    /// to hear what the sliders and the Fish reference id actually do before committing them. Never persisted. The
+    /// to hear what the voice and the sliders actually do before committing them. Never persisted. The
     /// prompt here is deliberately minimal; the real round prompts belong to the WATCH slice.
     /// </summary>
     private static async Task<IResult> PreviewLineAsync(CreateProfileRequest persona, IGeminiText gemini, GeminiModelOptions models, ITtsService voice, CancellationToken ct)

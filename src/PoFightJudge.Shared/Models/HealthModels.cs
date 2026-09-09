@@ -48,8 +48,6 @@ public sealed record DiagDto(
     IReadOnlyList<string> MissingKeys,
     bool FakeAi,
     string Gemini,
-    string FishAudio,
-    string AzureSpeech,
     string TableStorage,
     string BlobStorage,
     ModelIdsDto Models,
