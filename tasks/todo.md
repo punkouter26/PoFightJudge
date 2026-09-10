@@ -145,3 +145,4 @@
 - [x] T106 The persona editor halved: 28 fields become 14, and the nine lines of "50 (neutral)" stop being sent to the model
 - [x] T107 Cloned voices come back: Fish Audio restored ahead of Gemini, and the editor asks for a voice id instead of a voice
 - [x] T108 Three cloned voices join the cast: Ramsay and Schwarzenegger are written, and Trump finally speaks in his own
+- [x] T109 Prod can speak for itself: Azure Monitor is finally called, and a persona added in code seeds itself on startup

@@ -1,9 +1,11 @@
 using Azure.Core;
 using Azure.Identity;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Carter;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OpenTelemetry.Resources;
 using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Ai;
 using PoFightJudge.Api.Features.Analysis;
@@ -12,6 +14,7 @@ using PoFightJudge.Api.Features.Diagnostics;
 using PoFightJudge.Api.Features.Fight;
 using PoFightJudge.Api.Features.Fighters;
 using PoFightJudge.Api.Features.Profiles;
+using PoFightJudge.Api.Features.Profiles.Seeding;
 using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Api.Features.Voice;
 using PoFightJudge.Api.Features.Watch;
@@ -112,6 +115,24 @@ try
         }
     });
 
+    // ── Telemetry ─────────────────────────────────────────────────────────────────────────────────────────────────
+    // App Service injects the connection string; without one this is a no-op, so a local run stays local. The role
+    // name is set explicitly because App Insights groups by it and the resource is shared with every other Po* app —
+    // unnamed, this app's telemetry arrives as a blank row nobody can filter to.
+    if (Environment.GetEnvironmentVariable(ConfigKeys.Telemetry.AppInsightsEnvVar) is { Length: > 0 } appInsights)
+    {
+        builder.Services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(ConfigKeys.Root))
+            .UseAzureMonitor(options =>
+            {
+                options.ConnectionString = appInsights;
+
+                // Everything, unless somebody dials it down. This app's traffic is a handful of requests a minute;
+                // sampling it would only make an already thin signal thinner.
+                options.SamplingRatio = builder.Configuration.GetValue<float?>(ConfigKeys.Telemetry.SamplingRatio) ?? 1.0f;
+            });
+    }
+
     // ── Services ──────────────────────────────────────────────────────────────────────────────────────────────────
     var fakeAuth = GuestMiddleware.IsEnabledIn(builder.Environment, builder.Configuration);
     builder.Services.AddPoAuth(builder.Configuration, builder.Environment, fakeAuth);
@@ -120,6 +141,10 @@ try
     builder.Services.AddPoStorage(builder.Configuration, builder.Environment);
     builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
     builder.Services.AddSingleton<IProfileImageService, ProfileImageService>();
+
+    // A persona added to the cast in code should be on the site after the next deploy, not after somebody remembers
+    // to call the seed endpoint. Adds what is missing; never touches what is already there.
+    builder.Services.AddHostedService<SeedOnStartup>();
     builder.Services.AddSingleton<IProfileGenerator, ProfileGenerator>();
     builder.Services.AddScoped<IMatchRepository, MatchRepository>();
     builder.Services.AddScoped<IShareRepository, ShareRepository>();
