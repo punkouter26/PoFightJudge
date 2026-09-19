@@ -78,6 +78,7 @@
 
                     <RadzenStepsItem Text="About" Disabled="@(Problem is not null)">
                         <section class="topic">
+                            <TopicThread HostSelector=".topic" Topic="@_topic" />
                             <RadzenFormField Text="What is the fight about?" Variant="Variant.Outlined">
                                 <ChildContent>
                                     <RadzenTextBox @bind-Value="_topic" Name="topic" MaxLength="200" Placeholder="the thermostat" />

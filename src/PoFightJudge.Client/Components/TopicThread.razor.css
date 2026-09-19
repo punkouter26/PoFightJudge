@@ -1,0 +1,36 @@
+/* T112: the topic thread grows as the WATCH topic is typed. The bolt fires once, on the moment the topic
+   crosses the threshold, then waits for the topic to drop back below to fire again on the next climb. */
+
+.topic-thread {
+  display: block;
+  width: 100%;
+  height: 2.5rem;
+  overflow: visible;
+  margin-bottom: -0.5rem;
+}
+
+.thread-path {
+  filter: drop-shadow(0 0 0.5rem var(--po-accent));
+  transition: d 220ms ease-out;
+}
+
+.thread-bolt {
+  transform-origin: 180px 60px;
+  transform-box: fill-box;
+  transition: opacity 120ms linear;
+}
+
+.thread-bolt--on {
+  animation: thread-bolt-flash 420ms ease-out;
+}
+
+@keyframes thread-bolt-flash {
+  0%   { opacity: 0; transform: scale(0.4); }
+  35%  { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thread-path { transition: none; }
+  .thread-bolt { animation: none; opacity: 0; }
+}
