@@ -51,9 +51,29 @@
     /// <summary>What the fight was about, so a saved clip lands with a name that says which argument it is from.</summary>
     [Parameter] public string Topic { get; set; } = string.Empty;
 
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+
     private readonly Dictionary<int, string> _playing = [];
     private int? _loading;
     private string? _problem;
+
+    /// <summary>T116: wire the rewind effect onto every audio the reel has rendered. Idempotent.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("PoHighlightRewind.wire", ".reel");
+        }
+        catch (JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
 
     /// <summary>
     /// Saving takes the same route as playing, for the same reason: the bytes have to be fetched with the caller's

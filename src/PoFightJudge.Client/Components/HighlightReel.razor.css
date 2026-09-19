@@ -27,3 +27,20 @@ blockquote p { margin: 0; font-size: var(--po-text-lg); }
 .ways .player {
   flex: 1 1 14rem;
 }
+
+/* T116: the rewind effect ramps in over 400 ms, holds for 400 ms, ramps out. The radial-blur and chromatic
+   aberration use cheap SVG filters; a slower machine shows the ramps but never the effect being skipped. */
+.moment.rewinding {
+  animation: highlight-rewind 800ms ease-out;
+}
+
+@keyframes highlight-rewind {
+  0%   { filter: none; transform: scale(1); }
+  25%  { filter: blur(2px) drop-shadow(2px 0 0 rgba(255, 0, 80, 0.4)) drop-shadow(-2px 0 0 rgba(0, 200, 255, 0.4)); transform: scale(0.985); }
+  50%  { filter: blur(3px) drop-shadow(3px 0 0 rgba(255, 0, 80, 0.55)) drop-shadow(-3px 0 0 rgba(0, 200, 255, 0.55)); transform: scale(0.97); }
+  100% { filter: none; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moment.rewinding { animation: none; }
+}
