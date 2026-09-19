@@ -92,6 +92,7 @@ Each was a deliberate decision made while building; the commit that made it says
 | T98 | the flags | plus `appsettings.Development.json`'s duplicate `PoFightJudge` key | the Ollama block that T86 added was a second key in the same object, and removing it fixed a silent shadow |
 | T100 | the pages and their endpoints | plus `.husky/commit-msg` | the hook took two-digit task numbers only, so T100 could not be committed under the rule the hook exists to enforce |
 | T101 | trim the suites | 62 Unit files deleted outright | at one test per decision most of those files had no decision left that another test did not already make |
+| T110–T116 | ship the seven visual effects end to end, with full Unit tests on every commit, then run E2EUI | ship T110–T116 one task one commit each, Unit tier + `dotnet format --verify-no-changes` green on every commit; E2EUI (StageEffectTests additions) deferred to the next time `./SCRIPTS/setup.ps1` brings Azurite + the host up | the user asked for all in one session without bringing the dev env online, and Unit + format are the contracts that already run on every commit; E2EUI's job is to prove the shader/canvas paths, which the existing StageEffectTests pattern covers once the host is reachable |
 
 ## Still outstanding
 

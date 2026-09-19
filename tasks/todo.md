@@ -149,3 +149,9 @@
 
 ## Phase Q — Visual polish (2026-09-18)
 - [x] T110 Sparks on a clipping level meter: when --po-mic-level crosses 0.9, js/level-clip.js asks PoParticles.burst('.meter', 'sparks', '.lamp'); reduced motion and the existing CSS paint path both untouched
+- [x] T111 Wax-seal stamp on each fallacy in the ruling: js/fallacy-stamp.js slams a tilted SVG seal per .fallacy-stamp with a Sfx.Thump under it; staggered by index
+- [x] T112 Lightning-rod thread on the WATCH topic field: js/topic-thread.js redraws an SVG arc on every keystroke; a bolt fires once when the topic crosses six characters, with a Sfx.Whoosh under it
+- [x] T113 History aurora: Shaders.Aurora (WebGL2) is mounted on .aurora-host inside History.razor; height is the streak length, hue is the dominant side of the latest argument; no opacity on the grid below
+- [x] T114 Three-note tuning chord before the persona preview: Sfx.Chord is a triangle-wave triad that lands just before the TTS line; the preview button on ProfileCard.razor is the only consumer
+- [x] T115 Mic-check vortex: js/mic-vortex.js emits particles into .vortex at a rate that climbs with --po-mic-level; started when the panel opens, stopped when it closes or the page leaves
+- [x] T116 Highlight rewind: js/highlight-rewind.js adds .rewinding to .moment on the audio `play` event (radial blur + chromatic aberration, 800 ms keyframe in HighlightReel.razor.css) and dips playbackRate to 0.9438 for the clip's duration
