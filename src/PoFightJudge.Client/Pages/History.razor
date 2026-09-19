@@ -21,9 +21,6 @@
         </RadzenSelectBar>
     </Actions>
     <ChildContent>
-        @* T113: the aurora is mounted on this empty host. Behind it the grid sits on the opaque shell floor,
-           so the bands are decoration, not contrast the words are read against. *@
-        <div class="aurora-host" aria-hidden="true"></div>
         @* Narrowing happens on the server: the browser never holds the whole history, only the page it is showing. *@
         <section class="narrow" aria-label="Narrow the list">
             <RadzenFormField Text="Search" Variant="Variant.Outlined" class="find">
@@ -188,90 +185,14 @@
     private bool _loading = true;
     private string? _error;
 
-    /// <summary>The element the aurora is mounted on. One selector, used to bring the shader up and take it down.</summary>
-    public const string AuroraSelector = ".aurora-host";
-
-    /// <summary>Whether the WebGL2 backdrop mounted. Lets later updates be no-ops when the browser said no.</summary>
-    private bool _auroraMounted;
-
-    [Inject] private GfxInterop Gfx { get; set; } = default!;
-
     /// <summary>Whether anything has been asked of the list. Decides which empty state is the true one.</summary>
     private bool IsNarrowed => _text.Trim().Length > 0 || _from is not null || _to is not null;
-
-    /// <summary>The current streak: how many of the most recent matches were won by the same side. 0 when none.</summary>
-    private int _streak;
-
-    /// <summary>Which side is on the streak: the side that has the recent wins. 0 when no streak.</summary>
-    private string? _streakSide;
-
-    /// <summary>The mix uniform, biased toward whichever side the streak belongs to. 0.5 when there is no streak.</summary>
-    private double _mix = 0.5;
-
-    /// <summary>The heat uniform, clamped 0–1 from a streak of up to five wins.</summary>
-    private double _heat;
 
     protected override async Task OnInitializedAsync()
     {
         Viewport.Changed += OnViewportChanged;
         await Viewport.InitializeAsync();
         await LoadAsync();
-    }
-
-    /// <summary>Mounts the aurora once the host is in the DOM. The shader answers false on no-WebGL2.</summary>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _auroraMounted = await Gfx.MountAsync(AuroraSelector, Shaders.Aurora, ct: _leaving.Token);
-        }
-    }
-
-    /// <summary>Walks the matches newest-first, counting the leading run of wins by the same person.</summary>
-    private (int Length, string? Side) ComputeStreak()
-    {
-        var length = 0;
-        string? side = null;
-        foreach (var match in _matches)
-        {
-            if (match.IsDraw || string.IsNullOrEmpty(match.Winner))
-            {
-                break;
-            }
-
-            if (side is null)
-            {
-                side = match.Winner;
-                length = 1;
-            }
-            else if (string.Equals(match.Winner, side, StringComparison.Ordinal))
-            {
-                length++;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        return (length, side);
-    }
-
-    /// <summary>Updates the aurora uniforms after each load. Best-effort; the shader answers false rather than throwing.</summary>
-    private async Task UpdateAuroraAsync()
-    {
-        if (!_auroraMounted)
-        {
-            return;
-        }
-
-        var (length, side) = ComputeStreak();
-        _streak = length;
-        _streakSide = side;
-        _heat = Math.Min(1.0, length / 5.0);
-        _mix = side is null ? 0.5 : 0.5;
-        await Gfx.SetAsync(AuroraSelector, "heat", _heat, _leaving.Token);
-        await Gfx.SetAsync(AuroraSelector, "mix", _mix, _leaving.Token);
     }
 
     /// <summary>Which columns exist is a render decision, and a rotated phone is a different set of them.</summary>
@@ -283,10 +204,6 @@
         _leaving.Cancel();
         _leaving.Dispose();
         _typing?.Dispose();
-        if (_auroraMounted)
-        {
-            Gfx.Release(AuroraSelector);
-        }
     }
 
     private async Task LoadAsync()
@@ -318,7 +235,6 @@
         finally
         {
             _loading = false;
-            await UpdateAuroraAsync();
         }
     }
 

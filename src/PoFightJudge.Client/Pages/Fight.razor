@@ -15,40 +15,42 @@
                      NextText="Next" PreviousText="Back">
             <Steps>
                 <RadzenStepsItem Text="Who">
-                    <section class="tags">
-                        <div class="fighter-setup">
-                            <FighterTagInput Label="Fighter one" Name="player1Tag" Tag="@_one" TagChanged="@OnOneChanged" Known="@_known" Excluded="@_two" />
-                            @* 2P has no husband or wife. The seat is for afterwards: what they say here becomes a persona that
-                               CPU and 1P can put in an argument, and those channels pit a husband against a wife. *@
-                            <div class="seat">
-                                <span class="po-eyebrow">Argues as</span>
-                                <RadzenSelectBar @bind-Value="_oneRole" TValue="ProfileRole" Name="player1Role" Size="ButtonSize.Small" aria-label="Fighter one argues as">
-                                    <Items>
-                                        <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
-                                        <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
-                                    </Items>
-                                </RadzenSelectBar>
+                    <div class="who-step">
+                        <section class="tags">
+                            <div class="fighter-setup">
+                                <FighterTagInput Label="Fighter one" Name="player1Tag" Tag="@_one" TagChanged="@OnOneChanged" Known="@_known" Excluded="@_two" />
+                                @* 2P has no husband or wife. The seat is for afterwards: what they say here becomes a persona that
+                                   CPU and 1P can put in an argument, and those channels pit a husband against a wife. *@
+                                <div class="seat">
+                                    <span class="po-eyebrow">Argues as</span>
+                                    <RadzenSelectBar @bind-Value="_oneRole" TValue="ProfileRole" Name="player1Role" Size="ButtonSize.Small" aria-label="Fighter one argues as">
+                                        <Items>
+                                            <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
+                                            <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
+                                        </Items>
+                                    </RadzenSelectBar>
+                                </div>
                             </div>
-                        </div>
-                        <div class="fighter-setup">
-                            <FighterTagInput Label="Fighter two" Name="player2Tag" Tag="@_two" TagChanged="@OnTwoChanged" Known="@_known" Excluded="@_one" />
-                            <div class="seat">
-                                <span class="po-eyebrow">Argues as</span>
-                                <RadzenSelectBar @bind-Value="_twoRole" TValue="ProfileRole" Name="player2Role" Size="ButtonSize.Small" aria-label="Fighter two argues as">
-                                    <Items>
-                                        <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
-                                        <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
-                                    </Items>
-                                </RadzenSelectBar>
+                            <div class="fighter-setup">
+                                <FighterTagInput Label="Fighter two" Name="player2Tag" Tag="@_two" TagChanged="@OnTwoChanged" Known="@_known" Excluded="@_one" />
+                                <div class="seat">
+                                    <span class="po-eyebrow">Argues as</span>
+                                    <RadzenSelectBar @bind-Value="_twoRole" TValue="ProfileRole" Name="player2Role" Size="ButtonSize.Small" aria-label="Fighter two argues as">
+                                        <Items>
+                                            <RadzenSelectBarItem Text="Husband" Value="@ProfileRole.Husband" />
+                                            <RadzenSelectBarItem Text="Wife" Value="@ProfileRole.Wife" />
+                                        </Items>
+                                    </RadzenSelectBar>
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
 
-                    <section class="preview" aria-label="Who is arguing">
-                        <FighterCard Tag="@_one" Fighter="@Known(_one)" />
-                        <div class="versus po-display" aria-hidden="true">vs</div>
-                        <FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" />
-                    </section>
+                        <section class="preview" aria-label="Who is arguing">
+                            <FighterCard Tag="@_one" Fighter="@Known(_one)" />
+                            <div class="versus po-display" aria-hidden="true">vs</div>
+                            <FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" />
+                        </section>
+                    </div>
 
                     @if (Problem is { Length: > 0 })
                     {

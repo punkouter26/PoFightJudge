@@ -58,7 +58,7 @@
      Panels that sit over the live stage's shader, blurring it rather than hiding it. The floor colour is opaque
      enough on its own that the text over it still clears AA when backdrop-filter is unsupported or switched off —
      the blur is the effect, never the legibility. */
-  --po-glass: light-dark(rgba(255, 255, 255, 0.82), rgba(21, 25, 35, 0.78));
+  --po-glass: light-dark(rgba(255, 255, 255, 0.85), rgba(21, 25, 35, 0.88));
   --po-glass-edge: light-dark(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.08));
   --po-glass-blur: blur(14px) saturate(1.3);
 

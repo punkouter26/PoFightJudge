@@ -22,8 +22,8 @@
 
 ::deep .cards .rz-datalist-data {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
-  gap: var(--po-space-4);
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--po-space-3);
   padding: 0;
   margin: 0;
   list-style: none;
@@ -34,4 +34,11 @@
   padding: 0;
   border: 0;
   background: none;
+}
+
+@media (max-width: 40rem) {
+  ::deep .cards .rz-datalist-data {
+    grid-template-columns: 1fr;
+    gap: var(--po-space-2);
+  }
 }

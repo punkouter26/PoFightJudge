@@ -74,8 +74,6 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
                 _asked.Add(request);
                 return OneLineAsync($"line {_asked.Count}");
             });
-        _api.RoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new TtsAudioDto(string.Empty, "pcm")));
         _api.StreamRoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
             .Returns(_ => ClausesAsync(null));
         _api.VerdictAsync(Arg.Any<VerdictRequest>(), Arg.Any<CancellationToken>())

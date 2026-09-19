@@ -23,6 +23,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
     public const string StageSelector = ".stage";
 
     private readonly List<WatchRoundDto> _rounds = [];
+    private int _revealedRounds;
 
     /// <summary>
     /// Each round's spoken audio, by index, kept for the verdict. It is deliberately not held on the rounds
@@ -307,7 +308,19 @@ public sealed partial class WatchPlay : IAsyncDisposable
     {
         if (side.IsHuman)
         {
+            _revealedRounds = _rounds.Count;
+            await InvokeAsync(StateHasChanged);
             return;
+        }
+
+        var revealed = false;
+        void Reveal()
+        {
+            if (!revealed)
+            {
+                revealed = true;
+                _revealedRounds = _rounds.Count;
+            }
         }
 
         try
@@ -363,6 +376,9 @@ public sealed partial class WatchPlay : IAsyncDisposable
                 // the beat has to know how long the whole line runs, not how long its first phrase did.
                 _lineEndsAt = endsAt;
 
+                // Reveal text in lockstep with the voice starting.
+                Reveal();
+
                 // The line is being spoken now rather than merely written, and the stage says so — the speaking
                 // corner, the meter and the caret all read state this loop is the only thing moving. Through the
                 // dispatcher, because a clause arrives on whatever thread its continuation landed on.
@@ -382,6 +398,12 @@ public sealed partial class WatchPlay : IAsyncDisposable
         }
         catch (HttpRequestException)
         {
+        }
+        finally
+        {
+            // If the audio was voiceless, empty, or failed, ensure the line is still shown.
+            Reveal();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -458,6 +480,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         // default is the middle of the scale, exactly as the server treats a line whose mood it does not know.
         var speaker = WatchTurns.NextSpeaker(_rounds.Count, _slapUsed);
         _rounds.Add(new WatchRoundDto(speaker, said, WatchTurns.NormalizeMood(null)));
+        _revealedRounds = _rounds.Count;
         _line = string.Empty;
         _stage = Stage.Arguing;
         await RunAsync();
@@ -510,6 +533,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
     {
         await Audio.StopAsync(_leaving.Token);
         _rounds.Clear();
+        _revealedRounds = 0;
         _clips.Clear();
         _verdict = null;
         _error = null;

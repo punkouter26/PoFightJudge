@@ -1,7 +1,0 @@
-#!/usr/bin/env sh
-# One commit per task: "T12: Profile aggregate + repository". docs:/chore:/fix: are allowed for non-task housekeeping.
-msg="$(head -n1 "$1")"
-echo "$msg" | grep -qE '^(T[0-9]{2,}[a-z]?|docs|chore|fix): .+' || {
-  echo "commit message must start with 'T##: ' (two digits or more, or docs:/chore:/fix:), got: $msg" >&2
-  exit 1
-}

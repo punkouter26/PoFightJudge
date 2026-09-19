@@ -46,10 +46,13 @@
 
 ::deep .transcript {
   width: 100%;
+  max-height: clamp(14rem, 42vh, 32rem);
+  overflow-y: auto;
+  padding-inline-end: var(--po-space-2);
+  scroll-behavior: smooth;
 }
 
-.line,
-.arriving {
+.line {
   display: grid;
   gap: var(--po-space-2);
   padding: var(--po-space-4);
@@ -61,53 +64,28 @@
   flex: 1 1 auto;
 }
 
-.line header,
-.arriving header {
+.line header {
   display: flex;
   gap: var(--po-space-2);
   align-items: baseline;
   justify-content: space-between;
 }
 
-.line .who,
-.arriving .who {
+.line .who {
   font-family: var(--po-font-display);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.line p,
-.arriving p {
+.line p {
   margin: 0;
   font-size: var(--po-text-lg);
   line-height: 1.5;
 }
 
-.line.p1,
-.arriving.p1 { border-left: 3px solid var(--po-p1); }
+.line.p1 { border-left: 3px solid var(--po-p1); }
 
-.line.p2,
-.arriving.p2 { border-left: 3px solid var(--po-p2); }
-
-/*
- * A line still being written. The caret is the only thing that says "there is more coming" — the words themselves
- * read exactly like a finished line, which is the point: a viewer should be reading the argument, not watching a
- * loading state. It goes away under reduced motion, where a blinking box is the problem rather than the feedback.
- */
-.arriving p::after {
-  content: "▌";
-  margin-left: 0.1em;
-  color: var(--po-muted);
-  animation: po-caret 1s steps(2, start) infinite;
-}
-
-@keyframes po-caret {
-  50% { opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .arriving p::after { animation: none; }
-}
+.line.p2 { border-left: 3px solid var(--po-p2); }
 
 .your-turn,
 .verdict {

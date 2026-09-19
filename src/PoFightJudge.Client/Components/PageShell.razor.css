@@ -3,7 +3,7 @@
 .po-shell {
   width: 100%;
   margin: 0 auto;
-  padding-block: var(--po-space-6) calc(var(--po-space-8) + var(--po-safe-b));
+  padding-block: var(--po-space-4) calc(var(--po-space-5) + var(--po-safe-b));
   padding-inline: max(var(--po-page-gutter), var(--po-safe-l)) max(var(--po-page-gutter), var(--po-safe-r));
 }
 
@@ -17,7 +17,7 @@
   justify-content: space-between;
   gap: var(--po-space-4);
   flex-wrap: wrap;
-  margin-bottom: var(--po-space-6);
+  margin-bottom: var(--po-space-4);
 }
 
 .titles {

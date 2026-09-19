@@ -2,33 +2,34 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: var(--po-space-4);
-  margin-bottom: var(--po-space-6);
+  gap: var(--po-space-3);
+  margin-bottom: var(--po-space-4);
 }
 
 .titles {
   display: flex;
   flex-direction: column;
-  gap: var(--po-space-2);
+  gap: var(--po-space-1);
 }
 
 h1 {
-  font-size: var(--po-text-3xl);
+  font-size: var(--po-text-2xl);
+  letter-spacing: 0.01em;
 }
 
 .channels {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--po-space-5);
-  margin-bottom: var(--po-space-6);
+  gap: var(--po-space-4);
+  margin-bottom: var(--po-space-4);
 }
 
 /* Side by side above 64rem, stacked between there and the phone breakpoint, and tabs below that — the last of
    those is a render decision in the page, not a rule here. */
 .below {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: var(--po-space-5);
+  grid-template-columns: 1.5fr 1fr;
+  gap: var(--po-space-4);
 }
 
 .section-head {

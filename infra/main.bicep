@@ -6,6 +6,9 @@ param location string = 'eastus2'
 @description('App Service Plan SKU. Left at F1 (Free) unless somebody deliberately opts into a billed tier; see resources.bicep for what each one buys.')
 param appServicePlanSku string = 'F1'
 
+@description('Location for the App Service Plan and Web App (defaults to westus2 due to F1 quota)')
+param webAppLocation string = 'westus2'
+
 // Naming: Po{Solution}. Everything app-specific lives in the PoFightJudge resource group; Key Vault,
 // App Insights and Log Analytics stay in PoShared and are referenced as existing, the same layout every
 // other Po* app uses.
@@ -26,9 +29,7 @@ module resources 'resources.bicep' = {
   name: 'resources'
   scope: rg
   params: {
-    // West US 2: this subscription has no Free-tier quota in East US 2 (SubscriptionIsOverQuotaForSku),
-    // and every other Po* F1 plan is West US 2 for the same reason.
-    webAppLocation: 'westus2'
+    webAppLocation: webAppLocation
     storageLocation: location
     storageAccountName: storageAccountName
     webAppName: webAppName

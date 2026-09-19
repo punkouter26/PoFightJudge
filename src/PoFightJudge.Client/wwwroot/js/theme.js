@@ -19,7 +19,7 @@
     if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
   } catch (e) { /* storage blocked: keep the default */ }
 
-  var base = '_content/Radzen.Blazor/';
+  var base = '/_content/Radzen.Blazor/';
   var sheet = document.createElement('link');
   sheet.rel = 'stylesheet';
   sheet.href = base + 'css/' + (theme === 'light' ? 'material-base.css' : 'material-dark-base.css');

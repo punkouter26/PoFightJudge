@@ -1,15 +1,5 @@
 ::deep .history { width: 100%; }
 
-/* T113: the aurora is decoration, never the contrast the words are read against. The host sits above the
-   narrow strip; the grid below it is what people actually look at. The pointer-events:none stops a canvas
-   that lives behind the controls from intercepting clicks. */
-.aurora-host {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
 /* The two buttons do not shrink. Radzen does not mark these icon-only — they carry a label span either way — so
    the 44 px floor from T71 does not reach them, and in a 7rem cell flex squeezed each to 28 px around 51 px of
    content: a button three times taller than it is wide, with its own icon hanging out of it. */

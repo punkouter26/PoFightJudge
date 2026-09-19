@@ -47,7 +47,13 @@ try
         try
         {
             TokenCredential credential = builder.Environment.IsDevelopment()
-                ? new DefaultAzureCredential()
+                ? new DefaultAzureCredential(new DefaultAzureCredentialOptions
+                {
+                    ExcludeEnvironmentCredential = true,
+                    ExcludeWorkloadIdentityCredential = true,
+                    ExcludeManagedIdentityCredential = true,
+                    ExcludeInteractiveBrowserCredential = true,
+                })
                 : new DefaultAzureCredential(new DefaultAzureCredentialOptions
                 {
                     ExcludeVisualStudioCredential = true,

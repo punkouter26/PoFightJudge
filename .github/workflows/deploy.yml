@@ -31,11 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - uses: actions/cache@v6
+      - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
@@ -48,7 +48,7 @@ jobs:
         run: dotnet test tests/PoFightJudge.Unit --no-build -c Release --verbosity minimal
       - name: Publish API
         run: dotnet publish src/PoFightJudge.Api -c Release --no-build -o publish
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: webapp
           path: publish
@@ -64,10 +64,10 @@ jobs:
       name: production
       url: ${{ env.AZURE_WEBAPP_URL }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           name: webapp
           path: publish

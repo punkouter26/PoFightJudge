@@ -23,9 +23,6 @@
 
     @if (_open)
     {
-        @* T115: the particle vortex sits next to the meter; PoMicVortex reads --po-mic-level and asks
-           PoParticles.emit for a steady trickle of sparks. *@
-        <div class="vortex" aria-hidden="true"></div>
         <LevelMeter Listening="true" Caption="@Caption" />
     }
     else if (_heard)
@@ -82,43 +79,8 @@
         await _leaving.CancelAsync();
         _leaving.Dispose();
 
-        // T115: stop the vortex animation if the page leaves while the panel is still open.
-        try
-        {
-            await Js.InvokeVoidAsync("PoMicVortex.stop");
-        }
-        catch (JSException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (TaskCanceledException)
-        {
-        }
-
         // The recording light must not outlive the page it belongs to.
         await Mic.CancelAsync(CancellationToken.None);
-    }
-
-    [Inject] private IJSRuntime Js { get; set; } = default!;
-
-    /// <summary>
-    /// Watches the published mic level and asks the particle layer to throw sparks, sized to the input. Wired
-    /// from the toggle: the vortex only runs while the panel is open.
-    /// </summary>
-    private void StartVortex()
-    {
-        try
-        {
-            Js.InvokeVoidAsync("PoMicVortex.watch");
-        }
-        catch (JSException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
     }
 
     private async Task ToggleAsync()
@@ -142,10 +104,6 @@
 
             _open = true;
 
-            // T115: the vortex only spins while the panel is open. Started here so the first frame after open
-            // has a stream of particles to throw.
-            StartVortex();
-
             // Only now: labels are blank until permission has been given once, so a list offered before this is a
             // list of opaque ids.
             _devices = await Mic.DevicesAsync(_leaving.Token);
@@ -166,19 +124,6 @@
         _open = false;
         _clipping = false;
         await Mic.CancelAsync(_leaving.Token);
-        try
-        {
-            await Js.InvokeVoidAsync("PoMicVortex.stop");
-        }
-        catch (JSException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (TaskCanceledException)
-        {
-        }
         StateHasChanged();
     }
 

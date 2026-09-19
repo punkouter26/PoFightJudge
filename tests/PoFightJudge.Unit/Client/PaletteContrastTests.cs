@@ -44,10 +44,16 @@ public partial class PaletteContrastTests
     ];
 
     [Fact]
-    public void Every_rendered_colour_pair_is_readable_in_both_themes()
+    public void Palette_tokens_are_defined_and_meet_contrast_ratios()
     {
+        var (light, dark) = Themes.Value;
+        var required = Pairs.SelectMany(p => new[] { p.Foreground, p.Background }).Distinct();
+
+        dark.Keys.Should().Contain(required);
+        light.Keys.Should().Contain(required, "every colour is one light-dark() declaration, so both halves exist");
+
         var failures = new List<string>();
-        foreach (var (name, tokens) in new[] { ("light", Themes.Value.Light), ("dark", Themes.Value.Dark) })
+        foreach (var (name, tokens) in new[] { ("light", light), ("dark", dark) })
         {
             foreach (var (foreground, background, minimum, use) in Pairs)
             {
@@ -60,16 +66,6 @@ public partial class PaletteContrastTests
         }
 
         failures.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void Both_themes_define_every_token_the_pages_use()
-    {
-        var (light, dark) = Themes.Value;
-        var required = Pairs.SelectMany(p => new[] { p.Foreground, p.Background }).Distinct();
-
-        dark.Keys.Should().Contain(required);
-        light.Keys.Should().Contain(required, "every colour is one light-dark() declaration, so both halves exist");
     }
 
     private static (IReadOnlyDictionary<string, string> Light, IReadOnlyDictionary<string, string> Dark) Load()

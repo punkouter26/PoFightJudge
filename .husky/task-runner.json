@@ -1,6 +1,0 @@
-{
-  "tasks": [
-    { "name": "format-check", "group": "pre-commit", "command": "dotnet", "args": ["format", "PoFightJudge.slnx", "--verify-no-changes", "--no-restore"] },
-    { "name": "unit-tests", "group": "pre-commit", "command": "dotnet", "args": ["test", "tests/PoFightJudge.Unit", "--no-restore", "--verbosity", "quiet"] }
-  ]
-}

@@ -4,11 +4,14 @@
 .stage {
   position: relative;
   isolation: isolate;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--po-space-4);
   padding: var(--po-space-3);
   border-radius: var(--po-radius-lg);
   overflow: hidden;
+  min-height: min(72vh, 48rem);
+  max-height: calc(100dvh - 12rem);
 }
 
 /* Above the backdrop. Everything the page laid out sits on this layer; only the canvas is below it. */
@@ -39,5 +42,14 @@
 
 @media (min-width: 64rem) {
   .bar { grid-template-columns: 2fr 1fr auto; }
+}
+
+@media (max-width: 40rem) {
+  .stage {
+    min-height: calc(100dvh - 9rem);
+    max-height: calc(100dvh - 9rem);
+    padding: var(--po-space-2);
+    gap: var(--po-space-2);
+  }
 }
 

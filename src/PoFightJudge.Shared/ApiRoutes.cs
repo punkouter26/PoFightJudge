@@ -88,14 +88,12 @@ public static class ApiRoutes
         public const string Base = $"{ApiPrefix}/watch";
         public const string GenerateRoundSegment = "/generate-round";
         public const string GenerateRoundStreamSegment = "/generate-round-stream";
-        public const string RoundAudioSegment = "/round-audio";
         public const string RoundAudioStreamSegment = "/round-audio-stream";
         public const string VerdictSegment = "/verdict";
         public const string TranscribeSegment = "/transcribe";
 
         public const string GenerateRoundUrl = $"{Base}{GenerateRoundSegment}";
         public const string GenerateRoundStreamUrl = $"{Base}{GenerateRoundStreamSegment}";
-        public const string RoundAudioUrl = $"{Base}{RoundAudioSegment}";
         public const string RoundAudioStreamUrl = $"{Base}{RoundAudioStreamSegment}";
         public const string VerdictUrl = $"{Base}{VerdictSegment}";
         public const string TranscribeUrl = $"{Base}{TranscribeSegment}";

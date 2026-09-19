@@ -64,6 +64,18 @@
   .side-by-side { grid-template-columns: 1fr 1fr; }
 }
 
+@media (min-width: 64rem) {
+  .verdict { gap: var(--po-space-4); }
+  .side-by-side { gap: var(--po-space-6); }
+}
+
+@media (max-width: 40rem) {
+  .ruling { padding: var(--po-space-4); }
+  .summary { font-size: var(--po-text-md); }
+  .reasons { padding-left: var(--po-space-4); }
+  .verdict { gap: var(--po-space-3); }
+}
+
 /* The reveal: each part of the report arrives a beat after the one above it, in reading order. Purely on first
    paint — nothing here re-runs, and one switch turns all of it off.
 

@@ -47,9 +47,38 @@
   text-align: right;
 }
 
+.who-step {
+  display: grid;
+  gap: var(--po-space-4);
+}
+
 @media (min-width: 48rem) {
   .tags { grid-template-columns: 1fr 1fr; }
   .preview { grid-template-columns: 1fr auto 1fr; }
+}
+
+@media (min-width: 64rem) {
+  .who-step {
+    grid-template-columns: 1.1fr 1fr;
+    gap: var(--po-space-5);
+    align-items: start;
+  }
+
+  .who-step .tags {
+    grid-template-columns: 1fr;
+  }
+
+  .who-step .preview {
+    grid-template-columns: 1fr;
+    padding: var(--po-space-4);
+    background: var(--po-surface-2);
+    border: 1px solid var(--po-border);
+    border-radius: var(--po-radius-md);
+  }
+
+  .who-step .versus {
+    margin-block: var(--po-space-1);
+  }
 }
 
 /* Side by side on a phone too. Stacked, the two cards and the "vs" between them were 329 px of a screen whose

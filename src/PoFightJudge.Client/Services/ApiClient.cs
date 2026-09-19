@@ -59,9 +59,6 @@ public interface IApiClient
     /// </summary>
     IAsyncEnumerable<RoundStreamPart> StreamRoundAsync(GenerateRoundRequest request, CancellationToken ct = default);
 
-    /// <summary>Speaks a line that has already been generated.</summary>
-    Task<TtsAudioDto> RoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default);
-
     /// <summary>The same audio, clause by clause, so playback starts on the first phrase instead of the whole line.</summary>
     IAsyncEnumerable<RoundAudioChunkDto> StreamRoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default);
 
@@ -353,12 +350,6 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
                 yield return new RoundStreamPart(null, final);
             }
         }
-    }
-
-    public async Task<TtsAudioDto> RoundAudioAsync(RoundAudioRequest request, CancellationToken ct = default)
-    {
-        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Watch.RoundAudioUrl), request, ct);
-        return await ReadAsync<TtsAudioDto>(response, ct);
     }
 
     public async IAsyncEnumerable<RoundAudioChunkDto> StreamRoundAudioAsync(

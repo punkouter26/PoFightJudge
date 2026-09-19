@@ -1,11 +1,12 @@
 @implements IDisposable
+@inject IJSRuntime JS
 
 @* What is being said, as it is said. A log region so a screen reader reads new lines without stealing focus.
 
    This component subscribes to its own log rather than being redrawn by the page that owns it: the live API
    rewrites the line being spoken several times a second, and none of those fragments say anything about the phase
    banner, the clock, the host indicator or the scoreboard above it. *@
-<section class="captions po-glass" role="log" aria-live="polite" aria-label="What is being said">
+<section @ref="_container" class="captions po-glass" role="log" aria-live="polite" aria-label="What is being said">
     @if (Log.Lines.Count == 0)
     {
         <p class="po-muted empty">Nothing said yet.</p>
@@ -60,10 +61,19 @@
     /// </summary>
     protected override bool ShouldRender() => Log.Version != _drawn || !string.Equals(Names, _names, StringComparison.Ordinal);
 
-    protected override void OnAfterRender(bool firstRender)
+    private ElementReference _container;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         _drawn = Log.Version;
         _names = Names;
+        try
+        {
+            await JS.InvokeVoidAsync("PoFx.scrollBottom", _container);
+        }
+        catch (JSException)
+        {
+        }
     }
 
     private string Names => $"{Player1Name}|{Player2Name}|{HostName}";

@@ -97,9 +97,6 @@
         _previewError = null;
         try
         {
-            // T114: the tuning chord lands just before the preview, keyed to a base frequency. A preview without
-            // a chord is just a button; the chord is what makes it a tuning.
-            await Sound.PlayAsync(Sfx.Chord);
             _preview = await Api.PreviewLineAsync(Persona);
             _previewing = false;
             if (!_preview.Audio.IsEmpty)

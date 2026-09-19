@@ -34,5 +34,11 @@ window.PoFx = (function () {
     el.className = el.className.replace(/\bfx-[a-z0-9-]+\b/gi, "").trim();
   }
 
-  return { burst: burst, stop: stop };
+  function scrollBottom(el) {
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }
+
+  return { burst: burst, stop: stop, scrollBottom: scrollBottom };
 })();

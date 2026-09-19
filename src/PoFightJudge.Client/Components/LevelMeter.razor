@@ -34,36 +34,4 @@
     [Parameter] public string Caption { get; set; } = "Listening";
 
     private string Label => Listening ? $"{Caption}. The microphone is open." : "The microphone is off";
-
-    /// <summary>Starts watching the published level once, after the first render. The observer is idempotent.</summary>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await Js.InvokeVoidAsync("PoLevelClip.watch");
-        }
-    }
-
-    [Inject] private IJSRuntime Js { get; set; } = default!;
-
-    /// <summary>
-    /// Tells the observer to stop so the requestAnimationFrame loop does not keep running on a meter nobody is
-    /// looking at any more. Best-effort: <c>PoLevelClip.stop</c> answers no rather than throwing on prerender.
-    /// </summary>
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
-            await Js.InvokeVoidAsync("PoLevelClip.stop");
-        }
-        catch (Microsoft.JSInterop.JSException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (System.Threading.Tasks.TaskCanceledException)
-        {
-        }
-    }
 }

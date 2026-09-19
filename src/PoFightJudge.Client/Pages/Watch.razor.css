@@ -37,9 +37,38 @@
   justify-content: flex-end;
 }
 
+.cast-step {
+  display: grid;
+  gap: var(--po-space-4);
+}
+
 @media (min-width: 48rem) {
   .sides { grid-template-columns: 1fr 1fr; }
   .preview { grid-template-columns: 1fr auto 1fr; }
+}
+
+@media (min-width: 64rem) {
+  .cast-step {
+    grid-template-columns: 1.1fr 1fr;
+    gap: var(--po-space-5);
+    align-items: start;
+  }
+
+  .cast-step .sides {
+    grid-template-columns: 1fr;
+  }
+
+  .cast-step .preview {
+    grid-template-columns: 1fr;
+    padding: var(--po-space-4);
+    background: var(--po-surface-2);
+    border: 1px solid var(--po-border);
+    border-radius: var(--po-radius-md);
+  }
+
+  .cast-step .versus {
+    margin-block: var(--po-space-1);
+  }
 }
 
 /* 1P: one dropdown for the opponent, and a card that states which seat that leaves you. */

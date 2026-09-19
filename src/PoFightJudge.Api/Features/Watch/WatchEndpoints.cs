@@ -28,7 +28,6 @@ public sealed class WatchEndpoints : ICarterModule
 
         watch.MapPost(ApiRoutes.Watch.GenerateRoundSegment, GenerateRoundAsync).Produces<GenerateRoundResponse>().ProducesValidationProblem().Produces(StatusCodes.Status404NotFound);
         watch.MapPost(ApiRoutes.Watch.GenerateRoundStreamSegment, StreamRoundAsync);
-        watch.MapPost(ApiRoutes.Watch.RoundAudioSegment, RoundAudioAsync).Produces<TtsAudioDto>().Produces(StatusCodes.Status404NotFound);
         watch.MapPost(ApiRoutes.Watch.RoundAudioStreamSegment, StreamRoundAudioAsync);
         watch.MapPost(ApiRoutes.Watch.TranscribeSegment, TranscribeAsync).Produces<TranscribeResponse>().ProducesValidationProblem();
         watch.MapPost(ApiRoutes.Watch.VerdictSegment, VerdictAsync).Produces<VerdictResponse>().ProducesValidationProblem().Produces(StatusCodes.Status404NotFound);
@@ -108,19 +107,6 @@ public sealed class WatchEndpoints : ICarterModule
                 await WriteLineAsync(http, new GenerateRoundResponse(final.Text, final.Mood, attitude, ai.IsFake), ct);
             }
         }
-    }
-
-    /// <summary>Speaks a line that has already been generated, in the persona's own voice.</summary>
-    private static async Task<IResult> RoundAudioAsync(RoundAudioRequest request, IProfileRepository profiles, ITtsService voice, CancellationToken ct)
-    {
-        var persona = await profiles.GetByIdAsync(request.Speaker, ct);
-        if (persona is null)
-        {
-            return Results.NotFound();
-        }
-
-        var audio = await voice.GenerateTtsAsync(request.Text, persona.TtsSettings, ct);
-        return Results.Ok(new TtsAudioDto(audio.Base64, audio.Format));
     }
 
     /// <summary>

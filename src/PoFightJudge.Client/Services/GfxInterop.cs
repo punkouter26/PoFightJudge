@@ -14,11 +14,8 @@ public static class Shaders
     /// <summary>The verdict, finished like film: a vignette and grain, over the page rather than behind it.</summary>
     public const string Grain = "grain";
 
-    /// <summary>T113: the slow aurora behind the history list, height driven by streak length.</summary>
-    public const string Aurora = "aurora";
-
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
-    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain, Aurora];
+    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain];
 }
 
 /// <summary>

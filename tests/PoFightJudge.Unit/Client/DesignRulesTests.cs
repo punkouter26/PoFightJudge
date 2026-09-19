@@ -93,8 +93,6 @@ public partial class DesignRulesTests
     {
         "fx-slap",
         "po-particles",
-        "stamp-in",
-        "thread-bolt--on",
     };
 
     /// <summary>

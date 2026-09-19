@@ -31,7 +31,7 @@
                           Click="@(() => _drawer = !_drawer)" />
             <AuthorizeView>
                 <Authorized>
-                    <span class="user"><RadzenIcon Icon="person" /> @context.User.Identity?.Name</span>
+                    <span class="user"><RadzenIcon Icon="person" /><span class="user-name">@context.User.Identity?.Name</span></span>
                     <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Icon="logout" Click="SignOutAsync"
                                   aria-label="Sign out" title="Sign out" Disabled="@_signingOut" />
                 </Authorized>

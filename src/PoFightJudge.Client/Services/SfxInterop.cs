@@ -45,14 +45,8 @@ public static class Sfx
     /// <summary>The microphone is peaking and whatever they are saying will be mangled.</summary>
     public const string Clipping = "clipping";
 
-    /// <summary>T111: the wax-seal stamp landing on a fallacy.</summary>
-    public const string Thump = "thump";
-
     /// <summary>A prompt: it is your turn and nobody has said anything for a while.</summary>
     public const string Cue = "cue";
-
-    /// <summary>T114: a three-note motif that lands just before the persona preview line.</summary>
-    public const string Chord = "chord";
 
     /// <summary>A counting scoreboard, one per tick. Takes a 0–1 value and climbs with it.</summary>
     public const string Count = "count";
@@ -61,7 +55,7 @@ public static class Sfx
     public static IReadOnlyList<string> All { get; } =
     [
         Bell, BellThree, Slap, Gavel, GavelThree, Tick, Whoosh,
-        Intro, Probe, Ruling, Fanfare, Clipping, Thump, Cue, Chord, Count,
+        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count,
     ];
 }
 

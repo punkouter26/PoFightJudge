@@ -142,39 +142,7 @@ void main() {
   outColour = vec4(colour, clamp(alpha, 0.0, 0.42));
 }`;
 
-  // T113: a slow, low-frequency aurora behind the history list. Heat (the streak length) drives the height of
-  // the bands; mix (the dominant side of the most recent argument) drives the hue. The bands move slowly on
-  // purpose — a history page is somewhere you scroll and look, not somewhere you stare at a flare.
-  const AURORA = `#version 300 es
-precision highp float;
-in vec2 v_uv;
-out vec4 outColour;
-uniform vec2 u_res;
-uniform float u_time;
-uniform float u_heat;
-uniform float u_mix;
-uniform vec3 u_c1;
-uniform vec3 u_c2;
-${NOISE}
-void main() {
-  float aspect = u_res.x / max(u_res.y, 1.0);
-  vec2 p = vec2(v_uv.x * aspect, v_uv.y);
-  float t = u_time * 0.04;
-
-  vec2 warp = vec2(fbm(p * 1.4 + t), fbm(p * 1.4 + 3.7 - t));
-  float bands = fbm(p * 2.3 + warp * 1.7 + vec2(0.0, t * 0.4));
-
-  float heat = clamp(u_heat, 0.0, 1.0);
-  float pull = (clamp(u_mix, 0.0, 1.0) - 0.5) * 0.6;
-  vec3 colour = mix(u_c1, u_c2, clamp(v_uv.x * 0.7 + bands * 0.6 - 0.1 - pull, 0.0, 1.0));
-
-  float bandMask = smoothstep(0.32, 0.85, bands + heat * 0.18);
-  float vignette = smoothstep(1.3, 0.2, length((v_uv - 0.5) * vec2(aspect, 1.0)));
-  float alpha = bandMask * (0.10 + heat * 0.18) * vignette;
-  outColour = vec4(colour, clamp(alpha, 0.0, 0.55));
-}`;
-
-  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN, "aurora": AURORA };
+  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN };
 
   const mounts = new Map();
   let frame = 0;

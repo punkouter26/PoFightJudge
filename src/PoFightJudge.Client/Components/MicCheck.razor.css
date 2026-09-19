@@ -18,14 +18,3 @@
   margin: 0;
   color: var(--po-success);
 }
-
-/* T115: the vortex is a 96px square next to the meter; the particle layer paints inside it. */
-.vortex {
-  position: relative;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: radial-gradient(circle at center, var(--po-surface-3) 0%, transparent 70%);
-  margin: 0 auto;
-  overflow: hidden;
-}

@@ -33,14 +33,14 @@
                 </section>
 
                 @* Only while a line is actually being worked out: a person waiting to speak is not the page loading. *@
-                @if (_rounds.Count == 0 && _error is null && _stage == Stage.Arguing)
+                @if (_revealedRounds == 0 && _error is null && _stage == Stage.Arguing)
                 {
                     <LoadingRows Count="2" Label="Working out how to start" />
                 }
 
-                <RadzenTimeline Orientation="Orientation.Vertical" LinePosition="LinePosition.Left" class="transcript" aria-label="The argument so far" aria-live="polite">
+                <RadzenTimeline Orientation="Orientation.Vertical" LinePosition="LinePosition.Left" class="transcript" aria-label="The argument so far">
                     <Items>
-                        @foreach (var round in _rounds)
+                        @foreach (var round in _rounds.Take(_revealedRounds))
                         {
                             @* A plain dot in the side's own colour: blue for the husband, red for the wife, matching the card borders. *@
                             <RadzenTimelineItem PointStyle="@(WatchTurns.IsHusband(round.Speaker) ? PointStyle.Info : PointStyle.Danger)">
@@ -52,26 +52,6 @@
                                             <span class="po-chip">@round.Mood</span>
                                         </header>
                                         <p>@round.Text</p>
-                                    </article>
-                                </ChildContent>
-                            </RadzenTimelineItem>
-                        }
-
-                        @* The line still being written. It is not a round yet — the mood and the attitude arrive
-                           with the closing object — so it renders as its own provisional item and is replaced by
-                           the real one the moment the stream finishes. *@
-                        @if (_arrivingSpeaker is { } arriving && _arriving.Length > 0)
-                        {
-                            <RadzenTimelineItem PointStyle="@(WatchTurns.IsHusband(arriving) ? PointStyle.Info : PointStyle.Danger)">
-                                <ChildContent>
-                                    @* Deliberately not .line: a line still being written is not one of the rounds,
-                                       and everything that counts them counts what was actually said. *@
-                                    <article class="arriving po-card @(WatchTurns.IsHusband(arriving) ? "p1" : "p2")"
-                                             data-speaker="@arriving" aria-busy="true">
-                                        <header>
-                                            <span class="who">@NameOf(arriving)</span>
-                                        </header>
-                                        <p>@_arriving.ToString()</p>
                                     </article>
                                 </ChildContent>
                             </RadzenTimelineItem>
