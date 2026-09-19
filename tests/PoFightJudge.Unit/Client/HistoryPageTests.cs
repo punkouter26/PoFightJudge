@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
 using NSubstitute;
 using PoFightJudge.Client.Components;
 using PoFightJudge.Client.Pages;
@@ -38,6 +39,10 @@ public class HistoryPageTests : BunitContext
         Services.AddSingleton(_api);
         // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
         Services.AddScoped<Viewport>();
+        // T113: the aurora mounts through the real GfxInterop. Under bunit's loose JSInterop the call throws
+        // JSException, which MountAsync swallows and answers false — the same shape the real interop gives on
+        // a no-WebGL2 browser, and no substitute required.
+        Services.AddScoped<GfxInterop>();
         JSInterop.Mode = JSRuntimeMode.Loose;
         _api.GetMatchPageAsync(Arg.Any<MatchQuery>(), Arg.Any<CancellationToken>()).Returns(_ => Page(Both()));
     }
