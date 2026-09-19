@@ -66,6 +66,8 @@
 
     [Inject] private AudioInterop Audio { get; set; } = default!;
 
+    [Inject] private SfxInterop Sound { get; set; } = default!;
+
     /// <summary>Changes whenever the list reloads, so a replaced portrait is not served from the browser cache.</summary>
     [Parameter] public string FaceVersion { get; set; } = string.Empty;
 
@@ -95,6 +97,9 @@
         _previewError = null;
         try
         {
+            // T114: the tuning chord lands just before the preview, keyed to a base frequency. A preview without
+            // a chord is just a button; the chord is what makes it a tuning.
+            await Sound.PlayAsync(Sfx.Chord);
             _preview = await Api.PreviewLineAsync(Persona);
             _previewing = false;
             if (!_preview.Audio.IsEmpty)

@@ -189,6 +189,15 @@ window.PoSfx = (function () {
       hit(at + 0.01, { freq: 900, duration: 0.04, gain: 0.22, filter: "lowpass" });
     },
     "cue": function (at) { tone(at, { type: "sine", freq: 660, sweepTo: 880, duration: 0.26, gain: 0.13, attack: 0.03 }); },
+    // T114: a short three-note motif that lands before the persona speaks. The C# side passes the base frequency
+    // as value (0 = default C5 523.3Hz, otherwise scale up the C5 reference proportionally).
+    "chord": function (at, value) {
+      const base = (typeof value === "number" && value > 0) ? 440 * Math.pow(2, (value - 1) * 0.1) : 523.3;
+      const triad = [base, base * 1.25, base * 1.5];
+      for (let i = 0; i < triad.length; i++) {
+        tone(at + i * 0.05, { type: "triangle", freq: triad[i], duration: 0.22, gain: 0.16, attack: 0.005 });
+      }
+    },
     // The one voice the caller shapes: a scoreboard counting up plays this per tick, climbing with the number.
     "count": function (at, value) { tone(at, { type: "sine", freq: 440 + value * 620, duration: 0.035, gain: 0.06 }); },
   };
