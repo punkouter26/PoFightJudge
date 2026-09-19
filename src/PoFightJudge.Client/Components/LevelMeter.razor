@@ -4,7 +4,12 @@
    The level itself is a CSS custom property published by whichever recorder is running — mic.js on a spoken turn,
    live-audio.js during a fight — so the bar is painted by the browser rather than pushed a frame at a time. The
    eight bars behind it are the same thing with the frequencies kept apart: a level says how loud, a shape says it
-   is a voice and not the fan. *@
+   is a voice and not the fan.
+
+   T110: when the bar crosses into the danger zone, sparks are thrown from the lamp's corner. The level itself
+   never leaves the browser — a tiny observer in <c>js/level-clip.js</c> watches <c>--po-mic-level</c> and asks
+   <c>PoParticles.burst</c> to fire on the rising edge, then again whenever the level has stayed above the
+   threshold past a short cooldown. The bar paint path is unchanged. *@
 <div class="meter @(Listening ? "meter--on" : null)" role="status" aria-label="@Label">
     <span class="lamp" aria-hidden="true"></span>
     <span class="caption po-eyebrow">@Caption</span>
@@ -29,4 +34,36 @@
     [Parameter] public string Caption { get; set; } = "Listening";
 
     private string Label => Listening ? $"{Caption}. The microphone is open." : "The microphone is off";
+
+    /// <summary>Starts watching the published level once, after the first render. The observer is idempotent.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Js.InvokeVoidAsync("PoLevelClip.watch");
+        }
+    }
+
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+
+    /// <summary>
+    /// Tells the observer to stop so the requestAnimationFrame loop does not keep running on a meter nobody is
+    /// looking at any more. Best-effort: <c>PoLevelClip.stop</c> answers no rather than throwing on prerender.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("PoLevelClip.stop");
+        }
+        catch (Microsoft.JSInterop.JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (System.Threading.Tasks.TaskCanceledException)
+        {
+        }
+    }
 }

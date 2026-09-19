@@ -146,3 +146,6 @@
 - [x] T107 Cloned voices come back: Fish Audio restored ahead of Gemini, and the editor asks for a voice id instead of a voice
 - [x] T108 Three cloned voices join the cast: Ramsay and Schwarzenegger are written, and Trump finally speaks in his own
 - [x] T109 Prod can speak for itself: Azure Monitor is finally called, and a persona added in code seeds itself on startup
+
+## Phase Q — Visual polish (2026-09-18)
+- [x] T110 Sparks on a clipping level meter: when --po-mic-level crosses 0.9, js/level-clip.js asks PoParticles.burst('.meter', 'sparks', '.lamp'); reduced motion and the existing CSS paint path both untouched
