@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Client.Stats;
 using PoFightJudge.Shared.Identifiers;
@@ -45,6 +46,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     [Inject] private ParticleInterop Particles { get; set; } = default!;
 
     [Inject] private GfxInterop Gfx { get; set; } = default!;
+
+    [Inject] private IJSRuntime Js { get; set; } = default!;
 
     private string Title => _report is null ? "Reading it back" : _report.Topic is { Length: > 0 } topic ? topic : "The ruling";
 
@@ -196,6 +199,21 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         await Task.Yield();
         var won = _report.Overall.Overall == Speaker.Player1 ? _report.Player1.Name : _report.Player2.Name;
         await Particles.BurstAsync(RevealSelector, ParticleInterop.Confetti, $".player[data-tag='{won}']", _leaving.Token);
+
+        // T111: the seals on each fallacy slam in once the verdict card is on the page.
+        try
+        {
+            await Js.InvokeVoidAsync("PoFallacyStamp.slam", ".fallacies");
+        }
+        catch (JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
     }
 
     private async Task RetryAsync()

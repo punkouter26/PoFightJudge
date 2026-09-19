@@ -1,0 +1,28 @@
+/* T111: the stamp slams in, wobbles once, and stays tilted on the corner of the fallacy quote.
+   The animation is driven by adding .stamp-in once the parent has rendered; the JS layer handles the
+   thump on the same frame. Reduced motion takes the motion out — the seal still shows, just already in place. */
+
+.fallacy-stamp {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+  transform: rotate(-6deg) scale(0.85);
+  opacity: 0;
+  transform-origin: center;
+  transition: none;
+}
+
+.fallacy-stamp.stamp-in {
+  animation: fallacy-slam 420ms cubic-bezier(0.2, 0.9, 0.2, 1.15) forwards;
+}
+
+@keyframes fallacy-slam {
+  0%   { transform: rotate(-22deg) scale(1.55); opacity: 0; }
+  55%  { transform: rotate(-3deg) scale(0.92); opacity: 1; }
+  72%  { transform: rotate(-9deg) scale(1.06); opacity: 1; }
+  100% { transform: rotate(-6deg) scale(0.85); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fallacy-stamp { opacity: 1; transform: rotate(-6deg) scale(0.85); animation: none; }
+}

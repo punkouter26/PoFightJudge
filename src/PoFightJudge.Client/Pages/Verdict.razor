@@ -105,7 +105,7 @@
                                                 <ul class="fallacies">
                                                     @foreach (var fallacy in report.Assessment.Fallacies)
                                                     {
-                                                        <li><strong>@fallacy.Name</strong> — “@fallacy.Quote”</li>
+                                                        <li class="fallacy-item" data-fallacy="@fallacy.Name"><FallacyStamp Stamp="@fallacy.Name" /><strong>@fallacy.Name</strong> — "@fallacy.Quote"</li>
                                                     }
                                                 </ul>
                                             }

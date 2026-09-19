@@ -182,6 +182,12 @@ window.PoSfx = (function () {
       tone(at, { type: "sine", freq: 1800, duration: 0.05, gain: 0.22 });
       tone(at + 0.08, { type: "sine", freq: 1800, duration: 0.05, gain: 0.22 });
     },
+    // T111: a wax-seal stamp landing on a fallacy — a soft thump under a paper-rough click.
+    "thump": function (at) {
+      tone(at, { type: "sine", freq: 90, sweepTo: 40, duration: 0.18, gain: 0.55, attack: 0.001 });
+      hit(at, { freq: 2200, duration: 0.03, gain: 0.32, q: 1.4 });
+      hit(at + 0.01, { freq: 900, duration: 0.04, gain: 0.22, filter: "lowpass" });
+    },
     "cue": function (at) { tone(at, { type: "sine", freq: 660, sweepTo: 880, duration: 0.26, gain: 0.13, attack: 0.03 }); },
     // The one voice the caller shapes: a scoreboard counting up plays this per tick, climbing with the number.
     "count": function (at, value) { tone(at, { type: "sine", freq: 440 + value * 620, duration: 0.035, gain: 0.06 }); },
