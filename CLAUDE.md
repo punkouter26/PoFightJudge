@@ -36,6 +36,14 @@ dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
   it reads like a person wrote it, then push.
 - **TL;DR.** Any answer over 100 words ends with a 20-word summary.
 - **Run the tests the change touched**, not the whole suite.
+- **Screenshots.** After any change that affects what a page shows, run the screenshot runner for the affected
+  routes and send the PNGs in chat with any console errors before saying the change is done. Cloud sessions can't
+  be browsed, so this is how changes are reviewed before a deploy. Route names live in `ScreenshotRunner.Routes`;
+  leave `ROUTES` off for all of them. Google Fonts errors in a cloud session are the proxy, not the app.
+  ```bash
+  SHOTS=<scratchpad>/shots ROUTES=home,watch dotnet test tests/PoFightJudge.E2EUI \
+    --filter "FullyQualifiedName~ScreenshotRunner" --logger "console;verbosity=detailed"
+  ```
 - **Do not hand over commands to type.** If it can be run here, run it.
 
 ## Ask before
