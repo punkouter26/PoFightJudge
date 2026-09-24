@@ -107,8 +107,8 @@ if (-not $names) {
             Write-Ok "secret $name"
         } else {
             $key = $name.Replace('--', ':')
-            Write-Todo "secret $name is missing. Locally: dotnet user-secrets set `"$key`" <value> --project src/PoFightJudge.Api"
-            Write-Host '      Or copy them all across: ./SCRIPTS/seed-secrets.ps1 prints the plan, -Apply carries it out' -ForegroundColor DarkGray
+            Write-Todo "secret $name ($key) is missing from kv-poshared."
+            Write-Host '      Copy them all across: ./SCRIPTS/seed-secrets.ps1 prints the plan, -Apply carries it out' -ForegroundColor DarkGray
         }
     }
 }

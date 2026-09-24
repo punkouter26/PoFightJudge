@@ -13,9 +13,7 @@ measurements each, and the moments worth listening to again.
 A merge of [PoMarriedLife](https://github.com/punkouter26/PoMarriedLife) and
 [PoArgueJudge](https://github.com/punkouter26/PoArgueJudge) into one fresh solution.
 
-Governance: [SPEC.md](SPEC.md) is what it must do · [AGENT.md](AGENT.md) is how it is worked on ·
-[NET_RULES.md](NET_RULES.md) is the standard every `Po*` solution follows · [tasks/todo.md](tasks/todo.md) is the
-task log.
+Governance: [AGENT.md](AGENT.md) is how it is worked on.
 
 ## Run it
 
@@ -47,8 +45,7 @@ dotnet test tests/PoFightJudge.E2EAPI        # the real API in process, with the
 dotnet test tests/PoFightJudge.E2EUI         # Playwright Chromium with a fake microphone playing a real argument
 ```
 
-`dotnet test PoFightJudge.slnx` runs all four. A pre-commit hook runs `dotnet format --verify-no-changes` and the
-Unit tier.
+`dotnet test PoFightJudge.slnx` runs all four.
 
 ## How it is put together
 
@@ -78,7 +75,6 @@ committed.
 ```powershell
 ./SCRIPTS/seed-secrets.ps1          # prints what it would copy into kv-poshared; writes nothing
 ./SCRIPTS/seed-secrets.ps1 -Apply   # carries it out
-dotnet user-secrets set "PoFightJudge:GeminiApiKey" <value> --project src/PoFightJudge.Api   # or just locally
 ```
 
 ## Deploy

@@ -8,8 +8,8 @@ is the short version for a working session.
 ```powershell
 dotnet build PoFightJudge.slnx -c Release       # warnings are errors; this must be clean
 dotnet test PoFightJudge.slnx                   # Unit, Integration (Docker), E2EAPI, E2EUI (Playwright)
-dotnet test tests/PoFightJudge.Unit             # the fast tier, and what the pre-commit hook runs
-dotnet format PoFightJudge.slnx                 # the hook verifies this, so run it before committing
+dotnet test tests/PoFightJudge.Unit             # the fast tier
+dotnet format PoFightJudge.slnx                 # run it before committing
 ./SCRIPTS/setup.ps1                               # clean machine → running app
 ./SCRIPTS/azurite.ps1                             # just the emulator (and -Down -Wipe to throw it away)
 dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
@@ -17,7 +17,7 @@ dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
 
 ## Working rules
 
-- One task, one commit, subject `T##: what it does`. Tick `tasks/todo.md` in the same commit.
+- One task, one commit, subject `T##: what it does`.
 - Tests first, then the smallest code that passes them. Never delete, skip or weaken a failing test — if it is
   wrong, say so and fix it deliberately; if it is right, the code is wrong.
 - A task edits the files it lists. Going outside that is allowed when it is necessary, but it is said out loud in
@@ -29,8 +29,7 @@ dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
 
 - **master only.** All work goes on `master`. Another branch happens only when it is asked for by name.
 - **Restart and check.** After a code change, restart the app and confirm it came back up before saying it works.
-- **Check `DOCS/` first.** Look there for the overall summary of the project. Today it holds only
-  `screenshots/`, so the overview actually lives in `README.md`, `SPEC.md` and this file.
+- **Overview first.** The overall summary of the project lives in `README.md` and this file.
 - **No `dotnet user-secrets`.** Local settings go in `appsettings*.json`; anything secret goes in Azure Key Vault.
 - **Never push.** `git push` happens only when the words **`git sync`** are typed — never off my own bat,
   and never because it seemed implied. On a `git sync`: commit with a short subject in American slang, so

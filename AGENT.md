@@ -1,17 +1,14 @@
 # AGENT.md — how this repository is worked on
 
 Written for whoever (or whatever) picks the work up next. [README.md](README.md) says what the app is and how to
-run it; [SPEC.md](SPEC.md) says what it must do; [tasks/todo.md](tasks/todo.md) is the task log, one line per
-commit. This file is the operating detail that lives in none of them.
+run it. This file is the operating detail that does not live there.
 
 ## Identity and history
 
 - One branch: `master`. Local git identity `punkouter26 <punkouter26@gmail.com>`.
-- **One commit per task**, subject `T47: history, leaderboards and a persona's record`. A commit-msg hook enforces
-  the prefix (`T\d\d[a-z]?`, `docs`, `chore` or `fix`), and a pre-commit hook runs `dotnet format
-  --verify-no-changes` and the Unit tier.
+- **One commit per task**, subject `T47: history, leaderboards and a persona's record`. The prefix is
+  `T\d\d[a-z]?`, `docs`, `chore` or `fix`. Run `dotnet format` and the Unit tier before committing.
 - Nothing is pushed without being asked for. There is no remote configured.
-- `tasks/todo.md` is ticked in the same commit as the work it describes.
 
 ## Environments
 
@@ -19,7 +16,7 @@ commit. This file is the operating detail that lives in none of them.
 |---|---|---|---|
 | Auth | FakeAuth (`X-Fake-User`) + guest cookie | the same | Entra ID, JWT bearer |
 | Storage | Azurite over HTTPS with OAuth, ports 12000/12002 | in-memory repositories | Azure Storage, managed identity |
-| Secrets | Key Vault via `az login`, or user-secrets | none needed | Key Vault via managed identity |
+| Secrets | Key Vault via `az login` | none needed | Key Vault via managed identity |
 | AI | real when a key is present, deterministic fakes when not | fakes, unless `POFIGHTJUDGE_E2E_REAL=1` | **real only** — the fakes refuse to register |
 | Logs | console + Seq (5341) | console | Serilog → Application Insights |
 
@@ -131,8 +128,7 @@ running when the wire format or a schema changes, and not otherwise.
 
 - **master only.** All work goes on `master`. Another branch happens only when it is asked for by name.
 - **Restart and check.** After a code change, restart the app and confirm it came back up before saying it works.
-- **Check `DOCS/` first.** Look there for the overall summary of the project. Today it holds only
-  `screenshots/`, so the overview actually lives in `README.md`, `SPEC.md` and this file.
+- **Overview first.** The overall summary of the project lives in `README.md` and this file.
 - **No `dotnet user-secrets`.** Local settings go in `appsettings*.json`; anything secret goes in Azure Key Vault.
 - **Never push.** `git push` happens only when the words **`git sync`** are typed — never off my own bat,
   and never because it seemed implied. On a `git sync`: commit with a short subject in American slang, so
