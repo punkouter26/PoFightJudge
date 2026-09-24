@@ -63,13 +63,13 @@ public sealed class AnalysisPipelineTests : IDisposable
 
     public void Dispose() => _services.Dispose();
 
-    private AnalysisPipeline Pipeline(IGeminiTranscribeClient? transcriber = null, IGeminiFilesClient? files = null) => new(
+    private AnalysisPipeline Pipeline(IGeminiTranscribeClient? transcriber = null, IGeminiFilesClient? files = null, AnalysisOptions? options = null) => new(
         _services.GetRequiredService<IServiceScopeFactory>(),
         files ?? new FakeAnalysisClients.Files(),
         transcriber ?? new FakeAnalysisClients.Transcriber(),
         _judge,
         _clock,
-        Options.Create(_options),
+        Options.Create(options ?? _options),
         NullLogger<AnalysisPipeline>.Instance);
 
     /// <summary>A finished fight with a recording, ready to be read.</summary>
@@ -198,6 +198,30 @@ public sealed class AnalysisPipelineTests : IDisposable
         var process = async () => await pipeline.ProcessAsync("user-2", match.Id, CancellationToken.None);
 
         await process.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
+    }
+
+    [Fact]
+    public void By_default_a_fight_is_transcribed_by_the_transcribe_model_not_its_captions()
+    {
+        var defaults = new AnalysisOptions();
+
+        defaults.UseLiveCaptionTranscript.Should().BeFalse("the verbatim, diarized transcript is the one the judge reads");
+        defaults.AcceptClientTranscript.Should().BeFalse("a browser transcript would stand in front of the transcribe model");
+    }
+
+    [Fact]
+    public async Task With_default_options_a_fight_with_plenty_of_captions_still_goes_to_the_transcribe_model()
+    {
+        var transcriber = Substitute.For<IGeminiTranscribeClient>();
+        transcriber.TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new TranscriptDto("well", [new TranscriptWord("well", "spk_1", 0, 0.4)])));
+        var match = await RecordedAsync();
+        await StoreCaptionsAsync(match.Id, 60);
+
+        using var pipeline = Pipeline(transcriber, options: new AnalysisOptions());
+        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
+
+        await transcriber.Received(1).TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     private async Task StoreCaptionsAsync(MatchId id, int words)

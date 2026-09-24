@@ -15,10 +15,11 @@ public sealed class AnalysisOptions
 
     /// <summary>
     /// Use the transcript the orchestrator assembled from the host's own captions and skip the diarization call.
-    /// On by default: the fight already paid for those captions, so transcribing the same audio a second time is
-    /// the largest avoidable cost here. Anything missing or too thin falls back to the transcribe model.
+    /// Off by default: every fight goes to <c>gemini-3.5-transcribe</c> for a verbatim, speaker-diarized transcript,
+    /// which keeps the fillers and false starts the captions smooth over. Turning it on saves that call, and anything
+    /// missing or too thin still falls back to the transcribe model.
     /// </summary>
-    public bool UseLiveCaptionTranscript { get; set; } = true;
+    public bool UseLiveCaptionTranscript { get; set; }
 
     /// <summary>
     /// Below this many words a caption transcript is too thin to judge on and the transcribe model runs instead. A
@@ -27,13 +28,12 @@ public sealed class AnalysisOptions
     public int MinCaptionTranscriptWords { get; set; } = 30;
 
     /// <summary>
-    /// Accept a word-level transcript produced in the browser instead of calling the transcribe model. On since
-    /// T85, when the browser half was finally written: it sits behind the host's own live captions and in front of
-    /// the paid diarization, so the only fight it changes is one whose captions came out too thin to judge on —
-    /// which used to be the only fight that paid. What arrives is bounded by <see cref="ClientTranscript"/> before
-    /// it is stored, and the source every run actually used is logged.
+    /// Accept a word-level transcript produced in the browser instead of calling the transcribe model. Off by
+    /// default, so it cannot stand in front of the verbatim diarization. When on, it sits behind the host's own live
+    /// captions and in front of the transcribe model. What arrives is bounded by <see cref="ClientTranscript"/>
+    /// before it is stored, and the source every run actually used is logged.
     /// </summary>
-    public bool AcceptClientTranscript { get; set; } = true;
+    public bool AcceptClientTranscript { get; set; }
 
     /// <summary>
     /// How long to wait for that transcript to arrive, on top of the time the recording's upload already takes.
