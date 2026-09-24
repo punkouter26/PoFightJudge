@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+    <!-- CA1707 underscores in test names; CA1711 xunit *Collection fixtures; CA1001 xunit IAsyncLifetime fixtures own disposables; the rest are test-only ergonomics. -->
+    <NoWarn>$(NoWarn);CA1707;CA1711;CA1001;CS1591;CA1515;CA2234;CA1861;MA0002;MA0011;VSTHRD200</NoWarn>
+  </PropertyGroup>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <Using Include="Xunit" />
+    <Using Include="AwesomeAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
+  </ItemGroup>
+</Project>
