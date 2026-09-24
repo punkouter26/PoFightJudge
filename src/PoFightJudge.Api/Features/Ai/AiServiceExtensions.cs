@@ -46,6 +46,10 @@ public static class AiServiceExtensions
         {
             services.AddSingleton<IGeminiText>(sp => new FakeGeminiText(sp.GetRequiredService<AiLatencyTracker>()));
             services.AddSingleton<ITtsProvider, FakeTts>();
+
+            // GET /features reads it; without a registration the endpoint infers a body and the host will not start.
+            services.AddSingleton(new FishAudioOptions(Enabled: false));
+
             // The WATCH fake sits at the game's seam rather than the transport's: a whole match plays out from the
             // personas' own words, which the schema-driven text fake could not do on its own.
             services.AddSingleton<IWatchAi>(_ => new FakeWatchAi());

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using PoFightJudge.Api.Features.Ai;
+using PoFightJudge.Api.Features.Voice;
 using PoFightJudge.Shared.Configuration;
 
 namespace PoFightJudge.Unit.Ai;
@@ -67,5 +68,14 @@ public class AiRegistrationTests
         analysis.Timeout.Should().Be(GeminiResilience.AnalysisTimeout, "flex-tier calls are queued by design");
         analysis.DefaultRequestVersion.Should().Be(HttpVersion.Version20);
         services.GetRequiredService<GeminiModelOptions>().Should().Be(GeminiModelOptions.Defaults);
+    }
+
+    [Fact]
+    public void Fish_options_are_registered_with_the_fakes_too_so_the_features_endpoint_can_bind()
+    {
+        var (mode, services) = Register("Test", apiKey: null);
+
+        mode.UseFakes.Should().BeTrue();
+        services.GetService<FishAudioOptions>().Should().BeEquivalentTo(new FishAudioOptions(Enabled: false), "GET /features takes it, and without it the app fails to start");
     }
 }
