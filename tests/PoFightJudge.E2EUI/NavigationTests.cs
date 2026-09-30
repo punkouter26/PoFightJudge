@@ -12,7 +12,7 @@ public class NavigationTests(AppFixture app)
     private static readonly (string Label, string Path)[] Destinations =
     [
         ("Home", "/"), ("CPU", "/cpu"), ("1P", "/1p"), ("2P", "/2p"),
-        ("Profiles", "/profiles"), ("Fighters", "/fighters"), ("History", "/history"),
+        ("Profiles", "/profiles"), ("Leaderboard", "/fighters"), ("History", "/history"),
     ];
 
     [SkippableFact]
