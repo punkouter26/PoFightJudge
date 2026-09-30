@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using PoFightJudge.Shared.Identifiers;
 
 namespace PoFightJudge.Shared.Models;
@@ -127,7 +128,7 @@ public sealed record TranscribeResponse(string Text, bool IsFake);
 /// play screen has to know whose turn it is in order to ask for the right line. A second copy in the client is how
 /// the two would drift.
 /// </summary>
-public static class WatchTurns
+public static partial class WatchTurns
 {
     /// <summary>Wire values for a speaker. Storage maps the pair onto Player1/Player2.</summary>
     public const string Husband = "husband";
@@ -160,6 +161,26 @@ public static class WatchTurns
             ?? Moods.FirstOrDefault(m => cleaned.Contains(m, StringComparison.Ordinal))
             ?? "angry";
     }
+
+    /// <summary>
+    /// A line as the transcript shows it: without the stage cues — "(smug)", "(seething)" — that the voice acts out.
+    /// The stored line and the one sent to the voice keep them; the mood chip already says it on screen. A line that
+    /// is nothing but a cue is left as it is rather than printed blank.
+    /// </summary>
+    public static string Shown(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return string.Empty;
+        }
+
+        var shown = StageCue().Replace(line, string.Empty).Trim();
+        return shown.Length == 0 ? line.Trim() : shown;
+    }
+
+    /// <summary>A short parenthesised aside, and the space in front of it.</summary>
+    [GeneratedRegex(@"\s*\([^()]{1,40}\)", RegexOptions.None, matchTimeoutMilliseconds: 100)]
+    private static partial Regex StageCue();
 
     public static bool IsHusband(string? speaker) => string.Equals(speaker, Husband, StringComparison.OrdinalIgnoreCase);
 

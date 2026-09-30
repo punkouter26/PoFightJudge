@@ -61,7 +61,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
             {
                 var request = call.Arg<GenerateRoundRequest>();
                 _asked.Add(request);
-                return Task.FromResult(new GenerateRoundResponse($"line {_asked.Count}", "angry", "escalating", true));
+                return Task.FromResult(new GenerateRoundResponse($"line {_asked.Count} (seething)", "angry", "escalating", true));
             });
 
         // A line with nothing prefetched behind it is streamed, and one the prefetch holds is not. Both are the
@@ -72,7 +72,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
             {
                 var request = call.Arg<GenerateRoundRequest>();
                 _asked.Add(request);
-                return OneLineAsync($"line {_asked.Count}");
+                return OneLineAsync($"line {_asked.Count} (seething)");
             });
         _api.StreamRoundAudioAsync(Arg.Any<RoundAudioRequest>(), Arg.Any<CancellationToken>())
             .Returns(_ => ClausesAsync(null));
@@ -138,6 +138,23 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         _asked.Should().OnlyContain(a => a.Topic == "the thermostat");
         cut.Markup.Should().Contain("He answered the point");
         cut.Markup.Should().Contain("Matthew", "the ruling names the winner rather than printing initials alone");
+    }
+
+    [Fact(Timeout = 60_000)]
+    public async Task The_stage_cue_is_voiced_but_not_printed()
+    {
+        _simulation.Set(Matthew, Kimberly, "the thermostat");
+
+        var cut = Render<WatchPlay>();
+        await RunToTheEndAsync(cut, _clock);
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll("section.verdict").Should().HaveCount(1), TimeSpan.FromSeconds(10));
+        cut.FindAll("article.line p").Select(p => p.TextContent).Should().Equal(
+            ["line 1", "line 2", "line 3", "line 4", "line 5", "line 6"], "the cue is for the voice, not the transcript");
+        _api.ReceivedCalls()
+            .Where(c => string.Equals(c.GetMethodInfo().Name, nameof(IApiClient.StreamRoundAudioAsync), StringComparison.Ordinal))
+            .Select(c => ((RoundAudioRequest)c.GetArguments()[0]!).Text)
+            .Should().NotBeEmpty().And.OnlyContain(t => t.EndsWith("(seething)", StringComparison.Ordinal), "the voice still gets the cue");
     }
 
     [Fact(Timeout = 60_000)]
