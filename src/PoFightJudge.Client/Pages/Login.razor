@@ -72,8 +72,7 @@
     }
 
     /// <summary>Production only: MSAL handles the code flow on the client.</summary>
-    private void SignInWithMicrosoft() =>
-        Nav.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(SafeReturnUrl())}");
+    private void SignInWithMicrosoft() => MicrosoftSignIn.Start(Nav, SafeReturnUrl());
 
     private async Task ContinueAsGuestAsync()
     {

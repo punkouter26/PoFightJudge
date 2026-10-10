@@ -2,6 +2,7 @@
 @attribute [AllowAnonymous]
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment Env
+@inject NavigationManager Nav
 
 <PageTitle>Signing in · PoFightJudge</PageTitle>
 
@@ -13,7 +14,21 @@
         <CompletingLoggingIn><p class="po-boot">Completing sign-in…</p></CompletingLoggingIn>
         <LogOut><p class="po-boot">Signing you out…</p></LogOut>
         <LogOutSucceeded><p class="po-boot">Signed out.</p></LogOutSucceeded>
-        <LogInFailed><RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false">Microsoft sign-in failed: @context</RadzenAlert></LogInFailed>
+        <LogInFailed>
+            @* Said in a sentence, with a way forward. Microsoft's own message is a paragraph of ids that fills the
+               screen and tells nobody what to do; it is kept underneath for whoever is asked to look into it. *@
+            <PageShell Width="PageShell.ShellWidth.Narrow" Eyebrow="Sign in" Title="That did not work">
+                <PageAlert Kind="AlertStyle.Danger">@MicrosoftSignIn.Explain(context)</PageAlert>
+                <p class="again">
+                    <RadzenButton Text="Choose another account" Icon="switch_account" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
+                                  Click="@(() => MicrosoftSignIn.Start(Nav, "/"))" />
+                </p>
+                <details class="po-muted">
+                    <summary>What Microsoft said</summary>
+                    <p class="said">@context</p>
+                </details>
+            </PageShell>
+        </LogInFailed>
     </RemoteAuthenticatorView>
 }
 else

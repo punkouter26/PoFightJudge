@@ -42,6 +42,12 @@ public class LoginPageTests : BunitContext
 
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("Continue as Guest (Dev)"));
         cut.Markup.Should().NotContain("Sign in with Microsoft", "MSAL is the production path, and this is Development");
+
+        // When Microsoft refuses an account because its organisation has not allowed the app, the page says that
+        // and what to do, rather than printing a paragraph of ids.
+        PoFightJudge.Client.Services.MicrosoftSignIn.Explain("AADSTS500011: The resource principal named api://x was not found in the tenant named y.")
+            .Should().Contain("organisation").And.Contain("personal Microsoft account");
+        PoFightJudge.Client.Services.MicrosoftSignIn.Explain("AADSTS70008: expired").Should().NotContain("organisation");
     }
 
     [Fact]

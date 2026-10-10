@@ -1,0 +1,7 @@
+.again { margin: var(--po-space-4) 0; }
+
+.said {
+  margin: var(--po-space-2) 0 0;
+  font-size: var(--po-text-sm);
+  overflow-wrap: anywhere;
+}
