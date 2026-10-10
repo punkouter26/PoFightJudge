@@ -14,6 +14,9 @@
         <RadzenButton Text="New fight" Icon="mic" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo("fight"))" />
     </Actions>
     <ChildContent>
+        @* A wrapper this page owns, and nothing more (display: contents). Scoped CSS reaches into a child component
+           only from an element written here: without one, every ::deep rule for this page matches nothing. *@
+        <div class="po-scope">
         @if (_loading)
         {
             <LoadingRows Count="3" Label="Reading the card" />
@@ -108,6 +111,7 @@
                 <Board Rows="_board" Empty="No one has argued twice on the microphone yet." />
             </section>
         }
+        </div>
     </ChildContent>
 </PageShell>
 

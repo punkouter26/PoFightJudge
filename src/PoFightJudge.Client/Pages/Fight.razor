@@ -8,6 +8,9 @@
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="Channel 2P" Title="2P" Lead="@Lead">
     <ChildContent>
+        @* A wrapper this page owns, and nothing more (display: contents). Scoped CSS reaches into a child component
+           only from an element written here: without one, every ::deep rule for this page matches nothing. *@
+        <div class="po-scope">
         @* Three steps rather than one column. The whole thing was 1755 px on a phone: the sound check sat below the
            fold, under the button it is supposed to come before, which is how a fight dies on a muted headset.
            RadzenSteps keeps each question to a screen and keeps them in the order they are asked. *@
@@ -90,6 +93,7 @@
                 </RadzenStepsItem>
             </Steps>
         </RadzenSteps>
+        </div>
     </ChildContent>
 </PageShell>
 

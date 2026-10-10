@@ -10,6 +10,7 @@
 
 @* Create or edit a persona. Hosted by DialogService (the page awaits the saved ProfileDto) and rendered on its own in
    tests. The form edits a copy; the list only changes when the server has accepted it. *@
+<div class="po-scope">
 <RadzenTemplateForm TItem="CreateProfileRequest" Data="@_model" Submit="@SaveAsync" class="editor">
     <FluentValidationValidator DisableAssemblyScanning="true" />
 
@@ -177,6 +178,7 @@
         <RadzenButton ButtonType="ButtonType.Submit" Text="@(IsEdit ? "Save changes" : "Create profile")" Icon="check" ButtonStyle="ButtonStyle.Primary" IsBusy="@_busy" BusyText="Saving…" />
     </div>
 </RadzenTemplateForm>
+</div>
 
 @code {
     /// <summary>Largest file the picker accepts. It never leaves the browser: what is sent is the cropped PNG.</summary>

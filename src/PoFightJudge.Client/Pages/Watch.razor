@@ -11,6 +11,9 @@
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="@($"Channel {Channel}")" Title="@Channel" Lead="@Lead">
     <ChildContent>
+        @* A wrapper this page owns, and nothing more (display: contents). Scoped CSS reaches into a child component
+           only from an element written here: without one, every ::deep rule for this page matches nothing. *@
+        <div class="po-scope">
         @if (_loading)
         {
             <LoadingRows Count="2" Label="Loading the cast" />
@@ -96,6 +99,7 @@
                 </Steps>
             </RadzenSteps>
         }
+        </div>
     </ChildContent>
 </PageShell>
 

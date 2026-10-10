@@ -10,7 +10,7 @@ h2 {
   margin: var(--po-space-5) 0 var(--po-space-3);
 }
 
-.grid {
+::deep .grid {
   border: 1px solid var(--po-border);
   border-radius: var(--po-radius-md);
 }

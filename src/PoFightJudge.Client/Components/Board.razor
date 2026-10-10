@@ -1,6 +1,7 @@
 @using System.Globalization
 @* One leaderboard, whichever kind. Rank is the row's place in the order the server returned, not a stored number. *@
 
+<div class="po-scope">
 @if (Rows.Count == 0)
 {
     <EmptyState Icon="leaderboard" Title="Nothing to rank" Text="@Empty" />
@@ -30,6 +31,7 @@ else
         </Columns>
     </RadzenDataGrid>
 }
+</div>
 
 @code {
     private IReadOnlyList<Placed> _ranked = [];

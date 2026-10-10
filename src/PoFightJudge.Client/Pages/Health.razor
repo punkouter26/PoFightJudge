@@ -11,6 +11,9 @@
         <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Secondary" Click="LoadAsync" IsBusy="@_loading" />
     </Actions>
     <ChildContent>
+        @* A wrapper this page owns, and nothing more (display: contents). Scoped CSS reaches into a child component
+           only from an element written here: without one, every ::deep rule for this page matches nothing. *@
+        <div class="po-scope">
         @if (_error is not null)
         {
             <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
@@ -58,6 +61,7 @@
                 </RadzenDataGrid>
             }
         }
+        </div>
     </ChildContent>
 </PageShell>
 

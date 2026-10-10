@@ -21,6 +21,9 @@
         </RadzenSelectBar>
     </Actions>
     <ChildContent>
+        @* A wrapper this page owns, and nothing more (display: contents). Scoped CSS reaches into a child component
+           only from an element written here: without one, every ::deep rule for this page matches nothing. *@
+        <div class="po-scope">
         @* Narrowing happens on the server: the browser never holds the whole history, only the page it is showing. *@
         <section class="narrow" aria-label="Narrow the list">
             <RadzenFormField Text="Search" Variant="Variant.Outlined" class="find">
@@ -165,6 +168,7 @@
                 </Columns>
             </RadzenDataGrid>
         }
+        </div>
     </ChildContent>
 </PageShell>
 

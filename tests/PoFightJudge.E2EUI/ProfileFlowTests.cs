@@ -19,6 +19,10 @@ public class ProfileFlowTests(AppFixture app)
         var dialog = page.Locator(".rz-dialog");
         await dialog.WaitForAsync(new() { Timeout = 15_000 });
 
+        // The dialog's own stylesheet reaches the Radzen form inside it. It did not for a long time: a scoped rule
+        // needs an element the component wrote around the thing it styles, and there was none.
+        (await dialog.Locator(".editor").EvaluateAsync<string>("e => getComputedStyle(e).display")).Should().Be("grid");
+
         // Validation first: an empty form must not leave the dialog.
         await dialog.GetByRole(AriaRole.Button, new() { Name = "Create profile" }).ClickAsync();
         await dialog.Locator(".validation-message", new() { HasText = "Initials are required." }).WaitForAsync(new() { Timeout = 10_000 });
