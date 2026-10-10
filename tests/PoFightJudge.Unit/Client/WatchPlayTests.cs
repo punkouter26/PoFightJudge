@@ -131,7 +131,8 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         await RunToTheEndAsync(cut, _clock);
 
         await cut.WaitForAssertionAsync(() => cut.FindAll("section.verdict").Should().HaveCount(1), TimeSpan.FromSeconds(10));
-        cut.FindAll("article.line").Should().HaveCount(WatchTurns.RoundsPerSide * 2, "each side gets its three rounds");
+        cut.Find(".transcript").GetAttribute("data-lines").Should().Be("6", "each side gets its three rounds");
+        cut.FindAll("article.line").Should().ContainSingle("only the line just said is on the page, so the page stays one screen");
         _asked.Select(a => a.Speaker).Should().Equal(
             [WatchTurns.Husband, WatchTurns.Wife, WatchTurns.Husband, WatchTurns.Wife, WatchTurns.Husband, WatchTurns.Wife],
             "the husband opens and the two alternate");
@@ -150,7 +151,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
 
         await cut.WaitForAssertionAsync(() => cut.FindAll("section.verdict").Should().HaveCount(1), TimeSpan.FromSeconds(10));
         cut.FindAll("article.line p").Select(p => p.TextContent).Should().Equal(
-            ["line 1", "line 2", "line 3", "line 4", "line 5", "line 6"], "the cue is for the voice, not the transcript");
+            ["line 6"], "the cue is for the voice, not the page, and the page shows the last line only");
         _api.ReceivedCalls()
             .Where(c => string.Equals(c.GetMethodInfo().Name, nameof(IApiClient.StreamRoundAudioAsync), StringComparison.Ordinal))
             .Select(c => ((RoundAudioRequest)c.GetArguments()[0]!).Text)
@@ -175,7 +176,8 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         var spoken = cut.FindAll("button").Single(b => b.TextContent.Contains("Say it", StringComparison.Ordinal)).ClickAsync(new());
 
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("that is not what I said"), TimeSpan.FromSeconds(10));
-        cut.FindAll("article.line").Should().HaveCountGreaterThanOrEqualTo(2, "the person's line joins the argument");
+        int.Parse(cut.Find(".transcript").GetAttribute("data-lines")!, System.Globalization.CultureInfo.InvariantCulture)
+            .Should().BeGreaterThanOrEqualTo(2, "the person's line joins the argument");
         await cut.WaitForAssertionAsync(() => _asked.Should().HaveCount(2, "the loop resumes on the persona's side once the person has spoken"), TimeSpan.FromSeconds(10));
         _asked[1].History.Should().HaveCount(2, "the persona answers the person's line, not the one before it");
 

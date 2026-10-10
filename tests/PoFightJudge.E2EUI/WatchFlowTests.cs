@@ -23,12 +23,13 @@ public class WatchFlowTests(AppFixture app)
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 
         // Six lines, spoken one after another, then the judge.
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 6", null, new() { Timeout = 90_000 });
+        await page.WaitForFunctionAsync($"() => {AppFixture.LinesSaid} >= 6", null, new() { Timeout = 90_000 });
         var verdict = page.Locator("section.verdict");
         await verdict.WaitForAsync(new() { Timeout = 60_000 });
 
         (await verdict.InnerTextAsync()).Should().NotBeNullOrWhiteSpace();
-        (await page.Locator("article.line").CountAsync()).Should().Be(6, "three rounds each, no slap");
+        (await page.EvaluateAsync<int>(AppFixture.LinesSaid)).Should().Be(6, "three rounds each, no slap");
+        (await page.Locator("article.line").CountAsync()).Should().Be(1, "only the line just said is on the page");
 
         // The matchup lives in the tab, not only in memory: a reload plays the same two again rather than dumping
         // whoever was watching back at the setup screen.
@@ -44,6 +45,8 @@ public class WatchFlowTests(AppFixture app)
     {
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", user: "e2e-arguer");
         await using var _ = context;
+
+        await AppFixture.ListenForLinesAsync(page);
 
         // Every microphone stream the page is handed is kept, so the test can stop talking later on.
         await page.AddInitScriptAsync(
@@ -81,10 +84,9 @@ public class WatchFlowTests(AppFixture app)
         await page.WaitForTimeoutAsync(1_500);
         await page.EvaluateAsync("() => window.__streams.forEach(s => s.getAudioTracks().forEach(t => { t.enabled = false; }))");
 
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 3", null, new() { Timeout = 60_000 });
-        var said = await page.Locator("article.line").Nth(1).InnerTextAsync();
-        said.Should().ContainEquivalentOf("KD", "the line on the record is theirs");
-        said.Should().MatchRegex("(?i)rich, coming from you|raised yours first|last weekend|know you are losing", "what the transcriber heard is what went on the record");
+        await page.WaitForFunctionAsync($"() => {AppFixture.LinesSaid} >= 3", null, new() { Timeout = 60_000 });
+        var theirs = (await AppFixture.SaidAsync(page)).Should().Contain(l => l.Contains("KD", StringComparison.OrdinalIgnoreCase), "the person's line was shown under their own tag").Subject;
+        theirs.Should().MatchRegex("(?i)rich, coming from you|raised yours first|last weekend|know you are losing", "what the transcriber heard is what went on the record");
 
         errors.Should().BeEmpty();
     }

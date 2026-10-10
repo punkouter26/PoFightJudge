@@ -40,20 +40,17 @@
                     <LoadingRows Count="2" Label="Working out how to start" />
                 }
 
-                <RadzenTimeline Orientation="Orientation.Vertical" LinePosition="LinePosition.Left" class="transcript" aria-label="The argument so far">
-                    <Items>
-                        @foreach (var round in _rounds.Take(_revealedRounds))
-                        {
-                            @* A plain dot in the side's own colour: blue for the husband, red for the wife, matching the card borders. *@
-                            <RadzenTimelineItem PointStyle="@(WatchTurns.IsHusband(round.Speaker) ? PointStyle.Info : PointStyle.Danger)">
-                                <ChildContent>
-                                    <TranscriptLine First="@WatchTurns.IsHusband(round.Speaker)" Speaker="@round.Speaker"
-                                                    Name="@NameOf(round.Speaker)" Mood="@round.Mood" Text="@round.Text" />
-                                </ChildContent>
-                            </RadzenTimelineItem>
-                        }
-                    </Items>
-                </RadzenTimeline>
+                @* Only the line that was just said. The whole argument used to pile up here and push the turn box and
+                   the ruling off the bottom of the screen; the page is one screen now, and everything that was said
+                   is in the replay afterwards. The count says how far in the argument is. *@
+                <section class="transcript" aria-label="What was just said" aria-live="polite" data-lines="@_revealedRounds">
+                    @if (_revealedRounds > 0 && _rounds[_revealedRounds - 1] is var round)
+                    {
+                        <span class="po-eyebrow count">Line @_revealedRounds</span>
+                        <TranscriptLine First="@WatchTurns.IsHusband(round.Speaker)" Speaker="@round.Speaker"
+                                        Name="@NameOf(round.Speaker)" Mood="@round.Mood" Text="@round.Text" />
+                    }
+                </section>
 
                 @if (_stage == Stage.WaitingForPerson && Person is not null)
                 {

@@ -36,16 +36,11 @@ window.PoFx = (function () {
     }
   }
 
-  // The same, for something the page did not draw itself and so holds no reference to.
-  function scrollEnd(selector) {
-    scrollBottom(document.querySelector(selector));
-  }
-
   function scrollBottom(el) {
     if (el) {
       el.scrollTop = el.scrollHeight;
     }
   }
 
-  return { burst: burst, scrollBottom: scrollBottom, scrollEnd: scrollEnd, reveal: reveal };
+  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal };
 })();

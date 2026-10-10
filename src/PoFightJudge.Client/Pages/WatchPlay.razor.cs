@@ -108,9 +108,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
     private LeaveGuard? _guard;
 
-    /// <summary>How many lines the transcript had when it was last scrolled to its end.</summary>
-    private int _shownRounds;
-
     /// <summary>The side a real person is arguing, when there is one.</summary>
     private MatchSide? Person => Simulation.Human;
 
@@ -157,20 +154,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
         if (firstRender)
         {
             _drawn = await Gfx.MountAsync(StageSelector, Shaders.Stage, GfxInterop.WatchLevel, ct: _leaving.Token);
-        }
-
-        // The transcript scrolls inside its own box, and a line that lands below the bottom of it has not been
-        // shown to anybody. Each new line brings the box down with it.
-        if (_shownRounds != _revealedRounds)
-        {
-            _shownRounds = _revealedRounds;
-            try
-            {
-                await JS.InvokeVoidAsync("PoFx.scrollEnd", _leaving.Token, ".play .transcript");
-            }
-            catch (Exception ex) when (ex is JSException or InvalidOperationException or OperationCanceledException)
-            {
-            }
         }
 
         if (!_drawn || string.Equals(_aimedAt, _speaking, StringComparison.Ordinal))

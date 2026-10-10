@@ -16,6 +16,7 @@ public class WatchHardeningTests(AppFixture app)
     {
         var (context, page, errors) = await app.OpenAsync(AppFixture.Mobile, "/profiles", user: "e2e-opener");
         await using var _ = context;
+        await AppFixture.ListenForLinesAsync(page);
 
         await SeedAsync(page);
         await page.GotoAsync($"{app.BaseUrl}/1p");
@@ -41,8 +42,8 @@ public class WatchHardeningTests(AppFixture app)
         // From the keyboard: somebody who typed their answer should not have to find the button to give it.
         await turn.GetByRole(AriaRole.Button, new() { Name = "Say it" }).WaitForAsync(new() { Timeout = 10_000 });
         await turn.Locator("textarea[name=line]").PressAsync("Control+Enter");
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 2", null, new() { Timeout = 60_000 });
-        (await page.Locator("article.line").First.InnerTextAsync()).Should().Contain("not having this argument");
+        await page.WaitForFunctionAsync($"() => {AppFixture.LinesSaid} >= 2", null, new() { Timeout = 60_000 });
+        (await AppFixture.SaidAsync(page)).Should().Contain(l => l.Contains("not having this argument", StringComparison.Ordinal), "what they typed is what was put on screen");
 
         errors.Should().BeEmpty();
     }
@@ -69,7 +70,7 @@ public class WatchHardeningTests(AppFixture app)
         // A rematch starts a fresh argument rather than appending to the one just judged.
         await page.GetByRole(AriaRole.Button, new() { Name = "Argue again" }).ClickAsync();
         await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('section.verdict').length === 0 && document.querySelectorAll('article.line').length <= 2",
+            $"() => document.querySelectorAll('section.verdict').length === 0 && {AppFixture.LinesSaid} <= 2",
             null,
             new() { Timeout = 30_000 });
 

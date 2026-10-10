@@ -44,18 +44,13 @@
   filter: saturate(0.55) brightness(0.82);
 }
 
-::deep .transcript {
-  width: 100%;
-  max-height: clamp(14rem, 42vh, 32rem);
-  overflow-y: auto;
-  padding-inline-end: var(--po-space-2);
-  scroll-behavior: smooth;
+.transcript {
+  display: grid;
+  gap: var(--po-space-2);
+  align-content: start;
 }
 
-/* The timeline's own column sizing leaves the content half the page; the argument wants the width. */
-::deep .transcript .rz-timeline-item-content {
-  flex: 1 1 auto;
-}
+.transcript:empty { display: none; }
 
 .your-turn {
   display: grid;
@@ -160,7 +155,7 @@
 
   .stage { grid-column: 1 / -1; }
 
-  .play > ::deep .transcript { grid-column: 1; grid-row: 2 / span 4; }
+  .transcript { grid-column: 1; grid-row: 2 / span 4; }
 
   .your-turn,
   .judging,

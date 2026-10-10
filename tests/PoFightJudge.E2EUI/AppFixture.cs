@@ -137,6 +137,20 @@ public sealed class AppFixture : IAsyncLifetime
     /// starts an argument is on the last one; Radzen refuses a step the page has said is not ready, and the loop
     /// stops there rather than pretending it got through.
     /// </summary>
+    /// <summary>
+    /// The watch page shows one line at a time, so a test that wants to know what was said has to have been
+    /// listening. Call before the page is opened; <see cref="SaidAsync"/> then returns every line in order.
+    /// </summary>
+    public static Task ListenForLinesAsync(IPage page) => page.AddInitScriptAsync(
+        "window.__said = []; new MutationObserver(() => { const l = document.querySelector('article.line'); const t = l && l.innerText;"
+        + " if (t && window.__said[window.__said.length - 1] !== t) window.__said.push(t); })"
+        + ".observe(document, { subtree: true, childList: true, characterData: true });");
+
+    public static Task<string[]> SaidAsync(IPage page) => page.EvaluateAsync<string[]>("() => window.__said");
+
+    /// <summary>How many lines the argument on screen has had so far.</summary>
+    public const string LinesSaid = "Number(document.querySelector('.transcript')?.dataset.lines ?? 0)";
+
     public static async Task ToTheLastStepAsync(IPage page)
     {
         for (var step = 0; step < 4; step++)
