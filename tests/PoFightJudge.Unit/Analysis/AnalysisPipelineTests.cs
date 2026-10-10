@@ -201,6 +201,19 @@ public sealed class AnalysisPipelineTests : IDisposable
         analysis!.Status.Should().Be(AnalysisStatus.Failed);
         analysis.Error.Should().Be(AnalysisPipeline.UserFacingFailure, "the detail belongs in the log, not in front of the room");
         (await _matches.GetAsync("user-1", match.Id, CancellationToken.None))!.Status.Should().Be(SessionStatus.Failed);
+        analysis.Attempts.Should().Be(1, "which is what stops a fight that keeps failing from being queued on every restart");
+
+        // The transcript was paid for before the judge fell over. The second attempt reads that one back.
+        _judge.JudgeAsync(Arg.Any<JudgeRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(Judged(call.Arg<JudgeRequest>())));
+        var transcriber = Substitute.For<IGeminiTranscribeClient>();
+        using var again = Pipeline(transcriber);
+        await again.ProcessAsync("user-1", match.Id, CancellationToken.None);
+
+        await transcriber.DidNotReceive().TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        var second = await AnalysisOf(match.Id);
+        second!.Status.Should().Be(AnalysisStatus.Ready);
+        second.Attempts.Should().Be(2);
     }
 
     [Fact]

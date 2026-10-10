@@ -28,6 +28,9 @@ public sealed partial class AnalysisResumer(
 {
     public const string StaleFailure = "This fight was still being read when the app restarted, and it has been too long to pick it back up. Start it again to have another go.";
 
+    /// <summary>How many times a reading may start before it stops being picked back up.</summary>
+    public const int MaxAttempts = 3;
+
     public async Task ResumeAsync(CancellationToken ct)
     {
         try
@@ -57,6 +60,15 @@ public sealed partial class AnalysisResumer(
 
                 // No recording is not a matter of age: there is nothing to read however recently it happened.
                 if (ended < cutoff || string.IsNullOrEmpty(match.AudioBlobName))
+                {
+                    await AbandonAsync(match, ct);
+                    abandoned++;
+                    continue;
+                }
+
+                // Started this many times and never finished: it is the reading itself that is going wrong, and trying
+                // again on every restart is how one bad recording keeps a small host from ever settling.
+                if ((await matches.GetAnalysisAsync(match.Id, ct))?.Attempts >= MaxAttempts)
                 {
                     await AbandonAsync(match, ct);
                     abandoned++;

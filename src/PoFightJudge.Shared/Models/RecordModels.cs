@@ -90,7 +90,11 @@ public sealed record TurnDto(MatchId MatchId, int Index, Speaker Speaker, TurnKi
 }
 
 /// <summary>The post-fight analysis, or its progress. The report itself is JSON so the pipeline can grow without a storage migration.</summary>
-public sealed record AnalysisRecordDto(MatchId MatchId, AnalysisStatus Status, string? ReportJson, string? Error, DateTimeOffset UpdatedAt);
+public sealed record AnalysisRecordDto(MatchId MatchId, AnalysisStatus Status, string? ReportJson, string? Error, DateTimeOffset UpdatedAt)
+{
+    /// <summary>How many times a reading of this fight has started. A fresh request to read it starts the count again.</summary>
+    public int Attempts { get; init; }
+}
 
 /// <summary>
 /// One persona's record of one WATCH match. Written per side, so a profile's whole record is a single-partition read

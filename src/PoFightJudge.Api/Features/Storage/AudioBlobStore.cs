@@ -24,6 +24,9 @@ public interface IAudioBlobStore
     /// <summary>Transcript built from the host's own live captions, written by the orchestrator as the fight ends.</summary>
     static string LiveTranscript(MatchId matchId) => $"{matchId.Value}/live-transcript.json";
 
+    /// <summary>The diarized transcript the transcribe model produced, kept so a second attempt does not pay for it again.</summary>
+    static string DiarizedTranscript(MatchId matchId) => $"{matchId.Value}/diarized-transcript.json";
+
     /// <summary>One WATCH round's synthesized line; the extension records the wire format it was recorded in.</summary>
     static string Round(MatchId matchId, int roundIndex, string extension) => $"{matchId.Value}/{roundIndex}.{extension}";
 }

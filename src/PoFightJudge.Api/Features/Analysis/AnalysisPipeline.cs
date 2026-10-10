@@ -92,7 +92,7 @@ public sealed partial class AnalysisPipeline(
             ?? throw new InvalidOperationException($"Fight {matchId.Value} was not found for this user.");
         var blobName = match.AudioBlobName ?? throw new InvalidOperationException("That fight has no recording.");
 
-        await SaveStatusAsync(matches, matchId, AnalysisStatus.Diarizing, null, null, ct);
+        await SaveStatusAsync(matches, matchId, AnalysisStatus.Diarizing, null, null, ct, starting: true);
         match = await MarkAsync(matches, match, SessionStatus.Analyzing, ct);
 
 
@@ -114,10 +114,21 @@ public sealed partial class AnalysisPipeline(
             file = await files.UploadAndWaitAsync(recording.Content, recording.Length, MimeType, $"{matchId.Value}-players.wav", clock, ct);
         }
 
+        // Taken back when the reading is over, however it ends.
+        await using var uploaded = new UploadedRecording(files, file.Name, logger);
+
         // The cheapest usable transcript wins. Only a fight that produced neither is worth paying to read back.
         var (existing, source) = await ReadExistingTranscriptAsync(blobs, matchId, ct);
         var transcript = existing ?? await transcriber.TranscribeAsync(file.Uri, MimeType, ct);
-        source = existing is null ? GeminiTranscribeSource : source;
+        if (existing is null)
+        {
+            source = GeminiTranscribeSource;
+
+            // Kept, so that if the judge fails after this the next attempt does not pay to transcribe it again.
+            using var kept = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(transcript, GeminiJudgeClient.JsonOptions));
+            await blobs.UploadAsync(IAudioBlobStore.DiarizedTranscript(matchId), kept, "application/json", ct);
+        }
+
         var turns = await turnsTask;
         var mapped = SpeakerMapper.Map(transcript, turns);
         LogTranscribed(logger, matchId.Value, transcript.Words.Count, source, mapped.Note);
@@ -277,6 +288,12 @@ public sealed partial class AnalysisPipeline(
     /// </summary>
     private async Task<(TranscriptDto? Transcript, string Source)> ReadExistingTranscriptAsync(IAudioBlobStore blobs, MatchId matchId, CancellationToken ct)
     {
+        // An earlier attempt at this same fight already paid for one.
+        if (await ReadTranscriptAsync(blobs, matchId, IAudioBlobStore.DiarizedTranscript(matchId), ct) is { } diarized)
+        {
+            return (diarized, "diarized, kept from an earlier attempt");
+        }
+
         if (options.Value.UseLiveCaptionTranscript
             && await ReadTranscriptAsync(blobs, matchId, IAudioBlobStore.LiveTranscript(matchId), ct) is { } captions
             && captions.Words.Count >= Math.Max(0, options.Value.MinCaptionTranscriptWords))
@@ -333,8 +350,38 @@ public sealed partial class AnalysisPipeline(
         0, 0, 0, 0, "N/A", "N/A",
         ["Speak for longer, so there is something to assess.", "Take a position; hedging gives the judge nothing to grade.", "Answer the question you were actually asked."]);
 
-    private Task SaveStatusAsync(IMatchRepository matches, MatchId matchId, AnalysisStatus status, string? json, string? error, CancellationToken ct) =>
-        matches.SaveAnalysisAsync(new AnalysisRecordDto(matchId, status, json, error, clock.GetUtcNow()), ct);
+    /// <summary>
+    /// Writes where the reading has got to. The count of attempts rides along on every write and goes up by one each
+    /// time a reading starts, which is how a fight that takes the process down with it is recognised on the way
+    /// back up instead of being queued again on every restart.
+    /// </summary>
+    private async Task SaveStatusAsync(IMatchRepository matches, MatchId matchId, AnalysisStatus status, string? json, string? error, CancellationToken ct, bool starting = false)
+    {
+        var attempts = (await matches.GetAnalysisAsync(matchId, ct))?.Attempts ?? 0;
+        await matches.SaveAnalysisAsync(
+            new AnalysisRecordDto(matchId, status, json, error, clock.GetUtcNow()) { Attempts = starting ? attempts + 1 : attempts },
+            ct);
+    }
+
+    /// <summary>The recording as the provider holds it, for exactly as long as the reading takes.</summary>
+    private sealed class UploadedRecording(IGeminiFilesClient files, string name, ILogger logger) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await files.DeleteAsync(name, CancellationToken.None);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                // It expires by itself in two days; a failed tidy-up is not worth losing a report over.
+                LogUploadNotDeleted(logger, name, ex);
+            }
+        }
+    }
+
+    [LoggerMessage(EventId = 5007, Level = LogLevel.Warning, Message = "The uploaded recording {Name} could not be deleted; it expires by itself.")]
+    private static partial void LogUploadNotDeleted(ILogger logger, string name, Exception ex);
 
     private static async Task<MatchDto> MarkAsync(IMatchRepository matches, MatchDto match, SessionStatus status, CancellationToken ct)
     {

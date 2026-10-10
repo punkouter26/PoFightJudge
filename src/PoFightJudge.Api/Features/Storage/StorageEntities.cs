@@ -221,6 +221,8 @@ public sealed class AnalysisEntity : ITableEntity
 
     public DateTimeOffset UpdatedAt { get; set; }
 
+    public int Attempts { get; set; }
+
     public string? Json0 { get; set; }
 
     public string? Json1 { get; set; }
@@ -246,6 +248,7 @@ public sealed class AnalysisEntity : ITableEntity
             Status = dto.Status.ToString(),
             Error = dto.Error,
             UpdatedAt = dto.UpdatedAt,
+            Attempts = dto.Attempts,
         };
 
         var json = dto.ReportJson ?? string.Empty;
@@ -273,7 +276,8 @@ public sealed class AnalysisEntity : ITableEntity
             Enum.TryParse<AnalysisStatus>(Status, ignoreCase: true, out var status) ? status : AnalysisStatus.Queued,
             json.Length == 0 ? null : json,
             Error,
-            UpdatedAt);
+            UpdatedAt)
+        { Attempts = Attempts };
     }
 }
 

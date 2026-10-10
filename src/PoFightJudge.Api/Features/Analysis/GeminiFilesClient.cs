@@ -15,6 +15,12 @@ public interface IGeminiFilesClient
 
     Task<GeminiFile> GetAsync(string name, CancellationToken ct);
 
+    /// <summary>
+    /// Removes an uploaded file. It would expire by itself in about two days; deleting it means a recording is not
+    /// sitting with the provider for those two days after it has been read, or after its fight has been deleted.
+    /// </summary>
+    Task DeleteAsync(string name, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Uploads and waits until the file is usable, checking soon and then less often.</summary>
     async Task<GeminiFile> UploadAndWaitAsync(Stream content, long length, string mimeType, string displayName, TimeProvider clock, CancellationToken ct)
     {
@@ -74,6 +80,13 @@ public sealed class GeminiFilesClient(IHttpClientFactory factory) : IGeminiFiles
         using var response = await http.GetAsync(new Uri($"v1beta/{name}", UriKind.Relative), ct);
         await GeminiHttp.EnsureSuccessAsync(response, "files.get", ct);
         return Parse(JsonNode.Parse(await response.Content.ReadAsStringAsync(ct)));
+    }
+
+    public async Task DeleteAsync(string name, CancellationToken ct)
+    {
+        using var http = factory.CreateClient(GeminiHttpClients.Analysis);
+        using var response = await http.DeleteAsync(new Uri($"v1beta/{name}", UriKind.Relative), ct);
+        await GeminiHttp.EnsureSuccessAsync(response, "files.delete", ct);
     }
 
     public static GeminiFile Parse(JsonNode? file) => file is null
