@@ -128,7 +128,8 @@ public sealed partial class AnalysisPipeline(
         // Without this gate the model invents facts and quotes from twelve seconds of breathing, and the headline
         // then contradicts the recording it came from.
         JudgeOutputDto output;
-        if (mapped.Words.Count < MinWordsForJudging || first.TalkSeconds + second.TalkSeconds < MinSpeechSecondsForJudging)
+        var ruled = mapped.Words.Count >= MinWordsForJudging && first.TalkSeconds + second.TalkSeconds >= MinSpeechSecondsForJudging;
+        if (!ruled)
         {
             LogTooShort(logger, matchId.Value, mapped.Words.Count, first.TalkSeconds + second.TalkSeconds);
             output = NothingToJudge();
@@ -156,7 +157,8 @@ public sealed partial class AnalysisPipeline(
             ToSpeaker(output.Overall.WinnerCorrect),
             ToSpeaker(output.Overall.Overall),
             output.Overall.Reasons,
-            output.Overall.Summary);
+            output.Overall.Summary)
+        { Ruled = ruled };
 
         var report = new AnalysisReportDto(
             matchId,
@@ -171,16 +173,35 @@ public sealed partial class AnalysisPipeline(
             clock.GetUtcNow(),
             HighlightFinder.Find(output.Player1, output.Player2, mapped));
 
+        // Read again before anything is written back. The row in hand is minutes old: the fight may have been deleted
+        // since, in which case writing it would bring it back, or shared, in which case writing the old copy would
+        // drop the link.
+        if (await matches.GetAsync(userId, matchId, ct) is not { } current)
+        {
+            LogDeletedMeanwhile(logger, matchId.Value);
+            return;
+        }
+
         await SaveStatusAsync(matches, matchId, AnalysisStatus.Ready, JsonSerializer.Serialize(report, GeminiJudgeClient.JsonOptions), null, ct);
-        await SaveRecordsAsync(results, match, report, mapped, ct);
         await SaveWordsAsync(words, match, mapped, ct);
-        await MarkAsync(matches, match with { Winner = WinnerTag(match, overall) }, SessionStatus.Ready, ct);
+
+        // A fight nobody said enough in has no winner. Recording one would hand somebody a win, and the other a loss,
+        // for sitting in silence.
+        if (ruled)
+        {
+            await SaveRecordsAsync(results, match, report, mapped, ct);
+        }
+
+        await MarkAsync(matches, current with { Winner = ruled ? WinnerTag(match, overall) : string.Empty }, SessionStatus.Ready, ct);
         LogReady(logger, matchId.Value, stopwatch.Elapsed.TotalSeconds);
 
         // Last, and after the room can already read the ruling: the persona is a bonus read from a report that is
         // on the record, and it is the one step here that costs a model call per fighter.
-        var personas = scope.ServiceProvider.GetRequiredService<FighterPersonaWriter>();
-        await personas.WriteAsync(match, report, ct);
+        if (ruled)
+        {
+            var personas = scope.ServiceProvider.GetRequiredService<FighterPersonaWriter>();
+            await personas.WriteAsync(match, report, ct);
+        }
     }
 
     /// <summary>
@@ -333,6 +354,9 @@ public sealed partial class AnalysisPipeline(
 
     [LoggerMessage(EventId = 5004, Level = LogLevel.Information, Message = "Analysis {MatchId}: the judge was skipped ({Words} words, {Seconds:F1}s of speech) — too little was said")]
     private static partial void LogTooShort(ILogger logger, string matchId, int words, double seconds);
+
+    [LoggerMessage(EventId = 5006, Level = LogLevel.Information, Message = "Analysis {MatchId}: the fight was deleted while it was being read; nothing was written")]
+    private static partial void LogDeletedMeanwhile(ILogger logger, string matchId);
 
     [LoggerMessage(EventId = 5005, Level = LogLevel.Warning, Message = "Analysis {MatchId}: a stored transcript was unusable, falling back to the transcribe model")]
     private static partial void LogTranscriptUnusable(ILogger logger, string matchId, Exception ex);

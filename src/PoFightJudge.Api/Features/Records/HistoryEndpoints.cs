@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Carter;
 using PoFightJudge.Api.Features.Ai;
 using PoFightJudge.Api.Features.Auth;
+using PoFightJudge.Api.Features.Fight;
 using PoFightJudge.Api.Features.Storage;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
@@ -80,12 +81,19 @@ public sealed class HistoryEndpoints : ICarterModule
         IMatchRepository matches,
         IAudioBlobStore blobs,
         IShareRepository shares,
+        SessionRegistry fights,
         CancellationToken ct)
     {
         var userId = user.UserId();
         if (await matches.GetAsync(userId, id, ct) is not { } match)
         {
             return Results.NotFound();
+        }
+
+        // A fight still running writes its row again when it ends, which would bring a deleted one straight back.
+        if (fights.Get(id) is not null)
+        {
+            return Results.Problem("That fight is still running. End it first.", statusCode: StatusCodes.Status409Conflict);
         }
 
         // A shared link outliving the argument it points at is the one way a delete could fail to be a delete.

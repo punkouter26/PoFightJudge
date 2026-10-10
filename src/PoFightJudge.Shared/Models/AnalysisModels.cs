@@ -40,7 +40,14 @@ public sealed record PlayerAssessmentDto(
     string WorstMomentQuote,
     IReadOnlyList<string> CoachingTips);
 
-public sealed record OverallVerdictDto(Speaker WinnerLogic, Speaker WinnerCorrect, Speaker Overall, IReadOnlyList<string> Reasons, string Summary);
+public sealed record OverallVerdictDto(Speaker WinnerLogic, Speaker WinnerCorrect, Speaker Overall, IReadOnlyList<string> Reasons, string Summary)
+{
+    /// <summary>
+    /// False when too little was said to rule on. The winner fields still hold a value, because a stored report has
+    /// to deserialize, but nobody won: nothing is recorded against either side and the page says so.
+    /// </summary>
+    public bool Ruled { get; init; } = true;
+}
 
 /// <summary>The judge's structured output, before names and measurements are attached to it.</summary>
 public sealed record JudgeOutputDto(PlayerAssessmentDto Player1, PlayerAssessmentDto Player2, JudgeOverallDto Overall);

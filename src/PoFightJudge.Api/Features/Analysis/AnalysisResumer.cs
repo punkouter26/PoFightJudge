@@ -46,6 +46,15 @@ public sealed partial class AnalysisResumer(
             {
                 var ended = match.EndedAt ?? match.StartedAt;
 
+                // Still "live" at startup means the process went down mid-fight: fights live in memory, so there is
+                // no room to go back to and no recording was ever stored.
+                if (match.Status == SessionStatus.Live)
+                {
+                    await AbandonAsync(match, ct);
+                    abandoned++;
+                    continue;
+                }
+
                 // No recording is not a matter of age: there is nothing to read however recently it happened.
                 if (ended < cutoff || string.IsNullOrEmpty(match.AudioBlobName))
                 {

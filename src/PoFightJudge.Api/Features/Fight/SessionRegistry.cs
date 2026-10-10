@@ -68,6 +68,14 @@ public sealed partial class SessionRegistry(
         catch
         {
             _fights.TryRemove(matchId.Value, out _);
+
+            // The row was written as Live before the host was dialled. Left like that it answers "queued" for ever.
+            var matches = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
+            if (await matches.GetAsync(userId, matchId, CancellationToken.None) is { } row)
+            {
+                await matches.UpsertAsync(row with { Status = SessionStatus.Failed, EndedAt = clock.GetUtcNow() }, CancellationToken.None);
+            }
+
             await orchestrator.DisposeAsync();
             scope.Dispose();
             throw;

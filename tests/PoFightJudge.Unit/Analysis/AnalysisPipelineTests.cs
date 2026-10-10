@@ -119,6 +119,14 @@ public sealed class AnalysisPipelineTests : IDisposable
     {
         var match = await RecordedAsync();
 
+        // Somebody shares the fight while the judge is still reading it.
+        _judge.JudgeAsync(Arg.Any<JudgeRequest>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            var row = await _matches.GetAsync("user-1", match.Id, CancellationToken.None);
+            await _matches.UpsertAsync(row! with { ShareToken = "shared-meanwhile" }, CancellationToken.None);
+            return Judged(call.Arg<JudgeRequest>());
+        });
+
         using var pipeline = Pipeline();
         await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
 
@@ -128,6 +136,7 @@ public sealed class AnalysisPipelineTests : IDisposable
 
         var stored = await _matches.GetAsync("user-1", match.Id, CancellationToken.None);
         stored!.Status.Should().Be(SessionStatus.Ready);
+        stored.ShareToken.Should().Be("shared-meanwhile", "the row is read again before it is written back, so the link survives");
         stored.Winner.Should().Be("AL", "the ruling names a tag, which is what a record is keyed on");
 
         var rows = await _fighterResults.ListForAsync(FighterId.From("AL"), "user-1", CancellationToken.None);
@@ -168,6 +177,11 @@ public sealed class AnalysisPipelineTests : IDisposable
         var analysis = await AnalysisOf(match.Id);
         analysis!.Status.Should().Be(AnalysisStatus.Ready, "a fight that produced nothing still has a report saying so");
         analysis.ReportJson.Should().Contain("not enough", "the headline must not contradict the recording");
+        analysis.ReportJson.Should().Contain("\"ruled\":false");
+
+        (await _matches.GetAsync("user-1", match.Id, CancellationToken.None))!.Winner.Should().BeEmpty("nobody wins a fight nobody had");
+        (await _fighterResults.ListForAsync(FighterId.From("AL"), "user-1", CancellationToken.None))
+            .Should().BeEmpty("sitting in silence is not a win, and it is not a loss for the other one either");
     }
 
     [Fact]

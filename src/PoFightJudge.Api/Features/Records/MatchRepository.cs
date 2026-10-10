@@ -32,7 +32,7 @@ public interface IMatchRepository
     Task<AnalysisRecordDto?> GetAnalysisAsync(MatchId id, CancellationToken ct = default);
 
     /// <summary>
-    /// Every fight, whoever it belongs to, still marked <see cref="SessionStatus.Analyzing"/> — what a process that
+    /// Every fight, whoever it belongs to, still marked analysing or live — what a process that
     /// died mid-read left behind. Deliberately not per-user: nobody is signed in when this is asked.
     /// </summary>
     Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default);
@@ -173,7 +173,7 @@ public sealed class MatchRepository(TableServiceClient tables) : IMatchRepositor
     public Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default) =>
         StorageBootstrap.WithTableAsync<IReadOnlyList<MatchDto>>(tables, TableNames.Matches, async token =>
         {
-            var filter = TableClient.CreateQueryFilter($"Status eq {nameof(SessionStatus.Analyzing)}");
+            var filter = TableClient.CreateQueryFilter($"Status eq {nameof(SessionStatus.Analyzing)} or Status eq {nameof(SessionStatus.Live)}");
             var stranded = new List<MatchDto>();
             await foreach (var entity in Table(TableNames.Matches).QueryAsync<MatchEntity>(filter, cancellationToken: token))
             {

@@ -299,7 +299,7 @@ public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults,
     /// <summary>Everything left mid-read, oldest first — the same order the table query returns.</summary>
     public Task<IReadOnlyList<MatchDto>> ListUnfinishedAnalysesAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<MatchDto>>(
-            [.. _matches.Values.Where(m => m.Status == SessionStatus.Analyzing).OrderBy(m => m.StartedAt)]);
+            [.. _matches.Values.Where(m => m.Status is SessionStatus.Analyzing or SessionStatus.Live).OrderBy(m => m.StartedAt)]);
 
     public async Task<bool> DeleteAsync(string userId, MatchId id, CancellationToken ct = default)
     {

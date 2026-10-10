@@ -593,8 +593,24 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
             // pipeline finds it already there rather than paying to transcribe the show a second time.
             var players = _playersTrack.Bytes > 0 ? UploadTrackAsync(id, IAudioBlobStore.PlayersTrack, _playersTrack, ct) : Task.FromResult<string?>(null);
             var host = _hostTrack.Bytes > 0 ? UploadTrackAsync(id, IAudioBlobStore.HostTrack, _hostTrack, ct) : Task.FromResult<string?>(null);
-            await Task.WhenAll(players, host, UploadCaptionTranscriptAsync(id, ct));
-            blobName = await players;
+            var extras = Task.WhenAll(host, UploadCaptionTranscriptAsync(id, ct));
+            try
+            {
+                blobName = await players;
+            }
+            finally
+            {
+                // The host's track and the captions are extras: losing one of them costs a replay or a cheaper
+                // transcript, never the fight.
+                try
+                {
+                    await extras;
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    LogPersistFailed(_logger, ex);
+                }
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
