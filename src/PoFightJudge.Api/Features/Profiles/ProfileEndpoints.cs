@@ -115,13 +115,13 @@ public sealed class ProfileEndpoints : ICarterModule
 
     private static GeminiPrompt PreviewPrompt(CreateProfileRequest persona) => new(
         System: "You write one line of dialogue for a satirical married-couple argument show. One sentence, in character, "
-            + "spoken out loud to their spouse mid-argument. No stage directions, no quotation marks.",
+            + "spoken out loud to their spouse mid-argument. No stage directions, no quotation marks. " + PromptText.DataNotice,
         User: $"""
-            The speaker is the {persona.Role.ToString().ToLowerInvariant()} {persona.Name ?? persona.Initials}.
-            Likes: {persona.Likes}
-            Dislikes: {persona.Dislikes}
-            They usually argue about: {persona.CommonArguments}
-            Their philosophy: {persona.Philosophy}
+            The speaker is the {persona.Role.ToString().ToLowerInvariant()} {PromptText.Inline(persona.Name ?? persona.Initials, 60)}.
+            Likes: {PromptText.Inline(persona.Likes, 600)}
+            Dislikes: {PromptText.Inline(persona.Dislikes, 600)}
+            They usually argue about: {PromptText.Inline(persona.CommonArguments, 600)}
+            Their philosophy: {PromptText.Inline(persona.Philosophy, 600)}
 
             Write their next line.
             """);

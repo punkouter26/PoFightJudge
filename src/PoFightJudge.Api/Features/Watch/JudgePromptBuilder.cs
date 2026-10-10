@@ -48,7 +48,7 @@ public static class JudgePromptBuilder
         ArgumentNullException.ThrowIfNull(wife);
         ArgumentNullException.ThrowIfNull(rounds);
 
-        var transcript = string.Join("\n", rounds.Select(r => $"[{r.Speaker.ToUpperInvariant()}]: {r.Text}"));
+        var transcript = string.Join("\n", rounds.Select(r => $"[{RoundPromptBuilder.Side(r.Speaker)}]: {PromptText.Inline(r.Text, RoundPromptBuilder.MaxHistoryLineChars)}"));
 
         var user = $"""
             PARTICIPANTS:
@@ -59,7 +59,7 @@ public static class JudgePromptBuilder
             {transcript}
             """;
 
-        return new GeminiPrompt($"{Criteria}\n\n{TiebreakerAndOutput}", user);
+        return new GeminiPrompt($"{Criteria}\n\n{PromptText.DataNotice}\n\n{TiebreakerAndOutput}", user);
     }
 
     /// <summary>A one-line personality digest, so a verdict can describe who each spouse is without re-sending the whole profile block.</summary>
@@ -69,7 +69,7 @@ public static class JudgePromptBuilder
 
         var bits = new List<string>
         {
-            $"{p.Name ?? p.Initials}, {p.Occupation ?? "unemployed"}",
+            $"{RoundPromptBuilder.Name(p)}, {RoundPromptBuilder.OrDash(p.Occupation ?? "unemployed")}",
             RoundPromptBuilder.SliderLabel("logic", p.LogicVsEmotion),
             RoundPromptBuilder.SliderLabel("patience", p.Patience),
             RoundPromptBuilder.SliderLabel("grudges", p.HoldsGrudges),
@@ -78,7 +78,7 @@ public static class JudgePromptBuilder
 
         if (!string.IsNullOrWhiteSpace(p.Philosophy))
         {
-            bits.Add($"motto \"{p.Philosophy.Trim()}\"");
+            bits.Add($"motto \"{PromptText.Inline(p.Philosophy)}\"");
         }
 
         return string.Join("; ", bits);

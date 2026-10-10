@@ -29,6 +29,12 @@ public static class RoundPromptBuilder
     /// </summary>
     public const int MaxLineWords = 45;
 
+    /// <summary>The most of one earlier line that is replayed to the model.</summary>
+    public const int MaxHistoryLineChars = 1_000;
+
+    /// <summary>The most of one profile field that is printed in the participant block.</summary>
+    public const int MaxFieldChars = 600;
+
     /// <summary>
     /// Spliced into the participant block for the live human. A model handed a blank profile will happily invent one,
     /// producing a spouse who argues against traits the player never chose.
@@ -70,6 +76,8 @@ public static class RoundPromptBuilder
             Tailor your attack: pick on your opponent's likes, rub THEIR dislikes in their face, or
             contradict THEIR philosophy. Quote a specific like or dislike verbatim when natural.
 
+            {{PromptText.DataNotice}}
+
             LINE RULES:
             {{WatchRules.LineRulesFor(other.IsHuman)}}
 
@@ -88,12 +96,12 @@ public static class RoundPromptBuilder
         // CURRENT STATE, where it would still be constant but would shorten the cacheable prefix for nothing.
         var topicBlock = string.IsNullOrWhiteSpace(topic)
             ? string.Empty
-            : $"\nTHE FIGHT IS ABOUT: \"{topic.Trim()}\" — every line must stay on this exact topic. "
+            : $"\nTHE FIGHT IS ABOUT: \"{PromptText.Inline(topic)}\" — every line must stay on this exact topic. "
                 + "Attack the opponent THROUGH this topic; do not drift to a different fight.\n";
 
         var historyText = history.Count == 0
             ? "This is the opening statement."
-            : string.Join("\n", history.Select(r => $"[{r.Speaker.ToUpperInvariant()}]: {r.Text}"));
+            : string.Join("\n", history.Select(r => $"[{Side(r.Speaker)}]: {PromptText.Inline(r.Text, MaxHistoryLineChars)}"));
 
         var heckle = Interjections.Find(interjection)
             ?? (wasSlapped ? Interjections.Find(Interjections.SlapKey) : null);
@@ -106,8 +114,8 @@ public static class RoundPromptBuilder
             {{historyText}}
 
             CURRENT STATE:
-              YOU ARE SPEAKING AS: the {{(speakingHusband ? "husband" : "wife")}}, {{self.Name ?? self.Initials}}.
-              Your opponent is the {{other.Role.ToString().ToLowerInvariant()}}, {{other.Name ?? other.Initials}}.
+              YOU ARE SPEAKING AS: the {{(speakingHusband ? "husband" : "wife")}}, {{Name(self)}}.
+              Your opponent is the {{other.Role.ToString().ToLowerInvariant()}}, {{Name(other)}}.
               Attitude injected this turn: {{attitude}}
               {{heckle?.PromptDirective ?? string.Empty}}
             """;
@@ -125,7 +133,7 @@ public static class RoundPromptBuilder
         ArgumentNullException.ThrowIfNull(p);
 
         return $"""
-            ╔══ {p.Role.ToString().ToUpperInvariant()}: {p.Name ?? p.Initials} (age {p.Age?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?"}, {p.Occupation ?? "unemployed"}) ══╗
+            ╔══ {p.Role.ToString().ToUpperInvariant()}: {Name(p)} (age {p.Age?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?"}, {OrDash(p.Occupation ?? "unemployed")}) ══╗
 
               Likes:             {OrDash(p.Likes)}
               Dislikes:          {OrDash(p.Dislikes)}
@@ -155,5 +163,17 @@ public static class RoundPromptBuilder
         _ => "neutral",
     };
 
-    public static string OrDash(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s.Trim();
+    /// <summary>A profile field on one line, or a dash: the layout above is a table, and a field with a line break in it is a second row.</summary>
+    public static string OrDash(string? s) => PromptText.Inline(s, MaxFieldChars) is { Length: > 0 } line ? line : "—";
+
+    /// <summary>What a persona is called in a prompt: one short line, whatever was typed into the editor.</summary>
+    public static string Name(Profile p)
+    {
+        ArgumentNullException.ThrowIfNull(p);
+        return PromptText.Inline(p.Name ?? p.Initials, 60);
+    }
+
+    /// <summary>The history is written as "[HUSBAND]: …" and "[WIFE]: …" and nothing else, whatever the client sent as the speaker.</summary>
+    public static string Side(string speaker) =>
+        string.Equals(speaker, WatchRound.Husband, StringComparison.OrdinalIgnoreCase) ? "HUSBAND" : "WIFE";
 }
