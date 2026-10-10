@@ -3,11 +3,11 @@
     <header>
         @if (Profile.HasFace)
         {
-            <RadzenImage Path="@FaceUrl" AlternateText="@DisplayName" class="face" />
+            <RadzenImage Path="@FaceUrl" AlternateText="@DisplayName" class="po-face face" />
         }
         else
         {
-            <div class="face face--blank po-display" aria-hidden="true">@Persona.Initials</div>
+            <div class="po-face face face--blank po-display" aria-hidden="true">@Persona.Initials</div>
         }
         <div class="who">
             <h3>@DisplayName</h3>

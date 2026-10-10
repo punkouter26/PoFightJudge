@@ -4,24 +4,6 @@
 
 .tag { letter-spacing: 0.06em; }
 
-/* The phone's one column: tag, name, record and form stacked instead of five columns dragged sideways. */
-.stacked {
-  display: grid;
-  gap: var(--po-space-1);
-  min-width: 0;
-}
+.find { max-width: 22rem; margin-bottom: var(--po-space-3); }
 
-.stacked .line-1 {
-  display: flex;
-  align-items: baseline;
-  gap: var(--po-space-2);
-  min-width: 0;
-}
-
-.stacked .name {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-weight: 600;
-}
-
-.stacked .line-2 { font-size: var(--po-text-xs); }
+.cut-off { margin: 0 0 var(--po-space-3); font-size: var(--po-text-sm); }

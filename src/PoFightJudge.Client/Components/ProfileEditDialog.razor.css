@@ -28,12 +28,8 @@
 
 ::deep .face,
 .face {
-  width: 6rem;
-  height: 6rem;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--po-border-strong);
-  background: var(--po-surface-2);
+  --po-face-size: 6rem;
+  border-color: var(--po-border-strong);
 }
 
 .face--blank {

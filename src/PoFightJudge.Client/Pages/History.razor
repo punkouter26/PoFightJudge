@@ -85,7 +85,7 @@
         {
             @* Count and PageSize come from the server: the grid is showing one page of a list it has never seen. *@
             <RadzenDataGrid Data="@_matches" TItem="MatchDto" AllowSorting="true" AllowPaging="true" IsLoading="@_loading"
-                            Count="@_total" PageSize="@_take" PageSizeOptions="@PageSizes" ShowPagingSummary="true"
+                            Count="@_total" PageSize="@_take" PageSizeOptions="@PageSizes" ShowPagingSummary="true" Density="Density.Compact"
                             LoadData="@OnPageAsync" class="history">
                 <Columns>
                     @* A phone gets the same five facts stacked into one cell. Hiding the columns with CSS is not
@@ -93,16 +93,16 @@
                        576 px of table on a 356 px screen. Not declared is the only way to not be measured. *@
                     <RadzenDataGridColumn TItem="MatchDto" Title="Argument" Visible="@Viewport.IsPhone" Sortable="false">
                         <Template Context="match">
-                            <div class="stacked">
-                                <span class="line-1">
+                            <div class="po-stacked">
+                                <span class="po-stacked__head">
                                     <ModeBadge Mode="@match.Mode" />
-                                    <span class="topic">@match.Topic</span>
+                                    <span class="po-stacked__strong">@match.Topic</span>
                                 </span>
-                                <span class="line-2 po-muted">
+                                <span class="po-stacked__fine po-muted">
                                     @match.Side1.DisplayName vs @match.Side2.DisplayName
                                     · @match.StartedAt.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)
                                 </span>
-                                <span class="line-3">
+                                <span class="po-stacked__tail">
                                     @if (match.IsDraw)
                                     {
                                         <span class="po-muted">Nobody took it</span>

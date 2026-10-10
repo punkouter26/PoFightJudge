@@ -39,15 +39,15 @@
             <div class="portrait">
                 @if (_faceDataUrl is not null)
                 {
-                    <RadzenImage Path="@_faceDataUrl" AlternateText="New portrait" class="face" />
+                    <RadzenImage Path="@_faceDataUrl" AlternateText="New portrait" class="po-face face" />
                 }
                 else if (Existing is { HasFace: true })
                 {
-                    <RadzenImage Path="@ApiRoutes.Profiles.Face(Existing.Id)" AlternateText="@_model.Initials" class="face" />
+                    <RadzenImage Path="@ApiRoutes.Profiles.Face(Existing.Id)" AlternateText="@_model.Initials" class="po-face face" />
                 }
                 else
                 {
-                    <div class="face face--blank po-display" aria-hidden="true">@(string.IsNullOrWhiteSpace(_model.Initials) ? "?" : _model.Initials.ToUpperInvariant())</div>
+                    <div class="po-face face face--blank po-display" aria-hidden="true">@(string.IsNullOrWhiteSpace(_model.Initials) ? "?" : _model.Initials.ToUpperInvariant())</div>
                 }
                 <RadzenFileInput TValue="string" @bind-Value="_faceDataUrl" Accept="image/*" MaxFileSize="@MaxFaceBytes"
                                  ChooseText="Upload portrait" DeleteText="Clear" Error="@OnFaceError" class="face-input" />

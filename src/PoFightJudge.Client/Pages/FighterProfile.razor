@@ -106,17 +106,17 @@
             }
             else
             {
-                <RadzenDataGrid Data="@_results" TItem="FighterResultDto" AllowSorting="true" AllowPaging="true" PageSize="10" class="results">
+                <RadzenDataGrid Data="@_results" TItem="FighterResultDto" AllowSorting="true" AllowPaging="true" PageSize="10" Density="Density.Compact" class="results">
                     <Columns>
                         @* 33rem of declared width on a 356 px screen. Stacked on a phone, the same five facts. *@
                         <RadzenDataGridColumn TItem="FighterResultDto" Title="Result" Visible="@Viewport.IsPhone" Sortable="false">
                             <Template Context="row">
-                                <div class="stacked">
-                                    <span class="line-1">
+                                <div class="po-stacked">
+                                    <span class="po-stacked__head">
                                         <ModeBadge Mode="@row.Mode" />
-                                        <span class="topic">@row.Topic</span>
+                                        <span class="po-stacked__strong">@row.Topic</span>
                                     </span>
-                                    <span class="line-2 po-muted">
+                                    <span class="po-stacked__fine po-muted">
                                         vs @row.Opponent · @(row.Draw ? "draw" : row.Won ? "won" : "lost") @row.Score
                                         · @row.At.LocalDateTime.ToString("d MMM, HH:mm", CultureInfo.CurrentCulture)
                                     </span>

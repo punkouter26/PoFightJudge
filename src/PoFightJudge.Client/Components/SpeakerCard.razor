@@ -4,7 +4,7 @@
 
     @if (Side is null)
     {
-        <div class="face face--empty" aria-hidden="true">?</div>
+        <div class="po-face face face--empty" aria-hidden="true">?</div>
         <div class="who">
             <h2 class="po-muted">Nobody yet</h2>
             <p class="po-muted">Pick a persona, or step up to the microphone.</p>
@@ -12,7 +12,7 @@
     }
     else if (Side.IsHuman)
     {
-        <div class="face face--human" aria-hidden="true">
+        <div class="po-face face face--human" aria-hidden="true">
             <RadzenIcon Icon="mic" />
         </div>
         <div class="who">
@@ -27,11 +27,11 @@
     {
         @if (Profile is { HasFace: true })
         {
-            <RadzenImage Path="@FaceUrl" AlternateText="@Side.DisplayName" class="face" />
+            <RadzenImage Path="@FaceUrl" AlternateText="@Side.DisplayName" class="po-face face" />
         }
         else
         {
-            <div class="face face--blank po-display" aria-hidden="true">@Side.Id</div>
+            <div class="po-face face face--blank po-display" aria-hidden="true">@Side.Id</div>
         }
         <div class="who">
             <h2>@Side.DisplayName</h2>

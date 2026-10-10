@@ -19,15 +19,10 @@
 
 ::deep .face,
 .face {
+  --po-face-size: 3.5rem;
   grid-area: face;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  object-fit: cover;
   display: grid;
   place-items: center;
-  background: var(--po-surface-2);
-  border: 2px solid var(--po-border);
   color: var(--po-muted);
 }
 

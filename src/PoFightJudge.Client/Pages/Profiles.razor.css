@@ -20,6 +20,9 @@
   letter-spacing: 0.04em;
 }
 
+/* With WrapItems on, Radzen renders the list as div.rz-g with div children (a wrapping flex row), not as the ul
+   these rules were first written for. Both are named, so the cards sit on one grid whichever it renders. */
+::deep .cards .rz-g,
 ::deep .cards .rz-datalist-data {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
@@ -29,14 +32,17 @@
   list-style: none;
 }
 
+::deep .cards .rz-g > div,
 ::deep .cards .rz-datalist-data > li {
   display: block;
+  margin: 0;
   padding: 0;
   border: 0;
   background: none;
 }
 
 @media (max-width: 40rem) {
+  ::deep .cards .rz-g,
   ::deep .cards .rz-datalist-data {
     grid-template-columns: 1fr;
     gap: var(--po-space-2);

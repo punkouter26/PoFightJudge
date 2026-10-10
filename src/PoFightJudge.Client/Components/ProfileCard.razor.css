@@ -15,14 +15,7 @@ header {
 }
 
 ::deep .face,
-.face {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--po-surface-2);
-  border: 2px solid var(--po-border);
-}
+.face { --po-face-size: 4.5rem; }
 
 .face--blank {
   display: grid;

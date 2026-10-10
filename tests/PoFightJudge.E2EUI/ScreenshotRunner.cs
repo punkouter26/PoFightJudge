@@ -112,7 +112,11 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
     private async Task ShootAsync(IPage page, string folder, string name, string path, List<string> errors)
     {
         // The icons are a font: a page photographed before it arrives shows their names spelled out instead.
-        await page.EvaluateAsync("() => document.fonts.ready");
+        // "Ready" only covers faces something has asked for so far, so each declared face is loaded by hand first.
+        await page.EvaluateAsync("async () => { await Promise.allSettled([...document.fonts].map(f => f.load())); await document.fonts.ready; }");
+        await page.WaitForTimeoutAsync(300);
+        var icons = await page.EvaluateAsync<string>("() => [...document.fonts].filter(f => f.family.includes('Material')).map(f => f.status).join(',') + ' / ' + getComputedStyle(document.querySelector('.rzi') ?? document.body).fontFamily");
+        Report($"  {name}: icon font {icons}");
         var file = Path.Combine(folder, name + ".png");
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = file, FullPage = true });
         Report($"SHOT {name} {path} -> {file} ({errors.Count} errors)");

@@ -8,7 +8,7 @@
 }
 else
 {
-    <RadzenDataGrid Data="@_ranked" TItem="Placed" AllowSorting="false" class="board"
+    <RadzenDataGrid Data="@_ranked" TItem="Placed" AllowSorting="false" Density="Density.Compact" class="board"
                     RowClick="@(args => Open(args.Data))"
                     RowRender="@(args => args.Attributes["class"] = OnOpen.HasDelegate ? "openable" : string.Empty)">
         <Columns>
