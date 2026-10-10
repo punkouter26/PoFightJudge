@@ -18,8 +18,8 @@
                      NextText="Next" PreviousText="Back">
             <Steps>
                 <RadzenStepsItem Text="Who">
-                    <div class="who-step">
-                        <section class="tags">
+                    <SetupStep Problem="@Problem" Touched="@_touched" PreviewLabel="Who is arguing">
+                        <Sides>
                             <div class="fighter-setup">
                                 <FighterTagInput Label="Fighter one" Name="player1Tag" Tag="@_one" TagChanged="@OnOneChanged" Known="@_known" Excluded="@_two" />
                                 @* 2P has no husband or wife. The seat is for afterwards: what they say here becomes a persona that
@@ -46,30 +46,15 @@
                                     </RadzenSelectBar>
                                 </div>
                             </div>
-                        </section>
-
-                        <section class="preview" aria-label="Who is arguing">
-                            <FighterCard Tag="@_one" Fighter="@Known(_one)" />
-                            <div class="versus po-display" aria-hidden="true">vs</div>
-                            <FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" />
-                        </section>
-                    </div>
-
-                    @if (Problem is { Length: > 0 })
-                    {
-                        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
-                    }
+                        </Sides>
+                        <First><FighterCard Tag="@_one" Fighter="@Known(_one)" /></First>
+                        <Second><FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" /></Second>
+                    </SetupStep>
                 </RadzenStepsItem>
 
                 <RadzenStepsItem Text="About" Disabled="@(Problem is not null)">
-                    <section class="topic">
-                        <RadzenFormField Text="What are you arguing about?" Variant="Variant.Outlined">
-                            <ChildContent>
-                                <RadzenTextBox Value="@_topic" @oninput="@OnTopicTyped" Name="topic" MaxLength="200" Placeholder="who does the dishes" />
-                            </ChildContent>
-                            <Helper><span class="po-muted">Leave it blank and the host will ask you both at the top of the show.</span></Helper>
-                        </RadzenFormField>
-                    </section>
+                    <TopicField @bind-Value="_topic" Label="What are you arguing about?" Placeholder="who does the dishes"
+                                Hint="Leave it blank and the host will ask you both at the top of the show." />
 
                     <HostPersonaPicker Persona="@_persona" PersonaChanged="@(p => _persona = p)" />
                 </RadzenStepsItem>
@@ -109,6 +94,9 @@
     /// <summary>Which microphone the fight should open, once somebody has picked one. Null means the browser's default.</summary>
     private string? _device;
     private bool _starting;
+
+    /// <summary>Whether a tag has been typed yet. Until one has, what is missing is a hint rather than a warning.</summary>
+    private bool _touched;
     private string? _error;
 
     /// <summary>Which of the three questions is on screen.</summary>
@@ -143,11 +131,9 @@
     private FighterDto? Known(string tag) =>
         tag.Length == 0 ? null : _known.FirstOrDefault(f => string.Equals(f.Tag, tag, StringComparison.OrdinalIgnoreCase));
 
-    private void OnOneChanged(string tag) => _one = tag;
+    private void OnOneChanged(string tag) => (_one, _touched) = (tag, true);
 
-    private void OnTwoChanged(string tag) => _two = tag;
-
-    private void OnTopicTyped(ChangeEventArgs e) => _topic = e.Value?.ToString() ?? string.Empty;
+    private void OnTwoChanged(string tag) => (_two, _touched) = (tag, true);
 
     private async Task StartAsync()
     {

@@ -1,0 +1,6 @@
+.topic {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--po-space-3);
+  align-items: start;
+}

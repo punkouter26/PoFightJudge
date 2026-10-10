@@ -1,4 +1,4 @@
-@* Chooses one side of an argument: a profile from the cast, or the person at the microphone under their own tag. *@
+@* Chooses one side of an argument from the cast. A person at the microphone is seated by the 1P page itself. *@
 <div class="picker">
     <RadzenFormField Text="@Label" Variant="Variant.Outlined" class="choice">
         <ChildContent>
@@ -13,44 +13,12 @@
                             AllowClear="false" />
         </ChildContent>
     </RadzenFormField>
-
-    @if (IsHumanChosen)
-    {
-        <RadzenFormField Text="Your tag" Variant="Variant.Outlined" class="tag">
-            <ChildContent>
-                @* Published on every keystroke, so the Start button answers the tag as it is typed rather than on blur. *@
-                <RadzenTextBox Value="@Tag"
-                               ValueChanged="@OnTagChanged"
-                               @oninput="@(e => OnTagChanged(e.Value?.ToString() ?? string.Empty))"
-                               Name="@(IsWife ? "wifeTag" : "husbandTag")"
-                               MaxLength="@Initials.MaxLength"
-                               Placeholder="AB"
-                               aria-label="Your fighter tag" />
-            </ChildContent>
-            <Helper>
-                @if (TagError is { Length: > 0 })
-                {
-                    <span class="validation-message">@TagError</span>
-                }
-                else
-                {
-                    <span class="po-muted">1–3 letters or digits. The same tag you fight under, so this debate counts towards your profile.</span>
-                }
-            </Helper>
-        </RadzenFormField>
-    }
 </div>
 
 @code {
-    /// <summary>Wire value of the "a person argues this side" choice, distinct from any persona's initials.</summary>
-    public const string HumanKey = " human";
-
     [Parameter, EditorRequired] public IReadOnlyList<ProfileDto> Cast { get; set; } = [];
 
     [Parameter] public bool IsWife { get; set; }
-
-    /// <summary>Whether a person may take this side at all: the server gates it on a transcriber being available.</summary>
-    [Parameter] public bool AllowHuman { get; set; } = true;
 
     [Parameter] public MatchSide? Side { get; set; }
 
@@ -70,13 +38,7 @@
 
     private string Label => Caption is { Length: > 0 } caption ? caption : IsWife ? "Wife" : "Husband";
 
-    private string Tag { get; set; } = string.Empty;
-
-    private string? TagError { get; set; }
-
-    private bool IsHumanChosen { get; set; }
-
-    private string SelectedKey => IsHumanChosen ? HumanKey : Side?.Id ?? string.Empty;
+    private string SelectedKey => Side?.Id ?? string.Empty;
 
     private sealed record Choice(string Key, string Label);
 
@@ -85,47 +47,12 @@
         .. Cast.Where(p => AnyRole || p.Persona.Role == (IsWife ? ProfileRole.Wife : ProfileRole.Husband))
             .Where(p => !string.Equals(p.Persona.Initials, Excluded, StringComparison.OrdinalIgnoreCase))
             .Select(p => new Choice(p.Persona.Initials, $"{p.Persona.Name ?? p.Persona.Initials} ({p.Persona.Initials})")),
-        .. AllowHuman ? new[] { new Choice(HumanKey, "🎤 A person at the microphone") } : [],
     ];
 
     private async Task OnChoiceChanged(string key)
     {
-        IsHumanChosen = string.Equals(key, HumanKey, StringComparison.Ordinal);
-        if (IsHumanChosen)
-        {
-            // A person must say who they are before they can argue: the debate goes on their record.
-            await PublishAsync(Tag.Length == 0 ? null : BuildHuman(Tag));
-            return;
-        }
-
-        TagError = null;
         var persona = Cast.FirstOrDefault(p => string.Equals(p.Persona.Initials, key, StringComparison.OrdinalIgnoreCase));
         await PublishAsync(persona is null ? null : MatchSide.Persona(persona.Persona.Initials, persona.Persona.Name));
-    }
-
-    private async Task OnTagChanged(string value)
-    {
-        Tag = value ?? string.Empty;
-        await PublishAsync(BuildHuman(Tag));
-    }
-
-    private MatchSide? BuildHuman(string raw)
-    {
-        var tag = Initials.Normalize(raw);
-        if (tag.Length == 0)
-        {
-            TagError = raw.Length == 0 ? null : "A tag is 1–3 letters or digits.";
-            return null;
-        }
-
-        if (string.Equals(tag, Excluded, StringComparison.OrdinalIgnoreCase))
-        {
-            TagError = "That tag is already arguing the other side.";
-            return null;
-        }
-
-        TagError = null;
-        return MatchSide.Human(tag);
     }
 
     private Task PublishAsync(MatchSide? side)

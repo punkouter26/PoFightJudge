@@ -1,0 +1,39 @@
+@* What the argument is about: the same box, the same hint and the same way out of a blank mind on both channels. *@
+<section class="topic">
+    <RadzenFormField Text="@Label" Variant="Variant.Outlined">
+        <ChildContent>
+            @* Published as it is typed, so nothing is lost by pressing Start without leaving the box first. *@
+            <RadzenTextBox Value="@Value" ValueChanged="@PublishAsync" @oninput="@(e => PublishAsync(e.Value?.ToString() ?? string.Empty))"
+                           Name="topic" MaxLength="200" Placeholder="@Placeholder" />
+        </ChildContent>
+        <Helper><span class="po-muted">@Hint</span></Helper>
+    </RadzenFormField>
+    <RadzenButton Text="Random" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@PickRandomAsync" />
+</section>
+
+@code {
+    private static readonly string[] RandomTopics =
+    [
+        "the thermostat", "whose turn it is to load the dishwasher", "the in-laws at Christmas",
+        "screen time after nine", "who forgot the anniversary", "the correct way to load a car",
+        "leaving every light on", "weekend plans, again", "whose family we visit first",
+    ];
+
+    [Parameter] public string Value { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter] public string Label { get; set; } = "What is the fight about?";
+
+    [Parameter] public string Placeholder { get; set; } = "the thermostat";
+
+    [Parameter] public string Hint { get; set; } = "Leave it blank and they will find something.";
+
+    private Task PublishAsync(string value)
+    {
+        Value = value ?? string.Empty;
+        return ValueChanged.InvokeAsync(Value);
+    }
+
+    private Task PickRandomAsync() => PublishAsync(RandomTopics[Random.Shared.Next(RandomTopics.Length)]);
+}

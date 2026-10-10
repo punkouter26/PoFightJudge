@@ -1,0 +1,41 @@
+@* The first screen of setting up an argument, either kind: the two choices, and the pair they make. What still has
+   to be decided is said as a plain hint until somebody has touched something; only then is it a warning — a form
+   that opens with an alert about fields nobody has seen yet is telling them off for arriving. *@
+<div class="step">
+    <section class="sides">@Sides</section>
+    <section class="preview" aria-label="@PreviewLabel">
+        @First
+        <div class="versus po-display" aria-hidden="true">vs</div>
+        @Second
+    </section>
+</div>
+
+@if (Problem is { Length: > 0 })
+{
+    @if (Touched)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
+    }
+    else
+    {
+        <p class="po-muted todo">@Problem</p>
+    }
+}
+
+@code {
+    /// <summary>The pickers or tag boxes that choose the two sides.</summary>
+    [Parameter, EditorRequired] public RenderFragment Sides { get; set; } = default!;
+
+    /// <summary>The card for the first side, and the second: what the choices so far add up to.</summary>
+    [Parameter, EditorRequired] public RenderFragment First { get; set; } = default!;
+
+    [Parameter, EditorRequired] public RenderFragment Second { get; set; } = default!;
+
+    [Parameter] public string PreviewLabel { get; set; } = "The matchup";
+
+    /// <summary>Why this step is not finished yet, or null when it is.</summary>
+    [Parameter] public string? Problem { get; set; }
+
+    /// <summary>Whether anything on the step has been changed by hand yet.</summary>
+    [Parameter] public bool Touched { get; set; }
+}

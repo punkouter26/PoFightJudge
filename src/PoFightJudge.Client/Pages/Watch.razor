@@ -38,13 +38,13 @@
             <RadzenSteps @bind-SelectedIndex="_step" ShowStepsButtons="true" class="wizard" NextText="Next" PreviousText="Back">
                 <Steps>
                     <RadzenStepsItem Text="Cast">
-                        <div class="cast-step">
-                            <section class="sides">
+                        <SetupStep Problem="@Problem" Touched="@_touched">
+                            <Sides>
                                 @if (IsOnePlayer)
                                 {
                                     @* One choice: who you are arguing with. Which seat that leaves you is a consequence of
                                        their role, not a second question. *@
-                                    <ProfilePicker Cast="@_cast" AnyRole="true" AllowHuman="false" Caption="Who are you arguing with?"
+                                    <ProfilePicker Cast="@_cast" AnyRole="true" Caption="Who are you arguing with?"
                                                    Side="@_opponent" SideChanged="@OpponentChosenAsync" />
                                     <div class="you po-card po-card--quiet">
                                         <span class="po-eyebrow">You</span>
@@ -63,34 +63,17 @@
                                 }
                                 else
                                 {
-                                    <ProfilePicker Cast="@_cast" IsWife="false" AllowHuman="false" Excluded="@_wife?.Id" Side="@_husband" SideChanged="@(s => _husband = s)" />
-                                    <ProfilePicker Cast="@_cast" IsWife="true" AllowHuman="false" Excluded="@_husband?.Id" Side="@_wife" SideChanged="@(s => _wife = s)" />
+                                    <ProfilePicker Cast="@_cast" IsWife="false" Excluded="@_wife?.Id" Side="@_husband" SideChanged="@(s => (_husband, _touched) = (s, true))" />
+                                    <ProfilePicker Cast="@_cast" IsWife="true" Excluded="@_husband?.Id" Side="@_wife" SideChanged="@(s => (_wife, _touched) = (s, true))" />
                                 }
-                            </section>
-
-                            <section class="preview" aria-label="The matchup">
-                                <SpeakerCard Side="@_husband" Profile="@ProfileFor(_husband)" IsWife="false" />
-                                <div class="versus po-display" aria-hidden="true">vs</div>
-                                <SpeakerCard Side="@_wife" Profile="@ProfileFor(_wife)" IsWife="true" />
-                            </section>
-                        </div>
-
-                        @if (Problem is { Length: > 0 })
-                        {
-                            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">@Problem</RadzenAlert>
-                        }
+                            </Sides>
+                            <First><SpeakerCard Side="@_husband" Profile="@ProfileFor(_husband)" IsWife="false" /></First>
+                            <Second><SpeakerCard Side="@_wife" Profile="@ProfileFor(_wife)" IsWife="true" /></Second>
+                        </SetupStep>
                     </RadzenStepsItem>
 
                     <RadzenStepsItem Text="About" Disabled="@(Problem is not null)">
-                        <section class="topic">
-                            <RadzenFormField Text="What is the fight about?" Variant="Variant.Outlined">
-                                <ChildContent>
-                                    <RadzenTextBox @bind-Value="_topic" Name="topic" MaxLength="200" Placeholder="the thermostat" />
-                                </ChildContent>
-                                <Helper><span class="po-muted">Leave it blank and they will find something.</span></Helper>
-                            </RadzenFormField>
-                            <RadzenButton Text="Random" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@PickRandomTopic" />
-                        </section>
+                        <TopicField @bind-Value="_topic" />
 
                         <div class="go">
                             <RadzenButton Text="Start the argument" Icon="theaters" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large" Disabled="@(Problem is not null)" Click="@Start" />
@@ -120,6 +103,9 @@
     private string _tag = string.Empty;
     private string _topic = string.Empty;
     private bool _loading = true;
+
+    /// <summary>Whether a side or a tag has been chosen by hand yet. Until then, what is missing is a hint, not a warning.</summary>
+    private bool _touched;
     private string? _loadError;
     private bool? _channel;
 
@@ -174,6 +160,7 @@
 
     private Task TagChangedAsync(string value)
     {
+        _touched = true;
         _tag = value ?? string.Empty;
         return SeatAsync();
     }
@@ -251,8 +238,6 @@
 
     private ProfileDto? ProfileFor(MatchSide? side) =>
         side is null || side.IsHuman ? null : _cast.FirstOrDefault(p => string.Equals(p.Persona.Initials, side.Id, StringComparison.OrdinalIgnoreCase));
-
-    private void PickRandomTopic() => _topic = RandomTopics[Random.Shared.Next(RandomTopics.Length)];
 
     /// <summary>
     /// Opens on the last matchup, or on a rematch if one was asked for. Only sides still in the cast are restored:
