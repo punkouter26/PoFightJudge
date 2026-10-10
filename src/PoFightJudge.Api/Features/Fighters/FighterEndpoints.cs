@@ -82,6 +82,7 @@ public sealed class FighterEndpoints : ICarterModule
         IFighterRepository fighters,
         IFighterResultRepository results,
         IFighterWordsRepository words,
+        IMatchRepository matches,
         CancellationToken ct)
     {
         if (await fighters.GetAsync(tag, ct) is not { } fighter)
@@ -94,7 +95,7 @@ public sealed class FighterEndpoints : ICarterModule
 
         // Every debate, not the model's bounded corpus: a career number that quietly stopped counting at twelve
         // would be wrong in a way nobody could see from the page.
-        var spoken = await words.ListAsync(tag, ct);
+        var spoken = await words.MineAsync(matches, tag, user.UserId(), ct);
         return Results.Ok(new FighterProfileDto(
             dto,
             FighterStatsBuilder.Build(dto, rows),

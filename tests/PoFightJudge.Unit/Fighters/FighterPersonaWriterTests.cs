@@ -30,11 +30,15 @@ public sealed class FighterPersonaWriterTests
     private readonly InMemoryFighterResultRepository _results = new();
     private readonly InMemoryFighterWordsRepository _words = new();
     private readonly InMemoryProfileRepository _profiles = new();
+    private readonly InMemoryMatchRepository _matches;
+
+    public FighterPersonaWriterTests() => _matches = new InMemoryMatchRepository(new InMemoryWatchResultRepository(), _results, _words);
 
     private FighterPersonaWriter Writer(IGeminiText? gemini = null) => new(
         _fighters,
         _results,
         _words,
+        _matches,
         _profiles,
         gemini ?? new FakeGeminiText(new AiLatencyTracker(), TimeSpan.Zero),
         GeminiModelOptions.Defaults,
@@ -93,7 +97,7 @@ public sealed class FighterPersonaWriterTests
 
     /// <summary>What the pipeline stores for one side once the fight is read: their own words, in order.</summary>
     private Task SaidAsync(MatchDto match, string tag, Speaker side, MappedTranscript transcript, DateTimeOffset at) =>
-        _words.SaveAsync(SpokenDebate.From(tag, match.Id, at, MatchMode.Fight, transcript.For(side).OrderBy(w => w.Start).Select(w => w.Text)));
+        _words.SaveAsync(SpokenDebate.From(tag, match.Id, at, MatchMode.Fight, transcript.For(side).OrderBy(w => w.Start).Select(w => w.Text)) with { UserId = match.UserId });
 
     private static PlayerAssessmentDto Assessment(string tone, string quote) => new(
         "B2", "clear enough", 1, ["a slip"], 6, 7, 8, [new FallacyDto("Appeal to authority", quote)], 5, 6, 7, 80, [],
@@ -105,7 +109,22 @@ public sealed class FighterPersonaWriterTests
     {
         var (match, report) = await FoughtAsync();
 
-        await Writer().WriteAsync(match, report, CancellationToken.None);
+        // Somebody else typed the same three letters into their own account. What they said is not this person's.
+        await _words.SaveAsync(SpokenDebate.From("KKK", MatchId.New(), Now, MatchMode.Fight, ["PINEAPPLE", "belongs", "on", "pizza"]) with { UserId = "user-2" });
+        var gemini = Substitute.For<IGeminiText>();
+        var real = new FakeGeminiText(new AiLatencyTracker(), TimeSpan.Zero);
+        var prompts = new List<string>();
+        gemini.GenerateAsync(Arg.Any<GeminiTextRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var prompt = call.Arg<GeminiTextRequest>().Prompt;
+            prompts.Add(prompt.System + prompt.User);
+            return real.GenerateAsync(call.Arg<GeminiTextRequest>(), call.Arg<CancellationToken>());
+        });
+
+        await Writer(gemini).WriteAsync(match, report, CancellationToken.None);
+
+        prompts.Should().NotBeEmpty().And.NotContain(p => p.Contains("PINEAPPLE", StringComparison.Ordinal), "words stay with the account that said them");
+        prompts.Should().Contain(p => p.Contains("greatest", StringComparison.Ordinal), "their own are what the persona is read from");
 
         var kkk = await _profiles.GetByIdAsync(ProfileId.From("KKK"));
         kkk.Should().NotBeNull("KKK can now be picked for a CPU or 1P argument");

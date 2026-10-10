@@ -3,6 +3,7 @@ using System.Text;
 using Azure;
 using Azure.Data.Tables;
 using PoFightJudge.Api.Common;
+using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Api.Features.Storage;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -37,6 +38,12 @@ public sealed record SpokenDebate(string Tag, MatchId MatchId, DateTimeOffset At
     }
 
     public bool IsEmpty => string.IsNullOrWhiteSpace(Said);
+
+    /// <summary>
+    /// Whose account the debate was argued in. A tag is three letters anybody can type, so two accounts can share
+    /// one; what was said under it stays with whoever said it. Empty on rows written before this was recorded.
+    /// </summary>
+    public string UserId { get; init; } = string.Empty;
 }
 
 /// <summary>
@@ -131,6 +138,8 @@ public sealed class FighterWordsEntity : ITableEntity
 
     public string Said { get; set; } = string.Empty;
 
+    public string UserId { get; set; } = string.Empty;
+
     public static FighterWordsEntity From(SpokenDebate debate)
     {
         ArgumentNullException.ThrowIfNull(debate);
@@ -141,6 +150,7 @@ public sealed class FighterWordsEntity : ITableEntity
             At = debate.At,
             Mode = debate.Mode.ToString(),
             Said = debate.Said,
+            UserId = debate.UserId,
         };
     }
 
@@ -149,7 +159,38 @@ public sealed class FighterWordsEntity : ITableEntity
         MatchId.From(RowKey),
         At,
         Enum.TryParse<MatchMode>(Mode, ignoreCase: true, out var mode) ? mode : MatchMode.Fight,
-        Said);
+        Said)
+    { UserId = UserId ?? string.Empty };
+}
+
+public static class FighterWords
+{
+    /// <summary>
+    /// What one account said under a tag, newest first. A row from before accounts were recorded is theirs only if
+    /// the debate it came from is.
+    /// </summary>
+    public static async Task<IReadOnlyList<SpokenDebate>> MineAsync(
+        this IFighterWordsRepository words,
+        IMatchRepository matches,
+        FighterId tag,
+        string userId,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(words);
+        ArgumentNullException.ThrowIfNull(matches);
+
+        var mine = new List<SpokenDebate>();
+        foreach (var debate in await words.ListAsync(tag, ct))
+        {
+            if (string.Equals(debate.UserId, userId, StringComparison.Ordinal)
+                || (debate.UserId.Length == 0 && await matches.GetAsync(userId, debate.MatchId, ct) is not null))
+            {
+                mine.Add(debate);
+            }
+        }
+
+        return mine;
+    }
 }
 
 /// <summary>

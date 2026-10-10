@@ -252,7 +252,7 @@ public sealed partial class AnalysisPipeline(
         foreach (var (side, speaker) in new[] { (match.Side1, Speaker.Player1), (match.Side2, Speaker.Player2) }.Where(s => s.Item1.IsHuman))
         {
             await words.SaveAsync(
-                SpokenDebate.From(side.Id, match.Id, at, MatchMode.Fight, transcript.For(speaker).OrderBy(w => w.Start).Select(w => w.Text)),
+                SpokenDebate.From(side.Id, match.Id, at, MatchMode.Fight, transcript.For(speaker).OrderBy(w => w.Start).Select(w => w.Text)) with { UserId = match.UserId },
                 ct);
         }
     }

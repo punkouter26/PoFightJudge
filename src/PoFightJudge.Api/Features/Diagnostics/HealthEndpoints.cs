@@ -55,7 +55,8 @@ public sealed class HealthEndpoints : ICarterModule
     {
         var present = !string.IsNullOrWhiteSpace(value);
         var state = present ? HealthState.Ok : required ? HealthState.Failed : HealthState.NotConfigured;
-        checks.Add(new HealthCheckDto(name, state, present ? SecretMasker.Mask(value) : "not set", HealthCategory.Configuration));
+        // Present or not, and nothing more: this route answers anybody, and eight characters of a key is eight too many.
+        checks.Add(new HealthCheckDto(name, state, present ? "set" : "not set", HealthCategory.Configuration));
     }
 
     private static HealthState Map(HealthStatus status) => status switch

@@ -29,6 +29,7 @@ public sealed partial class FighterPersonaWriter(
     IFighterRepository fighters,
     IFighterResultRepository results,
     IFighterWordsRepository words,
+    IMatchRepository matches,
     IProfileRepository profiles,
     IGeminiText gemini,
     GeminiModelOptions models,
@@ -42,16 +43,16 @@ public sealed partial class FighterPersonaWriter(
 
         if (match.Side1.IsHuman)
         {
-            await WriteOneAsync(match.Side1.Id, report?.Player1.Assessment, ct);
+            await WriteOneAsync(match.Side1.Id, match.UserId, report?.Player1.Assessment, ct);
         }
 
         if (match.Side2.IsHuman)
         {
-            await WriteOneAsync(match.Side2.Id, report?.Player2.Assessment, ct);
+            await WriteOneAsync(match.Side2.Id, match.UserId, report?.Player2.Assessment, ct);
         }
     }
 
-    private async Task WriteOneAsync(string tag, PlayerAssessmentDto? assessment, CancellationToken ct)
+    private async Task WriteOneAsync(string tag, string userId, PlayerAssessmentDto? assessment, CancellationToken ct)
     {
         try
         {
@@ -74,9 +75,10 @@ public sealed partial class FighterPersonaWriter(
 
             var style = StyleProfileBuilder.Build(tag, await results.ListForAnyoneAsync(id, ct));
 
-            // Everything they have ever said, this debate included: the words are the evidence, and a person who
-            // has argued five times has told us five times as much about how they argue.
-            var corpus = SpokenCorpus.From(await words.ListAsync(id, ct));
+            // Everything they have ever said in this account, this debate included: the words are the evidence, and
+            // a person who has argued five times has told us five times as much about how they argue. Somebody else
+            // typing the same tag into their own account is a different person, and their words stay out of it.
+            var corpus = SpokenCorpus.From(await words.MineAsync(matches, id, userId, ct));
 
             CreateProfileRequest draft = new();
             for (var attempt = 0; attempt < 2; attempt++)

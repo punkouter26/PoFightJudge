@@ -294,7 +294,7 @@ public sealed class WatchEndpoints : ICarterModule
                 await fighterResults.SaveAsync([new FighterResultDto(side.Id, match.UserId, match.Id, MatchMode.Watch, now, match.Topic ?? string.Empty, opponent.Id, won, draw, score, style)], ct);
 
                 // And the words themselves, so a persona written after any later debate has this one to read too.
-                await fighterWords.SaveAsync(SpokenDebate.From(side.Id, match.Id, now, MatchMode.Watch, spoken), ct);
+                await fighterWords.SaveAsync(SpokenDebate.From(side.Id, match.Id, now, MatchMode.Watch, spoken) with { UserId = match.UserId }, ct);
             }
             else
             {
