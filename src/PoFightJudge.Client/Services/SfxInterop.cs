@@ -179,3 +179,13 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
         }
     }
 }
+
+/// <summary>
+/// A sound for something a page did — a step turned, a row removed. Asked of the container rather than injected,
+/// because a cue is decoration: a page rendered where there is no sound engine is silent, not broken.
+/// </summary>
+public static class Cues
+{
+    public static Task CueAsync(this IServiceProvider services, string sound, CancellationToken ct = default) =>
+        services.GetService(typeof(SfxInterop)) is SfxInterop sfx ? sfx.PlayAsync(sound, ct: ct) : Task.CompletedTask;
+}

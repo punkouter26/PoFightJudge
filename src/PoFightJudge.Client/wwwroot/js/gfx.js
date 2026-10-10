@@ -298,7 +298,6 @@ void main() {
           return;
         }
 
-        resize(mount);
         gl.viewport(0, 0, mount.canvas.width, mount.canvas.height);
         gl.useProgram(mount.program);
         gl.uniform2f(mount.u.res, mount.canvas.width, mount.canvas.height);
@@ -334,6 +333,41 @@ void main() {
     }
   }
 
+  // Compiles the shader into the mount's context and looks up what it takes. Run at mount, and again whenever a
+  // lost context is restored. False when the program will not build.
+  function build(entry) {
+    const gl = entry.gl;
+    const prog = program(gl, entry.source);
+    if (!prog) {
+      return false;
+    }
+
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    const position = gl.getAttribLocation(prog, "a_position");
+    gl.enableVertexAttribArray(position);
+    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    entry.program = prog;
+    entry.u = {
+      res: gl.getUniformLocation(prog, "u_res"),
+      time: gl.getUniformLocation(prog, "u_time"),
+      level: gl.getUniformLocation(prog, "u_level"),
+      side: gl.getUniformLocation(prog, "u_side"),
+      focus: gl.getUniformLocation(prog, "u_focus"),
+      shock: gl.getUniformLocation(prog, "u_shock"),
+      c1: gl.getUniformLocation(prog, "u_c1"),
+      c2: gl.getUniformLocation(prog, "u_c2"),
+      c3: gl.getUniformLocation(prog, "u_c3"),
+      mix: gl.getUniformLocation(prog, "u_mix"),
+      heat: gl.getUniformLocation(prog, "u_heat"),
+    };
+    return true;
+  }
+
   function mount(selector, shader, options) {
     if (reducedMotion() || mounts.has(selector)) {
       return false;
@@ -364,25 +398,13 @@ void main() {
       return false;
     }
 
-    const prog = program(gl, source);
-    if (!prog) {
-      return false;
-    }
-
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
-    const position = gl.getAttribLocation(prog, "a_position");
-    gl.enableVertexAttribArray(position);
-    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
     const entry = {
       host: host,
       canvas: canvas,
       gl: gl,
-      program: prog,
+      source: source,
+      program: null,
+      u: null,
       start: performance.now(),
       level: settings.level || null,
       tokens: settings.tokens || ["--po-p1", "--po-p2", "--po-danger"],
@@ -395,23 +417,27 @@ void main() {
       c1: [0.25, 0.66, 0.96],
       c2: [1.0, 0.31, 0.55],
       c3: [1.0, 0.35, 0.35],
-      u: {
-        res: gl.getUniformLocation(prog, "u_res"),
-        time: gl.getUniformLocation(prog, "u_time"),
-        level: gl.getUniformLocation(prog, "u_level"),
-        side: gl.getUniformLocation(prog, "u_side"),
-        focus: gl.getUniformLocation(prog, "u_focus"),
-        shock: gl.getUniformLocation(prog, "u_shock"),
-        c1: gl.getUniformLocation(prog, "u_c1"),
-        c2: gl.getUniformLocation(prog, "u_c2"),
-        c3: gl.getUniformLocation(prog, "u_c3"),
-        mix: gl.getUniformLocation(prog, "u_mix"),
-        heat: gl.getUniformLocation(prog, "u_heat"),
-      },
     };
+
+    if (!build(entry)) {
+      return false;
+    }
+
+    // The driver can take a context away (a laptop switching GPUs, a tab left in the background too long) and
+    // give it back later, empty. Saying "wait" on the first event is what makes the second one happen; on the
+    // second, everything compiled into the old context is compiled again.
+    canvas.addEventListener("webglcontextlost", function (e) { e.preventDefault(); });
+    canvas.addEventListener("webglcontextrestored", function () { build(entry); });
+
+    // Sized when the host's box changes rather than measured every frame.
+    if (typeof ResizeObserver === "function") {
+      entry.observer = new ResizeObserver(function () { resize(entry); });
+      entry.observer.observe(host);
+    }
 
     readColours(entry);
     host.appendChild(canvas);
+    resize(entry);
     mounts.set(selector, entry);
     watchTheme();
     pump();
@@ -425,6 +451,10 @@ void main() {
     }
 
     mounts.delete(selector);
+    if (entry.observer) {
+      entry.observer.disconnect();
+    }
+
     if (entry.canvas.parentNode) {
       entry.canvas.parentNode.removeChild(entry.canvas);
     }

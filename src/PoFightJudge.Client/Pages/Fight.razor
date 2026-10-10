@@ -14,7 +14,7 @@
         @* Three steps rather than one column. The whole thing was 1755 px on a phone: the sound check sat below the
            fold, under the button it is supposed to come before, which is how a fight dies on a muted headset.
            RadzenSteps keeps each question to a screen and keeps them in the order they are asked. *@
-        <RadzenSteps @bind-SelectedIndex="_step" ShowStepsButtons="true" class="wizard"
+        <RadzenSteps SelectedIndex="@_step" SelectedIndexChanged="@TurnAsync" ShowStepsButtons="true" class="wizard"
                      NextText="Next" PreviousText="Back">
             <Steps>
                 <RadzenStepsItem Text="Who">
@@ -83,6 +83,15 @@
 </PageShell>
 
 @code {
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    /// <summary>One question gives way to the next, and it sounds like it.</summary>
+    private Task TurnAsync(int step)
+    {
+        _step = step;
+        return Services.CueAsync(Sfx.Whoosh);
+    }
+
     private IReadOnlyList<FighterDto> _known = [];
     private string _one = string.Empty;
     private string _two = string.Empty;

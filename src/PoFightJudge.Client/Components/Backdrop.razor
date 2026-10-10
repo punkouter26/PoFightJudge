@@ -1,0 +1,36 @@
+@* The two sides' colours, moving slowly behind a page that has no argument on it yet. It is the shader the live
+   fight runs behind its stage, at rest. Decoration and nothing else: it sits under the whole page, takes no clicks,
+   is not drawn at all for anybody who asked for less motion, and a browser without WebGL2 simply shows the page. *@
+@implements IAsyncDisposable
+@inject IServiceProvider Services
+
+<div class="po-backdrop" aria-hidden="true"></div>
+
+@code {
+    private const string Selector = ".po-backdrop";
+
+    private GfxInterop? _gfx;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        // Asked for rather than injected: a page that is rendered without the effects layer is a page, not an error.
+        _gfx = Services.GetService<GfxInterop>();
+        if (_gfx is not null)
+        {
+            await _gfx.MountAsync(Selector, Shaders.Backdrop);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_gfx is not null)
+        {
+            await _gfx.UnmountAsync(Selector, CancellationToken.None);
+        }
+    }
+}

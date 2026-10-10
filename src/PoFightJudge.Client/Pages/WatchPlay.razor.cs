@@ -448,6 +448,15 @@ public sealed partial class WatchPlay : IAsyncDisposable
         DropPrefetch();
         await Fx.BurstAsync(heckle.Key, _leaving.Token);
 
+        // A phone in the hand feels it land. Nowhere else has a motor, and saying so is not worth an exception.
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.vibrate", _leaving.Token, 70);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+        }
+
         // The crack lands over the top of the line it interrupts, and the ring goes out from the middle of the
         // stage — one gesture in three places, which is the only reason it reads as a hit rather than a glitch.
         await Sound.PlayOverAsync(Sfx.Slap, 0.6, _leaving.Token);

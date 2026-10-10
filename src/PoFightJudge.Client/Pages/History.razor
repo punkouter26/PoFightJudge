@@ -178,6 +178,8 @@
 </PageShell>
 
 @code {
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
     /// <summary>How long to wait after the last keystroke before asking. Short enough to feel live, long enough that
     /// typing a word is one request rather than five.</summary>
     private static readonly TimeSpan TypingPause = TimeSpan.FromMilliseconds(300);
@@ -413,6 +415,9 @@
         try
         {
             await Api.DeleteMatchAsync(match.Id);
+
+            // Struck from the record.
+            await Services.CueAsync(Sfx.Gavel);
 
             // A new list rather than a removal: the grid is bound to the instance, and it re-reads when it changes.
             _matches = [.. _matches.Where(m => m.Id != match.Id)];

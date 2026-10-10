@@ -6,10 +6,8 @@
    eight bars behind it are the same thing with the frequencies kept apart: a level says how loud, a shape says it
    is a voice and not the fan.
 
-   T110: when the bar crosses into the danger zone, sparks are thrown from the lamp's corner. The level itself
-   never leaves the browser — a tiny observer in <c>js/level-clip.js</c> watches <c>--po-mic-level</c> and asks
-   <c>PoParticles.burst</c> to fire on the rising edge, then again whenever the level has stayed above the
-   threshold past a short cooldown. The bar paint path is unchanged. *@
+   When the level pins at the top the lamp throws sparks, at most once a second: mic.js asks PoParticles for
+   them from the same loop that publishes the level, so nothing about it leaves the browser. *@
 <div class="meter @(Listening ? "meter--on" : null)" role="status" aria-label="@Label">
     <span class="lamp" aria-hidden="true"></span>
     <span class="caption po-eyebrow">@Caption</span>

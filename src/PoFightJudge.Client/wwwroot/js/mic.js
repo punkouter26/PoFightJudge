@@ -76,13 +76,25 @@ window.PoMic = (function () {
 
   // The same custom property the live fight publishes, so one meter reads either. Painted by the browser rather
   // than pushed from .NET: a level is sixty small changes a second and none of them is worth a round trip.
+  const CLIPPING = 0.98;
+  let sparkedAt = 0;
+
   function pump() {
     if (!analyser) {
       return;
     }
 
-    publish(level());
+    const now = level();
+    publish(now);
     publishBands();
+
+    // Pinned at the top of the meter is a microphone being shouted into. The lamp throws sparks, at most once a
+    // second, so it reads as a warning rather than as the meter being on fire.
+    if (now >= CLIPPING && window.PoParticles && performance.now() - sparkedAt > 1000) {
+      sparkedAt = performance.now();
+      window.PoParticles.burst(".meter", "sparks", ".lamp");
+    }
+
     meterFrame = requestAnimationFrame(pump);
   }
 

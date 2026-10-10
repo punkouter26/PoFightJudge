@@ -35,7 +35,7 @@
             @* Two steps rather than one column: the cast, then what they argue about. The pickers, two speaker
                cards and a topic field came to more than a phone screen, and the button that starts it was under
                the fold. *@
-            <RadzenSteps @bind-SelectedIndex="_step" ShowStepsButtons="true" class="wizard" NextText="Next" PreviousText="Back">
+            <RadzenSteps SelectedIndex="@_step" SelectedIndexChanged="@TurnAsync" ShowStepsButtons="true" class="wizard" NextText="Next" PreviousText="Back">
                 <Steps>
                     <RadzenStepsItem Text="Cast">
                         <SetupStep Problem="@Problem" Touched="@_touched">
@@ -87,6 +87,15 @@
 </PageShell>
 
 @code {
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    /// <summary>One question gives way to the next, and it sounds like it.</summary>
+    private Task TurnAsync(int step)
+    {
+        _step = step;
+        return Services.CueAsync(Sfx.Whoosh);
+    }
+
     private static readonly string[] RandomTopics =
     [
         "the thermostat", "whose turn it is to load the dishwasher", "the in-laws at Christmas",
