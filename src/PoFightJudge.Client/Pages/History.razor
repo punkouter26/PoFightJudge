@@ -11,21 +11,19 @@
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="On the record" Title="History"
            Lead="Every argument you have been part of, both kinds, newest first.">
-    <Actions>
-        <RadzenSelectBar @bind-Value="_mode" TValue="MatchMode?" Change="@(_ => NarrowAsync())" Size="ButtonSize.Small">
-            <Items>
-                <RadzenSelectBarItem Text="All" Value="@((MatchMode?)null)" />
-                <RadzenSelectBarItem Text="Watches" Value="@((MatchMode?)MatchMode.Watch)" />
-                <RadzenSelectBarItem Text="Fights" Value="@((MatchMode?)MatchMode.Fight)" />
-            </Items>
-        </RadzenSelectBar>
-    </Actions>
     <ChildContent>
         @* A wrapper this page owns, and nothing more (display: contents). Scoped CSS reaches into a child component
            only from an element written here: without one, every ::deep rule for this page matches nothing. *@
         <div class="po-scope">
         @* Narrowing happens on the server: the browser never holds the whole history, only the page it is showing. *@
         <section class="narrow" aria-label="Narrow the list">
+            <RadzenSelectBar @bind-Value="_mode" TValue="MatchMode?" Change="@(_ => NarrowAsync())" Size="ButtonSize.Small" aria-label="Which kind of argument">
+                <Items>
+                    <RadzenSelectBarItem Text="All" Value="@((MatchMode?)null)" />
+                    <RadzenSelectBarItem Text="Watches" Value="@((MatchMode?)MatchMode.Watch)" />
+                    <RadzenSelectBarItem Text="Fights" Value="@((MatchMode?)MatchMode.Fight)" />
+                </Items>
+            </RadzenSelectBar>
             <RadzenFormField Text="Search" Variant="Variant.Outlined" class="find">
                 <ChildContent>
                     <RadzenTextBox Value="@_text" @oninput="@OnTextTyped" Name="find" MaxLength="80"
@@ -57,7 +55,13 @@
             <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" Close="@(() => _error = null)">@_error</RadzenAlert>
         }
 
-        @if (_loading)
+        @* The placeholder is for the first read only. After that the grid stays where it is and says it is busy:
+           swapping it out on every page click and every letter typed made the page jump and lost the pager's place. *@
+        @if (!_loaded)
+        {
+            <LoadingRows Count="3" Label="Loading your history" />
+        }
+        else if (_matches.Count == 0 && _loading)
         {
             <LoadingRows Count="3" Label="Loading your history" />
         }
@@ -80,8 +84,9 @@
         else
         {
             @* Count and PageSize come from the server: the grid is showing one page of a list it has never seen. *@
-            <RadzenDataGrid Data="@_matches" TItem="MatchDto" AllowSorting="true" AllowPaging="true"
-                            Count="@_total" PageSize="@MatchQuery.DefaultTake" LoadData="@OnPageAsync" class="history">
+            <RadzenDataGrid Data="@_matches" TItem="MatchDto" AllowSorting="true" AllowPaging="true" IsLoading="@_loading"
+                            Count="@_total" PageSize="@_take" PageSizeOptions="@PageSizes" ShowPagingSummary="true"
+                            LoadData="@OnPageAsync" class="history">
                 <Columns>
                     @* A phone gets the same five facts stacked into one cell. Hiding the columns with CSS is not
                        enough: the grid lays itself out from the widths they declare, so a hidden column is still
@@ -184,18 +189,26 @@
     private DateTime? _from;
     private DateTime? _to;
     private int _skip;
+    private int _take = MatchQuery.DefaultTake;
     private int _total;
+    private MatchSort _sort = MatchSort.Newest;
+
+    /// <summary>False until the first answer is in: the only time there is nothing on screen to keep in place.</summary>
+    private bool _loaded;
+
+    private static readonly int[] PageSizes = [MatchQuery.DefaultTake, 30, 50];
     private CancellationTokenSource? _typing;
     private bool _loading = true;
     private string? _error;
 
     /// <summary>Whether anything has been asked of the list. Decides which empty state is the true one.</summary>
-    private bool IsNarrowed => _text.Trim().Length > 0 || _from is not null || _to is not null;
+    private bool IsNarrowed => _mode is not null || _text.Trim().Length > 0 || _from is not null || _to is not null;
 
     protected override async Task OnInitializedAsync()
     {
         Viewport.Changed += OnViewportChanged;
         await Viewport.InitializeAsync();
+        ReadAddress();
         await LoadAsync();
     }
 
@@ -218,11 +231,12 @@
         {
             // The To date is a day, and somebody who picks it means the end of it rather than midnight at its start.
             var page = await Api.GetMatchPageAsync(
-                new MatchQuery(_mode, _text, _from, _to?.Date.AddDays(1).AddTicks(-1), _skip, MatchQuery.DefaultTake),
+                new MatchQuery(_mode, _text, _from, _to?.Date.AddDays(1).AddTicks(-1), _skip, _take, _sort),
                 _leaving.Token);
 
             _matches = page.Matches;
             _total = page.Total;
+            WriteAddress();
         }
         catch (OperationCanceledException)
         {
@@ -239,6 +253,41 @@
         finally
         {
             _loading = false;
+            _loaded = true;
+        }
+    }
+
+    /// <summary>
+    /// What is being asked for lives in the address as well as on the page, so coming back from an argument, a
+    /// reload, or a link somebody saved all open the same list rather than the first page of everything.
+    /// </summary>
+    private void ReadAddress()
+    {
+        var asked = System.Web.HttpUtility.ParseQueryString(new Uri(Nav.Uri).Query);
+        _text = asked["find"] ?? string.Empty;
+        _mode = Enum.TryParse<MatchMode>(asked["kind"], ignoreCase: true, out var mode) ? mode : null;
+        _sort = Enum.TryParse<MatchSort>(asked["sort"], ignoreCase: true, out var sort) ? sort : MatchSort.Newest;
+        _from = DateTime.TryParseExact(asked["from"], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var from) ? from : null;
+        _to = DateTime.TryParseExact(asked["to"], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var to) ? to : null;
+        _skip = int.TryParse(asked["skip"], NumberStyles.None, CultureInfo.InvariantCulture, out var skip) ? skip : 0;
+    }
+
+    /// <summary>Replaces the entry rather than adding one: Back should leave the page, not undo a letter of a search.</summary>
+    private void WriteAddress()
+    {
+        var address = Nav.GetUriWithQueryParameters(new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["find"] = _text.Trim().Length == 0 ? null : _text.Trim(),
+            ["kind"] = _mode?.ToString().ToLowerInvariant(),
+            ["sort"] = _sort == MatchSort.Newest ? null : _sort.ToString(),
+            ["from"] = _from?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["to"] = _to?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["skip"] = _skip == 0 ? null : _skip,
+        });
+
+        if (!string.Equals(address, Nav.Uri, StringComparison.Ordinal))
+        {
+            Nav.NavigateTo(address, replace: true);
         }
     }
 
@@ -280,17 +329,39 @@
 
     private Task ClearAsync()
     {
+        _mode = null;
         _text = string.Empty;
         _from = null;
         _to = null;
         return NarrowAsync();
     }
 
-    /// <summary>The grid asking for a page. Only the offset changes; everything else is already what it is.</summary>
+    /// <summary>The grid asking for a page, a page size or an order. The list is the server's, so all three are asked of it.</summary>
     private Task OnPageAsync(LoadDataArgs args)
     {
-        _skip = args.Skip ?? 0;
+        var skip = args.Skip ?? 0;
+        var take = args.Top ?? _take;
+        var sort = SortOf(args.OrderBy);
+        if (skip == _skip && take == _take && sort == _sort && _loaded)
+        {
+            // The grid asks again whenever it is handed a new list. Nothing it wants has changed.
+            return Task.CompletedTask;
+        }
+
+        // A new order or a new page size is a new list: page four of it is somewhere else entirely.
+        _skip = sort != _sort || take != _take ? 0 : skip;
+        (_take, _sort) = (take, sort);
         return LoadAsync();
+    }
+
+    /// <summary>Radzen names the column and the direction, as in "Topic desc". Two columns can be sorted on; anything else is newest first.</summary>
+    internal static MatchSort SortOf(string? orderBy)
+    {
+        var asked = orderBy ?? string.Empty;
+        var descending = asked.EndsWith(" desc", StringComparison.OrdinalIgnoreCase);
+        return asked.StartsWith(nameof(MatchDto.Topic), StringComparison.OrdinalIgnoreCase) ? (descending ? MatchSort.TopicDescending : MatchSort.TopicAscending)
+            : asked.StartsWith(nameof(MatchDto.StartedAt), StringComparison.OrdinalIgnoreCase) && !descending ? MatchSort.Oldest
+            : MatchSort.Newest;
     }
 
     /// <summary>
@@ -337,6 +408,14 @@
 
             // A new list rather than a removal: the grid is bound to the instance, and it re-reads when it changes.
             _matches = [.. _matches.Where(m => m.Id != match.Id)];
+            _total = Math.Max(0, _total - 1);
+
+            // The last row of a page that is not the first: there is more history, and it is one page back.
+            if (_matches.Count == 0 && _total > 0)
+            {
+                _skip = Math.Max(0, _skip - _take);
+                await LoadAsync();
+            }
         }
         catch (ApiException ex)
         {

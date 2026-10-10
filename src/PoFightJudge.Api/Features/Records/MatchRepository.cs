@@ -91,7 +91,7 @@ public sealed class MatchRepository(TableServiceClient tables) : IMatchRepositor
                 matches.Add(entity.ToDto());
             }
 
-            var found = matches.Where(m => Matches(m, sane.Text)).OrderByDescending(m => m.StartedAt).ToList();
+            var found = sane.Order(matches.Where(m => Matches(m, sane.Text))).ToList();
             return new MatchPageDto([.. found.Skip(sane.Skip).Take(sane.Take)], found.Count, sane.Skip, sane.Take);
         }, ct);
     }

@@ -16,7 +16,7 @@
 }
 
 /* The search box takes the room; the two dates sit at their natural width beside it. */
-.narrow .find {
+.narrow ::deep .find {
   flex: 1 1 16rem;
 }
 

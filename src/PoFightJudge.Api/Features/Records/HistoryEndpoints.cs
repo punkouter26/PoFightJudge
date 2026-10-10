@@ -48,10 +48,11 @@ public sealed class HistoryEndpoints : ICarterModule
         DateTimeOffset? to,
         int? skip,
         int? take,
+        MatchSort? sort,
         CancellationToken ct) =>
         await matches.PageAsync(
             user.UserId(),
-            new MatchQuery(mode, q, from, to, skip ?? 0, take ?? MatchQuery.DefaultTake),
+            new MatchQuery(mode, q, from, to, skip ?? 0, take ?? MatchQuery.DefaultTake, sort ?? MatchSort.Newest),
             ct);
     private static async Task<IResult> GetAsync(MatchId id, ClaimsPrincipal user, IMatchRepository matches, CancellationToken ct) =>
         await matches.GetAsync(user.UserId(), id, ct) is { } match ? Results.Ok(match) : Results.NotFound();

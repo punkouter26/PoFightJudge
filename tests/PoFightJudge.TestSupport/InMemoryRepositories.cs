@@ -235,13 +235,12 @@ public sealed class InMemoryMatchRepository(IWatchResultRepository watchResults,
     {
         ArgumentNullException.ThrowIfNull(query);
         var sane = query.Sane();
-        var found = _matches.Values
-            .Where(m => string.Equals(m.UserId, userId, StringComparison.Ordinal))
-            .Where(m => sane.Mode is null || m.Mode == sane.Mode)
-            .Where(m => sane.From is null || m.StartedAt >= sane.From)
-            .Where(m => sane.To is null || m.StartedAt <= sane.To)
-            .Where(m => Matches(m, sane.Text))
-            .OrderByDescending(m => m.StartedAt)
+        var found = sane.Order(_matches.Values
+                .Where(m => string.Equals(m.UserId, userId, StringComparison.Ordinal))
+                .Where(m => sane.Mode is null || m.Mode == sane.Mode)
+                .Where(m => sane.From is null || m.StartedAt >= sane.From)
+                .Where(m => sane.To is null || m.StartedAt <= sane.To)
+                .Where(m => Matches(m, sane.Text)))
             .ToList();
 
         return Task.FromResult(new MatchPageDto([.. found.Skip(sane.Skip).Take(sane.Take)], found.Count, sane.Skip, sane.Take));

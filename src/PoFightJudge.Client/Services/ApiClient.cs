@@ -443,6 +443,11 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         var sane = query.Sane();
 
         var parts = new List<string> { $"skip={sane.Skip}", $"take={sane.Take}" };
+        if (sane.Sort != MatchSort.Newest)
+        {
+            parts.Add($"sort={sane.Sort}");
+        }
+
         if (sane.Mode is { } mode)
         {
             parts.Add($"mode={mode}");

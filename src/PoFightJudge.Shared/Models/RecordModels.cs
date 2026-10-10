@@ -351,6 +351,16 @@ public sealed record HeadToHeadDto(
     public bool NeverMet => Meetings == 0;
 }
 
+/// <summary>The orders a history list can be read in. Newest first is what anybody means until they say otherwise.</summary>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<MatchSort>))]
+public enum MatchSort
+{
+    Newest,
+    Oldest,
+    TopicAscending,
+    TopicDescending,
+}
+
 /// <summary>
 /// How a history list is narrowed. Every part is optional; all of them together are an AND. The text runs over the
 /// topic, both sides and the winner, because those are the four things somebody remembers about an argument.
@@ -361,12 +371,22 @@ public sealed record MatchQuery(
     DateTimeOffset? From = null,
     DateTimeOffset? To = null,
     int Skip = 0,
-    int Take = MatchQuery.DefaultTake)
+    int Take = MatchQuery.DefaultTake,
+    MatchSort Sort = MatchSort.Newest)
 {
     public const int DefaultTake = 15;
 
     /// <summary>A ceiling on what one request can ask for, so a hand-written URL cannot pull the whole table.</summary>
     public const int MaxTake = 100;
+
+    /// <summary>The list in the order this query asks for. One place, so the table and the test stand-in cannot disagree.</summary>
+    public IOrderedEnumerable<MatchDto> Order(IEnumerable<MatchDto> matches) => Sort switch
+    {
+        MatchSort.Oldest => matches.OrderBy(m => m.StartedAt),
+        MatchSort.TopicAscending => matches.OrderBy(m => m.Topic, StringComparer.OrdinalIgnoreCase).ThenByDescending(m => m.StartedAt),
+        MatchSort.TopicDescending => matches.OrderByDescending(m => m.Topic, StringComparer.OrdinalIgnoreCase).ThenByDescending(m => m.StartedAt),
+        _ => matches.OrderByDescending(m => m.StartedAt),
+    };
 
     /// <summary>The same query with its numbers forced into range: a negative skip and a take of a million are both refusals.</summary>
     public MatchQuery Sane() => this with

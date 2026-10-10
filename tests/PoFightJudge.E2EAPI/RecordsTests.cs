@@ -158,5 +158,11 @@ public class RecordsTests(ApiFactory factory)
         first.Total.Should().Be(5, "the count is of everything behind the page, not of the page");
         second!.Matches.Should().HaveCount(2);
         second.Matches.Should().NotIntersectWith(first.Matches);
+
+        // And in the order asked for: the grid's column headers are answered by the server, which has the whole list.
+        var oldest = await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?take=5&sort=Oldest");
+        oldest!.Matches.Select(m => m.StartedAt).Should().BeInAscendingOrder();
+        oldest.Matches.Select(m => m.Id).Should().Equal(
+            (await client.GetFromJsonAsync<MatchPageDto>($"{ApiRoutes.Matches.Base}?take=5"))!.Matches.Select(m => m.Id).Reverse());
     }
 }

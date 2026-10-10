@@ -95,6 +95,12 @@ public class HistoryPageTests : BunitContext
         cut.FindComponents<ModeBadge>().Select(b => b.Instance.Mode)
             .Should().BeEquivalentTo([MatchMode.Watch, MatchMode.Fight]);
         cut.Markup.Should().Contain("the thermostat").And.Contain("who forgot the bins");
+
+        // A click on a column header is an order the server is asked for, not one the page pretends to have.
+        _api.ReceivedCalls().Should().Contain(c => c.GetArguments().OfType<MatchQuery>().Any(q => q.Sort == MatchSort.Newest));
+        MatchQuery.DefaultTake.Should().BePositive();
+        new MatchQuery(Sort: MatchSort.TopicAscending).Order(Both()).Select(m => m.Topic).Should().Equal("the thermostat", "who forgot the bins");
+        new MatchQuery(Sort: MatchSort.TopicDescending).Order(Both()).Select(m => m.Topic).Should().Equal("who forgot the bins", "the thermostat");
     }
 
     [Fact]
