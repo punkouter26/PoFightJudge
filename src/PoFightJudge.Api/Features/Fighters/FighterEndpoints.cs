@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Carter;
+using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Api.Features.Profiles;
 using PoFightJudge.Api.Features.Records;
@@ -40,7 +41,7 @@ public sealed class FighterEndpoints : ICarterModule
             .Produces<FighterProfileDto>()
             .Produces(StatusCodes.Status404NotFound);
 
-        fighters.MapPut(ApiRoutes.Fighters.ByTagSegment, RenameAsync)
+        fighters.MapPut(ApiRoutes.Fighters.ByTagSegment, RenameAsync).WithValidation<RenameFighterRequest>()
             .Produces<FighterDto>()
             .Produces(StatusCodes.Status404NotFound);
 
@@ -107,8 +108,24 @@ public sealed class FighterEndpoints : ICarterModule
     /// Only the display name can change. The tag is the identity every result is keyed on, so renaming that would
     /// not be a rename — it would be a different person inheriting somebody's record.
     /// </summary>
-    private static async Task<IResult> RenameAsync(FighterId tag, RenameFighterRequest? request, IFighterRepository fighters, CancellationToken ct) =>
-        await fighters.RenameAsync(tag, request?.DisplayName, ct) is { } renamed ? Results.Ok(renamed.ToDto()) : Results.NotFound();
+    private static async Task<IResult> RenameAsync(
+        FighterId tag,
+        RenameFighterRequest request,
+        ClaimsPrincipal user,
+        IFighterRepository fighters,
+        IFighterResultRepository results,
+        CancellationToken ct)
+    {
+        // The name is shown to everybody who can see the roster. It is theirs to change if they have argued under
+        // the tag, or if nobody has yet; somebody else's fighter is not found rather than forbidden.
+        var theirs = (await results.ListForAsync(tag, user.UserId(), ct)).Count > 0;
+        if (!theirs && (await results.ListForAnyoneAsync(tag, ct)).Count > 0)
+        {
+            return Results.NotFound();
+        }
+
+        return await fighters.RenameAsync(tag, request.DisplayName, ct) is { } renamed ? Results.Ok(renamed.ToDto()) : Results.NotFound();
+    }
 
     /// <summary>
     /// Forgets this person: everything they have on record with this account. The debates themselves stay — the

@@ -8,6 +8,7 @@ using PoFightJudge.Api.Features.Watch;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
+using PoFightJudge.Shared.Validators;
 
 namespace PoFightJudge.E2EAPI;
 
@@ -68,6 +69,16 @@ public class WatchTests(ApiFactory factory)
         verdict.Winner.Should().BeOneOf(husband.Id, wife.Id, string.Empty);
         verdict.HusbandStats.Should().NotBe(AdvancedStatsDto.Empty, "the analytics come from what was actually said");
         verdict.HusbandScore.Should().BeInRange(0, 100);
+
+        // The client holds the match and posts it back, so every part of it is bounded before anything is paid for.
+        var endless = new WatchRoundDto("husband", new string('x', WatchLimits.MaxLineLength + 1), "angry");
+        (await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, wife, [endless], "the thermostat")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest, "a line has a length");
+        var noise = Round("husband", 0) with { Audio = new TtsAudioDto("not base64 at all!", "mp3") };
+        (await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, wife, [noise], "the thermostat")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest, "audio that will not decode is refused before the judge is asked");
+        (await client.PostAsJsonAsync(ApiRoutes.Watch.GenerateRoundStreamUrl, new GenerateRoundRequest(husband, wife, Transcript(WatchTurns.MaxLines), "husband")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest, "the streamed route refuses a full match the same way the plain one does");
     }
 
     [Fact]

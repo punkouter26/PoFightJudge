@@ -25,11 +25,11 @@ public sealed class WatchEndpoints : ICarterModule
     {
         var watch = app.MapGroup(ApiRoutes.Watch.Base).WithTags("Watch").RequireRateLimiting(WatchServiceExtensions.AiPolicy);
 
-        watch.MapPost(ApiRoutes.Watch.GenerateRoundSegment, GenerateRoundAsync).Produces<GenerateRoundResponse>().ProducesValidationProblem().Produces(StatusCodes.Status404NotFound);
-        watch.MapPost(ApiRoutes.Watch.GenerateRoundStreamSegment, StreamRoundAsync);
-        watch.MapPost(ApiRoutes.Watch.RoundAudioStreamSegment, StreamRoundAudioAsync);
+        watch.MapPost(ApiRoutes.Watch.GenerateRoundSegment, GenerateRoundAsync).WithValidation<GenerateRoundRequest>().Produces<GenerateRoundResponse>().Produces(StatusCodes.Status404NotFound);
+        watch.MapPost(ApiRoutes.Watch.GenerateRoundStreamSegment, StreamRoundAsync).WithValidation<GenerateRoundRequest>();
+        watch.MapPost(ApiRoutes.Watch.RoundAudioStreamSegment, StreamRoundAudioAsync).WithValidation<RoundAudioRequest>();
         watch.MapPost(ApiRoutes.Watch.TranscribeSegment, TranscribeAsync).Produces<TranscribeResponse>().ProducesValidationProblem();
-        watch.MapPost(ApiRoutes.Watch.VerdictSegment, VerdictAsync).Produces<VerdictResponse>().ProducesValidationProblem().Produces(StatusCodes.Status404NotFound);
+        watch.MapPost(ApiRoutes.Watch.VerdictSegment, VerdictAsync).WithValidation<VerdictRequest>().Produces<VerdictResponse>().Produces(StatusCodes.Status404NotFound);
     }
 
     /// <summary>One line for the persona whose turn it is. A person's turn never comes here — they say it themselves.</summary>
@@ -87,6 +87,14 @@ public sealed class WatchEndpoints : ICarterModule
         var (husband, wife) = sides.Value;
         var speakingHusband = string.Equals(request.Speaker, WatchRound.Husband, StringComparison.OrdinalIgnoreCase);
         var speaker = speakingHusband ? husband : wife;
+
+        // The same three refusals the plain route makes: not a side, a person's own turn, a match already full.
+        if (!WatchTurns.IsSpeaker(request.Speaker) || speaker.IsHuman || request.History.Count >= WatchMatch.MaxLinesPerMatch)
+        {
+            http.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+
         var history = ToContext(request.History);
         var attitude = AttitudeSelector.Select(
             speaker,
@@ -192,7 +200,8 @@ public sealed class WatchEndpoints : ICarterModule
         {
             // A supplied id only ever means "judge this match again". One the caller does not own is not theirs to
             // overwrite, and minting a new match under their name would quietly duplicate somebody else's.
-            if (await matches.GetAsync(userId, supplied, ct) is null)
+            // And only a watch: a fight's id here would replace its row with a watch and drop its recording.
+            if (await matches.GetAsync(userId, supplied, ct) is not { Mode: MatchMode.Watch })
             {
                 return Results.NotFound();
             }
