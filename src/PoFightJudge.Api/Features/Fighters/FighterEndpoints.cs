@@ -41,6 +41,10 @@ public sealed class FighterEndpoints : ICarterModule
             .Produces<FighterProfileDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        fighters.MapGet(ApiRoutes.Fighters.VersusSegment, VersusAsync)
+            .Produces<HeadToHeadDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
         fighters.MapPut(ApiRoutes.Fighters.ByTagSegment, RenameAsync).WithValidation<RenameFighterRequest>()
             .Produces<FighterDto>()
             .Produces(StatusCodes.Status404NotFound);
@@ -104,6 +108,61 @@ public sealed class FighterEndpoints : ICarterModule
             rows,
             CareerWords.Compute(spoken)));
     }
+    /// <summary>
+    /// The series between two people: every debate this account has on record between them, newest first. It is
+    /// read from the same result rows each of their records is, so it cannot disagree with either page.
+    /// </summary>
+    private static async Task<IResult> VersusAsync(
+        FighterId tag,
+        FighterId opponent,
+        ClaimsPrincipal user,
+        IFighterRepository fighters,
+        IFighterResultRepository results,
+        CancellationToken ct)
+    {
+        if (await fighters.GetAsync(tag, ct) is not { } one || await fighters.GetAsync(opponent, ct) is not { } two)
+        {
+            return Results.NotFound();
+        }
+
+        var mine = (await results.ListForAsync(tag, user.UserId(), ct))
+            .Where(r => string.Equals(r.Opponent, two.Tag, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(r => r.At)
+            .ToList();
+
+        // The other side of each debate is a row of its own, under their tag: that is where their score is.
+        var theirs = (await results.ListForAsync(opponent, user.UserId(), ct))
+            .GroupBy(r => r.MatchId.Value, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().Score, StringComparer.Ordinal);
+
+        var meetings = mine
+            .Select(r => new MeetingDto(
+                r.MatchId,
+                r.Mode,
+                r.At,
+                r.Topic,
+                r.Draw ? string.Empty : r.Won ? one.Tag : two.Tag,
+                r.Score,
+                theirs.GetValueOrDefault(r.MatchId.Value)))
+            .ToList();
+
+        return Results.Ok(new HeadToHeadDto(
+            one.Tag,
+            one.DisplayName,
+            two.Tag,
+            two.DisplayName,
+            meetings.Count,
+            mine.Count(r => r.Won),
+            mine.Count(r => !r.Won && !r.Draw),
+            mine.Count(r => r.Draw),
+            meetings.Count == 0 ? 0 : Math.Round(meetings.Average(m => m.Score), 1),
+            meetings.Count == 0 ? 0 : Math.Round(meetings.Average(m => m.OpponentScore), 1),
+            [.. meetings.Take(MaxMeetings)]));
+    }
+
+    /// <summary>How many debates of a series are sent. The totals count all of them; the list is the recent ones.</summary>
+    public const int MaxMeetings = 25;
+
     /// <summary>
     /// Only the display name can change. The tag is the identity every result is keyed on, so renaming that would
     /// not be a rename — it would be a different person inheriting somebody's record.

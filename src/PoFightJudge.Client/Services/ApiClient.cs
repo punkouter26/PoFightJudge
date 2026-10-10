@@ -117,6 +117,9 @@ public interface IApiClient
     Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default);
     /// <summary>One person's page: their record, how they argue, and what they argued.</summary>
     Task<FighterProfileDto?> GetFighterProfileAsync(FighterId tag, CancellationToken ct = default);
+
+    /// <summary>Every time two people have argued each other, or null when either of them is nobody.</summary>
+    Task<HeadToHeadDto?> GetHeadToHeadAsync(FighterId tag, FighterId opponent, CancellationToken ct = default);
     /// <summary>Changes a fighter's display name. The tag never changes.</summary>
     Task<FighterDto> RenameFighterAsync(FighterId tag, string? displayName, CancellationToken ct = default);
 
@@ -552,6 +555,17 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         using var response = await http.GetAsync(Relative(ApiRoutes.Fighters.Profile(tag)), ct);
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<FighterProfileDto>(ct) : null;
     }
+    public async Task<HeadToHeadDto?> GetHeadToHeadAsync(FighterId tag, FighterId opponent, CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync(Relative(ApiRoutes.Fighters.Versus(tag, opponent)), ct);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        return await ReadAsync<HeadToHeadDto>(response, ct);
+    }
+
     public async Task<FighterDto> RenameFighterAsync(FighterId tag, string? displayName, CancellationToken ct = default)
     {
         using var response = await http.PutAsJsonAsync(Relative(ApiRoutes.Fighters.ByTag(tag)), new RenameFighterRequest(displayName), ct);

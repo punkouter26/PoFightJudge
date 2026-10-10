@@ -1,0 +1,104 @@
+@page "/vs/{Tag}/{Rival}"
+@using System.Globalization
+@inject IApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@Title · PoFightJudge</PageTitle>
+
+<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="The series" Title="@Title" Lead="Every time these two have argued each other, newest first.">
+    <Actions>
+        <RadzenButton Text="Run it back" Icon="mic" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo("2p"))" />
+    </Actions>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingRows Count="3" Label="Reading the series" />
+        }
+        else if (_error is not null)
+        {
+            <PageAlert Kind="AlertStyle.Danger">@_error</PageAlert>
+        }
+        else if (_series is null)
+        {
+            <EmptyState Icon="person_off" Title="No such pair" Text="One of those tags has never stepped up to the microphone." />
+        }
+        else if (_series.NeverMet)
+        {
+            <EmptyState Icon="handshake" Title="They have never argued" Text="@($"{_series.DisplayName} and {_series.OpponentDisplayName} have not been in a debate together on this account.")" />
+        }
+        else
+        {
+            <section class="tale po-card" aria-label="The series so far">
+                <div class="side p1">
+                    <RadzenLink Path="@($"fighters/{_series.Tag}")" Text="@_series.DisplayName" class="po-display" />
+                    <strong class="po-display po-num">@_series.Wins</strong>
+                    <span class="po-muted">average @_series.AverageScore.ToString("0.#", CultureInfo.CurrentCulture)</span>
+                </div>
+                <div class="middle">
+                    <span class="po-display">@Standing</span>
+                    <span class="po-muted">@_series.Meetings @(_series.Meetings == 1 ? "debate" : "debates")@(_series.Draws > 0 ? $", {_series.Draws} drawn" : string.Empty)</span>
+                </div>
+                <div class="side p2">
+                    <RadzenLink Path="@($"fighters/{_series.OpponentTag}")" Text="@_series.OpponentDisplayName" class="po-display" />
+                    <strong class="po-display po-num">@_series.Losses</strong>
+                    <span class="po-muted">average @_series.OpponentAverageScore.ToString("0.#", CultureInfo.CurrentCulture)</span>
+                </div>
+            </section>
+
+            <ul class="meetings" aria-label="Their debates">
+                @foreach (var meeting in _series.Recent)
+                {
+                    <li>
+                        <RadzenLink Path="@(meeting.Mode == MatchMode.Fight ? $"verdict/{meeting.MatchId.Value}" : $"watch/replay/{meeting.MatchId.Value}")" class="meeting">
+                            <ModeBadge Mode="@meeting.Mode" />
+                            <span class="topic">@(string.IsNullOrWhiteSpace(meeting.Topic) ? "an open topic" : meeting.Topic)</span>
+                            <span class="score po-num">@meeting.Score–@meeting.OpponentScore</span>
+                            <strong>@(meeting.IsDraw ? "drawn" : string.Equals(meeting.Winner, _series.Tag, StringComparison.OrdinalIgnoreCase) ? _series.DisplayName : _series.OpponentDisplayName)</strong>
+                            <span class="po-muted">@meeting.At.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</span>
+                        </RadzenLink>
+                    </li>
+                }
+            </ul>
+        }
+    </ChildContent>
+</PageShell>
+
+@code {
+    private HeadToHeadDto? _series;
+    private bool _loading = true;
+    private string? _error;
+
+    [Parameter] public string Tag { get; set; } = string.Empty;
+
+    [Parameter] public string Rival { get; set; } = string.Empty;
+
+    private string Title => _series is null ? $"{Tag} vs {Rival}" : $"{_series.DisplayName} vs {_series.OpponentDisplayName}";
+
+    /// <summary>Who is ahead, said the way somebody would say it.</summary>
+    private string Standing => _series is null ? string.Empty
+        : _series.Wins == _series.Losses ? "Level"
+        : $"{(_series.IsAhead ? _series.DisplayName : _series.OpponentDisplayName)} leads";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        _series = null;
+        try
+        {
+            // A tag that is not a tag is nobody, which is what the page says for a pair it cannot find.
+            if (FighterId.TryParse(Initials.Normalize(Tag), null, out var one) && FighterId.TryParse(Initials.Normalize(Rival), null, out var two))
+            {
+                _series = await Api.GetHeadToHeadAsync(one, two);
+            }
+        }
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The series could not be read") is { } why)
+        {
+            _error = why;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

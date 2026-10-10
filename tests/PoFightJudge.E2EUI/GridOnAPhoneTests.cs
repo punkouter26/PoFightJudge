@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
+using PoFightJudge.Api.Features.Fighters;
 using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -26,11 +27,29 @@ public class GridOnAPhoneTests(AppFixture app)
         await RecordAsync(MatchMode.Fight, "who forgot the bins and left them there all week", MatchSide.Human("HA1", "Alex"), MatchSide.Human("HA2", "Sam"));
 
         var offenders = new List<string>();
-        foreach (var route in new[] { "/history", "/fighters", "/health" })
+        foreach (var route in new[] { "/history", "/fighters", "/health", "/vs/HA1/HA2" })
         {
             var (context, page, _) = await app.OpenAsync(AppFixture.Mobile, route, user: User);
             await using var _ = context;
             await page.WaitForTimeoutAsync(1200);
+
+            if (string.Equals(route, "/fighters", StringComparison.Ordinal))
+            {
+                // Somebody is on the card, or this page is an empty state and says nothing about its grid.
+                (await page.Locator(".roster .po-stacked").CountAsync()).Should().BeGreaterThan(0, "two people have fought");
+            }
+
+            if (route.StartsWith("/vs/", StringComparison.Ordinal))
+            {
+                (await page.Locator("section.tale").InnerTextAsync()).Should().ContainEquivalentOf("Alex").And.ContainEquivalentOf("leads");
+                var width = await page.EvaluateAsync<int>("document.scrollingElement.scrollWidth - window.innerWidth");
+                width.Should().BeLessThanOrEqualTo(0, "the series fits a phone");
+            }
+
+            if (Environment.GetEnvironmentVariable("SHOTS") is { Length: > 0 } shots)
+            {
+                await page.ScreenshotAsync(new() { Path = Path.Combine(shots, route.Trim('/').Replace('/', '-') + "-seeded-phone.png"), FullPage = true });
+            }
 
             var wide = await page.EvaluateAsync<string[]>(
                 @"() => [...document.querySelectorAll('.rz-data-grid-data, .rz-grid-table, table')]
@@ -46,8 +65,27 @@ public class GridOnAPhoneTests(AppFixture app)
     {
         var matches = app.Services.GetRequiredService<IMatchRepository>();
         var now = app.Services.GetRequiredService<TimeProvider>().GetUtcNow();
+        var id = MatchId.New();
         await matches.UpsertAsync(new MatchDto(
-            MatchId.New(), User, mode, now.AddMinutes(-6), now, topic, one, two,
+            id, User, mode, now.AddMinutes(-6), now, topic, one, two,
             SessionPhase.Done, SessionStatus.Ready, one.DisplayName, "It was close.", IsFake: true));
+
+        // People, not personas, are on the fighters' card: they need to exist and to have a result each.
+        if (!one.IsHuman || !two.IsHuman)
+        {
+            return;
+        }
+
+        var fighters = app.Services.GetRequiredService<IFighterRepository>();
+        var results = app.Services.GetRequiredService<IFighterResultRepository>();
+        await fighters.EnsureAsync(FighterId.From(one.Id), now, role: null);
+        await fighters.EnsureAsync(FighterId.From(two.Id), now, role: null);
+        await fighters.RenameAsync(FighterId.From(one.Id), one.DisplayName);
+        await fighters.RenameAsync(FighterId.From(two.Id), two.DisplayName);
+        await results.SaveAsync(
+        [
+            new FighterResultDto(one.Id, User, id, mode, now, topic, two.Id, true, false, 72, StyleSnapshot.Empty),
+            new FighterResultDto(two.Id, User, id, mode, now, topic, one.Id, false, false, 58, StyleSnapshot.Empty),
+        ]);
     }
 }

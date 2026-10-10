@@ -75,6 +75,11 @@ public static class ApiRoutes
 
         /// <summary>Their record and how they argue, together — what one person's page is built from.</summary>
         public static string Profile(FighterId tag) => $"{ByTag(tag)}/profile";
+
+        /// <summary>Every time two people have argued each other.</summary>
+        public const string VersusSegment = "/{tag}/vs/{opponent}";
+
+        public static string Versus(FighterId tag, FighterId opponent) => $"{ByTag(tag)}/vs/{Uri.EscapeDataString(opponent.Value)}";
     }
 
     public static class Seed

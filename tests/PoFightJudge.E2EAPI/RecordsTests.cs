@@ -99,6 +99,16 @@ public class RecordsTests(ApiFactory factory)
         one.Form.Should().Equal(75, 65);
         roster.Should().Contain(r => string.Equals(r.Tag, "RO2", StringComparison.Ordinal), "somebody who has only lost is still on the roster");
         roster.Should().BeInDescendingOrder(r => r.Fights);
+
+        // And the two of them as a series: the same rows, read as a pair, from either side.
+        var series = await client.GetFromJsonAsync<HeadToHeadDto>(ApiRoutes.Fighters.Versus(FighterId.From("RO1"), FighterId.From("RO2")));
+        series!.Meetings.Should().Be(2);
+        (series.Wins, series.Losses, series.Draws).Should().Be((2, 0, 0));
+        series.Recent.Select(m => (m.Score, m.OpponentScore)).Should().BeEquivalentTo([(75, 25), (65, 35)]);
+        series.Recent.Should().OnlyContain(m => m.Winner == "RO1");
+        var mirrored = await client.GetFromJsonAsync<HeadToHeadDto>(ApiRoutes.Fighters.Versus(FighterId.From("RO2"), FighterId.From("RO1")));
+        (mirrored!.Wins, mirrored.Losses).Should().Be((0, 2));
+        (await client.GetAsync(ApiRoutes.Fighters.Versus(FighterId.From("RO1"), FighterId.From("ZZ9")))).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
