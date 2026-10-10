@@ -33,28 +33,29 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
             static JsonObject RichStr() => new() { ["type"] = "string", ["minLength"] = FieldMinLength };
             static JsonObject Int() => new() { ["type"] = "integer" };
 
+            var properties = new JsonObject
+            {
+                ["name"] = Str(),
+                ["age"] = Int(),
+                ["occupation"] = Str(),
+                ["likes"] = RichStr(),
+                ["dislikes"] = RichStr(),
+                ["commonArguments"] = RichStr(),
+                ["philosophy"] = RichStr(),
+                ["logicVsEmotion"] = Int(),
+                ["jealousy"] = Int(),
+                ["holdsGrudges"] = Int(),
+                ["patience"] = Int(),
+            };
+
+            // Everything defined is required, and nothing else can be. A name listed here with no property behind it
+            // is an invalid schema — eight of them were left over from the wider editor — and the fake, which answers
+            // from the properties, cannot tell.
             return new JsonObject
             {
                 ["type"] = "object",
-                ["properties"] = new JsonObject
-                {
-                    ["name"] = Str(),
-                    ["age"] = Int(),
-                    ["occupation"] = Str(),
-                    ["likes"] = RichStr(),
-                    ["dislikes"] = RichStr(),
-                    ["commonArguments"] = RichStr(),
-                    ["philosophy"] = RichStr(),
-                    ["logicVsEmotion"] = Int(),
-                    ["jealousy"] = Int(),
-                    ["holdsGrudges"] = Int(),
-                    ["patience"] = Int(),
-                },
-                ["required"] = new JsonArray(
-                    "name", "age", "occupation", "likes", "dislikes", "commonArguments", "philosophy",
-                    "loveLanguage", "attachmentStyle", "stressResponse",
-                    "logicVsEmotion", "punctuality", "inLawAffinity", "screenTime", "jealousy",
-                    "isMessy", "spendsMoneyFreely", "holdsGrudges", "patience"),
+                ["required"] = new JsonArray([.. properties.Select(p => (JsonNode)p.Key)]),
+                ["properties"] = properties,
             };
         }
     }

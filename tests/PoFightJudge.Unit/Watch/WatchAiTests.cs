@@ -13,6 +13,14 @@ public class WatchAiParsingTests
     [Fact]
     public void A_schema_answer_becomes_a_line_and_a_mood()
     {
+        // A schema that requires a property it does not define is refused by the API outright, and the fake, which
+        // answers from the properties, never notices.
+        foreach (var schema in new[] { WatchAi.ArgumentSchema, WatchAi.JudgeSchema("MAH", "KSH"), PoFightJudge.Api.Features.Profiles.ProfileGenerator.Schema })
+        {
+            var defined = schema["properties"]!.AsObject().Select(p => p.Key);
+            schema["required"]!.AsArray().Select(r => r!.GetValue<string>()).Should().BeSubsetOf(defined);
+        }
+
         var result = WatchAi.ParseArgument("""{"line":"You left the freezer open. (snaps)","mood":"furious"}""");
 
         result.Text.Should().Be("You left the freezer open. (snaps)");
