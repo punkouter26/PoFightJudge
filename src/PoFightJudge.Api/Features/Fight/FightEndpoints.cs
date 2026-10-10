@@ -5,6 +5,7 @@ using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Api.Features.Fighters;
 using PoFightJudge.Api.Features.Live;
 using PoFightJudge.Api.Features.Records;
+using PoFightJudge.Api.Features.Watch;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -21,9 +22,13 @@ public sealed class FightEndpoints : ICarterModule
     {
         var fights = app.MapGroup(ApiRoutes.Fights.Base).RequireAuthorization().WithTags("Fights");
 
+        // A fight opens a live model session and holds a recording in memory, so starting one is rationed like any
+        // other call that reaches a model.
         fights.MapPost("/", StartAsync)
+            .RequireRateLimiting(WatchServiceExtensions.AiPolicy)
             .Produces<CreateFightResponse>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         fights.MapGet(ApiRoutes.Fights.ByIdSegment, GetAsync)
             .Produces<DebateSnapshotDto>()
@@ -79,7 +84,11 @@ public sealed class FightEndpoints : ICarterModule
             Player2Digest = await DigestAsync(results, second, user.UserId(), ct),
         };
 
-        var fight = await registry.CreateAsync(user.UserId(), setup, ct);
+        if (await registry.CreateAsync(user.UserId(), setup, ct) is not { } fight)
+        {
+            return Results.Problem("Every ring is taken right now. Try again in a minute.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
         return Results.Created(ApiRoutes.Fights.ById(fight.Session.MatchId), new CreateFightResponse(fight.Session.MatchId));
     }
 

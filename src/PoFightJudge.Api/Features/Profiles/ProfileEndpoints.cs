@@ -4,6 +4,7 @@ using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Ai;
 using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Api.Features.Voice;
+using PoFightJudge.Api.Features.Watch;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -29,12 +30,13 @@ public sealed class ProfileEndpoints : ICarterModule
         profiles.MapPut(ApiRoutes.Profiles.ByIdSegment, UpdateAsync).WithValidation<CreateProfileRequest>()
             .Produces<ProfileDto>().Produces(StatusCodes.Status404NotFound);
         profiles.MapDelete(ApiRoutes.Profiles.ByIdSegment, DeleteAsync).Produces(StatusCodes.Status204NoContent);
-        profiles.MapPost(ApiRoutes.Profiles.GenerateSegment, GenerateAsync).Produces<CreateProfileRequest>().ProducesValidationProblem();
-        profiles.MapPost(ApiRoutes.Profiles.PreviewLineSegment, PreviewLineAsync).WithValidation<CreateProfileRequest>().Produces<PreviewLineResponse>();
+        profiles.MapPost(ApiRoutes.Profiles.GenerateSegment, GenerateAsync).RequireRateLimiting(WatchServiceExtensions.AiPolicy).Produces<CreateProfileRequest>().ProducesValidationProblem();
+        profiles.MapPost(ApiRoutes.Profiles.PreviewLineSegment, PreviewLineAsync).RequireRateLimiting(WatchServiceExtensions.AiPolicy).WithValidation<CreateProfileRequest>().Produces<PreviewLineResponse>();
 
         profiles.MapGet(ApiRoutes.Profiles.FaceSegment, GetFaceAsync).AllowAnonymous()
             .Produces(StatusCodes.Status200OK, contentType: ProfileImageService.ContentType).Produces(StatusCodes.Status404NotFound);
         profiles.MapPost(ApiRoutes.Profiles.FaceSegment, UploadFaceAsync)
+            .RequireRateLimiting(WatchServiceExtensions.AiPolicy)
             .WithMetadata(new RequestSizeLimitAttribute(ProfileImageService.MaxUploadBytes))
             .Produces<ProfileDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status415UnsupportedMediaType).Produces(StatusCodes.Status404NotFound);
     }

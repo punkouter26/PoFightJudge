@@ -91,6 +91,9 @@ public class AnalysisTests(ApiFactory factory)
         ready.Report.Player1.Metrics.Words.Should().BeGreaterThan(0, "the stand-in transcriber says something");
         ready.Report.Overall.Reasons.Should().NotBeEmpty();
 
+        // It has its answer. Asking again would pay the judge twice for the same recording.
+        (await client.PostAsync(ApiRoutes.Fights.AnalysisRetry(id), null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
         // Waited for, not read straight after Ready: the pipeline publishes the ruling before it writes the result
         // rows on purpose, so the room is not kept waiting on a record. Reading them the instant the status flips
         // races that write, and loses it under load.

@@ -99,4 +99,25 @@ public class ProfilesTests(ApiFactory factory)
         (await anonymous.GetAsync(ApiRoutes.Profiles.Base)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await anonymous.PostAsJsonAsync(ApiRoutes.Profiles.Base, Persona("ANO"))).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task Calls_that_reach_a_model_are_rationed_per_person_and_say_when_to_come_back()
+    {
+        // Its own user: the window is a minute long, and nobody else's test should find the bucket empty.
+        using var client = User("rationed-" + Guid.NewGuid().ToString("N"));
+        var url = $"{ApiRoutes.Profiles.GenerateUrl}?role=husband";
+
+        HttpResponseMessage? last = null;
+        for (var i = 0; i <= PoFightJudge.Api.Features.Watch.WatchServiceExtensions.PermitsPerWindow; i++)
+        {
+            last?.Dispose();
+            last = await client.PostAsync(url, null);
+        }
+
+        using (last)
+        {
+            last!.StatusCode.Should().Be(HttpStatusCode.TooManyRequests, "inventing a persona is a model call like any other");
+            last.Headers.RetryAfter.Should().NotBeNull("a throttled client is told when to come back");
+        }
+    }
 }

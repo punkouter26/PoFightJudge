@@ -28,10 +28,28 @@ public sealed partial class SessionRegistry(
 {
     private readonly ConcurrentDictionary<string, LiveFight> _fights = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _starting = new(1, 1);
     private readonly ILogger<SessionRegistry> _logger = loggers.CreateLogger<SessionRegistry>();
     private Task? _ticker;
 
-    public async Task<DebateOrchestrator> CreateAsync(string userId, ShowSetup setup, CancellationToken ct)
+    /// <summary>
+    /// Starts a fight, or returns null when the process is already running as many as it has memory for. One start
+    /// at a time: two requests from one person arriving together would otherwise both pass the "one show" check.
+    /// </summary>
+    public async Task<DebateOrchestrator?> CreateAsync(string userId, ShowSetup setup, CancellationToken ct)
+    {
+        await _starting.WaitAsync(ct);
+        try
+        {
+            return await CreateOneAsync(userId, setup, ct);
+        }
+        finally
+        {
+            _starting.Release();
+        }
+    }
+
+    private async Task<DebateOrchestrator?> CreateOneAsync(string userId, ShowSetup setup, CancellationToken ct)
     {
         // One show at a time: a stale tab's fight is ended, and persisted, before the new one starts.
         foreach (var (id, running) in _fights)
@@ -40,6 +58,11 @@ public sealed partial class SessionRegistry(
             {
                 await EndAsync(MatchId.Parse(id, null), "replaced by a new fight", ct);
             }
+        }
+
+        if (_fights.Count >= Math.Max(1, options.MaxConcurrentFights))
+        {
+            return null;
         }
 
         var matchId = MatchId.New();
@@ -130,6 +153,7 @@ public sealed partial class SessionRegistry(
         }
 
         _cts.Dispose();
+        _starting.Dispose();
     }
 
     /// <summary>One pass of the clock over every running fight. Public so a test can drive it without waiting a second.</summary>

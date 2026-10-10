@@ -40,6 +40,12 @@ public sealed class DebateOptions
     /// </summary>
     public bool StoreOpus { get; set; } = true;
 
+    /// <summary>
+    /// How many fights may run at once. Each holds its recording in memory until it ends — tens of megabytes — so
+    /// this is a memory ceiling before it is anything else.
+    /// </summary>
+    public int MaxConcurrentFights { get; set; } = 3;
+
     /// <summary>A session with no browser attached for this long is ended and persisted.</summary>
     public int ClientGraceSeconds { get; set; } = 30;
 

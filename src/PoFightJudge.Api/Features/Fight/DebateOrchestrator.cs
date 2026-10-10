@@ -22,6 +22,9 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
 
     public const int MaxFrameBytes = 32_000;
 
+    /// <summary>How far the recording may run ahead of the clock before frames are dropped: jitter, not a file upload.</summary>
+    public const double AheadOfClockSeconds = 2.0;
+
     /// <summary>Length of one microphone frame from the browser. Mirrors the frame size in the capture worklet.</summary>
     public const int FrameMilliseconds = 100;
 
@@ -174,6 +177,13 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
 
         // Keep the players' track on the wall clock, so word offsets line up with the turn timeline.
         var elapsed = Now - Session.StartedAt;
+
+        // A microphone cannot get ahead of the clock. Something that does is pushing a file, and every second of it
+        // is a second the model is paid to listen to.
+        if (recorded / 2.0 / PlayerSampleRate > elapsed.TotalSeconds + AheadOfClockSeconds)
+        {
+            return;
+        }
         if (recorded / 2.0 / PlayerSampleRate < elapsed.TotalSeconds - 0.3)
         {
             _playersTrack.PadTo(elapsed - TimeSpan.FromMilliseconds(FrameMilliseconds));

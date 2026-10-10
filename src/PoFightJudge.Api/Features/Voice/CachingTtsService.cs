@@ -22,6 +22,9 @@ public sealed record TtsRoutingOptions(string WireFormat, bool CacheEnabled);
 /// </remarks>
 public sealed partial class CachingTtsService(IEnumerable<ITtsProvider> providers, TtsRoutingOptions routing, ITtsCache cache, ILogger<CachingTtsService> logger)
 {
+    /// <summary>How many clauses of one line may be at the provider at once.</summary>
+    public const int MaxLookAhead = 3;
+
     private readonly IReadOnlyList<ITtsProvider> _providers = [.. providers];
 
     /// <summary>Who will be asked to speak for this persona, best first.</summary>
@@ -46,13 +49,28 @@ public sealed partial class CachingTtsService(IEnumerable<ITtsProvider> provider
             yield break;
         }
 
-        // Every chunk is dispatched immediately and awaited in order: synthesis overlaps, but playback order is never
-        // at risk, because audio delivered out of order is worse than audio delivered late. The listener hears the
-        // line as soon as its first clause is rendered rather than after the last one.
+        // Chunks are started in order, a few at a time, and awaited in order: synthesis overlaps, but playback order
+        // is never at risk, because audio delivered out of order is worse than audio delivered late. The listener
+        // hears the line as soon as its first clause is rendered rather than after the last one, and a long line
+        // cannot turn one request into dozens of provider calls at once.
+        using var lookAhead = new SemaphoreSlim(MaxLookAhead, MaxLookAhead);
         var pending = new List<Task<TtsAudio>>(chunks.Count);
         foreach (var chunk in chunks)
         {
-            pending.Add(GenerateTtsAsync(chunk, settings, ct));
+            pending.Add(AheadAsync(chunk));
+        }
+
+        async Task<TtsAudio> AheadAsync(string chunk)
+        {
+            await lookAhead.WaitAsync(ct);
+            try
+            {
+                return await GenerateTtsAsync(chunk, settings, ct);
+            }
+            finally
+            {
+                lookAhead.Release();
+            }
         }
 
         for (var i = 0; i < pending.Count; i++)

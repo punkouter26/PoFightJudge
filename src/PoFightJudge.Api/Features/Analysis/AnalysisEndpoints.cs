@@ -6,6 +6,7 @@ using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Api.Features.Fight;
 using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Api.Features.Storage;
+using PoFightJudge.Api.Features.Watch;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -32,6 +33,7 @@ public sealed class AnalysisEndpoints : ICarterModule
             .Produces(StatusCodes.Status404NotFound);
 
         fights.MapPost(ApiRoutes.Fights.AnalysisRetrySegment, RetryAsync)
+            .RequireRateLimiting(WatchServiceExtensions.AiPolicy)
             .Produces<AnalysisResponse>(StatusCodes.Status202Accepted)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .Produces(StatusCodes.Status404NotFound);
@@ -127,9 +129,13 @@ public sealed class AnalysisEndpoints : ICarterModule
             return Results.Problem("Nothing was recorded for this fight.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (await matches.GetAnalysisAsync(id, ct) is { Status: AnalysisStatus.Queued or AnalysisStatus.Diarizing or AnalysisStatus.Judging })
+        // Only a failure is worth paying to read again: a fight that is being read, or has been, already has its answer.
+        switch ((await matches.GetAnalysisAsync(id, ct))?.Status)
         {
-            return Results.Problem("It is already being read.", statusCode: StatusCodes.Status409Conflict);
+            case AnalysisStatus.Queued or AnalysisStatus.Diarizing or AnalysisStatus.Judging:
+                return Results.Problem("It is already being read.", statusCode: StatusCodes.Status409Conflict);
+            case AnalysisStatus.Ready:
+                return Results.Problem("It has already been read.", statusCode: StatusCodes.Status409Conflict);
         }
 
         await matches.SaveAnalysisAsync(new AnalysisRecordDto(id, AnalysisStatus.Queued, null, null, clock.GetUtcNow()), ct);
