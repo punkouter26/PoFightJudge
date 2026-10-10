@@ -14,11 +14,6 @@ public sealed class AudioInterop(IJSRuntime js) : IAsyncDisposable
     public const string Stop = "PoAudio.stop";
     public const string Pending = "PoAudio.pending";
 
-    private DotNetObjectReference<AudioInterop>? _self;
-
-    /// <summary>Raised when everything queued has finished playing.</summary>
-    public event EventHandler? PlaybackEnded;
-
     /// <summary>Plays one utterance, replacing anything already playing. Returns its duration.</summary>
     public async Task<TimeSpan> PlayAsync(TtsAudioDto audio, CancellationToken ct = default)
     {
@@ -49,16 +44,6 @@ public sealed class AudioInterop(IJSRuntime js) : IAsyncDisposable
     public async Task<TimeSpan> PendingAsync(CancellationToken ct = default) =>
         TimeSpan.FromSeconds(await js.InvokeAsync<double>(Pending, ct));
 
-    /// <summary>Asks the browser to call back when the queue drains; the callback raises <see cref="PlaybackEnded"/>.</summary>
-    public async Task WatchForEndAsync(CancellationToken ct = default)
-    {
-        _self ??= DotNetObjectReference.Create(this);
-        await js.InvokeVoidAsync("PoAudio.onEnded", ct, _self);
-    }
-
-    [JSInvokable]
-    public void OnPlaybackEnded() => PlaybackEnded?.Invoke(this, EventArgs.Empty);
-
     public async ValueTask DisposeAsync()
     {
         try
@@ -73,8 +58,5 @@ public sealed class AudioInterop(IJSRuntime js) : IAsyncDisposable
         {
             // Prerendering: no JS runtime to talk to.
         }
-
-        _self?.Dispose();
-        _self = null;
     }
 }

@@ -190,10 +190,6 @@ window.PoLive = (function () {
     nextStart = 0;
   }
 
-  function isPlaying() {
-    return !!ctx && nextStart > ctx.currentTime;
-  }
-
   /**
    * Dips the host for `seconds` and brings them back, so a phase stinger lands over the top of them rather than
    * fighting them. Called by PoSfx on the same beat as the effect; the microphone is untouched.
@@ -250,9 +246,7 @@ window.PoLive = (function () {
     play: play,
     clear: clear,
     duck: duck,
-    isPlaying: isPlaying,
     stop: stop,
-    micLevel: function () { return Math.min(1, Math.pow(micLevel * 3.2, 0.7)); },
     hostLevel: function () { return hostLevel; },
   };
 })();

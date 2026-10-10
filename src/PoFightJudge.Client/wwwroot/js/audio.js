@@ -14,7 +14,6 @@ const PoAudio = (() => {
   let meterFrame = 0;
   let nextStartTime = 0;
   let sources = [];
-  let endedCallback = null;
 
   function ensureContext() {
     if (!context) {
@@ -136,18 +135,8 @@ const PoAudio = (() => {
       }
       source.onended = () => {
         sources = sources.filter((s) => s !== source);
-        if (sources.length === 0 && endedCallback) {
-          const callback = endedCallback;
-          endedCallback = null;
-          callback.invokeMethodAsync('OnPlaybackEnded');
-        }
       };
       return buffer.duration;
-    },
-
-    /** Registers a .NET object to be told when the queue drains. */
-    onEnded(dotNetRef) {
-      endedCallback = dotNetRef;
     },
 
     /** Stops everything and resets the schedule clock. */
@@ -160,7 +149,6 @@ const PoAudio = (() => {
         }
       }
       sources = [];
-      endedCallback = null;
       nextStartTime = context ? context.currentTime : 0;
       currentLevel = 0;
       publishLevel(0);

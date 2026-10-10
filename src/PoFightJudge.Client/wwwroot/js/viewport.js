@@ -56,17 +56,5 @@ window.PoViewport = (function () {
     return entry.list.matches;
   }
 
-  function unwatch(query, ref) {
-    const entry = watchers.get(query);
-    if (!entry) {
-      return;
-    }
-
-    const at = entry.refs.indexOf(ref);
-    if (at >= 0) {
-      entry.refs.splice(at, 1);
-    }
-  }
-
-  return { watch: watch, unwatch: unwatch };
+  return { watch: watch };
 })();

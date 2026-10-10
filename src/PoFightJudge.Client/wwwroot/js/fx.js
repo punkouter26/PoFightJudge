@@ -28,17 +28,11 @@ window.PoFx = (function () {
     }, DURATION);
   }
 
-  function stop() {
-    window.clearTimeout(timer);
-    const el = target();
-    el.className = el.className.replace(/\bfx-[a-z0-9-]+\b/gi, "").trim();
-  }
-
   function scrollBottom(el) {
     if (el) {
       el.scrollTop = el.scrollHeight;
     }
   }
 
-  return { burst: burst, stop: stop, scrollBottom: scrollBottom };
+  return { burst: burst, scrollBottom: scrollBottom };
 })();

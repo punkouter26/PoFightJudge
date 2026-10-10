@@ -209,10 +209,6 @@ window.PoSfx = (function () {
       ensure();
     },
 
-    isMuted: function () {
-      return muted;
-    },
-
     setMuted: function (value) {
       muted = !!value;
       if (!ctx) {

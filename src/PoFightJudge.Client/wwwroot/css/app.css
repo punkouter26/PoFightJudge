@@ -232,14 +232,7 @@ a:hover { color: var(--po-fg); }
   padding: var(--po-space-4);
 }
 
-.po-card--sm { padding: var(--po-space-3); }
-.po-card--flush { padding: 0; overflow: hidden; }
 .po-card--quiet { border-color: var(--po-rule); }
-.po-card--stretch { display: flex; flex-direction: column; height: 100%; }
-.po-card--lift { transition: transform var(--po-dur-base) var(--po-ease), box-shadow var(--po-dur-base) var(--po-ease); }
-.po-card--lift:hover, .po-card--lift:focus-within { transform: translateY(-2px); box-shadow: var(--po-shadow-2); }
-.po-card--p1 { border-color: color-mix(in srgb, var(--po-p1) 45%, var(--po-border)); }
-.po-card--p2 { border-color: color-mix(in srgb, var(--po-p2) 45%, var(--po-border)); }
 
 /* ── Glass: the chrome of a live fight, over the shader behind it ──
    Global rather than scoped because three components share it, and because the fallback matters more than the
@@ -271,15 +264,6 @@ a:hover { color: var(--po-fg); }
 .po-num { font-variant-numeric: tabular-nums; }
 .po-p1 { color: var(--po-p1); }
 .po-p2 { color: var(--po-p2); }
-
-/* The fighter/profile tag in display type — TagMark's one style. */
-.po-tag {
-  font-family: var(--po-font-display);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  text-transform: uppercase;
-}
 
 /* ── Chips (RadzenBadge is used for status; this is the broadcast strip label) ── */
 .po-chip {

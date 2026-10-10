@@ -273,10 +273,6 @@ window.PoMic = (function () {
     release();
   }
 
-  function recording() {
-    return capturing;
-  }
-
   // The frames, with a WAV header in front of them. Nothing is converted here: the worklet already produced 16 kHz
   // little-endian mono Int16, which is what the header goes on to describe.
   function wav(chunks, rate) {
@@ -328,5 +324,5 @@ window.PoMic = (function () {
     return window.btoa(binary);
   }
 
-  return { start: start, stop: stop, cancel: cancel, recording: recording, level: level, devices: devices };
+  return { start: start, stop: stop, cancel: cancel, level: level, devices: devices };
 })();
