@@ -13,7 +13,7 @@ measurements each, and the moments worth listening to again.
 A merge of [PoMarriedLife](https://github.com/punkouter26/PoMarriedLife) and
 [PoArgueJudge](https://github.com/punkouter26/PoArgueJudge) into one fresh solution.
 
-Governance: [AGENT.md](AGENT.md) is how it is worked on.
+Governance: [AGENTS.md](AGENTS.md) is how it is worked on.
 
 ## Run it
 

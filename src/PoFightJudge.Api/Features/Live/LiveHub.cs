@@ -5,7 +5,7 @@ using PoFightJudge.Api.Features.Fight;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 
-namespace PoFightJudge.Api.Hubs;
+namespace PoFightJudge.Api.Features.Live;
 
 /// <summary>
 /// The channel between the room and the fight: microphone frames up, the host's voice, captions and snapshots down.

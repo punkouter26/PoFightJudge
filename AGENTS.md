@@ -1,4 +1,4 @@
-# AGENT.md — how this repository is worked on
+# AGENTS.md — how this repository is worked on
 
 Written for whoever (or whatever) picks the work up next. [README.md](README.md) says what the app is and how to
 run it. This file is the operating detail that does not live there.
@@ -29,9 +29,10 @@ Keys are `PoFightJudge:*` in configuration and `PoFightJudge--*` in Key Vault; `
 other. Every key has a constant in `Shared/Configuration/ConfigKeys.cs`, and that is where a new one goes — the
 host, the tests and the Bicep app settings all read the same name from there.
 
-Feature flags (`FeatureManagement` section): `UseFakeAi`, `DevGuestEnabled`, `HumanInWatch`,
-`BrowserSpeechRecognition`, `PreferFastVoice`, `TtsCacheEnabled`, `UseAzurite`, `DiagRequiresAdminInDev`.
-`/api/features` exposes the ones the client needs; the "using fake AI" banner reads it.
+Three switches are settable (`PoFightJudge:Toggles`, read once at startup): `UseFakes`, `UseAzurite` and
+`TtsCache`. Everything else that used to be called a feature flag is a question about the environment or the
+configuration and is answered where it is asked. `/api/features` tells the client what it needs to know —
+`UseFakeAi`, `DevGuestEnabled`, `HumanInWatch`, `FishVoices` — and the "using fake AI" banner reads it.
 
 ## Rules that are not negotiable
 
@@ -39,10 +40,11 @@ Feature flags (`FeatureManagement` section): `UseFakeAi`, `DevGuestEnabled`, `Hu
   constructors that take a connection string are in `BannedSymbols.txt`.
 - **No fakes in Production.** Registration is guarded, and a test asserts the guard.
 - **`TimeProvider`, never `DateTime.UtcNow`.** Also banned at build time.
-- **Radzen for anything a person operates.** A test greps the `.razor` files for raw `<button>`, `<input>`,
-  `<select>` and `<textarea>`.
+- **Radzen for anything a person operates.** `DesignRulesTests` greps the `.razor` files for raw `<button>`,
+  `<input>`, `<select>` and `<textarea>`.
 - **No `prefers-color-scheme` block.** The palette is `light-dark()` over one set of tokens, with
-  `:root[data-theme]` pinning the explicit choice; a test enforces both, and another checks contrast in both themes.
+  `:root[data-theme]` pinning the explicit choice; the same test refuses the block and a fourth breakpoint, and
+  `PaletteContrastTests` checks contrast in both themes.
 - **Never weaken a test to make it pass.** A failing test is reported as failing.
 - **Ask first** for: any `az` write (Key Vault, app registration, deployment, role assignment), creating the GitHub
   repository or its OIDC credential, every `git push`, deleting everybody's matches or profiles, moving off the F1
@@ -57,7 +59,7 @@ other through `Shared` contracts and repositories, not through each other's serv
   understands the game rather than pretending to be an HTTP response.
 - `ILiveSocket` is the WebSocket; `IGeminiLiveClient` is the protocol; `DebateSession` is the rules with no I/O at
   all. The scripted host replaces the client, so the state machine under test is the real one.
-- Records are computed on read by `FighterStatsBuilder`, `ProfileStatsBuilder` and `StyleProfileBuilder` from
+- Records are computed on read by `FighterStatsBuilder` and `StyleProfileBuilder` from
   result rows. Nothing anywhere increments a counter.
 - The effects layer is four files in `wwwroot/js` and nothing in the app depends on any of it: `sfx.js` synthesizes
   every sound that is not a voice, `gfx.js` runs the WebGL2 shaders, `particles.js` the canvas physics, and
@@ -103,11 +105,9 @@ Each was a deliberate decision made while building; the commit that made it says
   subject (`repo:punkouter26@121304072/PoFightJudge@1360738000:…`), so the `PoFightJudge-GitHub-OIDC` registration
   carries a second pair of federated credentials in that form beside the original ones; and the client's
   `wwwroot/appsettings.json` had shipped with empty MSAL values, which curl cannot see but `DeployedSiteTests` did.
-- The **transcription fallback** had never run against the real service, and T87 moved it off the model that was
-  the reason to worry: `gemini-3.5-transcribe` is documented in its own remarks as answering 200 with an empty part
-  while billing the audio. A fight now goes to Azure fast transcription whenever a Speech key is configured, which
-  is the same service every WATCH turn already uses. Still unrun end to end on a real fight — both real fights had
-  usable live captions, which the pipeline prefers — but it is now a service that is known to answer.
+- **Transcription** of a finished fight goes to `gemini-3.5-transcribe` over the interactions API on every fight;
+  the live captions are only used when `Analysis:UseLiveCaptionTranscript` is switched on. There is no Azure Speech
+  path in the code. Whether the diarized call holds up on a real fifteen-minute fight has not been measured.
 - The judge's **explicit context cache** (T81) has never run against the real service either. The shape is from the
   published reference, the fallback to inline parts is tested, and a refusal is logged rather than fatal — but
   whether a real fight's prefix clears the minimum token count is a measurement nobody has taken. The log line at
@@ -115,8 +115,8 @@ Each was a deliberate decision made while building; the commit that made it says
 
 The real-key measurements for WATCH, FIGHT and the analysis were taken on 2026-09-07. They were worth running:
 nine defects came out of them, seven of which no test on the stand-ins could have seen. The write-ups were
-point-in-time reports and were deleted in T102; `docs/screenshots/` is what is left of them, and the runs that
-produce those screenshots are still in `WatchHardeningTests`.
+point-in-time reports and were deleted in T102. The runs that produced their screenshots are still in
+`WatchHardeningTests`, which writes them to `docs/screenshots/` (ignored by git).
 
 ## Costs
 

@@ -1,4 +1,4 @@
-# Enforced by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030): the "never" rules in AGENT.md, made compile-time.
+# Enforced by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030): the "never" rules in AGENTS.md, made compile-time.
 P:System.DateTime.Now;Use TimeProvider.GetLocalNow()
 P:System.DateTime.UtcNow;Use TimeProvider.GetUtcNow()
 P:System.DateTimeOffset.Now;Use TimeProvider.GetLocalNow()

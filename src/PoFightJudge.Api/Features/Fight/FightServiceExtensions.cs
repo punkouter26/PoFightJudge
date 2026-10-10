@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using PoFightJudge.Api.Features.Ai;
 using PoFightJudge.Api.Features.Ai.Fakes;
 using PoFightJudge.Api.Features.Live;
-using PoFightJudge.Api.Hubs;
 
 namespace PoFightJudge.Api.Features.Fight;
 

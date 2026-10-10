@@ -88,6 +88,26 @@ public partial class DesignRulesTests
         dead.Distinct(StringComparer.Ordinal).Should().BeEmpty("a scoped rule can only reach its own component's markup");
     }
 
+    /// <summary>
+    /// The three rules AGENTS.md calls non-negotiable for the UI. Each is the kind a single stray line breaks: one
+    /// raw control that skips the Radzen theme, one media query that fights the theme switch, one breakpoint nobody
+    /// else uses.
+    /// </summary>
+    [Fact]
+    public void Pages_use_radzen_controls_one_theme_switch_and_three_breakpoints()
+    {
+        var pages = Directory.EnumerateFiles(ClientRoot, "*.razor", SearchOption.AllDirectories)
+            .Where(f => RawControl().IsMatch(File.ReadAllText(f)))
+            .Select(f => Path.GetRelativePath(ClientRoot, f));
+        pages.Should().BeEmpty("anything a person operates is a Radzen component");
+
+        var sheets = StyleSheets().ToDictionary(f => Path.GetRelativePath(ClientRoot, f), File.ReadAllText, StringComparer.Ordinal);
+        sheets.Where(s => s.Value.Contains("prefers-color-scheme", StringComparison.Ordinal)).Select(s => s.Key)
+            .Should().BeEmpty("the palette is light-dark() and data-theme pins the choice");
+        sheets.SelectMany(s => MediaWidth().Matches(s.Value).Select(m => m.Groups["value"].Value)).Distinct(StringComparer.Ordinal)
+            .Should().BeSubsetOf(["40rem", "48rem", "64rem"], "there are three breakpoints and no fourth");
+    }
+
     /// <summary>Classes the JavaScript layer adds to an element, which therefore never appear in the markup.</summary>
     private static readonly HashSet<string> AddedByScript = new(StringComparer.Ordinal)
     {

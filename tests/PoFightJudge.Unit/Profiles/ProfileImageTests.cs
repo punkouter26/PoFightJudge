@@ -5,27 +5,18 @@ namespace PoFightJudge.Unit.Profiles;
 
 public class ProfileImageTests
 {
-    [Fact]
-    public async Task A_512_square_png_is_kept_byte_for_byte()
-    {
-        var png = TestPng.Solid(ProfileImageService.Size, ProfileImageService.Size);
-        using var body = new MemoryStream(png);
-
-        var read = await ProfileImageService.ReadPngAsync(body, CancellationToken.None);
-
-        read.IsSuccess.Should().BeTrue(read.Error);
-        read.Value.Should().Equal(png);
-    }
-
+    /// <summary>The server decodes nothing: a 512 px square PNG is kept byte for byte, and anything else is refused with a reason.</summary>
     [Theory]
+    [InlineData("square", null)]
     [InlineData("empty", "No image")]
     [InlineData("text", "Not a PNG")]
     [InlineData("small", "512")]
     [InlineData("huge", "larger than")]
-    public async Task Anything_else_is_refused_with_a_reason(string kind, string reason)
+    public async Task Only_a_512_square_png_is_kept(string kind, string? refusal)
     {
         var bytes = kind switch
         {
+            "square" => TestPng.Solid(ProfileImageService.Size, ProfileImageService.Size),
             "empty" => [],
             "text" => "definitely not an image, however long it goes on"u8.ToArray(),
             "small" => TestPng.Solid(64, 64),
@@ -35,7 +26,15 @@ public class ProfileImageTests
 
         var read = await ProfileImageService.ReadPngAsync(body, CancellationToken.None);
 
-        read.IsSuccess.Should().BeFalse();
-        read.Error.Should().Contain(reason);
+        if (refusal is null)
+        {
+            read.IsSuccess.Should().BeTrue(read.Error);
+            read.Value.Should().Equal(bytes);
+        }
+        else
+        {
+            read.IsSuccess.Should().BeFalse();
+            read.Error.Should().Contain(refusal);
+        }
     }
 }

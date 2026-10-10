@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Read [AGENT.md](AGENT.md) first — it carries the rules, the environment matrix and the deviations table. This file
+Read [AGENTS.md](AGENTS.md) first — it carries the rules, the environment matrix and the deviations table. This file
 is the short version for a working session.
 
 ## Commands
@@ -21,7 +21,7 @@ dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
 - Tests first, then the smallest code that passes them. Never delete, skip or weaken a failing test — if it is
   wrong, say so and fix it deliberately; if it is right, the code is wrong.
 - A task edits the files it lists. Going outside that is allowed when it is necessary, but it is said out loud in
-  the commit message and in AGENT.md's deviations table.
+  the commit message and in AGENTS.md's deviations table.
 - Report faithfully. A failing test is reported as failing, with the output.
 - Never invent an API's shape. Check the documentation or ask.
 
