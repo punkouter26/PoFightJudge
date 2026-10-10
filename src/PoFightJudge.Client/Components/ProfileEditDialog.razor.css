@@ -94,12 +94,17 @@
 
 .slider-head .po-num { color: var(--po-fg); }
 
+/* Stuck to the bottom of the dialog: the form scrolls, and the way to finish it should not scroll away with it. */
 .footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: var(--po-space-2);
-  padding-top: var(--po-space-2);
+  padding-block: var(--po-space-2);
   border-top: 1px solid var(--po-rule);
+  background: var(--po-surface);
 }
 
 ::deep .error { margin: 0; }

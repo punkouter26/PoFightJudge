@@ -14,6 +14,10 @@
         {
             <LoadingRows Count="2" Label="Opening the ruling" />
         }
+        else if (_failed is not null)
+        {
+            <PageAlert Kind="AlertStyle.Danger">@_failed</PageAlert>
+        }
         else if (_shared is null)
         {
             <EmptyState Icon="link_off" Title="This link is not live"
@@ -53,6 +57,7 @@
 @code {
     private SharedMatchDto? _shared;
     private bool _loading = true;
+    private string? _failed;
 
     [Parameter] public string Token { get; set; } = string.Empty;
 
@@ -65,13 +70,16 @@
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
+        _failed = null;
         try
         {
             _shared = Token.Length == 0 ? null : await Api.GetSharedAsync(Token);
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The ruling could not be opened") is { } why)
         {
+            // The link may be perfectly good. Saying it "is not live" would send somebody off to ask for another.
             _shared = null;
+            _failed = why;
         }
         finally
         {

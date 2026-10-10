@@ -24,6 +24,11 @@
         {
             <LoadingRows Count="4" Label="Reading their record" />
         }
+        else if (_failed is not null)
+        {
+            <PageAlert Kind="AlertStyle.Danger">@_failed</PageAlert>
+            <RadzenButton Text="Try again" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Click="@LoadAsync" />
+        }
         else if (_profile is null)
         {
             <EmptyState Icon="person_off" Title="No such fighter" Text="Nobody has argued under that tag." />
@@ -148,6 +153,9 @@
     private string? _name;
     private bool _loading = true;
 
+    /// <summary>Why the record could not be read, when that — and not an unknown tag — is what happened.</summary>
+    private string? _failed;
+
     [Parameter] public string Tag { get; set; } = string.Empty;
 
     private string Title => _profile is null
@@ -179,9 +187,12 @@
     /// <summary>Which columns exist is a render decision, and a rotated phone is a different set of them.</summary>
     private void OnViewportChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
     {
         _loading = true;
+        _failed = null;
         if (!Initials.IsValid(Tag))
         {
             _profile = null;
@@ -195,9 +206,11 @@
             _results = _profile is null ? [] : [.. _profile.Results.OrderByDescending(r => r.At)];
             _name = _profile?.Fighter.DisplayName;
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "Their record could not be read") is { } why)
         {
+            // Not the same as nobody: the tag may be perfectly real and the network not.
             _profile = null;
+            _failed = why;
         }
         finally
         {

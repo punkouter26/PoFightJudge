@@ -89,9 +89,9 @@
         {
             _report = await Api.GetHealthDetailsAsync();
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The API did not answer") is { } why)
         {
-            _error = $"The API did not answer: {ex.Message}";
+            _error = why;
         }
         finally
         {

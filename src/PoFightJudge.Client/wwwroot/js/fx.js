@@ -28,6 +28,14 @@ window.PoFx = (function () {
     }, DURATION);
   }
 
+  // Brings the first match into the middle of whatever scrolls it. Nothing happens when there is none.
+  function reveal(selector) {
+    const el = document.querySelector(selector);
+    if (el) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }
+
   // The same, for something the page did not draw itself and so holds no reference to.
   function scrollEnd(selector) {
     scrollBottom(document.querySelector(selector));
@@ -39,5 +47,5 @@ window.PoFx = (function () {
     }
   }
 
-  return { burst: burst, scrollBottom: scrollBottom, scrollEnd: scrollEnd };
+  return { burst: burst, scrollBottom: scrollBottom, scrollEnd: scrollEnd, reveal: reveal };
 })();

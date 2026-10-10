@@ -153,7 +153,7 @@
         var result = (object?)await Dialog.OpenAsync<ProfileEditDialog>(
             existing is null ? "New profile" : $"Edit {existing.Persona.Initials}",
             parameters,
-            new DialogOptions { Width = "min(780px, 96vw)", CloseDialogOnOverlayClick = false, Resizable = false, Draggable = false });
+            new DialogOptions { Width = "min(780px, 96vw)", CloseDialogOnOverlayClick = false, CloseDialogOnEsc = false, Resizable = false, Draggable = false });
 
         if (result is ProfileDto saved)
         {

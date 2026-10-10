@@ -36,9 +36,11 @@
 
     <div class="bars">
         <StatBar LeftLabel="Logic" RightLabel="Emotion" Value="@Persona.LogicVsEmotion" Color="@Accent" />
-        <StatBar LeftLabel="Chill" RightLabel="Impatient" Value="@(100 - Persona.Patience)" Color="@Accent" />
+        @* The same four scales, the same way round and in the same order as the editor's sliders. The patience bar
+           used to be drawn backwards under different words, so a slider pushed right moved its bar left. *@
+        <StatBar LeftLabel="Impatient" RightLabel="Patient" Value="@Persona.Patience" Color="@Accent" />
+        <StatBar LeftLabel="Forgiving" RightLabel="Holds grudges" Value="@Persona.HoldsGrudges" Color="@Accent" />
         <StatBar LeftLabel="Secure" RightLabel="Jealous" Value="@Persona.Jealousy" Color="@Accent" />
-        <StatBar LeftLabel="Forgiving" RightLabel="Holds on" Value="@Persona.HoldsGrudges" Color="@Accent" />
     </div>
 
     @if (!string.IsNullOrWhiteSpace(Persona.Philosophy))
