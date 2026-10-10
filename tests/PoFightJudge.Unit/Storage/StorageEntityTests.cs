@@ -2,7 +2,7 @@ using PoFightJudge.Api.Features.Storage;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 
-namespace PoFightJudge.Unit.Records;
+namespace PoFightJudge.Unit.Storage;
 
 public class StorageEntityTests
 {

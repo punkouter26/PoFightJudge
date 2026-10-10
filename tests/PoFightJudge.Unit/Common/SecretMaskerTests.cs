@@ -3,7 +3,7 @@ using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Diagnostics;
 using PoFightJudge.Shared.Models;
 
-namespace PoFightJudge.Unit.Diagnostics;
+namespace PoFightJudge.Unit.Common;
 
 public class SecretMaskerTests
 {

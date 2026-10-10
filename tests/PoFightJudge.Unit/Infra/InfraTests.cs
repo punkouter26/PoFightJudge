@@ -57,7 +57,7 @@ public partial class InfraTests
     private static string? FindAz()
     {
         var paths = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
-        var names = OperatingSystem.IsWindows() ? new[] { "az.cmd", "az.exe", "az" } : ["az"];
+        var names = OperatingSystem.IsWindows() ? new[] { "az.cmd", "az.exe" } : ["az"];
         return paths
             .SelectMany(p => names.Select(n => Path.Combine(p, n)))
             .FirstOrDefault(File.Exists);

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using PoFightJudge.Api.Features.Ai;
 using PoFightJudge.Shared.Configuration;
 
-namespace PoFightJudge.Unit.Watch;
+namespace PoFightJudge.Unit.Ai;
 
 /// <summary>
 /// Two different Gemini surfaces transcribe in this solution, and they do not accept the same model.

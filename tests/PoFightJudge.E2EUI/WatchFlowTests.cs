@@ -39,6 +39,11 @@ public class WatchFlowTests(AppFixture app)
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", user: "e2e-arguer");
         await using var _ = context;
 
+        // Every microphone stream the page is handed is kept, so the test can stop talking later on.
+        await page.AddInitScriptAsync(
+            "window.__streams = []; const real = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);"
+            + " navigator.mediaDevices.getUserMedia = async c => { const s = await real(c); window.__streams.push(s); return s; };");
+
         await LoadTheCastAsync(page);
 
         await page.GotoAsync($"{app.BaseUrl}/1p");
@@ -55,24 +60,17 @@ public class WatchFlowTests(AppFixture app)
         await turn.WaitForAsync(new() { Timeout = 90_000 });
         (await page.Locator("article.line").CountAsync()).Should().Be(1, "the argument stops at the person's turn rather than speaking for them");
 
-        // Spoken, not typed. Nobody reaches for a button to start: the turn opens the microphone itself, the fake
-        // device plays the fixture into it, and what the transcriber makes of it lands in the box to be checked
-        // before it counts. "Done" is only there for somebody who has finished and will not wait out the pause.
+        // Spoken, not typed, and nothing to press: the turn opens the microphone itself, the fake device plays the
+        // fixture into it, and a pause is what ends it. The fixture never pauses, so the test goes quiet the way a
+        // person does, after a second and a half of talking: the track is muted, and the words then send themselves.
         await turn.Locator(".meter--on").WaitForAsync(new() { Timeout = 30_000 });
         await page.WaitForTimeoutAsync(1_500);
-        await turn.GetByRole(AriaRole.Button, new() { Name = "Done" }).ClickAsync();
-
-        var line = turn.Locator("textarea[name=line]");
-        await page.WaitForFunctionAsync(
-            "() => (document.querySelector('textarea[name=line]')?.value ?? '').length > 0",
-            null,
-            new() { Timeout = 60_000 });
-        (await line.InputValueAsync()).Should().Contain("fake transcript", "the offline transcriber says so out loud");
-
-        await turn.GetByRole(AriaRole.Button, new() { Name = "Say it" }).ClickAsync();
+        await page.EvaluateAsync("() => window.__streams.forEach(s => s.getAudioTracks().forEach(t => { t.enabled = false; }))");
 
         await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 3", null, new() { Timeout = 60_000 });
-        (await page.Locator("article.line").Nth(1).InnerTextAsync()).Should().Contain("fake transcript", "what they said is what went on the record");
+        var said = await page.Locator("article.line").Nth(1).InnerTextAsync();
+        said.Should().ContainEquivalentOf("KD", "the line on the record is theirs");
+        said.Should().MatchRegex("(?i)rich, coming from you|raised yours first|last weekend|know you are losing", "what the transcriber heard is what went on the record");
 
         errors.Should().BeEmpty();
     }

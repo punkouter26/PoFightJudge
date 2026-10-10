@@ -17,9 +17,9 @@ concurrency:
   group: deploy-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: false
 
+# The build needs nothing but the code; only the deploy job is handed a token it can log in to Azure with.
 permissions:
   contents: read
-  id-token: write   # OIDC federated credential for azure/login — no stored secret
 
 env:
   AZURE_WEBAPP_NAME: app-pofightjudge
@@ -42,10 +42,14 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
       - name: Build (Release, warnings are errors)
         run: dotnet build PoFightJudge.slnx -c Release
-      # Only the Unit suite gates the pipeline. Integration needs Azurite, E2EUI needs Playwright and a microphone
-      # fixture, and E2EAPI is covered by the post-deploy smoke; all four run locally via SCRIPTS/setup.ps1.
+      - name: Formatting
+        run: dotnet format PoFightJudge.slnx --verify-no-changes --no-restore
+      # Unit and E2EAPI gate the pipeline: both run in-process on the fakes. Integration needs Azurite and E2EUI needs
+      # Playwright and a microphone fixture; those two run locally via SCRIPTS/setup.ps1.
       - name: Unit tests
         run: dotnet test tests/PoFightJudge.Unit --no-build -c Release --verbosity minimal
+      - name: API tests
+        run: dotnet test tests/PoFightJudge.E2EAPI --no-build -c Release --verbosity minimal
       - name: Publish API
         run: dotnet publish src/PoFightJudge.Api -c Release --no-build -o publish
       - uses: actions/upload-artifact@v4
@@ -60,6 +64,9 @@ jobs:
     needs: build
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write   # OIDC federated credential for azure/login — no stored secret
     environment:
       name: production
       url: ${{ env.AZURE_WEBAPP_URL }}

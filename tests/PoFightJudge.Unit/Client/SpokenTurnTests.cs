@@ -1,6 +1,6 @@
 using PoFightJudge.Client.Pages;
 
-namespace PoFightJudge.Unit.Watch;
+namespace PoFightJudge.Unit.Client;
 
 /// <summary>
 /// The two decisions behind a hands-free turn: when a pause has run long enough to stop recording,

@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using PoFightJudge.Api.Features.Fight;
 using PoFightJudge.Api.Features.Storage;
 
-namespace PoFightJudge.Unit.Records;
+namespace PoFightJudge.Unit.Storage;
 
 /// <summary>
 /// Recordings are stored in Opus and read back as PCM. What matters is that the length survives — the analysis

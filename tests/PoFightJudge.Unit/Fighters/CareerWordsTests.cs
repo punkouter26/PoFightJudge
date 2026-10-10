@@ -2,7 +2,7 @@ using PoFightJudge.Api.Features.Fighters;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 
-namespace PoFightJudge.Unit.Watch;
+namespace PoFightJudge.Unit.Fighters;
 
 /// <summary>
 /// A whole speaking history, counted. These are rates rather than totals, asserting that
