@@ -18,6 +18,12 @@ public static class LiveHubContract
     public const string Snapshot = "Snapshot";
     public const string Ended = "Ended";
     public const string Error = "Error";
+
+    /// <summary>Client to server: tell me when the reading of this fight moves on. Only its owner may ask.</summary>
+    public const string WatchAnalysis = "WatchAnalysis";
+
+    /// <summary>Server to client: the reading has reached a new stage. Carries the stage's name; the page asks for the rest.</summary>
+    public const string AnalysisStatus = "AnalysisStatus";
 }
 
 /// <summary>

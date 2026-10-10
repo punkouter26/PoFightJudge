@@ -1,10 +1,12 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using PoFightJudge.Api.Features.Ai;
 using PoFightJudge.Api.Features.Fight;
 using PoFightJudge.Api.Features.Fighters;
+using PoFightJudge.Api.Features.Live;
 using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Api.Features.Storage;
 using PoFightJudge.Shared.Identifiers;
@@ -24,7 +26,8 @@ public sealed partial class AnalysisPipeline(
     IGeminiJudgeClient judge,
     TimeProvider clock,
     IOptions<AnalysisOptions> options,
-    ILogger<AnalysisPipeline> logger) : BackgroundService, IAnalysisIntake
+    ILogger<AnalysisPipeline> logger,
+    IHubContext<LiveHub>? hub = null) : BackgroundService, IAnalysisIntake
 {
     public const string UserFacingFailure = "The analysis could not be completed. Try again in a moment.";
 
@@ -361,7 +364,25 @@ public sealed partial class AnalysisPipeline(
         await matches.SaveAnalysisAsync(
             new AnalysisRecordDto(matchId, status, json, error, clock.GetUtcNow()) { Attempts = starting ? attempts + 1 : attempts },
             ct);
+
+        // Said out loud as well as written down, so the page that is waiting hears it the moment it happens rather
+        // than on its next ask. Only the stage's name goes out: the report is fetched, by its owner, the usual way.
+        if (hub is not null)
+        {
+            try
+            {
+                await hub.Clients.Group(LiveHub.AnalysisGroup(matchId)).SendAsync(LiveHubContract.AnalysisStatus, status.ToString(), ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Nobody listening, or the line is down. The page still asks, just less promptly.
+                LogNotAnnounced(logger, matchId.Value, ex);
+            }
+        }
     }
+
+    [LoggerMessage(EventId = 5008, Level = LogLevel.Debug, Message = "Analysis {MatchId}: the stage change could not be announced")]
+    private static partial void LogNotAnnounced(ILogger logger, string matchId, Exception ex);
 
     /// <summary>The recording as the provider holds it, for exactly as long as the reading takes.</summary>
     private sealed class UploadedRecording(IGeminiFilesClient files, string name, ILogger logger) : IAsyncDisposable

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Api.Features.Fight;
+using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
 
@@ -11,7 +12,7 @@ namespace PoFightJudge.Api.Features.Live;
 /// The channel between the room and the fight: microphone frames up, the host's voice, captions and snapshots down.
 /// </summary>
 [Authorize]
-public sealed class LiveHub(SessionRegistry fights, TimeProvider clock) : Hub
+public sealed class LiveHub(SessionRegistry fights, IMatchRepository matches, TimeProvider clock) : Hub
 {
     private const string FightKey = "matchId";
 
@@ -39,6 +40,26 @@ public sealed class LiveHub(SessionRegistry fights, TimeProvider clock) : Hub
 
         // Only now: the host's opening line must not be said to an empty room.
         await fight.BeginShowAsync(Context.ConnectionAborted);
+    }
+
+    /// <summary>The group that hears how the reading of one fight is going. Separate from the fight's own group: the room is gone by then.</summary>
+    public static string AnalysisGroup(MatchId id) => $"analysis:{id.Value}";
+
+    /// <summary>
+    /// Puts this connection on the list for one fight's reading. The fight has to be the caller's own: the group
+    /// name is guessable, and the only thing that keeps a stranger out of it is this check.
+    /// </summary>
+    [HubMethodName(LiveHubContract.WatchAnalysis)]
+    public async Task WatchAnalysisAsync(string matchId)
+    {
+        if (!MatchId.TryParse(matchId, null, out var id)
+            || Context.User?.UserIdOrNull() is not { } userId
+            || await matches.GetAsync(userId, id, Context.ConnectionAborted) is null)
+        {
+            throw new HubException("Fight not found.");
+        }
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, AnalysisGroup(id));
     }
 
     [HubMethodName(LiveHubContract.AudioIn)]

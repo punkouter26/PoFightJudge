@@ -19,6 +19,9 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     /// <summary>How often to ask. Long enough not to hammer the API, short enough that a finished report appears.</summary>
     internal static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
 
+    /// <summary>How often to ask while the server has promised to say when something changes: a backstop, not the plan.</summary>
+    internal static readonly TimeSpan ListeningInterval = TimeSpan.FromSeconds(20);
+
     /// <summary>Give up after this long rather than spinning forever in front of somebody.</summary>
     internal static readonly TimeSpan PollLimit = TimeSpan.FromMinutes(5);
 
@@ -32,6 +35,12 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     private bool _retrying;
     private bool _finished;
     private int _tab;
+
+    /// <summary>The line the server announces a new stage on, when it could be opened.</summary>
+    private AnalysisSignal? _signal;
+
+    /// <summary>Completed by an announcement, which ends whatever wait the polling loop is in.</summary>
+    private TaskCompletionSource _nudge = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     [Parameter] public string MatchIdText { get; set; } = string.Empty;
 
@@ -48,6 +57,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     [Inject] private GfxInterop Gfx { get; set; } = default!;
 
     [Inject] private IJSRuntime Js { get; set; } = default!;
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
 
     private string Title => _report is null ? "Reading it back" : _report.Topic is { Length: > 0 } topic ? topic : "The ruling";
 
@@ -101,8 +112,18 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             _match = null;
         }
 
+        // Told when the reading moves on, where the line can be opened. Where it cannot, the page asks on a timer.
+        if (Services.GetService<LiveConnectionFactory>() is { } connections)
+        {
+            _signal = connections.CreateSignal();
+            await _signal.ListenAsync(id, Nudge, _leaving.Token);
+        }
+
         await PollAsync(id);
     }
+
+    /// <summary>Something changed: stop waiting and ask now.</summary>
+    private void Nudge() => Interlocked.Exchange(ref _nudge, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).TrySetResult();
 
     /// <summary>
     /// Once the report is on the page, it is finished like a piece of film: a vignette that pulls the eye into the
@@ -174,7 +195,10 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             StateHasChanged();
             try
             {
-                await Task.Delay(PollInterval, Clock, _leaving.Token);
+                // With the line up the timer is only a backstop, so it is a slow one; a nudge ends the wait at once.
+                var wait = Task.Delay(_signal is { IsListening: true } ? ListeningInterval : PollInterval, Clock, _leaving.Token);
+                await Task.WhenAny(wait, Volatile.Read(ref _nudge).Task);
+                _leaving.Token.ThrowIfCancellationRequested();
             }
             catch (OperationCanceledException)
             {
@@ -238,5 +262,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         // in a way anybody could act on.
         Gfx.Release(RevealSelector);
         Particles.Release(RevealSelector);
+
+        // Fire and forget, for the same reason: closing a socket on the way out has nothing to report.
+        _ = _signal?.DisposeAsync().AsTask();
     }
 }

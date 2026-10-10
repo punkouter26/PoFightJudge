@@ -163,9 +163,67 @@ public sealed class LiveConnection(Uri baseAddress, IAccessTokenProvider? tokens
     }
 }
 
+/// <summary>
+/// Hears when the reading of a finished fight moves on. One method up, one event down: the page still fetches the
+/// report itself, this only tells it when there is something new to fetch.
+/// </summary>
+public sealed class AnalysisSignal(Uri baseAddress, IAccessTokenProvider? tokens) : IAsyncDisposable
+{
+    private HubConnection? _hub;
+
+    /// <summary>Whether the line is up. While it is, the page can ask rarely; when it is not, it asks as often as it used to.</summary>
+    public bool IsListening => _hub is { State: HubConnectionState.Connected };
+
+    /// <summary>Starts listening. Never throws: a page with no signal is a page that polls, which is what it was before.</summary>
+    public async Task ListenAsync(MatchId matchId, Action changed, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(changed);
+        try
+        {
+            _hub = new HubConnectionBuilder()
+                .WithUrl(new Uri(baseAddress, ApiRoutes.Hubs.Live), options =>
+                {
+                    if (tokens is not null)
+                    {
+                        options.AccessTokenProvider = async () =>
+                        {
+                            var result = await tokens.RequestAccessToken();
+                            return result.TryGetToken(out var token) ? token.Value : null;
+                        };
+                    }
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hub.On<string>(LiveHubContract.AnalysisStatus, _ => changed());
+
+            // A reconnect is a new connection, and the list it was on went with the old one.
+            _hub.Reconnected += _ => _hub.InvokeAsync(LiveHubContract.WatchAnalysis, matchId.Value);
+
+            await _hub.StartAsync(ct);
+            await _hub.InvokeAsync(LiveHubContract.WatchAnalysis, matchId.Value, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await DisposeAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub is not null)
+        {
+            await _hub.DisposeAsync();
+            _hub = null;
+        }
+    }
+}
+
 /// <summary>Makes one connection per fight, carrying whatever token the browser is signed in with.</summary>
 public sealed class LiveConnectionFactory(IServiceProvider services, Uri baseAddress)
 {
+    public AnalysisSignal CreateSignal() => new(baseAddress, services.GetService<IAccessTokenProvider>());
+
     public LiveConnection Create()
     {
         ArgumentNullException.ThrowIfNull(services);
