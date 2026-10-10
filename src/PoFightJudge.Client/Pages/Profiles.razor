@@ -28,7 +28,7 @@
         }
         else if (_error is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+            <PageAlert Kind="AlertStyle.Danger">@_error</PageAlert>
         }
         else if (_profiles.Count == 0)
         {
@@ -132,13 +132,9 @@
             _stamp = Clock.GetUtcNow().ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
             _board = await Api.GetLeaderboardAsync(MatchMode.Watch);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "Could not load the cast") is { } why)
         {
-            _error = $"Could not load the cast ({ex.Message}).";
-        }
-        catch (ApiException ex)
-        {
-            _error = ex.Summary;
+            _error = why;
         }
         finally
         {

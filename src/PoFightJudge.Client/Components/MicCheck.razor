@@ -37,7 +37,7 @@
 
     @if (_problem is { Length: > 0 })
     {
-        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_problem</RadzenAlert>
+        <PageAlert Kind="AlertStyle.Warning">@_problem</PageAlert>
     }
 </section>
 

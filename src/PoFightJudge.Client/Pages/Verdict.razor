@@ -7,13 +7,13 @@
     <ChildContent>
         @if (_problem is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+            <PageAlert Kind="AlertStyle.Danger" Class="problem">
                 <div class="failure">
                     <span>@_problem</span>
                     <RadzenButton Text="Read it again" Icon="refresh" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
                                   Disabled="@_retrying" Click="@RetryAsync" />
                 </div>
-            </RadzenAlert>
+            </PageAlert>
         }
         else if (_report is null)
         {
@@ -29,9 +29,9 @@
                 <RulingCard Winner="@Winner" Summary="@_report.Overall.Summary" Reasons="@_report.Overall.Reasons">
                     @if (_report.SpeakerMappingFlagged)
                     {
-                        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                        <PageAlert Kind="AlertStyle.Warning" Class="problem">
                             Who said what is not certain here. @_report.SpeakerMappingNote
-                        </RadzenAlert>
+                        </PageAlert>
                     }
                     @if (_match is not null)
                     {

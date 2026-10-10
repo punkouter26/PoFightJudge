@@ -1,0 +1,12 @@
+@* Something the page has to say that stays on the page: a problem that blocks what was asked for, or a caution
+   about what is being shown. It is flat, tinted and cannot be dismissed, because it is about the page as it
+   stands. Something that merely happened — saved, deleted, copied — is a toast (NotificationService), not this. *@
+<RadzenAlert AlertStyle="@Kind" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="@Class">@ChildContent</RadzenAlert>
+
+@code {
+    [Parameter] public AlertStyle Kind { get; set; } = AlertStyle.Danger;
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+}

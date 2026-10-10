@@ -23,7 +23,7 @@
         }
         else if (_error is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+            <PageAlert Kind="AlertStyle.Danger">@_error</PageAlert>
         }
         else if (_roster.Count == 0)
         {
@@ -151,13 +151,9 @@
             _roster = await Api.GetRosterAsync();
             _board = await Api.GetLeaderboardAsync(MatchMode.Fight);
         }
-        catch (ApiException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The card could not be read") is { } why)
         {
-            _error = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _error = $"The card could not be read ({ex.Message}).";
+            _error = why;
         }
         finally
         {

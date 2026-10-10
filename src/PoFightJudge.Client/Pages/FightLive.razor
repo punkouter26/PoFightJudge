@@ -10,12 +10,12 @@
     <ChildContent>
         @if (_fatal is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+            <PageAlert Kind="AlertStyle.Danger" Class="problem">
                 <div class="failure">
                     <span>@_fatal</span>
                     <RadzenButton Text="Start another" Icon="mic" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined" Click="@(() => Nav.NavigateTo("fight"))" />
                 </div>
-            </RadzenAlert>
+            </PageAlert>
         }
         else
         {
@@ -37,9 +37,9 @@
 
                 @if (_reconnecting)
                 {
-                    <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
+                    <PageAlert Kind="AlertStyle.Info" Class="problem">
                         The connection dropped. Keep talking — this keeps trying for as long as the page is open.
-                    </RadzenAlert>
+                    </PageAlert>
                 }
 
                 <CaptionFeed Log="@_captions" Player1Name="@Player1" Player2Name="@Player2" HostName="@HostName" />

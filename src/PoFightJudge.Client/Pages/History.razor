@@ -242,13 +242,9 @@
         {
             // Left the page, or a newer keystroke replaced this request.
         }
-        catch (ApiException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "Your history could not be loaded") is { } why)
         {
-            _error = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _error = $"Your history could not be loaded ({ex.Message}).";
+            _error = why;
         }
         finally
         {
@@ -417,13 +413,9 @@
                 await LoadAsync();
             }
         }
-        catch (ApiException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "It could not be deleted") is { } why)
         {
-            _error = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _error = $"It could not be deleted ({ex.Message}).";
+            _error = why;
         }
     }
 }

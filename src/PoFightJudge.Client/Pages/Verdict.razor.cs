@@ -219,13 +219,9 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             await Api.RetryAnalysisAsync(id, _leaving.Token);
             await PollAsync(id);
         }
-        catch (ApiException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "It could not be sent back to be read") is { } why)
         {
-            _problem = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _problem = $"It could not be sent back to be read ({ex.Message}).";
+            _problem = why;
         }
         finally
         {

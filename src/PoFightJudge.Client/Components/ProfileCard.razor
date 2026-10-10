@@ -107,13 +107,9 @@
                 await Task.Delay(duration);
             }
         }
-        catch (ApiException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The API is not answering") is { } why)
         {
-            _previewError = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _previewError = $"The API is not answering ({ex.Message}).";
+            _previewError = why;
         }
         finally
         {

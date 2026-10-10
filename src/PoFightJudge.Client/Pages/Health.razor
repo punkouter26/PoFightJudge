@@ -16,7 +16,7 @@
         <div class="po-scope">
         @if (_error is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+            <PageAlert Kind="AlertStyle.Danger">@_error</PageAlert>
         }
         else if (_report is null)
         {

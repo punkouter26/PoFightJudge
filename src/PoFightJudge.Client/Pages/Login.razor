@@ -31,14 +31,14 @@
 
         @if (_error is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">@_error</RadzenAlert>
+            <PageAlert Kind="AlertStyle.Danger">@_error</PageAlert>
         }
         @if (!Env.IsProduction() && Features.Loaded && !Features.Flags.DevGuestEnabled)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+            <PageAlert Kind="AlertStyle.Warning">
                 The guest door is off, and it is the only door outside Production. Set
                 <code>PoFightJudge:Auth:AllowFakeAuth</code>.
-            </RadzenAlert>
+            </PageAlert>
         }
     </div>
 </PageShell>

@@ -29,9 +29,9 @@
 
     @if (Existing?.FromFights == true)
     {
-        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="from-fights">
+        <PageAlert Kind="AlertStyle.Info" Class="from-fights">
             This persona is read from what @Existing.Persona.Initials has actually said, in every debate they have argued in, and is rewritten after each one. Anything you change here lasts until their next debate.
-        </RadzenAlert>
+        </PageAlert>
     }
 
     <RadzenFieldset Text="Identity" class="section">
@@ -170,7 +170,7 @@
 
     @if (_error is not null)
     {
-        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="error">@_error</RadzenAlert>
+        <PageAlert Kind="AlertStyle.Danger" Class="error">@_error</PageAlert>
     }
 
     <div class="footer">
@@ -258,13 +258,9 @@
             draft.TtsSettings ??= new TtsSettingsDto();
             _model = draft;
         }
-        catch (ApiException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The API is not answering") is { } why)
         {
-            _error = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _error = $"The API is not answering ({ex.Message}).";
+            _error = why;
         }
         finally
         {
@@ -293,13 +289,9 @@
         {
             _error = "That file is not an image this browser can read.";
         }
-        catch (ApiException ex)
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The API is not answering") is { } why)
         {
-            _error = ex.Summary;
-        }
-        catch (HttpRequestException ex)
-        {
-            _error = $"The API is not answering ({ex.Message}).";
+            _error = why;
         }
         finally
         {
