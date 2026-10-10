@@ -1,4 +1,5 @@
 using Azure.Data.Tables;
+using Microsoft.Extensions.Caching.Memory;
 using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Storage;
 using PoFightJudge.Shared.Identifiers;
@@ -24,10 +25,19 @@ public interface IWatchResultRepository
     Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> initials, CancellationToken ct = default);
 }
 
-public sealed class WatchResultRepository(TableServiceClient tables) : IWatchResultRepository
+/// <remarks>
+/// The leaderboard reads every row of every partition. That scan is kept for a short while and thrown away the
+/// moment this repository writes or deletes a row, so the board is never behind something this process did.
+/// </remarks>
+public sealed class WatchResultRepository(TableServiceClient tables, IMemoryCache? cache = null) : IWatchResultRepository
 {
-    public Task SaveAsync(IEnumerable<WatchResultDto> results, CancellationToken ct = default) =>
-        StorageBootstrap.WithTableAsync(tables, TableNames.WatchResults, async token =>
+    private const string EveryResult = "watch-results:all";
+
+    private static readonly TimeSpan KeptFor = TimeSpan.FromSeconds(30);
+
+    public async Task SaveAsync(IEnumerable<WatchResultDto> results, CancellationToken ct = default)
+    {
+        await StorageBootstrap.WithTableAsync(tables, TableNames.WatchResults, async token =>
         {
             // The two sides live in different partitions, so this cannot be one transaction; each row is idempotent
             // on (initials, match), which is what makes a retried verdict safe.
@@ -36,20 +46,39 @@ public sealed class WatchResultRepository(TableServiceClient tables) : IWatchRes
                 await Table.UpsertEntityAsync(WatchResultEntity.From(result), TableUpdateMode.Replace, token);
             }
         }, ct);
+        cache?.Remove(EveryResult);
+    }
 
     public Task<IReadOnlyList<WatchResultDto>> ListForAsync(string initials, CancellationToken ct = default) =>
         QueryAsync(TableClient.CreateQueryFilter($"PartitionKey eq {initials}"), ct);
 
-    public Task<IReadOnlyList<WatchResultDto>> ListAllAsync(CancellationToken ct = default) => QueryAsync(filter: null, ct);
+    public async Task<IReadOnlyList<WatchResultDto>> ListAllAsync(CancellationToken ct = default)
+    {
+        if (cache is null)
+        {
+            return await QueryAsync(filter: null, ct);
+        }
 
-    public Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> initials, CancellationToken ct = default) =>
-        StorageBootstrap.WithTableAsync(tables, TableNames.WatchResults, async token =>
+        if (!cache.TryGetValue(EveryResult, out IReadOnlyList<WatchResultDto>? all) || all is null)
+        {
+            all = await QueryAsync(filter: null, ct);
+            cache.Set(EveryResult, all, KeptFor);
+        }
+
+        return all;
+    }
+
+    public async Task DeleteForMatchAsync(MatchId matchId, IEnumerable<string> initials, CancellationToken ct = default)
+    {
+        await StorageBootstrap.WithTableAsync(tables, TableNames.WatchResults, async token =>
         {
             foreach (var side in initials.Where(s => !string.IsNullOrEmpty(s)).Distinct(StringComparer.Ordinal))
             {
                 await Table.DeleteEntityAsync(side, matchId.Value, cancellationToken: token);
             }
         }, ct);
+        cache?.Remove(EveryResult);
+    }
 
     private TableClient Table => tables.GetTableClient(TableNames.WatchResults);
 

@@ -5,6 +5,7 @@ using Carter;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Ai;
@@ -129,6 +130,7 @@ try
     {
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(ConfigKeys.Root))
+            .WithMetrics(metrics => metrics.AddMeter(AiLatencyTracker.MeterName))
             .UseAzureMonitor(options =>
             {
                 options.ConnectionString = appInsights;
@@ -168,7 +170,7 @@ try
     builder.Services.AddPoAnalysis(builder.Configuration, ai);
     Log.Information("AI providers: {Mode} ({Reason})", ai.UseFakes ? "fakes" : "real", ai.Reason);
     builder.Services.TryAddSingleton(TimeProvider.System);
-    builder.Services.AddHybridCache();
+    builder.Services.AddMemoryCache();
     builder.Services.AddCarter();
     builder.Services.AddOpenApi();
     builder.Services.AddProblemDetails();

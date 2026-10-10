@@ -52,17 +52,23 @@ public sealed partial class BlobTtsCache(BlobServiceClient blobs, StorageContain
 {
     private readonly BlobContainerClient _container = blobs.GetBlobContainerClient(containers.TtsCacheContainer);
 
+    private volatile string _lastHit = TtsAudioFormats.Mp3;
+
     public bool IsEnabled => true;
 
     public async Task<TtsAudio?> TryGetAsync(string key, CancellationToken ct = default)
     {
-        // The format is part of the key, so the stored blob's own content type is what the entry was written as.
-        foreach (var format in new[] { TtsAudioFormats.Mp3, TtsAudioFormats.Pcm })
+        // The entry is stored under the format the provider actually answered in, which the caller cannot know. The
+        // format the last hit was in goes first: one provider serves nearly every line, so nearly every hit is then
+        // one request rather than a 404 and then a hit.
+        var first = _lastHit;
+        foreach (var format in new[] { first, string.Equals(first, TtsAudioFormats.Mp3, StringComparison.Ordinal) ? TtsAudioFormats.Pcm : TtsAudioFormats.Mp3 })
         {
             try
             {
                 var blob = _container.GetBlobClient(TtsCacheKey.BlobName(key, format));
                 var response = await blob.DownloadContentAsync(ct);
+                _lastHit = format;
                 return new TtsAudio(Convert.ToBase64String(response.Value.Content.ToArray()), format);
             }
             catch (RequestFailedException ex) when (ex.Status is 404)

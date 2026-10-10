@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using PoFightJudge.Shared.Models;
 
 namespace PoFightJudge.Api.Features.Diagnostics;
@@ -15,12 +16,24 @@ public sealed class AiLatencyTracker
 
     public const string TimeToFirstTokenSuffix = ".ttft";
 
+    /// <summary>
+    /// The same numbers as OpenTelemetry metrics. The window above is what <c>/api/diag</c> shows and it starts again
+    /// every time the process does, which on a host that unloads when idle is several times a day; these go to
+    /// Azure Monitor, where they are kept, and metrics are not sampled the way traces are.
+    /// </summary>
+    public const string MeterName = "PoFightJudge.Ai";
+
+    private static readonly Meter Meter = new(MeterName);
+    private static readonly Histogram<double> Duration = Meter.CreateHistogram<double>("ai.call.duration", "ms", "How long one call to a model took, by operation.");
+    private static readonly Counter<long> Tokens = Meter.CreateCounter<long>("ai.tokens", "{token}", "Tokens billed, by operation and kind (prompt, output, cached).");
+
     private readonly Lock _gate = new();
     private readonly Dictionary<string, List<double>> _samples = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TokenLedger> _tokens = new(StringComparer.Ordinal);
 
     public void Record(string operation, double milliseconds)
     {
+        Duration.Record(milliseconds, new KeyValuePair<string, object?>("operation", operation));
         lock (_gate)
         {
             if (!_samples.TryGetValue(operation, out var list))
@@ -43,6 +56,9 @@ public sealed class AiLatencyTracker
     /// <summary><paramref name="cachedTokens"/> is the slice of the prompt served from the provider's context cache — the number that says whether cache-friendly prompt ordering pays off.</summary>
     public void RecordUsage(string operation, int promptTokens, int outputTokens, int cachedTokens)
     {
+        Count(operation, "prompt", promptTokens);
+        Count(operation, "output", outputTokens);
+        Count(operation, "cached", cachedTokens);
         lock (_gate)
         {
             _tokens.TryGetValue(operation, out var ledger);
@@ -79,6 +95,9 @@ public sealed class AiLatencyTracker
             ];
         }
     }
+
+    private static void Count(string operation, string kind, int tokens) =>
+        Tokens.Add(tokens, new KeyValuePair<string, object?>("operation", operation), new KeyValuePair<string, object?>("kind", kind));
 
     /// <summary>Nearest-rank percentile over a sorted window.</summary>
     public static double Percentile(double[] sorted, double p)

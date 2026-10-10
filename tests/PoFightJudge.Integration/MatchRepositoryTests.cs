@@ -11,10 +11,13 @@ public class MatchRepositoryTests(AzuriteFixture azurite)
 {
     private static readonly DateTimeOffset At = new(2026, 9, 6, 20, 41, 0, TimeSpan.Zero);
 
+    private static readonly Microsoft.Extensions.Caching.Memory.MemoryCache Cache = new(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
+
     private (MatchRepository Matches, WatchResultRepository Results) Sut()
     {
         Skip.IfNot(azurite.IsAvailable, azurite.Unavailable);
-        return (new MatchRepository(azurite.Tables), new WatchResultRepository(azurite.Tables));
+        // With the cache the host gives it, so a test that writes and then reads finds out if the kept scan goes stale.
+        return (new MatchRepository(azurite.Tables), new WatchResultRepository(azurite.Tables, Cache));
     }
 
     private static MatchDto Match(string userId, MatchMode mode = MatchMode.Watch, DateTimeOffset? startedAt = null, string side1 = "MAH", string side2 = "KSH") => new(
@@ -135,10 +138,12 @@ public class WatchResultRepositoryTests(AzuriteFixture azurite)
 {
     private static readonly DateTimeOffset At = new(2026, 9, 6, 20, 41, 0, TimeSpan.Zero);
 
+    private static readonly Microsoft.Extensions.Caching.Memory.MemoryCache Cache = new(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
+
     private WatchResultRepository Sut()
     {
         Skip.IfNot(azurite.IsAvailable, azurite.Unavailable);
-        return new WatchResultRepository(azurite.Tables);
+        return new WatchResultRepository(azurite.Tables, Cache);
     }
 
     [SkippableFact]
@@ -179,5 +184,6 @@ public class WatchResultRepositoryTests(AzuriteFixture azurite)
         await sut.DeleteForMatchAsync(newer, [side]);
 
         (await sut.ListForAsync(side)).Select(r => r.MatchId).Should().Equal(older);
+        (await sut.ListAllAsync()).Should().NotContain(r => r.MatchId == newer, "the kept scan is thrown away when a row goes");
     }
 }
