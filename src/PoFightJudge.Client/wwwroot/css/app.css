@@ -222,6 +222,18 @@ a:hover { color: var(--po-fg); }
   font-size: var(--po-text-lg);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  align-content: center;
+  gap: var(--po-space-3);
+}
+
+/* How much of the app has arrived. Blazor publishes the figure as it downloads the runtime; until it has said
+   anything the bar is simply empty, which is also the truth. */
+.po-boot::after {
+  content: "";
+  width: min(16rem, 60vw);
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--po-accent) var(--blazor-load-percentage, 0%), var(--po-border) 0);
 }
 
 /* ── Cards: one card, five modifiers ── */
@@ -244,10 +256,15 @@ a:hover { color: var(--po-fg); }
 }
 
 /* The volume slider beside the sound switch. Not on a narrow bar: there is no room, and a phone has its own. */
-.po-volume { width: 5rem; }
+/* html:root to outrank Radzen's own .rz-slider, whose sheet is loaded after this one. */
+html:root .po-volume { width: 5rem; margin-inline-start: var(--rz-slider-handle-width, 20px); }
+
+/* Radzen centres the handle on the value, so at full volume half of it hangs off the end of the track and the
+   slider is wider than its own box. Hung from its trailing edge instead, it stays inside at every value. */
+html:root .po-volume .rz-slider-handle { margin-inline-start: calc(var(--rz-slider-handle-width, 20px) * -1); }
 
 @media (max-width: 64rem) {
-  .po-volume { display: none; }
+  html:root .po-volume { display: none; }
 }
 
 /* A page's own element around components it wants its scoped CSS to reach. It takes no part in the layout. */

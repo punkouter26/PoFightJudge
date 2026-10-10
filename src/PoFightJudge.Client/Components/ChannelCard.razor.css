@@ -16,6 +16,12 @@
   transform: translateY(-2px);
 }
 
+/* The badge is pinned to the top corner and the content sits at the bottom. On a wide card the content is tall
+   enough to reach the badge, and the title ran underneath it; this keeps the badge's strip clear. */
+@media (min-width: 40rem) {
+  .channel { padding-top: calc(var(--po-space-3) + 2rem); }
+}
+
 .channel.p1 { background: linear-gradient(165deg, var(--po-p1-soft) 0%, var(--po-surface) 62%); }
 .channel.p2 { background: linear-gradient(165deg, var(--po-p2-soft) 0%, var(--po-surface) 62%); }
 .channel.accent { background: linear-gradient(165deg, var(--po-surface-3) 0%, var(--po-surface) 62%); }

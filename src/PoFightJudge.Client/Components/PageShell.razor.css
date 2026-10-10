@@ -7,6 +7,15 @@
   padding-inline: max(var(--po-page-gutter), var(--po-safe-l)) max(var(--po-page-gutter), var(--po-safe-r));
 }
 
+/* Every page arrives the same way: it fades in over the last one instead of replacing it in a single frame. Opacity
+   only — a transform here would re-anchor the fixed canvases some pages hang over themselves. The reduced-motion
+   switch in app.css takes the duration to nothing. */
+.po-shell { animation: arrive var(--po-dur-base) var(--po-ease) both; }
+
+@keyframes arrive {
+  from { opacity: 0; }
+}
+
 .narrow { max-width: calc(var(--po-page-narrow) + 2 * var(--po-page-gutter)); }
 .standard { max-width: calc(var(--po-page-standard) + 2 * var(--po-page-gutter)); }
 .wide { max-width: calc(var(--po-page-wide) + 2 * var(--po-page-gutter)); }
