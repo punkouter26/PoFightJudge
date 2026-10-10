@@ -6,7 +6,7 @@
   /* Fixed, not a minimum: the two copies are each one line, and a strip that cannot change height cannot move the
      page under it when the web font lands. */
   height: 28px;
-  padding: 0 var(--po-space-4);
+  padding: 0 max(var(--po-space-4), var(--po-safe-r)) 0 max(var(--po-space-4), var(--po-safe-l));
   background: var(--po-accent-soft);
   color: var(--po-accent-text);
   font-size: var(--po-text-xs);

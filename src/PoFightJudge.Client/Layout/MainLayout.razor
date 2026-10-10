@@ -27,7 +27,7 @@
         </nav>
         <div class="session">
             <RadzenButton class="drawer-toggle" Icon="menu" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
-                          aria-label="Menu" title="Menu" aria-expanded="@(_drawer ? "true" : "false")"
+                          aria-label="Menu" title="Menu" aria-expanded="@(_drawer ? "true" : "false")" aria-controls="po-drawer"
                           Click="@(() => _drawer = !_drawer)" />
             <AuthorizeView>
                 <Authorized>
@@ -45,8 +45,10 @@
        every destination. *@
     @if (_drawer)
     {
-        <div class="po-drawer-scrim" @onclick="@(() => _drawer = false)"></div>
-        <nav class="po-drawer" aria-label="Primary">
+        @* The scrim is a way out for a mouse; Escape is the way out for a keyboard, and focus starts inside the
+           drawer so that Escape has somewhere to be pressed. *@
+        <div class="po-drawer-scrim" @onclick="@(() => _drawer = false)" aria-hidden="true"></div>
+        <nav class="po-drawer" id="po-drawer" aria-label="Primary" tabindex="-1" @ref="_drawerNav" @onkeydown="@OnDrawerKey">
             <RadzenPanelMenu Click="@(_ => _drawer = false)" AriaLabel="Primary">
                 @foreach (var (text, path, icon) in Destinations)
                 {
@@ -55,7 +57,9 @@
             </RadzenPanelMenu>
         </nav>
     }
-    <main class="content" id="main">
+    @* While the drawer is open the page behind it is not there, for a keyboard and a screen reader as much as for
+       a finger. *@
+    <main class="content" id="main" inert="@_drawer">
         @* One unhandled render exception used to drop the whole app to index.html's error strip, which offers a
            reload and loses whatever was in progress. The boundary keeps the shell, the nav and the banner. *@
         <ErrorBoundary @ref="_boundary" @key="_attempt">
@@ -96,6 +100,30 @@
 
     /// <summary>Whether the phone's nav drawer is open.</summary>
     private bool _drawer;
+    private ElementReference _drawerNav;
+    private bool _drawerFocused;
+
+    private void OnDrawerKey(KeyboardEventArgs e)
+    {
+        if (string.Equals(e.Key, "Escape", StringComparison.Ordinal))
+        {
+            _drawer = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Once per opening: the drawer takes focus when it appears, so Escape and Tab start from inside it.
+        if (_drawer && !_drawerFocused)
+        {
+            _drawerFocused = true;
+            await _drawerNav.FocusAsync();
+        }
+        else if (!_drawer)
+        {
+            _drawerFocused = false;
+        }
+    }
 
     private ErrorBoundary? _boundary;
 

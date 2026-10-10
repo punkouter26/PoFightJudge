@@ -1,5 +1,7 @@
 @* How much arguing time is left. Counts down, because that is the number that changes behaviour. *@
-<div class="timer" role="timer" aria-label="@($"{RemainingSeconds} seconds of arguing left")">
+@* The label names the thing and stays put. With the seconds in it, it changed every second and a screen reader
+   read the clock aloud for the whole fight; the number is in the text for anybody who goes looking. *@
+<div class="timer" role="timer" aria-label="Arguing time left">
     <RadzenProgressBar Value="@Percent" Max="100" ShowValue="false"
                        ProgressBarStyle="@(RemainingSeconds <= 15 ? ProgressBarStyle.Danger : ProgressBarStyle.Info)" class="bar" />
     <div class="numbers">

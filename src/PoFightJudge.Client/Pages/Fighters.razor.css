@@ -2,7 +2,7 @@
 
 ::deep .roster .openable { cursor: pointer; }
 
-.tag { letter-spacing: 0.06em; }
+::deep .tag { letter-spacing: 0.06em; color: inherit; }
 
 .find { max-width: 22rem; margin-bottom: var(--po-space-3); }
 

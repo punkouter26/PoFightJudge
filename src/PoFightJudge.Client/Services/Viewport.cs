@@ -16,7 +16,7 @@ namespace PoFightJudge.Client.Services;
 public sealed class Viewport(IJSRuntime js) : IDisposable
 {
     /// <summary>40rem, the first of the design system's three breakpoints.</summary>
-    public const string PhoneQuery = "(max-width: 640px)";
+    public const string PhoneQuery = "(max-width: 40rem)";
 
     private DotNetObjectReference<Viewport>? _self;
     private bool _watching;

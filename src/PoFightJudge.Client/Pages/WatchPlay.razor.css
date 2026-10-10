@@ -149,3 +149,21 @@
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* On a wide screen the argument and what is asked of you sit side by side: the turn box and the ruling used to
+   arrive under a full-height transcript, below the fold, at the one moment the page needs somebody to act. */
+@media (min-width: 64rem) {
+  .play {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .stage { grid-column: 1 / -1; }
+
+  .play > ::deep .transcript { grid-column: 1; grid-row: 2 / span 4; }
+
+  .your-turn,
+  .judging,
+  .failure,
+  .play > ::deep .verdict { grid-column: 2; }
+}

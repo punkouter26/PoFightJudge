@@ -213,6 +213,7 @@
   width: min(18rem, 82vw);
   padding: var(--po-space-4) var(--po-space-3);
   padding-block-start: calc(var(--po-space-4) + var(--po-safe-t));
+  padding-block-end: calc(var(--po-space-4) + var(--po-safe-b));
   padding-inline-start: max(var(--po-space-3), var(--po-safe-l));
   overflow-y: auto;
   background: var(--po-bg-elev);

@@ -3,7 +3,7 @@
   gap: var(--po-space-3);
   align-items: center;
   flex-wrap: wrap;
-  padding: var(--po-space-2) var(--po-space-4);
+  padding: var(--po-space-2) max(var(--po-space-4), var(--po-safe-r)) var(--po-space-2) max(var(--po-space-4), var(--po-safe-l));
   font-size: var(--po-text-sm);
 }
 

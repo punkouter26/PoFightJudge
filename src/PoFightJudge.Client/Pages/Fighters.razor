@@ -57,7 +57,7 @@
                         <Template Context="row">
                             <div class="po-stacked">
                                 <span class="po-stacked__head">
-                                    <span class="tag po-display">@row.Tag</span>
+                                    <RadzenLink Path="@($"fighters/{row.Tag}")" Text="@row.Tag" class="tag po-display" />
                                     @if (string.Equals(row.DisplayName, row.Tag, StringComparison.Ordinal))
                                     {
                                         <span class="po-muted">no name yet</span>
@@ -79,7 +79,7 @@
                         </Template>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="Tag" Width="5.5rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Tag)">
-                        <Template Context="row"><span class="tag po-display">@row.Tag</span></Template>
+                        <Template Context="row"><RadzenLink Path="@($"fighters/{row.Tag}")" Text="@row.Tag" class="tag po-display" /></Template>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="Name" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.DisplayName)">
                         <Template Context="row">

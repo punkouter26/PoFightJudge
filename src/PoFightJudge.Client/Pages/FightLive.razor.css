@@ -10,7 +10,9 @@
   padding: var(--po-space-3);
   border-radius: var(--po-radius-lg);
   overflow: hidden;
-  min-height: min(72vh, 48rem);
+  /* The floor is never taller than the ceiling. It used to be: on a short window 72vh was more than what was left
+     under the title, the floor won, and the page scrolled in the middle of a fight. */
+  min-height: min(72vh, 48rem, calc(100dvh - 12rem));
   max-height: calc(100dvh - 12rem);
 }
 
