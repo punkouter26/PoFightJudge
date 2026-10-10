@@ -112,18 +112,21 @@ public sealed partial class GeminiJudgeClient(
             PlayerAssessmentDto player2;
             if (cache is null)
             {
-                player1 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models), AssessOperation, ct);
-                player2 = await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models), AssessOperation, ct);
+                player1 = Normalize(await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models), AssessOperation, ct));
+                player2 = Normalize(await PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models), AssessOperation, ct));
             }
             else
             {
-                var first = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models, cache), AssessOperation, ct);
-                var second = PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models, cache), AssessOperation, ct);
-                player1 = await first;
-                player2 = await second;
+                // Awaited together: awaiting one and then the other leaves the second unobserved if the first throws,
+                // and the cache below is then deleted while it is still reading from it.
+                var both = await Task.WhenAll(
+                    PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: true, models, cache), AssessOperation, ct),
+                    PostAsync<PlayerAssessmentDto>(BuildAssessmentRequest(request, first: false, models, cache), AssessOperation, ct));
+                player1 = Normalize(both[0]);
+                player2 = Normalize(both[1]);
             }
 
-            var overall = await RuleAsync(request, player1, player2, ct);
+            var overall = Normalize(await RuleAsync(request, player1, player2, ct));
             return new JudgeOutputDto(player1, player2, overall);
         }
         finally
@@ -235,6 +238,11 @@ public sealed partial class GeminiJudgeClient(
 
         await EnsureSuccessAsync(response, raw, ct);
         RecordUsage(operation, raw);
+        if (GeminiHttp.FinishReason(GeminiHttp.TryParse(raw)) is { } reason and not "STOP")
+        {
+            LogCutShort(logger, operation, reason);
+        }
+
         return Parse<T>(raw);
     }
 
@@ -493,6 +501,62 @@ public sealed partial class GeminiJudgeClient(
         }
     }
 
+    /// <summary>
+    /// An assessment as everything downstream may assume it is. The schema promises every field, but an answer cut
+    /// off at the token ceiling is repaired by closing what was open, and whatever had not arrived yet comes back
+    /// null where the record says it cannot be. Lists become empty, text becomes blank, and scores are held to the
+    /// range the prompt asked for — the schema describes that range but does not enforce it.
+    /// </summary>
+    public static PlayerAssessmentDto Normalize(PlayerAssessmentDto a)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        return a with
+        {
+            Cefr = a.Cefr ?? string.Empty,
+            CefrJustification = a.CefrJustification ?? string.Empty,
+            GrammarErrorCount = Math.Max(0, a.GrammarErrorCount),
+            GrammarExamples = a.GrammarExamples ?? [],
+            VocabularySophistication = Ten(a.VocabularySophistication),
+            Clarity = Ten(a.Clarity),
+            Logic = Ten(a.Logic),
+            Fallacies = a.Fallacies ?? [],
+            EvidenceUse = Ten(a.EvidenceUse),
+            RebuttalQuality = Ten(a.RebuttalQuality),
+            Persuasiveness = Ten(a.Persuasiveness),
+            CorrectnessPercent = Math.Clamp(a.CorrectnessPercent, 0, 100),
+            Claims = a.Claims ?? [],
+            Emotions = a.Emotions ?? new EmotionProfileDto(0, 0, 0, 0, 0, 0),
+            EmotionTimeline = a.EmotionTimeline ?? [],
+            PeakMomentQuote = a.PeakMomentQuote ?? string.Empty,
+            ToneDescriptors = a.ToneDescriptors ?? [],
+            PaceImpression = a.PaceImpression ?? string.Empty,
+            EnergyImpression = a.EnergyImpression ?? string.Empty,
+            PitchVariationImpression = a.PitchVariationImpression ?? string.Empty,
+            Confidence = Ten(a.Confidence),
+            Politeness = Ten(a.Politeness),
+            Aggression = Ten(a.Aggression),
+            Listening = Ten(a.Listening),
+            BestMomentQuote = a.BestMomentQuote ?? string.Empty,
+            WorstMomentQuote = a.WorstMomentQuote ?? string.Empty,
+            CoachingTips = a.CoachingTips ?? [],
+        };
+
+        static int Ten(int score) => Math.Clamp(score, 0, 10);
+    }
+
+    public static JudgeOverallDto Normalize(JudgeOverallDto o)
+    {
+        ArgumentNullException.ThrowIfNull(o);
+        return o with
+        {
+            WinnerLogic = o.WinnerLogic ?? string.Empty,
+            WinnerCorrect = o.WinnerCorrect ?? string.Empty,
+            Overall = o.Overall ?? string.Empty,
+            Reasons = o.Reasons ?? [],
+            Summary = o.Summary ?? string.Empty,
+        };
+    }
+
     /// <summary>Pulls the JSON payload out of a <c>generateContent</c> response, repairing a truncated tail if it can.</summary>
     public static T Parse<T>(string json)
         where T : class
@@ -527,6 +591,9 @@ public sealed partial class GeminiJudgeClient(
             return null;
         }
     }
+
+    [LoggerMessage(EventId = 5306, Level = LogLevel.Warning, Message = "The judge's {Operation} answer stopped early ({Reason}); what arrived is repaired and used.")]
+    private static partial void LogCutShort(ILogger logger, string operation, string reason);
 
     [LoggerMessage(EventId = 5301, Level = LogLevel.Warning, Message = "The judge's discount tier is busy; the same request goes again at the standard tier.")]
     private static partial void LogFlexBusy(ILogger logger, Exception ex);

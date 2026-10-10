@@ -51,6 +51,23 @@ public class JsonRepairTests
 
         repaired.Should().Be("""{"a":1}""");
         JsonNode.Parse(repaired!)!["a"]!.GetValue<int>().Should().Be(1);
+
+        // And what the repair leaves out is filled in before anything reads it: an assessment cut off after its
+        // first two fields has no lists at all, and a score the model overshot is held to the scale.
+        var response = new JsonObject
+        {
+            ["candidates"] = new JsonArray(new JsonObject
+            {
+                ["content"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = """{"cefr":"B2","logic":14,"cefrJustification":"clear eno""" }) },
+            }),
+        };
+        var cut = GeminiJudgeClient.Normalize(GeminiJudgeClient.Parse<PoFightJudge.Shared.Models.PlayerAssessmentDto>(response.ToJsonString()));
+        cut.Cefr.Should().Be("B2");
+        cut.Logic.Should().Be(10);
+        cut.Fallacies.Should().BeEmpty();
+        cut.CoachingTips.Should().BeEmpty();
+        cut.Emotions.Should().NotBeNull();
+        cut.BestMomentQuote.Should().BeEmpty();
     }
 }
 

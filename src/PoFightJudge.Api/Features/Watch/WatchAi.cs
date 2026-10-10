@@ -148,7 +148,7 @@ public sealed class WatchAi(IGeminiText gemini, GeminiModelOptions models) : IWa
             // Not JSON — an older model habit, or a refusal. Fall through and treat the answer as the line.
         }
 
-        var text = string.IsNullOrWhiteSpace(raw) ? "…" : raw.Trim();
+        var text = Readable(raw, ExtractLinePrefix(raw));
         return new ArgumentResult(text, InferMood(text));
     }
 
@@ -174,7 +174,29 @@ public sealed class WatchAi(IGeminiText gemini, GeminiModelOptions models) : IWa
             // Fall through to the no-ruling result below.
         }
 
-        return new JudgeVerdictResult(string.Empty, string.IsNullOrWhiteSpace(raw) ? "The judge could not reach a ruling." : raw.Trim(), 50, 50);
+        return new JudgeVerdictResult(string.Empty, Readable(raw, string.Empty, "The judge could not reach a ruling."), 50, 50);
+    }
+
+    /// <summary>
+    /// What to show when an answer would not parse. Plain prose is used as it stands — an older model habit, or a
+    /// refusal, still reads as a sentence. Something that was plainly meant to be JSON is not: an answer cut off
+    /// mid-object would otherwise be printed, and read aloud, braces and all. What could be salvaged from it is
+    /// used instead, and failing that a placeholder.
+    /// </summary>
+    public static string Readable(string? raw, string salvaged, string placeholder = "…")
+    {
+        var text = raw?.Trim() ?? string.Empty;
+        if (text.Length == 0)
+        {
+            return placeholder;
+        }
+
+        if (!text.StartsWith('{') && !text.StartsWith("```", StringComparison.Ordinal))
+        {
+            return text;
+        }
+
+        return string.IsNullOrWhiteSpace(salvaged) ? placeholder : salvaged.Trim();
     }
 
     /// <summary>Only one of the two sides can win. Anything else — a name, a role word, a blank — is a draw.</summary>

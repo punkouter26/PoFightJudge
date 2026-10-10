@@ -39,6 +39,13 @@ public sealed partial class GeminiTextClient(IHttpClientFactory httpClients, AiL
         }
 
         RecordUsage(request.Operation, body?["usageMetadata"] as JsonObject);
+        if (GeminiHttp.FinishReason(body) is { } reason and not "STOP")
+        {
+            // The text below is whatever arrived before it stopped. The callers cope with a partial answer; this is
+            // what says, afterwards, that one happened and why.
+            LogCutShort(logger, request.Model, request.Operation, reason);
+        }
+
         return ExtractText(body) ?? throw new HttpRequestException($"Gemini {request.Operation} returned no text part.", null, response.StatusCode);
     }
 
@@ -185,6 +192,9 @@ public sealed partial class GeminiTextClient(IHttpClientFactory httpClients, AiL
 
     [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "Gemini {Model} {Operation} completed in {ElapsedMs:F0}ms with {Status}")]
     private static partial void LogCompleted(ILogger logger, string model, string operation, double elapsedMs, int status);
+
+    [LoggerMessage(EventId = 1003, Level = LogLevel.Warning, Message = "Gemini {Model} {Operation} stopped early: {Reason}")]
+    private static partial void LogCutShort(ILogger logger, string model, string operation, string reason);
 
     [LoggerMessage(EventId = 1002, Level = LogLevel.Error, Message = "Gemini {Model} {Operation} failed with {Status}: {Detail}")]
     private static partial void LogFailed(ILogger logger, string model, string operation, int status, string detail);

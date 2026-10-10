@@ -162,7 +162,7 @@ public sealed class ProfileEndpoints : ICarterModule
             // Not JSON at all — treat the whole answer as the line.
         }
 
-        return (raw.Trim(), "angry");
+        return (WatchAi.Readable(raw, WatchAi.ExtractLinePrefix(raw)), "angry");
     }
 
     private static async Task<IResult> DeleteAsync(ProfileId id, IProfileRepository repo, IProfileImageService images, CancellationToken ct)

@@ -52,6 +52,13 @@ public static class GeminiHttp
 
     public static string Truncate(string s, int max = 400) => s.Length <= max ? s : string.Concat(s.AsSpan(0, max), "…");
 
+    /// <summary>
+    /// Why the model stopped: <c>STOP</c> when it finished, <c>MAX_TOKENS</c> when it was cut off, <c>SAFETY</c> and
+    /// the like when it declined. Null when the answer does not say.
+    /// </summary>
+    public static string? FinishReason(JsonObject? response) =>
+        (response?["candidates"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault()?["finishReason"]?.GetValue<string>();
+
     /// <summary>A body that has already been read, as JSON. Null for anything else — an error page, say.</summary>
     public static JsonObject? TryParse(string raw)
     {
