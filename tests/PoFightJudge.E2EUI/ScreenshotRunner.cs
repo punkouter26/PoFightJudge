@@ -8,6 +8,9 @@ namespace PoFightJudge.E2EUI;
 /// against the same in-memory, fake-AI host the rest of this suite drives. A cloud session cannot be browsed, so this
 /// is how a change gets looked at before it is deployed. <c>ROUTES</c> (comma-separated names or paths) narrows it
 /// to the pages a change touched. Skipped when <c>SHOTS</c> is unset, so the suite is unaffected.
+/// <c>VIEWPORTS=desktop,phone</c> takes each page at both sizes (a phone shot is named <c>-phone</c>), and
+/// <c>SEED=1</c> loads the default cast and plays one watch through first, so the lists have something in them and
+/// the finished argument is captured as <c>watch-play</c>.
 /// </summary>
 [Collection(AppCollection.Name)]
 public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
@@ -40,25 +43,82 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             : [.. Routes.Where(r => wanted.Contains(r.Name, StringComparer.OrdinalIgnoreCase) || wanted.Contains(r.Path, StringComparer.OrdinalIgnoreCase))];
         Skip.If(routes.Count == 0, $"ROUTES matched nothing. Known: {string.Join(", ", Routes.Select(r => r.Name))}");
 
-        foreach (var (name, path) in routes)
+        var sizes = (Environment.GetEnvironmentVariable("VIEWPORTS") ?? "desktop")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(v => string.Equals(v, "phone", StringComparison.OrdinalIgnoreCase) ? (Suffix: "-phone", Size: AppFixture.Mobile) : (Suffix: string.Empty, Size: AppFixture.Desktop))
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SEED")))
         {
-            var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, path);
-            try
+            await SeedAsync(folder!);
+        }
+
+        foreach (var (suffix, size) in sizes)
+        {
+            foreach (var (name, path) in routes)
             {
-                await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-                await page.WaitForTimeoutAsync(1000); // animations and late renders settle
-                var file = Path.Combine(folder!, name + ".png");
-                await page.ScreenshotAsync(new PageScreenshotOptions { Path = file, FullPage = true });
-                Report($"SHOT {name} {path} -> {file} ({errors.Count} errors)");
-                foreach (var error in errors)
+                var (context, page, errors) = await app.OpenAsync(size, path);
+                try
                 {
-                    Report($"  {name}: {error}");
+                    await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+                    await page.WaitForTimeoutAsync(1000); // animations and late renders settle
+                    await ShootAsync(page, folder!, name + suffix, path, errors);
+                }
+                finally
+                {
+                    await context.CloseAsync();
                 }
             }
-            finally
+        }
+    }
+
+    /// <summary>The default cast, and one whole argument between two of them, so no page is photographed empty.</summary>
+    private async Task SeedAsync(string folder)
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles");
+        try
+        {
+            var load = page.GetByRole(AriaRole.Button, new() { Name = "Load default cast" });
+            await load.First.WaitForAsync(new() { Timeout = 30_000 });
+            await load.First.ClickAsync();
+            var confirm = page.Locator(".rz-dialog");
+            await confirm.WaitForAsync(new() { Timeout = 10_000 });
+            await confirm.GetByRole(AriaRole.Button, new() { Name = "Load cast" }).ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelectorAll('article.profile').length >= 8", null, new() { Timeout = 30_000 });
+
+            await page.GotoAsync($"{app.BaseUrl}/cpu");
+            await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
+            for (var side = 0; side < 2; side++)
             {
-                await context.CloseAsync();
+                await page.Locator("div.picker").Nth(side).Locator(".rz-dropdown").ClickAsync();
+                var panel = page.Locator(".rz-dropdown-panel:visible");
+                await panel.WaitForAsync(new() { Timeout = 10_000 });
+                await panel.Locator(".rz-dropdown-item").First.ClickAsync();
+                await panel.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 10_000 });
             }
+
+            await AppFixture.ToTheLastStepAsync(page);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
+            await page.Locator("section.verdict").WaitForAsync(new() { Timeout = 150_000 });
+            await page.WaitForTimeoutAsync(1500);
+            await ShootAsync(page, folder, "watch-play", "/watch/play", errors);
+        }
+        finally
+        {
+            await context.CloseAsync();
+        }
+    }
+
+    private async Task ShootAsync(IPage page, string folder, string name, string path, List<string> errors)
+    {
+        // The icons are a font: a page photographed before it arrives shows their names spelled out instead.
+        await page.EvaluateAsync("() => document.fonts.ready");
+        var file = Path.Combine(folder, name + ".png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = file, FullPage = true });
+        Report($"SHOT {name} {path} -> {file} ({errors.Count} errors)");
+        foreach (var error in errors)
+        {
+            Report($"  {name}: {error}");
         }
     }
 
