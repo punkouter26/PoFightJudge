@@ -9,9 +9,6 @@
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="bunit" />
     <PackageReference Include="Xunit.SkippableFact" />
-    <PackageReference Include="Verify.Xunit" />
-    <PackageReference Include="Bogus" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
   </ItemGroup>
 </Project>

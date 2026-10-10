@@ -8,7 +8,6 @@
     <ProjectReference Include="../../src/PoFightJudge.Shared/PoFightJudge.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Bogus" />
     <PackageReference Include="Xunit.SkippableFact" />
   </ItemGroup>
 </Project>
