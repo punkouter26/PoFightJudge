@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using PoFightJudge.Api.Features.Ai;
+using PoFightJudge.Api.Features.Analysis;
 using PoFightJudge.Api.Features.Diagnostics;
 using PoFightJudge.Api.Features.Profiles;
 
@@ -18,9 +18,8 @@ public sealed partial class GeminiTtsService(IHttpClientFactory httpClients, Gem
 {
     public const string Operation = "tts";
 
-    public static Uri Endpoint { get; } = new("v1beta/interactions", UriKind.Relative);
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    /// <summary>How long a line may stay "running" before it is given up on and comes back silent.</summary>
+    private static readonly TimeSpan PollBudget = TimeSpan.FromSeconds(60);
 
     public string Name => "gemini";
 
@@ -29,30 +28,11 @@ public sealed partial class GeminiTtsService(IHttpClientFactory httpClients, Gem
     public async Task<TtsAudio> SynthesizeAsync(string text, TtsSettings settings, CancellationToken ct = default)
     {
         var client = httpClients.CreateClient(GeminiHttpClients.Tts);
-        using var content = new StringContent(BuildRequest(models.Tts, text, settings).ToJsonString(JsonOptions), Encoding.UTF8, "application/json");
-
         var started = Stopwatch.GetTimestamp();
-        using var response = await client.PostAsync(Endpoint, content, ct);
-        await GeminiHttp.EnsureSuccessAsync(response, "tts interactions.create", ct);
-        var node = JsonNode.Parse(await response.Content.ReadAsStringAsync(ct)) as JsonObject;
-
-        // An interaction can come back still running; poll by id, quickly at first, inside the client budget.
-        var delay = TimeSpan.FromMilliseconds(200);
-        while (node?["status"]?.GetValue<string>() is { } status && status is not ("completed" or "failed") && node["id"]?.GetValue<string>() is { } id)
-        {
-            await Task.Delay(delay, clock, ct);
-            delay = delay < TimeSpan.FromSeconds(3) ? delay * 2 : delay;
-            using var poll = await client.GetAsync(new Uri($"v1beta/{Uri.EscapeDataString(id)}", UriKind.Relative), ct);
-            await GeminiHttp.EnsureSuccessAsync(poll, "tts interactions.get", ct);
-            node = JsonNode.Parse(await poll.Content.ReadAsStringAsync(ct)) as JsonObject;
-        }
-
+        var backoff = new PollBackoff(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(3), PollBudget, clock);
+        var node = await GeminiHttp.RunInteractionAsync(client, BuildRequest(models.Tts, text, settings).ToJsonString(JsonSerializerOptions.Web), Operation, backoff, ct);
         var elapsed = Stopwatch.GetElapsedTime(started);
         latency.Record(Operation, elapsed.TotalMilliseconds);
-        if (string.Equals(node?["status"]?.GetValue<string>(), "failed", StringComparison.Ordinal))
-        {
-            throw new HttpRequestException("Gemini tts failed: " + GeminiHttp.Truncate(node?["error"]?.ToJsonString() ?? "unknown"));
-        }
 
         var audio = ExtractAudio(node);
         LogSynthesized(logger, models.Tts, settings.VoiceName, text.Length, elapsed.TotalMilliseconds, audio.IsEmpty);

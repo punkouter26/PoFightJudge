@@ -14,8 +14,6 @@ namespace PoFightJudge.Api.Features.Ai;
 /// </summary>
 public sealed partial class GeminiTextClient(IHttpClientFactory httpClients, AiLatencyTracker latency, ILogger<GeminiTextClient> logger) : IGeminiText
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public bool IsFake => false;
 
     public async Task<string> GenerateAsync(GeminiTextRequest request, CancellationToken ct = default)
@@ -31,15 +29,7 @@ public sealed partial class GeminiTextClient(IHttpClientFactory httpClients, AiL
         LogCompleted(logger, request.Model, request.Operation, elapsed.TotalMilliseconds, (int)response.StatusCode);
         latency.Record(request.Operation, elapsed.TotalMilliseconds);
 
-        JsonObject? body = null;
-        try
-        {
-            body = JsonNode.Parse(raw) as JsonObject;
-        }
-        catch (JsonException)
-        {
-            // A non-JSON error page; the status line below carries what we know.
-        }
+        var body = GeminiHttp.TryParse(raw);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -179,7 +169,7 @@ public sealed partial class GeminiTextClient(IHttpClientFactory httpClients, AiL
     private static HttpRequestMessage Message(GeminiTextRequest request, bool stream) =>
         new(HttpMethod.Post, Endpoint(request.Model, stream))
         {
-            Content = new StringContent(BuildPayload(request).ToJsonString(JsonOptions), Encoding.UTF8, "application/json"),
+            Content = new StringContent(BuildPayload(request).ToJsonString(JsonSerializerOptions.Web), Encoding.UTF8, "application/json"),
         };
 
     private void RecordUsage(string operation, JsonObject? usage)

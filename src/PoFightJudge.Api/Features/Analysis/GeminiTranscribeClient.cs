@@ -17,28 +17,8 @@ public sealed class GeminiTranscribeClient(IHttpClientFactory factory, GeminiMod
     public async Task<TranscriptDto> TranscribeAsync(string fileUri, string mimeType, CancellationToken ct)
     {
         using var http = factory.CreateClient(GeminiHttpClients.Analysis);
-        using var content = new StringContent(BuildRequest(models.Transcribe, fileUri, mimeType), Encoding.UTF8, "application/json");
-        using var response = await http.PostAsync(new Uri("v1beta/interactions", UriKind.Relative), content, ct);
-        await GeminiHttp.EnsureSuccessAsync(response, "interactions.create", ct);
-        var node = JsonNode.Parse(await response.Content.ReadAsStringAsync(ct));
-
-        // The interaction may still be running; poll it by id until it finishes, quickly at first.
         var backoff = new PollBackoff(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(3), TimeSpan.FromMinutes(4), clock);
-        while (node?["status"]?.GetValue<string>() is { } status
-            && status is not ("completed" or "failed")
-            && node["id"] is { } id
-            && await backoff.WaitAsync(ct))
-        {
-            using var poll = await http.GetAsync(new Uri($"v1beta/{id.GetValue<string>()}", UriKind.Relative), ct);
-            await GeminiHttp.EnsureSuccessAsync(poll, "interactions.get", ct);
-            node = JsonNode.Parse(await poll.Content.ReadAsStringAsync(ct));
-        }
-
-        if (string.Equals(node?["status"]?.GetValue<string>(), "failed", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Transcription failed: " + (node?["error"]?.ToJsonString() ?? "unknown"));
-        }
-
+        var node = await GeminiHttp.RunInteractionAsync(http, BuildRequest(models.Transcribe, fileUri, mimeType), "transcribe", backoff, ct);
         return ParseResponse(node);
     }
 

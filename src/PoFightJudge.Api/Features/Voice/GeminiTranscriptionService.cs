@@ -40,8 +40,6 @@ public sealed partial class GeminiTranscriptionService(IHttpClientFactory httpCl
         + "- If the clip contains no intelligible human speech - silence, noise, music, a tone, "
         + "or a language you cannot make out - output exactly " + Transcripts.NoSpeechSentinel + " and nothing else.";
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public string Name => "gemini";
 
     public bool IsEnabled => mode.HasGeminiKey;
@@ -55,7 +53,7 @@ public sealed partial class GeminiTranscriptionService(IHttpClientFactory httpCl
         }
 
         var client = httpClients.CreateClient(GeminiHttpClients.Fast);
-        using var content = new StringContent(BuildPayload(wav).ToJsonString(JsonOptions), Encoding.UTF8, "application/json");
+        using var content = new StringContent(BuildPayload(wav).ToJsonString(JsonSerializerOptions.Web), Encoding.UTF8, "application/json");
 
         var started = Stopwatch.GetTimestamp();
         using var response = await client.PostAsync(GeminiTextClient.Endpoint(models.TurnTranscribe, stream: false), content, ct);
@@ -64,15 +62,7 @@ public sealed partial class GeminiTranscriptionService(IHttpClientFactory httpCl
         latency.Record(Operation, elapsed.TotalMilliseconds);
         LogCompleted(logger, models.TurnTranscribe, wav.Length, elapsed.TotalMilliseconds, (int)response.StatusCode);
 
-        JsonObject? body = null;
-        try
-        {
-            body = JsonNode.Parse(raw) as JsonObject;
-        }
-        catch (JsonException)
-        {
-            // Not JSON; the status line below carries what is known.
-        }
+        var body = GeminiHttp.TryParse(raw);
 
         if (!response.IsSuccessStatusCode)
         {

@@ -82,7 +82,7 @@ public class EveryRouteTests(AppFixture app)
                             .slice(0, 3)
                             .map(e => e.tagName + '.' + String(e.className || '').split(' ').filter(c => !c.startsWith('b-')).join('.')),
                     })");
-                var measured = JsonSerializer.Deserialize<Measurements>(json, Json)!;
+                var measured = JsonSerializer.Deserialize<Measurements>(json, JsonSerializerOptions.Web)!;
 
                 var where = $"[{label}] {route}";
 
@@ -119,7 +119,6 @@ public class EveryRouteTests(AppFixture app)
         problems.Should().BeEmpty("every route is held to the same rules, including the ones added after these were written");
     }
 
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private sealed class Measurements
     {

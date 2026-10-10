@@ -137,7 +137,7 @@ public sealed class WatchAi(IGeminiText gemini, GeminiModelOptions models) : IWa
     {
         try
         {
-            if (JsonNode.Parse(IsolateJsonObject(raw)) is JsonObject obj && obj["line"]?.GetValue<string>() is { } line && !string.IsNullOrWhiteSpace(line))
+            if (JsonNode.Parse(GeminiHttp.IsolateJsonObject(raw)) is JsonObject obj && obj["line"]?.GetValue<string>() is { } line && !string.IsNullOrWhiteSpace(line))
             {
                 var mood = obj["mood"]?.GetValue<string>();
                 return new ArgumentResult(line.Trim(), WatchRules.Moods.Contains(mood ?? string.Empty, StringComparer.OrdinalIgnoreCase) ? mood!.ToLowerInvariant() : InferMood(line));
@@ -158,7 +158,7 @@ public sealed class WatchAi(IGeminiText gemini, GeminiModelOptions models) : IWa
         {
             // Literal newlines inside a multi-line JSON string would break the parse; the verdict is prose, so
             // collapsing them costs nothing.
-            var cleaned = IsolateJsonObject(raw).Replace("\r\n", " ", StringComparison.Ordinal).Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal);
+            var cleaned = GeminiHttp.IsolateJsonObject(raw).Replace("\r\n", " ", StringComparison.Ordinal).Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal);
             if (JsonNode.Parse(cleaned) is JsonObject obj)
             {
                 var winner = obj["winner"]?.GetValue<string>()?.Trim() ?? string.Empty;
@@ -187,30 +187,6 @@ public sealed class WatchAi(IGeminiText gemini, GeminiModelOptions models) : IWa
         }
 
         return string.Equals(cleaned, wifeInitials, StringComparison.OrdinalIgnoreCase) ? wifeInitials : string.Empty;
-    }
-
-    /// <summary>Strips code fences and isolates the outermost object, so a fenced or chatty answer still parses.</summary>
-    public static string IsolateJsonObject(string raw)
-    {
-        var cleaned = raw.Trim();
-        if (cleaned.StartsWith("```", StringComparison.Ordinal))
-        {
-            var newline = cleaned.IndexOf('\n', StringComparison.Ordinal);
-            if (newline >= 0)
-            {
-                cleaned = cleaned[(newline + 1)..];
-            }
-
-            var fence = cleaned.LastIndexOf("```", StringComparison.Ordinal);
-            if (fence >= 0)
-            {
-                cleaned = cleaned[..fence];
-            }
-        }
-
-        var start = cleaned.IndexOf('{', StringComparison.Ordinal);
-        var end = cleaned.LastIndexOf('}');
-        return start >= 0 && end > start ? cleaned[start..(end + 1)] : cleaned;
     }
 
     /// <summary>

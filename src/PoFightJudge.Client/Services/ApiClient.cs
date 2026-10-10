@@ -226,7 +226,6 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
     private readonly HttpClient anonymous = clients.CreateClient(HttpClients.Anonymous);
 
     /// <summary>Web defaults, so the NDJSON streams read the same camelCase the endpoints write.</summary>
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public async Task<AuthMeDto> GetMeAsync(CancellationToken ct = default) =>
         await http.GetFromJsonAsync<AuthMeDto>(ApiRoutes.Auth.Me, ct) ?? AuthMeDto.Anonymous;
@@ -324,7 +323,7 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
                 continue;
             }
 
-            if (parsed.Deserialize<GenerateRoundResponse>(JsonOptions) is { } final)
+            if (parsed.Deserialize<GenerateRoundResponse>(JsonSerializerOptions.Web) is { } final)
             {
                 yield return new RoundStreamPart(null, final);
             }
@@ -338,7 +337,7 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         await foreach (var line in NdjsonAsync(ApiRoutes.Watch.RoundAudioStreamUrl, request, ct))
         {
             using var parsed = TryParse(line);
-            if (parsed?.Deserialize<RoundAudioChunkDto>(JsonOptions) is { } chunk)
+            if (parsed?.Deserialize<RoundAudioChunkDto>(JsonSerializerOptions.Web) is { } chunk)
             {
                 yield return chunk;
             }
@@ -577,7 +576,7 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, Relative(url))
         {
-            Content = JsonContent.Create(request, options: JsonOptions),
+            Content = JsonContent.Create(request, options: JsonSerializerOptions.Web),
         };
 
         using var response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, ct);

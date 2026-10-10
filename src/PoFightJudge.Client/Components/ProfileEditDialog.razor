@@ -185,8 +185,6 @@
     /// <summary>The square the server insists on (<c>ProfileImageService.Size</c>).</summary>
     public const int FaceSize = 512;
 
-    private static readonly JsonSerializerOptions CloneOptions = new(JsonSerializerDefaults.Web);
-
     private static readonly string[] HusbandVoices = ["Charon", "Puck", "Fenrir"];
     private static readonly string[] WifeVoices = ["Kore", "Zephyr"];
 
@@ -244,7 +242,7 @@
     }
 
     private static CreateProfileRequest Clone(CreateProfileRequest source) =>
-        JsonSerializer.Deserialize<CreateProfileRequest>(JsonSerializer.Serialize(source, CloneOptions), CloneOptions)!;
+        JsonSerializer.Deserialize<CreateProfileRequest>(JsonSerializer.Serialize(source, JsonSerializerOptions.Web), JsonSerializerOptions.Web)!;
 
     private void OnFaceError(UploadErrorEventArgs args) => _error = "That image is too large — pick one under 4 MB.";
 

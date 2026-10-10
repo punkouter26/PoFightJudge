@@ -26,7 +26,6 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
 
     public const int MaxOutputTokens = 2048;
 
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private static readonly string[] HusbandVoices = ["Charon", "Puck", "Fenrir"];
     private static readonly string[] WifeVoices = ["Kore", "Zephyr"];
@@ -123,7 +122,7 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
         Generated? g = null;
         try
         {
-            g = JsonSerializer.Deserialize<Generated>(IsolateJsonObject(raw), Json);
+            g = JsonSerializer.Deserialize<Generated>(GeminiHttp.IsolateJsonObject(raw), JsonSerializerOptions.Web);
         }
         catch (JsonException)
         {
@@ -204,13 +203,6 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
     }
 
     private static int Clamp(int? v) => Math.Clamp(v ?? 50, 0, 100);
-
-    private static string IsolateJsonObject(string raw)
-    {
-        var start = raw.IndexOf('{', StringComparison.Ordinal);
-        var end = raw.LastIndexOf('}');
-        return start >= 0 && end > start ? raw[start..(end + 1)] : raw;
-    }
 
     [LoggerMessage(EventId = 1101, Level = LogLevel.Information, Message = "Generated a {Role} persona {Initials} ({Name})")]
     private static partial void LogGenerated(ILogger logger, ProfileRole role, string initials, string name);

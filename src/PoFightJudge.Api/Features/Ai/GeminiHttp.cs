@@ -1,4 +1,7 @@
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using PoFightJudge.Api.Features.Analysis;
 
 namespace PoFightJudge.Api.Features.Ai;
 
@@ -48,6 +51,69 @@ public static class GeminiHttp
     }
 
     public static string Truncate(string s, int max = 400) => s.Length <= max ? s : string.Concat(s.AsSpan(0, max), "…");
+
+    /// <summary>A body that has already been read, as JSON. Null for anything else — an error page, say.</summary>
+    public static JsonObject? TryParse(string raw)
+    {
+        try
+        {
+            return JsonNode.Parse(raw) as JsonObject;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Creates an interaction and polls it by id until it is done, quickly at first. The backoff's budget is the
+    /// deadline for the whole loop: each poll is a request of its own, so the client's timeout does not cover it.
+    /// A failed interaction throws; one still running when the budget is spent comes back as it stands.
+    /// </summary>
+    public static async Task<JsonObject?> RunInteractionAsync(HttpClient http, string body, string operation, PollBackoff backoff, CancellationToken ct)
+    {
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var response = await http.PostAsync(new Uri("v1beta/interactions", UriKind.Relative), content, ct);
+        await EnsureSuccessAsync(response, $"{operation} interactions.create", ct);
+        var node = TryParse(await response.Content.ReadAsStringAsync(ct));
+
+        while (node?["status"]?.GetValue<string>() is not (null or "completed" or "failed")
+            && node["id"]?.GetValue<string>() is { } id
+            && await backoff.WaitAsync(ct))
+        {
+            using var poll = await http.GetAsync(new Uri($"v1beta/{id}", UriKind.Relative), ct);
+            await EnsureSuccessAsync(poll, $"{operation} interactions.get", ct);
+            node = TryParse(await poll.Content.ReadAsStringAsync(ct));
+        }
+
+        return string.Equals(node?["status"]?.GetValue<string>(), "failed", StringComparison.Ordinal)
+            ? throw new HttpRequestException($"Gemini {operation} failed: " + Truncate(node?["error"]?.ToJsonString() ?? "unknown"))
+            : node;
+    }
+
+    /// <summary>Strips code fences and isolates the outermost object, so a fenced or chatty answer still parses.</summary>
+    public static string IsolateJsonObject(string raw)
+    {
+        var cleaned = raw.Trim();
+        if (cleaned.StartsWith("```", StringComparison.Ordinal))
+        {
+            var newline = cleaned.IndexOf('\n', StringComparison.Ordinal);
+            if (newline >= 0)
+            {
+                cleaned = cleaned[(newline + 1)..];
+            }
+
+            var fence = cleaned.LastIndexOf("```", StringComparison.Ordinal);
+            if (fence >= 0)
+            {
+                cleaned = cleaned[..fence];
+            }
+        }
+
+        var start = cleaned.IndexOf('{', StringComparison.Ordinal);
+        var end = cleaned.LastIndexOf('}');
+        return start >= 0 && end > start ? cleaned[start..(end + 1)] : cleaned;
+    }
 }
 
 /// <summary>

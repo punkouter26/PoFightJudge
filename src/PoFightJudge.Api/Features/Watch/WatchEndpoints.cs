@@ -20,7 +20,6 @@ namespace PoFightJudge.Api.Features.Watch;
 /// </summary>
 public sealed class WatchEndpoints : ICarterModule
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public void AddRoutes(IEndpointRouteBuilder app)
     {
@@ -368,7 +367,7 @@ public sealed class WatchEndpoints : ICarterModule
 
     private static async Task WriteLineAsync<T>(HttpContext http, T value, CancellationToken ct)
     {
-        await http.Response.WriteAsync(JsonSerializer.Serialize(value, Json) + "\n", Encoding.UTF8, ct);
+        await http.Response.WriteAsync(JsonSerializer.Serialize(value, JsonSerializerOptions.Web) + "\n", Encoding.UTF8, ct);
         await http.Response.Body.FlushAsync(ct);
     }
 }

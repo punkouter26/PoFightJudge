@@ -15,7 +15,6 @@ namespace PoFightJudge.Api.Features.Ai.Fakes;
 /// </summary>
 public sealed class FakeGeminiText(AiLatencyTracker latency, TimeSpan? chunkDelay = null) : IGeminiText
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private static readonly string[] Lines =
     [
@@ -62,7 +61,7 @@ public sealed class FakeGeminiText(AiLatencyTracker latency, TimeSpan? chunkDela
             return faker.PickRandom(Lines);
         }
 
-        return FromSchema(request.ResponseSchema, faker, "root", depth: 0)?.ToJsonString(JsonOptions) ?? "{}";
+        return FromSchema(request.ResponseSchema, faker, "root", depth: 0)?.ToJsonString(JsonSerializerOptions.Web) ?? "{}";
     }
 
     private static int Seed(string text)
