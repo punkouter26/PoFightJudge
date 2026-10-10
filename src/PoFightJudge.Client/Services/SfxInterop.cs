@@ -73,6 +73,8 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
     public const string Arm = "PoSfx.arm";
     public const string SetMuted = "PoSfx.setMuted";
     public const string Duck = "PoSfx.duck";
+    public const string GetVolume = "PoSfx.volume";
+    public const string SetVolume = "PoSfx.setVolume";
 
     public const string StorageKey = "po-sound";
     public const string On = "on";
@@ -80,6 +82,15 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
 
     /// <summary>Sound is on unless somebody has turned it off: this app talks out loud by design.</summary>
     public bool IsOn { get; private set; } = true;
+
+    /// <summary>The level everything plays at — effects and voices alike — as a percentage. The browser keeps it.</summary>
+    public int Volume { get; private set; } = 100;
+
+    public async Task SetVolumeAsync(int percent, CancellationToken ct = default)
+    {
+        Volume = Math.Clamp(percent, 0, 100);
+        await SafelyAsync(() => js.InvokeVoidAsync(SetVolume, ct, Volume / 100.0));
+    }
 
     /// <summary>Reads the stored choice and tells the browser about it. Safe when storage is blocked.</summary>
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -95,6 +106,15 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
         }
 
         await ApplyAsync(IsOn, persist: false, ct);
+        try
+        {
+            Volume = (int)Math.Round(await js.InvokeAsync<double>(GetVolume, ct) * 100);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // No script here (a test host, or a browser with nothing to play through): full volume, as before.
+            Volume = 100;
+        }
     }
 
     public Task ToggleAsync(CancellationToken ct = default) => ApplyAsync(!IsOn, persist: true, ct);

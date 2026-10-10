@@ -47,6 +47,7 @@ public sealed class ThemeInterop(IJSRuntime js, ILocalStorageService storage, Th
         try
         {
             await js.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", Current);
+            await js.InvokeVoidAsync("PoTheme.chrome", Current);
             if (persist)
             {
                 await storage.SetItemAsStringAsync(StorageKey, Current);

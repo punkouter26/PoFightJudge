@@ -79,6 +79,14 @@ window.PoLive = (function () {
     publishBands();
   }
 
+  let out = null;
+
+  window.addEventListener("po-volume", function (e) {
+    if (out) {
+      out.gain.value = e.detail;
+    }
+  });
+
   async function ensureContext() {
     if (!ctx) {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -87,8 +95,16 @@ window.PoLive = (function () {
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = 0.35;
       levelData = new Uint8Array(analyser.fftSize);
+      out = ctx.createGain();
+      out.gain.value = window.PoSfx ? window.PoSfx.volume() : 1;
       hostIn.connect(analyser);
-      analyser.connect(ctx.destination);
+      analyser.connect(out);
+      out.connect(ctx.destination);
+    }
+
+    // Started here rather than with the context: stop() clears it and keeps the context, so a second fight in the
+    // same tab used to get a meter that never moved.
+    if (!meterTimer) {
       meterTimer = window.setInterval(pumpLevels, 100);
     }
 

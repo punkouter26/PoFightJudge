@@ -33,11 +33,21 @@ public class ThemeAndViewportTests(AppFixture app)
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Switch to light theme" }).ClickAsync();
         await page.WaitForFunctionAsync("() => document.documentElement.getAttribute('data-theme') === 'light'");
+        const string Chrome = "document.querySelector('meta[name=theme-color]').content";
+        await page.WaitForFunctionAsync($"() => {Chrome} === '#f4f1ea'", null, new() { Timeout = 5_000 });
+
+        // The volume is the browser's to keep, like the theme, and one slider sets it for effects and voices both.
+        await page.Locator(".po-volume").WaitForAsync(new() { Timeout = 10_000 });
+        await page.EvaluateAsync("() => window.PoSfx.setVolume(0.4)");
 
         await page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
         await AppFixture.WaitForAppAsync(page, errors);
         (await page.EvaluateAsync<string?>("document.documentElement.getAttribute('data-theme')")).Should().Be("light");
         (await page.EvaluateAsync<string?>("localStorage.getItem('po-theme')")).Should().Be("light");
+        (await page.EvaluateAsync<string>(Chrome)).Should().Be("#f4f1ea", "the browser's own chrome is light before the app has even started");
+        (await page.EvaluateAsync<double>("window.PoSfx.volume()")).Should().Be(0.4);
+        (await page.Locator(".po-volume input, .po-volume [role=slider]").First.GetAttributeAsync("aria-valuenow") ?? await page.Locator(".po-volume input").First.InputValueAsync())
+            .Should().Be("40", "the slider opens where it was left");
         errors.Should().BeEmpty();
     }
 }

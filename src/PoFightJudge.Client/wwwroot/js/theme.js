@@ -35,3 +35,15 @@
   font.href = base + 'fonts/MaterialSymbolsOutlined.woff2';
   document.head.appendChild(font);
 })();
+
+// The address bar and the installed app's title bar take their colour from a meta tag, which is static: without
+// this a light page sits under dark chrome. Called at load for the stored choice and again whenever it changes.
+window.PoTheme = {
+  chrome: function (theme) {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute('content', theme === 'light' ? '#f4f1ea' : '#0b0d12');
+    }
+  },
+};
+window.PoTheme.chrome(document.documentElement.getAttribute('data-theme'));

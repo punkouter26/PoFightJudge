@@ -243,6 +243,13 @@ a:hover { color: var(--po-fg); }
   border: 2px solid var(--po-border);
 }
 
+/* The volume slider beside the sound switch. Not on a narrow bar: there is no room, and a phone has its own. */
+.po-volume { width: 5rem; }
+
+@media (max-width: 64rem) {
+  .po-volume { display: none; }
+}
+
 /* A page's own element around components it wants its scoped CSS to reach. It takes no part in the layout. */
 .po-scope { display: contents; }
 

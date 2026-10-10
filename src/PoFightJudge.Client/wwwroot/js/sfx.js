@@ -13,6 +13,7 @@ window.PoSfx = (function () {
   "use strict";
 
   const STORAGE_KEY = "po-sound";
+  const VOLUME_KEY = "po-volume";
   const OFF = "off";
   const MASTER_GAIN = 0.7;
   const NOISE_SECONDS = 2;
@@ -25,6 +26,20 @@ window.PoSfx = (function () {
   let master = null;
   let noise = null;
   let muted = readMuted();
+
+  // One volume for everything the app plays: the effects here, and the voices in audio.js and live-audio.js, which
+  // listen for the "po-volume" event. Kept here, and read at load like the mute, so the first sound is already at
+  // the level somebody chose last time.
+  let volume = readVolume();
+
+  function readVolume() {
+    try {
+      const stored = parseFloat((localStorage.getItem(VOLUME_KEY) || "").replace(/^"|"$/g, ""));
+      return stored >= 0 && stored <= 1 ? stored : 1;
+    } catch (e) {
+      return 1;
+    }
+  }
   let broken = false;
 
   function readMuted() {
@@ -57,7 +72,7 @@ window.PoSfx = (function () {
         limiter.attack.value = 0.003;
         limiter.release.value = 0.12;
         master = ctx.createGain();
-        master.gain.value = muted ? 0 : MASTER_GAIN;
+        master.gain.value = muted ? 0 : MASTER_GAIN * volume;
         master.connect(limiter).connect(ctx.destination);
       }
 
@@ -209,6 +224,30 @@ window.PoSfx = (function () {
       ensure();
     },
 
+    /** The level everything plays at, 0 to 1. */
+    volume: function () {
+      return volume;
+    },
+
+    setVolume: function (value) {
+      volume = Math.min(1, Math.max(0, Number(value) || 0));
+      try {
+        localStorage.setItem(VOLUME_KEY, String(volume));
+      } catch (e) {
+        // Storage blocked: it holds for this page.
+      }
+
+      if (ctx && !muted) {
+        try {
+          master.gain.setValueAtTime(MASTER_GAIN * volume, ctx.currentTime);
+        } catch (e) {
+          // A context that has gone away underneath us.
+        }
+      }
+
+      window.dispatchEvent(new CustomEvent("po-volume", { detail: volume }));
+    },
+
     setMuted: function (value) {
       muted = !!value;
       if (!ctx) {
@@ -221,7 +260,7 @@ window.PoSfx = (function () {
           master.gain.cancelScheduledValues(ctx.currentTime);
           master.gain.setValueAtTime(0, ctx.currentTime);
         } else {
-          master.gain.setValueAtTime(MASTER_GAIN, ctx.currentTime);
+          master.gain.setValueAtTime(MASTER_GAIN * volume, ctx.currentTime);
         }
       } catch (e) {
         // Nothing scheduled, or a context that has gone away underneath us.

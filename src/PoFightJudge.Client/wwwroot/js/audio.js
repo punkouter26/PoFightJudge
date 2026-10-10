@@ -8,6 +8,13 @@ const PoAudio = (() => {
   const DUCK_TO = 0.32;
   let context = null;
   let bus = null;
+  let out = null;
+
+  window.addEventListener('po-volume', (e) => {
+    if (out) {
+      out.gain.value = e.detail;
+    }
+  });
   let analyser = null;
   let levelData = null;
   let currentLevel = 0;
@@ -26,8 +33,12 @@ const PoAudio = (() => {
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = 0.35;
       levelData = new Uint8Array(analyser.fftSize);
+      // The meter reads the voice before the volume control, so the aura breathes the same at any level.
+      out = context.createGain();
+      out.gain.value = window.PoSfx ? window.PoSfx.volume() : 1;
       bus.connect(analyser);
-      analyser.connect(context.destination);
+      analyser.connect(out);
+      out.connect(context.destination);
     }
     if (context.state === 'suspended') {
       // Autoplay policy: a click has already happened by the time anything plays.
