@@ -90,6 +90,7 @@ Each was a deliberate decision made while building; the commit that made it says
 | T100 | the pages and their endpoints | plus `.husky/commit-msg` | the hook took two-digit task numbers only, so T100 could not be committed under the rule the hook exists to enforce |
 | T101 | trim the suites | 62 Unit files deleted outright | at one test per decision most of those files had no decision left that another test did not already make |
 | T110–T116 | ship the seven visual effects end to end, with full Unit tests on every commit, then run E2EUI | ship T110–T116 one task one commit each, Unit tier + `dotnet format --verify-no-changes` green on every commit; E2EUI (StageEffectTests additions) deferred to the next time `./SCRIPTS/setup.ps1` brings Azurite + the host up | the user asked for all in one session without bringing the dev env online, and Unit + format are the contracts that already run on every commit; E2EUI's job is to prove the shader/canvas paths, which the existing StageEffectTests pattern covers once the host is reachable |
+| — | face uploads decoded and re-encoded on the server with ImageSharp | the browser crops to a 512 px PNG (`js/face.js`); the server checks the PNG header and size, and decodes nothing | every ImageSharp 3.x has open advisories (three high), the fixes are 4.1.2+ only, and 4.x will not build without a paid-for licence key |
 
 ## Still outstanding
 
@@ -128,11 +129,16 @@ running when the wire format or a schema changes, and not otherwise.
 
 - **master only.** All work goes on `master`. Another branch happens only when it is asked for by name.
 - **Restart and check.** After a code change, restart the app and confirm it came back up before saying it works.
-- **Overview first.** The overall summary of the project lives in `README.md` and this file.
+- **Overview first.** Check for a `DOCS` folder in the root for the overall summary of the project; until there
+  is one, it lives in `README.md` and this file.
 - **No `dotnet user-secrets`.** Local settings go in `appsettings*.json`; anything secret goes in Azure Key Vault.
 - **Never push.** `git push` happens only when the words **`git sync`** are typed — never off my own bat,
   and never because it seemed implied. On a `git sync`: commit with a short subject in American slang, so
   it reads like a person wrote it, then push.
 - **TL;DR.** Any answer over 100 words ends with a 20-word summary.
-- **Run the tests the change touched**, not the whole suite.
-- **Do not hand over commands to type.** If it can be run here, run it.
+- **Run the tests the change touched**, not the whole suite — and none at all when the change is simple.
+- **Do not hand over commands to type.** If it can be run here, run it — CLI or web GUI.
+- **Warnings are errors.** A compile warning gets fixed, not left.
+- **Say when a lot goes.** If a prompt removes more than 100 lines of code overall, mention it.
+- **UI changes get a before/after.** Take annotated screenshots of the old and the new UI with the changes
+  marked, put them in an HTML file in the `SCREENSHOTS` folder, and give its full path.

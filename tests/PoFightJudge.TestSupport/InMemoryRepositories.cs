@@ -42,21 +42,21 @@ public sealed class InMemoryProfileRepository : IProfileRepository
     }
 }
 
-/// <summary>Runs the real image normalization (so the 400 paths are exercised) and keeps the PNG bytes in memory.</summary>
+/// <summary>Runs the real image check (so the 400 paths are exercised) and keeps the PNG bytes in memory.</summary>
 public sealed class InMemoryProfileImageService : IProfileImageService
 {
     private readonly ConcurrentDictionary<string, byte[]> _faces = new(StringComparer.Ordinal);
 
     public async Task<Outcome<string>> StoreFaceAsync(ProfileId id, Stream image, CancellationToken ct = default)
     {
-        var normalized = await ProfileImageService.NormalizeAsync(image, ct);
-        if (!normalized.IsSuccess)
+        var png = await ProfileImageService.ReadPngAsync(image, ct);
+        if (!png.IsSuccess)
         {
-            return Outcome.Failure<string>(normalized.Error!);
+            return Outcome.Failure<string>(png.Error!);
         }
 
         var name = ProfileImageService.BlobName(id);
-        _faces[name] = normalized.Value;
+        _faces[name] = png.Value;
         return Outcome.Success(name);
     }
 

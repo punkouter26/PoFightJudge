@@ -1,25 +1,23 @@
+using System.Buffers.Binary;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using PoFightJudge.Api.Common;
 using PoFightJudge.Shared.Identifiers;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Processing;
 
 namespace PoFightJudge.Api.Features.Profiles;
 
-/// <summary>A stored face: always the PNG this service wrote, served by the anonymous face endpoint.</summary>
+/// <summary>A stored face: always a PNG this service accepted, served by the anonymous face endpoint.</summary>
 public sealed record FaceImage(ReadOnlyMemory<byte> Bytes, string ContentType);
 
 /// <summary>
 /// Face images live in the faces blob container, never in the table row (Table properties cap at 64 KB and the list
-/// endpoint would otherwise ship every photo). Every upload is re-encoded, so what is stored is always a 512 px
-/// square PNG produced here — no uploaded bytes are ever echoed back from the anonymous endpoint.
+/// endpoint would otherwise ship every photo). The browser crops and encodes the portrait (<c>PoFace.square</c>); the
+/// server decodes nothing and only stores a body whose PNG header says 512 px square.
 /// </summary>
 public interface IProfileImageService
 {
-    /// <summary>Validates and normalizes the upload, stores it, and returns the blob name to keep on the profile.</summary>
+    /// <summary>Validates the upload, stores it, and returns the blob name to keep on the profile.</summary>
     Task<Outcome<string>> StoreFaceAsync(ProfileId id, Stream image, CancellationToken ct = default);
 
     Task<FaceImage?> GetFaceAsync(ProfileId id, CancellationToken ct = default);
@@ -31,22 +29,23 @@ public sealed class ProfileImageService(BlobServiceClient blobs, StorageContaine
 {
     public const int Size = 512;
 
-    public const int MaxUploadBytes = 4 * 1024 * 1024;
-
-    /// <summary>Decompression-bomb guard: the header is read before any pixel is decoded.</summary>
-    public const long MaxSourcePixels = 40_000_000;
+    /// <summary>Roomy for a 512 px square PNG, which tops out near 1 MB.</summary>
+    public const int MaxUploadBytes = 2 * 1024 * 1024;
 
     public const string ContentType = "image/png";
 
     private readonly BlobContainerClient _container = blobs.GetBlobContainerClient(containers.FacesContainer);
 
+    /// <summary>The PNG signature and the start of the IHDR chunk; width and height follow, big-endian.</summary>
+    private static ReadOnlySpan<byte> PngStart => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52];
+
     public static string BlobName(ProfileId id) => $"{id.Value}.png";
 
     /// <summary>
-    /// Any raster ImageSharp can read (PNG, JPEG, GIF, WebP, BMP, TIFF…) → one 512×512 cover-cropped PNG. Fails with a
-    /// user-facing message for: too many bytes, not an image, absurd dimensions, or a body that will not decode.
+    /// Reads the body and checks it is what the client is meant to send: a PNG of exactly <see cref="Size"/> square.
+    /// Fails with a user-facing message for: too many bytes, nothing sent, not a PNG, or the wrong dimensions.
     /// </summary>
-    public static async Task<Outcome<byte[]>> NormalizeAsync(Stream image, CancellationToken ct)
+    public static async Task<Outcome<byte[]>> ReadPngAsync(Stream image, CancellationToken ct)
     {
         using var buffer = new MemoryStream();
         if (!await CopyCappedAsync(image, buffer, ct))
@@ -54,54 +53,36 @@ public sealed class ProfileImageService(BlobServiceClient blobs, StorageContaine
             return Outcome.Failure<byte[]>($"Image is larger than {MaxUploadBytes / (1024 * 1024)} MB.");
         }
 
-        if (buffer.Length == 0)
+        var bytes = buffer.ToArray();
+        if (bytes.Length == 0)
         {
             return Outcome.Failure<byte[]>("No image was sent.");
         }
 
-        buffer.Position = 0;
-        ImageInfo info;
-        try
+        if (bytes.Length < PngStart.Length + 8 || !bytes.AsSpan(0, PngStart.Length).SequenceEqual(PngStart))
         {
-            info = await Image.IdentifyAsync(buffer, ct);
-        }
-        catch (ImageFormatException)
-        {
-            return Outcome.Failure<byte[]>("Not a PNG, JPEG, GIF, WebP or BMP image.");
+            return Outcome.Failure<byte[]>("Not a PNG image.");
         }
 
-        if ((long)info.Width * info.Height > MaxSourcePixels)
-        {
-            return Outcome.Failure<byte[]>("Image dimensions are too large.");
-        }
-
-        buffer.Position = 0;
-        try
-        {
-            using var decoded = await Image.LoadAsync(new DecoderOptions { MaxFrames = 1 }, buffer, ct);
-            decoded.Mutate(x => x.Resize(new ResizeOptions { Size = new SixLabors.ImageSharp.Size(Size, Size), Mode = ResizeMode.Crop }));
-            using var output = new MemoryStream();
-            await decoded.SaveAsPngAsync(output, ct);
-            return Outcome.Success(output.ToArray());
-        }
-        catch (ImageFormatException)
-        {
-            return Outcome.Failure<byte[]>("The image could not be decoded.");
-        }
+        var width = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(PngStart.Length));
+        var height = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(PngStart.Length + 4));
+        return width == Size && height == Size
+            ? Outcome.Success(bytes)
+            : Outcome.Failure<byte[]>($"The portrait must be {Size}×{Size} pixels.");
     }
 
     public async Task<Outcome<string>> StoreFaceAsync(ProfileId id, Stream image, CancellationToken ct = default)
     {
-        var normalized = await NormalizeAsync(image, ct);
-        if (!normalized.IsSuccess)
+        var png = await ReadPngAsync(image, ct);
+        if (!png.IsSuccess)
         {
-            return Outcome.Failure<string>(normalized.Error!);
+            return Outcome.Failure<string>(png.Error!);
         }
 
         var name = BlobName(id);
         await StorageBootstrap.WithContainerAsync(_container, async token =>
         {
-            using var content = new MemoryStream(normalized.Value);
+            using var content = new MemoryStream(png.Value);
             await _container.GetBlobClient(name).UploadAsync(content, new BlobHttpHeaders { ContentType = ContentType }, cancellationToken: token);
         }, ct);
         return Outcome.Success(name);
@@ -113,7 +94,7 @@ public sealed class ProfileImageService(BlobServiceClient blobs, StorageContaine
             try
             {
                 var response = await _container.GetBlobClient(BlobName(id)).DownloadContentAsync(token);
-                // Defence in depth for the anonymous endpoint: only the type this service writes is ever echoed back.
+                // Defence in depth for the anonymous endpoint: only the type this service stores is ever echoed back.
                 var type = string.Equals(response.Value.Details.ContentType, ContentType, StringComparison.Ordinal) ? ContentType : "application/octet-stream";
                 return new FaceImage(response.Value.Content.ToMemory(), type);
             }

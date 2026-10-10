@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using PoFightJudge.TestSupport;
 
 namespace PoFightJudge.E2EUI;
 
@@ -26,12 +27,19 @@ public class ProfileFlowTests(AppFixture app)
         await dialog.Locator("input[name=Name]").FillAsync("Zed Quill");
         await dialog.Locator("textarea[name=Likes]").FillAsync("quiet mornings");
         await dialog.Locator("textarea[name=Dislikes]").FillAsync("loud chewing");
+
+        // A wide picture: the browser has to crop it, because the server only takes the finished square.
+        await dialog.Locator("input[type=file]").SetInputFilesAsync(new FilePayload { Name = "wide.png", MimeType = "image/png", Buffer = TestPng.Solid(300, 120) });
+        await dialog.Locator("img.face").WaitForAsync(new() { Timeout = 10_000 });
         await dialog.GetByRole(AriaRole.Button, new() { Name = "Create profile" }).ClickAsync();
 
         await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
         var card = page.Locator("article.profile", new() { HasText = "ZZQ" });
         await card.WaitForAsync(new() { Timeout = 15_000 });
         (await card.InnerTextAsync()).Should().ContainEquivalentOf("Zed Quill", "innerText reflects the display font uppercase transform");
+        await card.Locator("img.face").WaitForAsync(new() { Timeout = 15_000 });
+        (await card.Locator("img.face").EvaluateAsync<bool>("async img => { await img.decode(); return img.naturalWidth === 512 && img.naturalHeight === 512; }"))
+            .Should().BeTrue("the portrait was cropped to the 512 px square before it was sent");
 
         await card.GetByRole(AriaRole.Button, new() { Name = "Delete ZZQ" }).ClickAsync();
         var confirm = page.Locator(".rz-dialog");

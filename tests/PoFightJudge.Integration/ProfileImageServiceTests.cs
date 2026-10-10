@@ -2,8 +2,7 @@ using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Profiles;
 using PoFightJudge.Integration.Support;
 using PoFightJudge.Shared.Identifiers;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using PoFightJudge.TestSupport;
 
 namespace PoFightJudge.Integration;
 
@@ -21,10 +20,8 @@ public class ProfileImageServiceTests(AzuriteFixture azurite)
     {
         var sut = Sut();
         var id = ProfileId.From("IMG");
-        using var image = new Image<Rgba32>(200, 300, new Rgba32(10, 200, 90));
-        using var source = new MemoryStream();
-        await image.SaveAsJpegAsync(source);
-        source.Position = 0;
+        var png = TestPng.Solid(ProfileImageService.Size, ProfileImageService.Size);
+        using var source = new MemoryStream(png);
 
         (await sut.GetFaceAsync(id)).Should().BeNull("nothing stored yet");
 
@@ -35,9 +32,7 @@ public class ProfileImageServiceTests(AzuriteFixture azurite)
         var face = await sut.GetFaceAsync(id);
         face.Should().NotBeNull();
         face!.ContentType.Should().Be(ProfileImageService.ContentType);
-        var info = Image.Identify(face.Bytes.Span);
-        info.Width.Should().Be(512);
-        info.Height.Should().Be(512);
+        face.Bytes.ToArray().Should().Equal(png);
 
         await sut.DeleteFaceAsync(id);
         (await sut.GetFaceAsync(id)).Should().BeNull();

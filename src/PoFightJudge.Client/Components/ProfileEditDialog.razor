@@ -6,6 +6,7 @@
 @inject IApiClient Api
 @inject FeatureGate Features
 @inject DialogService Dialog
+@inject IJSRuntime JS
 
 @* Create or edit a persona. Hosted by DialogService (the page awaits the saved ProfileDto) and rendered on its own in
    tests. The form edits a copy; the list only changes when the server has accepted it. *@
@@ -178,8 +179,11 @@
 </RadzenTemplateForm>
 
 @code {
-    /// <summary>Largest portrait the picker accepts; the server enforces the same cap.</summary>
+    /// <summary>Largest file the picker accepts. It never leaves the browser: what is sent is the cropped PNG.</summary>
     public const int MaxFaceBytes = 4 * 1024 * 1024;
+
+    /// <summary>The square the server insists on (<c>ProfileImageService.Size</c>).</summary>
+    public const int FaceSize = 512;
 
     private static readonly JsonSerializerOptions CloneOptions = new(JsonSerializerDefaults.Web);
 
@@ -274,14 +278,20 @@
         _error = null;
         try
         {
+            // Cropped before anything is saved, so a file the browser cannot read stops here and not half way.
+            var face = _faceDataUrl is null ? null : await JS.InvokeAsync<string?>("PoFace.square", _faceDataUrl, FaceSize);
             var saved = IsEdit ? await Api.UpdateProfileAsync(Existing!.Id, model) : await Api.CreateProfileAsync(model);
-            if (TryParseDataUrl(_faceDataUrl, out var bytes, out var contentType))
+            if (TryParseDataUrl(face, out var bytes, out var contentType))
             {
                 saved = await Api.UploadFaceAsync(saved.Id, bytes, contentType);
             }
 
             await OnSaved.InvokeAsync(saved);
             Dialog.Close(saved);
+        }
+        catch (JSException)
+        {
+            _error = "That file is not an image this browser can read.";
         }
         catch (ApiException ex)
         {

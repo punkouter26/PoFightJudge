@@ -61,7 +61,6 @@
     <PackageVersion Include="Concentus" Version="2.2.2" />
     <PackageVersion Include="Concentus.Oggfile" Version="1.0.7" />
     <!-- 3.1.x: Six Labors Split licence (free for non-commercial); 4.x requires a paid licence key at build time. -->
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 
   <ItemGroup Label="Build tools / analyzers">

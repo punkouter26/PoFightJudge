@@ -183,7 +183,7 @@ public sealed class ProfileEndpoints : ICarterModule
         return Results.Bytes(face.Bytes, face.ContentType);
     }
 
-    /// <summary>The body is the image itself (any raster type); it is re-encoded before anything is stored.</summary>
+    /// <summary>The body is the portrait itself: a 512 px square PNG, which the client crops before sending.</summary>
     private static async Task<IResult> UploadFaceAsync(ProfileId id, HttpRequest request, IProfileRepository repo, IProfileImageService images, CancellationToken ct)
     {
         if (request.ContentType is not { } type || !type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))

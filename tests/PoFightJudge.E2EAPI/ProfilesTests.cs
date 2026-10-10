@@ -6,8 +6,6 @@ using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace PoFightJudge.E2EAPI;
 
@@ -38,16 +36,6 @@ public class ProfilesTests(ApiFactory factory)
         Patience = 30,
         TtsSettings = new TtsSettingsDto { VoiceName = "Puck" },
     };
-
-    private static async Task<ByteArrayContent> PngAsync(int size = 64)
-    {
-        using var image = new Image<Rgba32>(size, size, new Rgba32(20, 120, 220));
-        using var ms = new MemoryStream();
-        await image.SaveAsPngAsync(ms);
-        var content = new ByteArrayContent(ms.ToArray());
-        content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-        return content;
-    }
 
     [Fact]
     public async Task Create_read_update_delete_round_trip_with_the_documented_status_codes()
