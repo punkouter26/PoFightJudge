@@ -224,12 +224,23 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
         foreach (var nudge in Session.Tick(now))
         {
             LogNudge(_logger, Session.MatchId.Value, nudge.Kind);
+            try
+            {
+                await _live.SendTextAsync(nudge.Message, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // The session has already ticked this one off. Put it back, or a nudge lost to a dropped line —
+                // "time is up" among them — is never sent again.
+                Session.Rearm(nudge.Kind);
+                LogSendFailed(_logger, ex);
+                continue;
+            }
+
             if (nudge.Kind == NudgeKind.LongTalker)
             {
                 Session.NoteInterrupt(now);
             }
-
-            await _live.SendTextAsync(nudge.Message, ct);
         }
 
         await PushSnapshotAsync(ct);
@@ -338,20 +349,32 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
         }
 
         var previous = _live;
-        _live = _liveFactory();
+        var next = _liveFactory();
         var config = new LiveSessionConfig(
             HostPersona.SystemInstruction(_options, Setup),
             previous?.ResumptionHandle,
             HostPersona.VoiceFor(Setup.Persona),
             ToolDeclarations.FunctionDeclarations());
 
-        await _live.ConnectAsync(config, ct);
+        // Swapped in only once it is connected: frames and nudges that arrive while it is still dialling go to the
+        // old client and fail quietly, rather than to a new one that throws "not connected" for every frame.
+        try
+        {
+            await next.ConnectAsync(config, ct);
+        }
+        catch
+        {
+            await next.DisposeAsync();
+            throw;
+        }
+
+        _live = next;
         if (previous is not null)
         {
             await previous.DisposeAsync();
         }
 
-        _eventLoop = Task.Run(() => EventLoopAsync(_live, _cts.Token), CancellationToken.None);
+        _eventLoop = Task.Run(() => EventLoopAsync(next, _cts.Token), CancellationToken.None);
     }
 
     private async Task EventLoopAsync(IGeminiLiveClient live, CancellationToken ct)
@@ -411,7 +434,8 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
                 _playerCaption.Append(heard.Text);
 
                 // The same text the room reads is the transcript the analysis reads: the show is transcribed once.
-                _captions.Add(heard.Text, speaking, CaptionTranscript.Elapsed(Now, Session.StartedAt));
+                // The room needs a name to print it under; the transcript is told the truth, which may be "nobody".
+                _captions.Add(heard.Text, Session.CurrentSpeaker?.ToSpeaker(), CaptionTranscript.Elapsed(Now, Session.StartedAt));
                 await _sink.CaptionAsync(new CaptionDto(speaking, _playerCaption.ToString(), false), ct);
                 break;
 

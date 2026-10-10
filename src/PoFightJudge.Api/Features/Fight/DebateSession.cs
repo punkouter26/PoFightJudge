@@ -121,7 +121,8 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 
     public DateTimeOffset? VerdictAt { get; private set; }
 
-    public IReadOnlyList<TurnDto> Turns => _turns;
+    /// <summary>A copy: the list itself is still being written to while a fight runs.</summary>
+    public IReadOnlyList<TurnDto> Turns => Locked(() => (IReadOnlyList<TurnDto>)[.. _turns]);
 
     /// <summary>
     /// How long they argued for. It stops when the argument does — the room is shown this as a countdown, and a
@@ -138,7 +139,9 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 
     public string NameOf(PlayerId id) => id == PlayerId.Player1 ? Player1Name : Player2Name;
 
-    public Outcome SetPlayers(string topic, string player1, string player2, DateTimeOffset now)
+    public Outcome SetPlayers(string topic, string player1, string player2, DateTimeOffset now) => Locked(() => SetPlayersCore(topic, player1, player2, now));
+
+    private Outcome SetPlayersCore(string topic, string player1, string player2, DateTimeOffset now)
     {
         if (Phase is not (SessionPhase.Intro or SessionPhase.Setup))
         {
@@ -162,7 +165,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
 
         Phase = SessionPhase.Setup;
         _setupStartedAt ??= now;
-        NoteSpeech(now);
+        NoteSpeechCore(now);
         return Outcome.Ok;
     }
 
@@ -210,11 +213,13 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         {
             Phase = SessionPhase.Setup;
             _setupStartedAt ??= now;
-            NoteSpeech(now);
+            NoteSpeechCore(now);
         }
     }
 
-    public Outcome StartTurn(PlayerId player, DateTimeOffset now)
+    public Outcome StartTurn(PlayerId player, DateTimeOffset now) => Locked(() => StartTurnCore(player, now));
+
+    private Outcome StartTurnCore(PlayerId player, DateTimeOffset now)
     {
         MoveOnFromIntro(now);
         if (Phase is SessionPhase.Setup)
@@ -233,7 +238,9 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         return Outcome.Ok;
     }
 
-    public Outcome EndDebate(DateTimeOffset now)
+    public Outcome EndDebate(DateTimeOffset now) => Locked(() => EndDebateCore(now));
+
+    private Outcome EndDebateCore(DateTimeOffset now)
     {
         MoveOnFromIntro(now);
 
@@ -261,11 +268,13 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         CurrentSpeaker = null;
         Phase = SessionPhase.Probe;
         _probeStartedAt = now;
-        NoteSpeech(now);
+        NoteSpeechCore(now);
         return Outcome.Ok;
     }
 
-    public Outcome AskProbe(PlayerId player, string question, DateTimeOffset now)
+    public Outcome AskProbe(PlayerId player, string question, DateTimeOffset now) => Locked(() => AskProbeCore(player, question, now));
+
+    private Outcome AskProbeCore(PlayerId player, string question, DateTimeOffset now)
     {
         MoveOnFromIntro(now);
 
@@ -273,7 +282,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         // as from the debate, because a question is just as clear a statement that the argument is over.
         if (Phase is SessionPhase.Setup or SessionPhase.Debate)
         {
-            EndDebate(now);
+            EndDebateCore(now);
         }
 
         if (Phase is not SessionPhase.Probe)
@@ -285,7 +294,9 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         return Outcome.Ok;
     }
 
-    public Outcome DeliverVerdict(VerdictCall verdict, DateTimeOffset now)
+    public Outcome DeliverVerdict(VerdictCall verdict, DateTimeOffset now) => Locked(() => DeliverVerdictCore(verdict, now));
+
+    private Outcome DeliverVerdictCore(VerdictCall verdict, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(verdict);
         if (Phase is SessionPhase.Verdict or SessionPhase.Done)
@@ -306,7 +317,9 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
     }
 
     /// <summary>Called once the host has finished speaking the ruling, or the show is cut short.</summary>
-    public void Complete(DateTimeOffset now)
+    public void Complete(DateTimeOffset now) => Locked(() => CompleteCore(now));
+
+    private void CompleteCore(DateTimeOffset now)
     {
         CloseOpenTurn(now);
         CurrentSpeaker = null;
@@ -314,7 +327,9 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
     }
 
     /// <summary>Any audio activity resets the silence clock. The long-talker clock is per turn and is not affected.</summary>
-    public void NoteSpeech(DateTimeOffset now)
+    public void NoteSpeech(DateTimeOffset now) => Locked(() => NoteSpeechCore(now));
+
+    private void NoteSpeechCore(DateTimeOffset now)
     {
         _lastSpeech = now;
         _silenceLevel = 0;
@@ -322,8 +337,22 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         _nudged.Remove(NudgeKind.SilenceAdvance);
     }
 
+    /// <summary>A nudge that could not be delivered: it is owed again on the next tick.</summary>
+    public void Rearm(NudgeKind kind) => Locked(() =>
+    {
+        _nudged.Remove(kind);
+        _silenceLevel = kind switch
+        {
+            NudgeKind.Silence => 0,
+            NudgeKind.SilenceAdvance => 1,
+            _ => _silenceLevel,
+        };
+    });
+
     /// <summary>Records a host interruption. The turn is attributed to whoever was cut off.</summary>
-    public void NoteInterrupt(DateTimeOffset now)
+    public void NoteInterrupt(DateTimeOffset now) => Locked(() => NoteInterruptCore(now));
+
+    private void NoteInterruptCore(DateTimeOffset now)
     {
         if (CurrentSpeaker is { } speaker)
         {
@@ -338,7 +367,9 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
     }
 
     /// <summary>Reads the clocks. Each nudge fires once per condition, and only fires again once that condition has reset.</summary>
-    public IReadOnlyList<DebateNudge> Tick(DateTimeOffset now)
+    public IReadOnlyList<DebateNudge> Tick(DateTimeOffset now) => Locked<IReadOnlyList<DebateNudge>>(() => TickCore(now));
+
+    private List<DebateNudge> TickCore(DateTimeOffset now)
     {
         var nudges = new List<DebateNudge>();
         if (Phase is SessionPhase.Done or SessionPhase.Verdict)
@@ -384,7 +415,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         return nudges;
     }
 
-    public DebateSnapshotDto Snapshot(DateTimeOffset now) => new(
+    public DebateSnapshotDto Snapshot(DateTimeOffset now) => Locked(() => new DebateSnapshotDto(
         MatchId,
         Phase,
         Topic,
@@ -395,7 +426,30 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         (int)DebateRemaining(now).TotalSeconds,
         Verdict is null ? null : new VerdictDto(Verdict.WinnerLogic.ToSpeaker(), Verdict.WinnerCorrect.ToSpeaker(), Verdict.Overall.ToSpeaker(), Verdict.Reasons),
         Persona,
-        (int)(now - StartedAt).TotalSeconds);
+        (int)(now - StartedAt).TotalSeconds));
+
+    /// <summary>
+    /// Every entry point takes this. The hub thread reports speech, the registry's ticker reads the clocks, the
+    /// host's event loop applies tool calls and an HTTP request can ask for a snapshot — four callers, one list of
+    /// turns. The lock is re-entrant, so one rule may apply another.
+    /// </summary>
+    private readonly Lock _gate = new();
+
+    private T Locked<T>(Func<T> rule)
+    {
+        lock (_gate)
+        {
+            return rule();
+        }
+    }
+
+    private void Locked(Action rule)
+    {
+        lock (_gate)
+        {
+            rule();
+        }
+    }
 
     /// <summary>Trims model-supplied text and caps its length, so a stored property stays inside what Table Storage takes.</summary>
     public static string Clean(string? value, int max, string fallback)
@@ -451,7 +505,7 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         CloseOpenTurn(now);
         CurrentSpeaker = player;
         _turnStartedAt = now;
-        NoteSpeech(now);
+        NoteSpeechCore(now);
         _openTurnIndex = _turns.Count;
         _turns.Add(new TurnDto(MatchId, _turns.Count, player.ToSpeaker(), kind, text) { StartSeconds = Seconds(now) });
     }

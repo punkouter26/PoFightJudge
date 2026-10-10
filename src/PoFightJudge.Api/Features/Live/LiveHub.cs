@@ -26,8 +26,14 @@ public sealed class LiveHub(SessionRegistry fights, TimeProvider clock) : Hub
         // Tenancy is checked here and nowhere else: joining is the only way into a fight's group.
         var fight = fights.Get(id, Context.User?.UserIdOrNull()) ?? throw new HubException("Fight not found.");
 
-        Context.Items[FightKey] = id;
-        fight.ClientConnected();
+        // Counted once per connection: a second JoinFight on the same one — a reconnect that re-joins — would otherwise
+        // leave the count above zero for good, and "nobody is in the room" would never be true again.
+        if (Joined() != id)
+        {
+            Context.Items[FightKey] = id;
+            fight.ClientConnected();
+        }
+
         await Groups.AddToGroupAsync(Context.ConnectionId, id.Value);
         await Clients.Caller.SendAsync(LiveHubContract.Snapshot, fight.Session.Snapshot(clock.GetUtcNow()));
 
@@ -42,7 +48,7 @@ public sealed class LiveHub(SessionRegistry fights, TimeProvider clock) : Hub
     [HubMethodName(LiveHubContract.EndFight)]
     public async Task EndFightAsync()
     {
-        if (Context.Items[FightKey] is MatchId id)
+        if (Joined() is { } id)
         {
             await fights.EndAsync(id, "ended from the room", CancellationToken.None);
         }
@@ -55,5 +61,8 @@ public sealed class LiveHub(SessionRegistry fights, TimeProvider clock) : Hub
         return base.OnDisconnectedAsync(exception);
     }
 
-    private DebateOrchestrator? Current() => Context.Items[FightKey] is MatchId id ? fights.Get(id) : null;
+    /// <summary>The fight this connection joined, if it joined one. The indexer throws on a missing key, so it is not used.</summary>
+    private MatchId? Joined() => Context.Items.TryGetValue(FightKey, out var value) && value is MatchId id ? id : null;
+
+    private DebateOrchestrator? Current() => Joined() is { } id ? fights.Get(id) : null;
 }

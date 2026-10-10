@@ -16,18 +16,14 @@ public class TranscribeModelTests
             .Build());
 
     [Fact]
-    public void Live_turn_and_diarization_models_have_distinct_defaults()
+    public void The_two_transcribing_surfaces_have_their_own_models_and_are_configured_apart()
     {
         GeminiModelOptions.Defaults.TurnTranscribe.Should().NotBe(
             GeminiModelOptions.Defaults.Transcribe,
             "the transcribe tier returns an empty part on generateContent, so sharing one id silently empties every spoken turn");
         GeminiModelOptions.Defaults.TurnTranscribe.Should().Be("gemini-3.1-flash-lite");
         GeminiModelOptions.Defaults.Transcribe.Should().Be("gemini-3.5-transcribe", "the interactions API is where that tier is the right answer");
-    }
 
-    [Fact]
-    public void Surfaces_are_configured_independently_with_proper_fallback()
-    {
         var models = FromSettings(
             (ConfigKeys.Ai.TranscribeModel, "diarizer-9"),
             (ConfigKeys.Ai.TurnTranscribeModel, "turns-9"));

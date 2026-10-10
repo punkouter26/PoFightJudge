@@ -101,4 +101,35 @@ public class DebateSessionTests
         interrupt.Text.Should().Contain("AB");
         session.Turns.Should().OnlyContain(t => t.MatchId == Match);
     }
+
+    /// <summary>
+    /// The hub thread, the ticker, the host's event loop and an HTTP read all call into one session. And a nudge the
+    /// session has ticked off but the line then dropped is still owed.
+    /// </summary>
+    [Fact]
+    public async Task Four_callers_at_once_do_not_corrupt_it_and_a_nudge_that_was_not_delivered_is_owed_again()
+    {
+        var session = Debating();
+        var callers = Enumerable.Range(0, 4).Select(caller => Task.Run(() =>
+        {
+            for (var i = 0; i < 2_000; i++)
+            {
+                var now = At(10 + (i / 100.0));
+                switch (caller)
+                {
+                    case 0: session.NoteSpeech(now); break;
+                    case 1: session.Tick(now); break;
+                    case 2: session.StartTurn(i % 2 == 0 ? PlayerId.Player1 : PlayerId.Player2, now); break;
+                    default: session.Snapshot(now).Phase.Should().Be(SessionPhase.Debate); _ = session.Turns.Count; break;
+                }
+            }
+        }));
+        await Task.WhenAll(callers);
+        session.Turns.Select(t => t.Index).Should().BeInAscendingOrder().And.OnlyHaveUniqueItems("every turn got its own slot");
+
+        session.Tick(At(200)).Select(n => n.Kind).Should().Contain(NudgeKind.DebateCap);
+        session.Tick(At(201)).Select(n => n.Kind).Should().NotContain(NudgeKind.DebateCap, "it fires once");
+        session.Rearm(NudgeKind.DebateCap);
+        session.Tick(At(202)).Select(n => n.Kind).Should().Contain(NudgeKind.DebateCap, "the line dropped before the host heard it");
+    }
 }
