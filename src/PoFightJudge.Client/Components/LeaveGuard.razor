@@ -1,0 +1,67 @@
+@* An argument is in progress. While it is, the page is not walked away from by accident — a tap on the nav bar, the
+   Back button, a closed tab — and the screen stays on. A page's own way out (Stop, Leave, the ruling arriving) calls
+   Allow() first: somebody who pressed Leave has already been asked. *@
+@implements IAsyncDisposable
+@inject DialogService Dialogs
+@inject IJSRuntime JS
+
+<NavigationLock ConfirmExternalNavigation="@(Active && !_allowed)" OnBeforeInternalNavigation="@AskAsync" />
+
+@code {
+    private bool _allowed;
+    private bool _held;
+
+    /// <summary>Whether there is anything to lose by leaving right now.</summary>
+    [Parameter] public bool Active { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Leave the argument?";
+
+    [Parameter] public string Message { get; set; } = "It is still going. Leaving now ends it where it stands.";
+
+    /// <summary>The page is about to navigate on purpose; do not ask.</summary>
+    public void Allow() => _allowed = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Active == _held)
+        {
+            return;
+        }
+
+        _held = Active;
+        try
+        {
+            await JS.InvokeVoidAsync(Active ? "PoWake.hold" : "PoWake.release");
+        }
+        catch (JSException)
+        {
+            // No such script on this page (a test host). The guard still guards.
+        }
+    }
+
+    private async Task AskAsync(LocationChangingContext context)
+    {
+        if (!Active || _allowed)
+        {
+            return;
+        }
+
+        var leave = await Dialogs.Confirm(Message, Title, new ConfirmOptions { OkButtonText = "Leave", CancelButtonText = "Stay" });
+        if (leave != true)
+        {
+            context.PreventNavigation();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("PoWake.release");
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException or OperationCanceledException)
+        {
+            // The page is already gone, and the browser gives the lock back with it.
+        }
+    }
+}

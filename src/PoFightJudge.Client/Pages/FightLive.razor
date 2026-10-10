@@ -2,6 +2,9 @@
 
 <PageTitle>Live · PoFightJudge</PageTitle>
 
+<LeaveGuard @ref="_guard" Active="@(_listening && !_ending)" Title="Leave the fight?"
+            Message="The microphone is still open. Leaving now ends the fight where it stands." />
+
 <PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="Channel 2" Title="@Title" Lead="@Lead">
     <Actions>
         <RadzenButton Text="Stop the fight" Icon="stop_circle" ButtonStyle="ButtonStyle.Danger"

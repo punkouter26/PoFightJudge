@@ -55,6 +55,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     [Inject] private NavigationManager Nav { get; set; } = default!;
 
+    private LeaveGuard? _guard;
+
     [Inject] private SfxInterop Sound { get; set; } = default!;
 
     [Inject] private GfxInterop Gfx { get; set; } = default!;
@@ -273,6 +275,7 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     {
         _listening = false;
         await Audio.StopAsync();
+        _guard?.Allow();
         Nav.NavigateTo($"verdict/{matchId}");
     });
 

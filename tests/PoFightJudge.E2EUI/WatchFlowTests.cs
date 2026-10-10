@@ -30,6 +30,12 @@ public class WatchFlowTests(AppFixture app)
         (await verdict.InnerTextAsync()).Should().NotBeNullOrWhiteSpace();
         (await page.Locator("article.line").CountAsync()).Should().Be(6, "three rounds each, no slap");
 
+        // The matchup lives in the tab, not only in memory: a reload plays the same two again rather than dumping
+        // whoever was watching back at the setup screen.
+        await page.ReloadAsync();
+        await page.Locator("article.line").First.WaitForAsync(new() { Timeout = 90_000 });
+        page.Url.Should().EndWith("/watch/play");
+
         errors.Should().BeEmpty();
     }
 
@@ -59,6 +65,14 @@ public class WatchFlowTests(AppFixture app)
         var turn = page.Locator("section.your-turn");
         await turn.WaitForAsync(new() { Timeout = 90_000 });
         (await page.Locator("article.line").CountAsync()).Should().Be(1, "the argument stops at the person's turn rather than speaking for them");
+
+        // A stray tap on the nav bar mid-argument asks first, and "Stay" means nothing happened.
+        await page.Locator("nav a[href$='history'], nav a[href='/history']").First.ClickAsync();
+        var asking = page.Locator(".rz-dialog", new() { HasText = "Leave the argument?" });
+        await asking.WaitForAsync(new() { Timeout = 10_000 });
+        await asking.GetByRole(AriaRole.Button, new() { Name = "Stay" }).ClickAsync();
+        await asking.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 10_000 });
+        page.Url.Should().EndWith("/watch/play");
 
         // Spoken, not typed, and nothing to press: the turn opens the microphone itself, the fake device plays the
         // fixture into it, and a pause is what ends it. The fixture never pauses, so the test goes quiet the way a

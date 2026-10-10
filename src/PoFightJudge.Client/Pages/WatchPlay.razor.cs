@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using PoFightJudge.Client.Components;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -102,6 +104,10 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
     [Inject] private NavigationManager Nav { get; set; } = default!;
 
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private LeaveGuard? _guard;
+
     /// <summary>The side a real person is arguing, when there is one.</summary>
     private MatchSide? Person => Simulation.Human;
 
@@ -121,12 +127,14 @@ public sealed partial class WatchPlay : IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        if (!Simulation.IsReady)
+        if (!Simulation.IsReady && !await RecallMatchupAsync())
         {
-            // Nothing to play: the matchup lives in memory, so a reload or a shared link lands here empty.
+            // Nothing to play, and nothing this tab remembers: a shared link, or a tab opened fresh.
             Nav.NavigateTo("watch");
             return;
         }
+
+        await RememberMatchupAsync();
 
         // The click that started this match is the gesture the audio context needs; taking it now means the first
         // bell rings on time rather than being swallowed by the autoplay policy.
@@ -541,7 +549,51 @@ public sealed partial class WatchPlay : IAsyncDisposable
         await RunAsync();
     }
 
-    private void Leave() => Nav.NavigateTo("watch");
+    private void Leave()
+    {
+        _guard?.Allow();
+        Nav.NavigateTo("watch");
+    }
+
+    /// <summary>
+    /// The matchup, kept for the life of the tab. The page holds it in memory, so a reload used to land on the setup
+    /// screen with the argument gone; now a reload starts the same two over on the same topic.
+    /// </summary>
+    private const string MatchupKey = "po-watch-matchup";
+
+    private sealed record Matchup(MatchSide Husband, MatchSide Wife, string Topic);
+
+    private async Task RememberMatchupAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(new Matchup(Simulation.Husband!, Simulation.Wife!, Simulation.Topic), System.Text.Json.JsonSerializerOptions.Web);
+            await JS.InvokeVoidAsync("sessionStorage.setItem", _leaving.Token, MatchupKey, json);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // Storage is blocked, or there is no browser here. A reload goes back to setup, as it always did.
+        }
+    }
+
+    private async Task<bool> RecallMatchupAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("sessionStorage.getItem", _leaving.Token, MatchupKey);
+            if (string.IsNullOrEmpty(json) || System.Text.Json.JsonSerializer.Deserialize<Matchup>(json, System.Text.Json.JsonSerializerOptions.Web) is not { Husband: not null, Wife: not null } kept)
+            {
+                return false;
+            }
+
+            Simulation.Set(kept.Husband, kept.Wife, kept.Topic);
+            return true;
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
 
     /// <summary>
     /// The argument with each line's audio attached, for the one request that archives it. A line nobody spoke —

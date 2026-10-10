@@ -2,6 +2,8 @@
 
 <PageTitle>@Headline · PoFightJudge</PageTitle>
 
+<LeaveGuard @ref="_guard" Active="@(_stage is Stage.Arguing or Stage.WaitingForPerson or Stage.Judging && Simulation.IsReady)" />
+
 <PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="Channel 1" Title="@Headline" Lead="@Lead">
     <Actions>
         <RadzenButton Text="Leave" Icon="close" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@Leave" />
