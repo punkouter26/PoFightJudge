@@ -47,6 +47,13 @@ public sealed class SetupMemory(ILocalStorageService storage)
         return await ReadAsync<FightCard>(FightKey);
     }
 
+    /// <summary>
+    /// The last fight set up on this device, without spending a rematch. History uses it to put two people back in
+    /// the seats they chose and in front of the host they picked: a match on the record keeps the tags and the
+    /// topic, but not those.
+    /// </summary>
+    public Task<FightCard?> LastFightAsync() => ReadAsync<FightCard>(FightKey);
+
     public async Task<WatchCard?> WatchAsync()
     {
         if (_pendingWatch is { } pending)

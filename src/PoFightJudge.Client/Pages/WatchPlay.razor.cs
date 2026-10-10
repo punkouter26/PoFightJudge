@@ -71,7 +71,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
     /// <summary>Held so the loop that counts it down is observed rather than dropped on the floor.</summary>
     private Task? _countdown;
 
-    /// <summary>S throws the slap. It is the one thing on this page somebody wants to reach without aiming.</summary>
+    /// <summary>The ruling, once there is one.</summary>
     private VerdictResponse? _verdict;
 
     private enum Stage

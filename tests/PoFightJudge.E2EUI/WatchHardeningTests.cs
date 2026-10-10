@@ -38,7 +38,9 @@ public class WatchHardeningTests(AppFixture app)
         scrollWidth.Should().BeLessThanOrEqualTo(innerWidth, "the play screen must never scroll sideways at 390 px");
 
         await turn.Locator("textarea[name=line]").FillAsync("We are not having this argument again.");
-        await turn.GetByRole(AriaRole.Button, new() { Name = "Say it" }).ClickAsync();
+        // From the keyboard: somebody who typed their answer should not have to find the button to give it.
+        await turn.GetByRole(AriaRole.Button, new() { Name = "Say it" }).WaitForAsync(new() { Timeout = 10_000 });
+        await turn.Locator("textarea[name=line]").PressAsync("Control+Enter");
         await page.WaitForFunctionAsync("() => document.querySelectorAll('article.line').length >= 2", null, new() { Timeout = 60_000 });
         (await page.Locator("article.line").First.InnerTextAsync()).Should().Contain("not having this argument");
 

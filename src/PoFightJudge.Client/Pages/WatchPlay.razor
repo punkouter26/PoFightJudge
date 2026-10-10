@@ -63,7 +63,8 @@
                         <RadzenFormField Text="What you say back" Variant="Variant.Outlined" class="say">
                             <ChildContent>
                                 @* Published as it is typed: a Say button that stays grey until you click elsewhere reads as broken. *@
-                                <RadzenTextArea Value="@_line" @oninput="@OnLineTypedAsync" Name="line" Rows="3" MaxLength="600"
+                                <RadzenTextArea Value="@_line" @oninput="@OnLineTypedAsync" @onkeydown="@OnLineKeyAsync" Name="line" Rows="3" MaxLength="600"
+                                                title="Ctrl+Enter says it"
                                                 Placeholder="That is not what I said and you know it." aria-label="What you say back" />
                             </ChildContent>
                         </RadzenFormField>

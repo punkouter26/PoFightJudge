@@ -269,4 +269,10 @@ public sealed partial class WatchPlay
         "NotSupportedError" => "This browser will not record. Type your line instead.",
         _ => $"The microphone could not be started ({error}).",
     };
+
+    /// <summary>Ctrl+Enter (or ⌘+Enter) says what is in the box, so nobody typing has to reach for the mouse to answer.</summary>
+    private Task OnLineKeyAsync(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e) =>
+        string.Equals(e.Key, "Enter", StringComparison.Ordinal) && (e.CtrlKey || e.MetaKey) && _line.Trim().Length > 0 && !_recording && !_transcribing
+            ? SayAsync()
+            : Task.CompletedTask;
 }

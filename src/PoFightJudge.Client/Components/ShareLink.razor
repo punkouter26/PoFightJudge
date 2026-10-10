@@ -14,6 +14,8 @@
     {
         <div class="live">
             <RadzenTextBox Value="@Url" ReadOnly="true" Name="shareUrl" aria-label="The link to this ruling" class="url" />
+            <RadzenButton Icon="ios_share" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                          title="Send the link" aria-label="Send the link" Click="@SendAsync" />
             <RadzenButton Icon="@(_copied ? "check" : "content_copy")" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
                           title="Copy the link" aria-label="Copy the link" Click="@CopyAsync" />
             <RadzenButton Text="Stop sharing" Icon="link_off" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
@@ -101,6 +103,23 @@
     /// and this needs no file to be served. It is refused outside a user gesture and on an insecure origin, so the
     /// box beside it stays selectable and the failure is said out loud rather than swallowed.
     /// </summary>
+    /// <summary>
+    /// The device's own share sheet — messages, mail, whatever is installed — where the browser has one. Where it
+    /// does not, or the sheet was dismissed, the link is copied instead: the button always does something.
+    /// </summary>
+    private async Task SendAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.share", new { url = Url, title = "The ruling" });
+            _error = null;
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            await CopyAsync();
+        }
+    }
+
     private async Task CopyAsync()
     {
         try

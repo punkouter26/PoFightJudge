@@ -9,7 +9,8 @@
                       Size="ButtonSize.Large"
                       Disabled="@(Used || !Enabled)"
                       Click="@(() => Throw.InvokeAsync(heckle))"
-                      title="@heckle.Tooltip"
+                      title="@($"{heckle.Tooltip} (access key S)")"
+                      accesskey="s"
                       class="heckle" />
     }
     <span class="hint po-muted">@(Used ? "Spent." : "Once per match.")</span>

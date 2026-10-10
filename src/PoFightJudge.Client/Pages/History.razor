@@ -164,7 +164,7 @@
                                 }
                                 <RadzenButton Icon="replay" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
                                               title="@($"Argue {match.Topic} again")" aria-label="@($"Argue {match.Topic} again")"
-                                              Click="@(() => RunItBack(match))" />
+                                              Click="@(() => RunItBackAsync(match))" />
                                 <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
                                               title="@($"Delete {match.Topic}")" aria-label="@($"Delete {match.Topic}")" Click="@(() => ConfirmAsync(match))" />
                             </div>
@@ -364,11 +364,23 @@
     /// The same matchup, set up again. It fills the setup screen in rather than starting anything: a side can be a
     /// person, and nothing here should be able to put a result on somebody's record without them pressing start.
     /// </summary>
-    private void RunItBack(MatchDto match)
+    private async Task RunItBackAsync(MatchDto match)
     {
         if (match.Mode == MatchMode.Fight)
         {
-            Memory.Rematch(new FightCard(match.Side1.Id, match.Side2.Id, match.Topic, ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Referee));
+            // The seats and the host are not on the record. If these are the two who fought last on this device,
+            // they get what they chose then; anybody else starts from the usual.
+            var last = await Memory.LastFightAsync();
+            var same = last is not null
+                && string.Equals(last.One, match.Side1.Id, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(last.Two, match.Side2.Id, StringComparison.OrdinalIgnoreCase);
+            Memory.Rematch(new FightCard(
+                match.Side1.Id,
+                match.Side2.Id,
+                match.Topic,
+                same ? last!.OneRole : ProfileRole.Husband,
+                same ? last!.TwoRole : ProfileRole.Wife,
+                same ? last!.Persona : HostPersonaId.Referee));
             Nav.NavigateTo("2p");
             return;
         }
