@@ -61,7 +61,7 @@ public class WatchHardeningTests(AppFixture app)
 
         var verdict = page.Locator("section.verdict");
         await verdict.WaitForAsync(new() { Timeout = 120_000 });
-        (await verdict.InnerTextAsync()).Should().ContainEquivalentOf("won", "the ruling says who took it, and innerText carries the display font uppercase");
+        (await verdict.InnerTextAsync()).Should().ContainEquivalentOf("took it", "the ruling says who took it, and innerText carries the display font uppercase");
         await ShootAsync(page, "watch-verdict");
 
         // A rematch starts a fresh argument rather than appending to the one just judged.

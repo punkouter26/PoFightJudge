@@ -62,9 +62,10 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         _ => "Queued.",
     };
 
-    private string WinnerLine => _report is null
-        ? string.Empty
-        : $"{(_report.Overall.Overall == Speaker.Player1 ? _report.Player1.Name : _report.Player2.Name)} took it.";
+    /// <summary>Who took it, or nobody: a fight too short to rule on has a report, and no winner.</summary>
+    private string? Winner => _report is not { Overall.Ruled: true }
+        ? null
+        : _report.Overall.Overall == Speaker.Player1 ? _report.Player1.Name : _report.Player2.Name;
 
     /// <summary>Both sides in a fixed order, so every tab lays them out the same way round.</summary>
     private IEnumerable<(Speaker Side, PlayerReportDto Report)> Sides =>
@@ -188,7 +189,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     /// </summary>
     private async Task CelebrateAsync()
     {
-        if (_report is null)
+        // Nobody won a fight that was too short to rule on, and there is nothing to celebrate about that.
+        if (_report is null || Winner is not { } won)
         {
             return;
         }
@@ -197,7 +199,6 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
         // After the render that put the cards on the page, or there is nothing to measure the burst against.
         await Task.Yield();
-        var won = _report.Overall.Overall == Speaker.Player1 ? _report.Player1.Name : _report.Player2.Name;
         await Particles.BurstAsync(RevealSelector, ParticleInterop.Confetti, $".player[data-tag='{won}']", _leaving.Token);
     }
 

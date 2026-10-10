@@ -45,14 +45,8 @@
                             @* A plain dot in the side's own colour: blue for the husband, red for the wife, matching the card borders. *@
                             <RadzenTimelineItem PointStyle="@(WatchTurns.IsHusband(round.Speaker) ? PointStyle.Info : PointStyle.Danger)">
                                 <ChildContent>
-                                    <article class="line po-card @(WatchTurns.IsHusband(round.Speaker) ? "p1" : "p2")"
-                                             data-speaker="@round.Speaker" data-mood="@round.Mood">
-                                        <header>
-                                            <span class="who">@NameOf(round.Speaker)</span>
-                                            <span class="po-chip">@round.Mood</span>
-                                        </header>
-                                        <p>@WatchTurns.Shown(round.Text)</p>
-                                    </article>
+                                    <TranscriptLine First="@WatchTurns.IsHusband(round.Speaker)" Speaker="@round.Speaker"
+                                                    Name="@NameOf(round.Speaker)" Mood="@round.Mood" Text="@round.Text" />
                                 </ChildContent>
                             </RadzenTimelineItem>
                         }
@@ -142,12 +136,7 @@
 
                 @if (_verdict is not null)
                 {
-                    <section class="verdict po-card" aria-label="The ruling">
-                        <div class="ruling">
-                            <span class="po-eyebrow po-eyebrow--accent">The ruling</span>
-                            <h2 class="po-display">@WinnerLine</h2>
-                            <p>@_verdict.Verdict</p>
-                        </div>
+                    <RulingCard Class="verdict" Winner="@(_verdict.Winner.Length == 0 ? null : NameOfSide(_verdict.Winner))" Summary="@_verdict.Verdict">
                         <div class="scores">
                             <div class="score p1">
                                 <span class="po-eyebrow">@Simulation.Husband!.DisplayName</span>
@@ -162,7 +151,7 @@
                             <RadzenButton Text="Argue again" Icon="replay" ButtonStyle="ButtonStyle.Primary" Click="@RematchAsync" />
                             <RadzenButton Text="New matchup" Icon="groups" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@Leave" />
                         </div>
-                    </section>
+                    </RulingCard>
                 }
             </div>
         }

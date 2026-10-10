@@ -23,48 +23,17 @@
         }
         else
         {
-            <article class="ruling po-card">
-                <header>
+            <RulingCard Side1="@_shared.Side1Name" Side2="@_shared.Side2Name" Winner="@(_shared.IsDraw ? null : _shared.Winner)"
+                        Summary="@_shared.Verdict" Reasons="@_shared.Reasons">
+                <Header>
                     <ModeBadge Mode="@_shared.Mode" />
                     <span class="po-muted">@_shared.StartedAt.LocalDateTime.ToString("d MMMM yyyy", System.Globalization.CultureInfo.CurrentCulture)</span>
                     @if (_shared.IsFake)
                     {
-                        <span class="po-chip" title="Argued with no key, so nothing here was really judged.">rehearsal</span>
+                        <RehearsalChip />
                     }
-                </header>
-
-                <div class="who">
-                    <span class="side p1">@_shared.Side1Name</span>
-                    <span class="po-muted">vs</span>
-                    <span class="side p2">@_shared.Side2Name</span>
-                </div>
-
-                <h2 class="po-display">
-                    @if (_shared.IsDraw)
-                    {
-                        @("Nobody took it.")
-                    }
-                    else
-                    {
-                        @($"{_shared.Winner} took it.")
-                    }
-                </h2>
-
-                @if (_shared.Verdict is { Length: > 0 } verdict)
-                {
-                    <p class="summary">@verdict</p>
-                }
-
-                @if (_shared.Reasons.Count > 0)
-                {
-                    <ul class="reasons">
-                        @foreach (var reason in _shared.Reasons)
-                        {
-                            <li>@reason</li>
-                        }
-                    </ul>
-                }
-            </article>
+                </Header>
+            </RulingCard>
 
             <p class="po-muted note">
                 This is the ruling only. The recording, the transcript and everything measured about how the two of them

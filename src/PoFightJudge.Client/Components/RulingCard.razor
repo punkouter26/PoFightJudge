@@ -1,0 +1,58 @@
+@* The ruling, wherever it is shown: who took it, and why. One layout and one wording — there were four of each.
+   The page adds what only it has (scores, a share link, buttons) as child content. *@
+<section class="ruling po-card @Class" aria-label="The ruling">
+    @if (Header is not null)
+    {
+        <header>@Header</header>
+    }
+    @if (!string.IsNullOrWhiteSpace(Side1) && !string.IsNullOrWhiteSpace(Side2))
+    {
+        <div class="who">
+            <span class="side p1">@Side1</span>
+            <span class="po-muted">vs</span>
+            <span class="side p2">@Side2</span>
+        </div>
+    }
+    <span class="po-eyebrow po-eyebrow--accent">The ruling</span>
+    <h2 class="po-display">@Headline(Winner)</h2>
+    @if (!string.IsNullOrWhiteSpace(Summary))
+    {
+        <p class="summary">@Summary</p>
+    }
+    @if (Reasons is { Count: > 0 })
+    {
+        <ul class="reasons">
+            @foreach (var reason in Reasons)
+            {
+                <li>@reason</li>
+            }
+        </ul>
+    }
+    @ChildContent
+</section>
+
+@code {
+    /// <summary>Who took it, as the page names them. Blank when the judge called neither, or there was nothing to judge.</summary>
+    [Parameter] public string? Winner { get; set; }
+
+    /// <summary>The two sides, when the page has not already named them above the card.</summary>
+    [Parameter] public string? Side1 { get; set; }
+
+    [Parameter] public string? Side2 { get; set; }
+
+    [Parameter] public string? Summary { get; set; }
+
+    [Parameter] public IReadOnlyList<string>? Reasons { get; set; }
+
+    /// <summary>A line above everything else: what kind of argument it was, when, whether it was a rehearsal.</summary>
+    [Parameter] public RenderFragment? Header { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Extra classes for the card, so a page can still find and style its own.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>The one sentence every page uses.</summary>
+    public static string Headline(string? winner) =>
+        string.IsNullOrWhiteSpace(winner) ? "Nobody took it." : $"{winner} took it.";
+}

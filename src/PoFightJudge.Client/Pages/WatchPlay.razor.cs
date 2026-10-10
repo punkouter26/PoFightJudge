@@ -119,11 +119,6 @@ public sealed partial class WatchPlay : IAsyncDisposable
         : Person is not null ? "You are in this one. Answer when it is your turn."
         : "Three rounds each, then the judge rules.";
 
-    private string WinnerLine =>
-        _verdict is null ? string.Empty
-        : _verdict.Winner.Length == 0 ? "Nobody won that."
-        : $"{NameOfSide(_verdict.Winner)} won it.";
-
     protected override async Task OnInitializedAsync()
     {
         if (!Simulation.IsReady)

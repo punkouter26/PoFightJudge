@@ -30,32 +30,18 @@
         else if (_match is not null)
         {
             <div class="replay">
-                <section class="card po-card">
-                    <div class="who">
-                        <span class="side p1">@_match.Side1.DisplayName</span>
-                        <span class="po-muted">vs</span>
-                        <span class="side p2">@_match.Side2.DisplayName</span>
-                    </div>
-                    <p class="outcome">
-                        @if (_match.IsDraw)
-                        {
-                            <span class="po-muted">The judge called neither of them.</span>
-                        }
-                        else
-                        {
-                            <span><strong>@_match.Winner</strong> took it.</span>
-                        }
+                <RulingCard Side1="@_match.Side1.DisplayName" Side2="@_match.Side2.DisplayName"
+                            Winner="@(_match.IsDraw ? null : _match.Winner)" Summary="@_match.Verdict">
+                    <Header>
                         @if (_match.IsFake)
                         {
-                            <span class="po-chip" title="Argued with no key, so nothing here was really judged.">rehearsal</span>
+                            <RehearsalChip />
                         }
-                    </p>
-                    @if (_match.Verdict is { Length: > 0 } verdict)
-                    {
-                        <p class="verdict">@verdict</p>
-                    }
-                    <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
-                </section>
+                    </Header>
+                    <ChildContent>
+                        <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
+                    </ChildContent>
+                </RulingCard>
 
                 @if (_turns.Count == 0)
                 {
@@ -70,25 +56,17 @@
                             {
                                 <RadzenTimelineItem PointStyle="@(turn.Speaker == Speaker.Player1 ? PointStyle.Info : PointStyle.Danger)">
                                     <ChildContent>
-                                        <article class="line po-card @(turn.Speaker == Speaker.Player1 ? "p1" : "p2")"
-                                                 data-speaker="@turn.Speaker" data-mood="@turn.Mood">
-                                            <header>
-                                                <span class="name">@NameOf(turn.Speaker)</span>
-                                                @if (turn.Mood is { Length: > 0 })
-                                                {
-                                                    <span class="po-chip">@turn.Mood</span>
-                                                }
-                                                @if (turn.AudioBlobName is not null)
-                                                {
-                                                    <RadzenButton Icon="@(_speaking == turn.Index ? "graphic_eq" : "volume_up")"
-                                                                  ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
-                                                                  Disabled="@(_speaking == turn.Index)"
-                                                                  title="@($"Hear this line again")" aria-label="@($"Hear line {turn.Index + 1} again")"
-                                                                  Click="@(() => PlayOneAsync(turn.Index))" />
-                                                }
-                                            </header>
-                                            <p>@WatchTurns.Shown(turn.Text)</p>
-                                        </article>
+                                        <TranscriptLine First="@(turn.Speaker == Speaker.Player1)" Speaker="@turn.Speaker.ToString()"
+                                                        Name="@NameOf(turn.Speaker)" Mood="@turn.Mood" Text="@turn.Text">
+                                            @if (turn.AudioBlobName is not null)
+                                            {
+                                                <RadzenButton Icon="@(_speaking == turn.Index ? "graphic_eq" : "volume_up")"
+                                                              ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                                                              Disabled="@(_speaking == turn.Index)"
+                                                              title="Hear this line again" aria-label="@($"Hear line {turn.Index + 1} again")"
+                                                              Click="@(() => PlayOneAsync(turn.Index))" />
+                                            }
+                                        </TranscriptLine>
                                     </ChildContent>
                                 </RadzenTimelineItem>
                             }

@@ -11,14 +11,6 @@
 
 .waiting p { margin: 0; }
 
-.ruling { display: grid; gap: var(--po-space-3); padding: var(--po-space-5); }
-
-.ruling h2 { margin: 0; }
-
-.summary { margin: 0; font-size: var(--po-text-lg); }
-
-.reasons { margin: 0; padding-left: var(--po-space-5); display: grid; gap: var(--po-space-1); }
-
 .reel-section { display: grid; gap: var(--po-space-3); }
 
 .reel-section h2 { margin: 0; }

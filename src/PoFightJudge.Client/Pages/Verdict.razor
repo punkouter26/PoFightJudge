@@ -26,16 +26,7 @@
         else
         {
             <div class="verdict">
-                <section class="ruling po-card">
-                    <span class="po-eyebrow po-eyebrow--accent">The ruling</span>
-                    <h2 class="po-display">@WinnerLine</h2>
-                    <p class="summary">@_report.Overall.Summary</p>
-                    <ul class="reasons">
-                        @foreach (var reason in _report.Overall.Reasons)
-                        {
-                            <li>@reason</li>
-                        }
-                    </ul>
+                <RulingCard Winner="@Winner" Summary="@_report.Overall.Summary" Reasons="@_report.Overall.Reasons">
                     @if (_report.SpeakerMappingFlagged)
                     {
                         <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="problem">
@@ -46,7 +37,7 @@
                     {
                         <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
                     }
-                </section>
+                </RulingCard>
 
                 @if (_report.Highlights is { Count: > 0 } highlights)
                 {
@@ -57,8 +48,8 @@
                 }
 
                 <section class="pair">
-                    <PlayerCard Report="@_report.Player1" Won="@(_report.Overall.Overall == Speaker.Player1)" />
-                    <PlayerCard Report="@_report.Player2" Won="@(_report.Overall.Overall == Speaker.Player2)" IsSecond="true" />
+                    <PlayerCard Report="@_report.Player1" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player1)" />
+                    <PlayerCard Report="@_report.Player2" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player2)" IsSecond="true" />
                 </section>
 
                 @* All tabs rendered, not just the selected one: a report is a document, so find-in-page and printing should reach every part of it. *@

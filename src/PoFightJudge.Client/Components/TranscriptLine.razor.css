@@ -1,0 +1,31 @@
+.line {
+  display: grid;
+  gap: var(--po-space-2);
+  padding: var(--po-space-4);
+  max-width: 48rem;
+}
+
+.line header,
+.tail {
+  display: flex;
+  gap: var(--po-space-2);
+  align-items: center;
+}
+
+.line header { justify-content: space-between; }
+
+.who {
+  font-family: var(--po-font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.line p {
+  margin: 0;
+  font-size: var(--po-text-lg);
+  line-height: 1.5;
+}
+
+.line.p1 { border-left: 3px solid var(--po-p1); }
+
+.line.p2 { border-left: 3px solid var(--po-p2); }

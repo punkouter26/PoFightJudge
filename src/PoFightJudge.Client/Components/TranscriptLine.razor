@@ -1,0 +1,32 @@
+@* One line of an argument, on whichever page shows it. The stage cue at the end of a generated line is for the
+   voice; the mood chip already says it on screen, so the words are printed without it. *@
+<article class="line po-card @(First ? "p1" : "p2")" data-speaker="@Speaker" data-mood="@Mood">
+    <header>
+        <span class="who">@Name</span>
+        <span class="tail">
+            @if (!string.IsNullOrEmpty(Mood))
+            {
+                <span class="po-chip">@Mood</span>
+            }
+            @ChildContent
+        </span>
+    </header>
+    <p>@WatchTurns.Shown(Text)</p>
+</article>
+
+@code {
+    /// <summary>True for the first side (the husband, player one): the blue edge. False is the other colour.</summary>
+    [Parameter] public bool First { get; set; }
+
+    /// <summary>The side as the page knows it, for anything that needs to find the line again.</summary>
+    [Parameter] public string? Speaker { get; set; }
+
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    [Parameter] public string? Mood { get; set; }
+
+    [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
+
+    /// <summary>Whatever the page can do with this one line — hear it again, say.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
