@@ -282,24 +282,6 @@ public sealed record CareerWordsDto(
 
 public sealed record FighterProfileDto(FighterDto Fighter, FighterStatsDto Stats, StyleProfileDto Style, IReadOnlyList<FighterResultDto> Results, CareerWordsDto Words);
 
-/// <summary>One persona's record from the watches they have argued in.</summary>
-public sealed record ProfileRecordDto(
-    string Initials,
-    int Matches,
-    int Wins,
-    int Losses,
-    int Draws,
-    double AverageScore,
-    DateTimeOffset? LastSeenAt,
-    AdvancedStatsDto AverageStats,
-    RivalryDto? TopRival)
-{
-    public double WinRate => Matches == 0 ? 0 : (double)Wins / Matches;
-
-    public static ProfileRecordDto Empty(string initials) =>
-        new(initials, 0, 0, 0, 0, 0, null, AdvancedStatsDto.Empty, null);
-}
-
 /// <summary>One row of a leaderboard, whichever kind it is.</summary>
 public sealed record LeaderboardRowDto(string Id, string DisplayName, int Matches, int Wins, double WinRate, double AverageScore);
 

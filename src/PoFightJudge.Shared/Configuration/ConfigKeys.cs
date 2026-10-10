@@ -88,7 +88,7 @@ public static class ConfigKeys
     }
 
     /// <summary>
-    /// Local Azurite endpoints, applied over the Key Vault values in the host when <see cref="Flags.UseAzurite"/> is on
+    /// Local Azurite endpoints, applied over the Key Vault values in the host when <see cref="Toggles.UseAzurite"/> is on
     /// (Development only). Still endpoints: Azurite runs <c>--oauth basic</c> over HTTPS.
     /// </summary>
     public static class Azurite
@@ -114,21 +114,6 @@ public static class ConfigKeys
     public static class Analysis
     {
         public const string Section = $"{Root}:Analysis";
-    }
-
-    public static class Audio
-    {
-        /// <summary><c>mp3</c> (default) or <c>pcm</c> for synthesized speech on the wire.</summary>
-        public const string WireFormat = $"{Root}:Audio:WireFormat";
-
-        /// <summary>Store fight recordings as Ogg/Opus (default true); false keeps WAV.</summary>
-        public const string StoreOpus = $"{Root}:Audio:StoreOpus";
-    }
-
-    public static class Host
-    {
-        public const string AspNetCoreUrls = "ASPNETCORE_URLS";
-        public const string Urls = "urls";
     }
 }
 

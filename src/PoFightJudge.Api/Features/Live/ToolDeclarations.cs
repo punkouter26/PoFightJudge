@@ -15,8 +15,6 @@ public static class ToolDeclarations
     public const string AskProbe = "ask_probe";
     public const string DeliverVerdict = "deliver_verdict";
 
-    public static IReadOnlyList<string> AllNames { get; } = [SetPlayers, StartTurn, EndDebate, AskProbe, DeliverVerdict];
-
     /// <summary>The only two values any player argument may take: there is nobody else in the room.</summary>
     private static readonly string[] Players = ["player1", "player2"];
 

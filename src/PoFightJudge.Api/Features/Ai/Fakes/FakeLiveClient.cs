@@ -32,9 +32,6 @@ public sealed class FakeLiveClient(TimeProvider clock) : IGeminiLiveClient
     /// <summary>The fake never offers one: there is no session to resume.</summary>
     public string? ResumptionHandle => null;
 
-    /// <summary>How many steps of the script have been played. Ends at <see cref="Script"/>'s length.</summary>
-    public int Beat => _beat;
-
     /// <summary>The show, in order. Each step is a line the host says and, where the rules need one, a tool call.</summary>
     private static IReadOnlyList<(string Says, string? Tool, object? Args)> Script { get; } =
     [

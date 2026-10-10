@@ -205,18 +205,6 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
 
     private static int Clamp(int? v) => Math.Clamp(v ?? 50, 0, 100);
 
-    private static T NormalizeEnum<T>(string? value, T fallback)
-        where T : struct, Enum
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return fallback;
-        }
-
-        var cleaned = value.Replace(" ", string.Empty, StringComparison.Ordinal).Replace("_", string.Empty, StringComparison.Ordinal).Replace("-", string.Empty, StringComparison.Ordinal);
-        return Enum.TryParse<T>(cleaned, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed) ? parsed : fallback;
-    }
-
     private static string IsolateJsonObject(string raw)
     {
         var start = raw.IndexOf('{', StringComparison.Ordinal);

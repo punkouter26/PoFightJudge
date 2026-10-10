@@ -21,15 +21,11 @@ public interface IApiClient
 
     Task<AuthMeDto> GuestSignInAsync(CancellationToken ct = default);
 
-    Task LogoutAsync(CancellationToken ct = default);
-
     Task<FeatureFlagsDto> GetFeaturesAsync(CancellationToken ct = default);
 
     Task<HealthReportDto?> GetHealthDetailsAsync(CancellationToken ct = default);
 
     Task<IReadOnlyList<ProfileDto>> GetProfilesAsync(CancellationToken ct = default);
-
-    Task<ProfileDto?> GetProfileAsync(ProfileId id, CancellationToken ct = default);
 
     /// <summary>Throws <see cref="ApiException"/> for a 400 (field errors) or 409 (initials taken).</summary>
     Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, CancellationToken ct = default);
@@ -242,12 +238,6 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         return await response.Content.ReadFromJsonAsync<AuthMeDto>(ct) ?? AuthMeDto.Anonymous;
     }
 
-    public async Task LogoutAsync(CancellationToken ct = default)
-    {
-        using var response = await http.PostAsync(Relative(ApiRoutes.Auth.Logout), null, ct);
-        response.EnsureSuccessStatusCode();
-    }
-
     public async Task<FeatureFlagsDto> GetFeaturesAsync(CancellationToken ct = default) =>
         await anonymous.GetFromJsonAsync<FeatureFlagsDto>(ApiRoutes.Features.Url, ct) ?? new FeatureFlagsDto(false, false, false, false);
 
@@ -256,17 +246,6 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
 
     public async Task<IReadOnlyList<ProfileDto>> GetProfilesAsync(CancellationToken ct = default) =>
         await http.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base, ct) ?? [];
-
-    public async Task<ProfileDto?> GetProfileAsync(ProfileId id, CancellationToken ct = default)
-    {
-        using var response = await http.GetAsync(Relative(ApiRoutes.Profiles.ById(id)), ct);
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return null;
-        }
-
-        return await ReadAsync<ProfileDto>(response, ct);
-    }
 
     public async Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, CancellationToken ct = default)
     {

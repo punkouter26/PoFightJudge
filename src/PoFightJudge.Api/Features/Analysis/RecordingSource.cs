@@ -35,13 +35,6 @@ public static class RecordingSource
     /// <summary>What a second of 16 kHz mono PCM16 costs, used to size the decode buffer.</summary>
     public const int BytesPerSecondAt16k = DebateOrchestrator.PlayerSampleRate * 2;
 
-    /// <summary>
-    /// Roughly how much PCM one byte of Opus becomes at the bitrate recordings are written with (256 kbps out of
-    /// 24 kbps in). Only a starting capacity — being a little wrong costs one resize, being absent costs about
-    /// seventeen of them and copies the whole recording again on the way through.
-    /// </summary>
-    public const int OpusExpansion = BytesPerSecondAt16k / (OpusAudio.BitsPerSecond / 8);
-
     public static async Task<Recording> OpenAsync(IAudioBlobStore blobs, string blobName, int sampleRate, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(blobs);

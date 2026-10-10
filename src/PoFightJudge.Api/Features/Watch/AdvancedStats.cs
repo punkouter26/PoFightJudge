@@ -32,16 +32,4 @@ public sealed record AdvancedStats(
         DeflectionCoefficient,
         LexicalComplexity,
         ApologyToInsultRatio);
-
-    public static AdvancedStats FromDto(AdvancedStatsDto dto) => new(
-        dto.PassiveAggressionIndex,
-        dto.HistoricalGrievanceRate,
-        dto.BlameMetric,
-        dto.LogicalFallacyCount,
-        dto.VolumeScore,
-        dto.WordCountDominance,
-        dto.EmotionalVolatility,
-        dto.DeflectionCoefficient,
-        dto.LexicalComplexity,
-        dto.ApologyToInsultRatio);
 }

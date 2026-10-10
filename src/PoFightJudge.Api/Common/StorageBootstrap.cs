@@ -42,9 +42,6 @@ public static class StorageBootstrap
     public static Task WithContainerAsync(BlobContainerClient container, Func<CancellationToken, Task> operation, CancellationToken ct) =>
         WithContainerAsync(container, Unit(operation), ct);
 
-    /// <summary>Test hook: forget every cached create (a fresh emulator on the same endpoint).</summary>
-    public static void Reset() => Created.Clear();
-
     private static Func<CancellationToken, Task<object?>> Unit(Func<CancellationToken, Task> operation) =>
         async token =>
         {

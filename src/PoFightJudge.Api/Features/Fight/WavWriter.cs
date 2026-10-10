@@ -49,17 +49,6 @@ public sealed class WavWriter(int sampleRate) : IDisposable
         }
     }
 
-    public byte[] ToWav()
-    {
-        byte[] data;
-        lock (_lock)
-        {
-            data = _pcm.ToArray();
-        }
-
-        return Build(SampleRate, data);
-    }
-
     /// <summary>A readable WAV stream over the recorded buffer without copying the PCM. Call once recording has stopped.</summary>
     /// <summary>The raw samples, for a caller that wants to encode them rather than read a WAV.</summary>
     public ReadOnlyMemory<byte> Pcm
