@@ -206,7 +206,6 @@ public sealed class AnalysisPipelineTests : IDisposable
         var defaults = new AnalysisOptions();
 
         defaults.UseLiveCaptionTranscript.Should().BeFalse("the verbatim, diarized transcript is the one the judge reads");
-        defaults.AcceptClientTranscript.Should().BeFalse("a browser transcript would stand in front of the transcribe model");
     }
 
     [Fact]

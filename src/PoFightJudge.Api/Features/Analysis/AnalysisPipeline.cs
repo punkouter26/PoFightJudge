@@ -251,7 +251,7 @@ public sealed partial class AnalysisPipeline(
         string.Join(' ', transcript.For(side).OrderBy(w => w.Start).Take(FightStyleSnapshotExtractor.OpenerWords).Select(w => w.Text));
 
     /// <summary>
-    /// The transcript this fight already produced, cheapest first: the host's own captions, then the browser's. The
+    /// The transcript this fight already produced, if there is one: the host's own captions. The
     /// source is logged, so a run that quietly fell back to the paid model is visible afterwards.
     /// </summary>
     private async Task<(TranscriptDto? Transcript, string Source)> ReadExistingTranscriptAsync(IAudioBlobStore blobs, MatchId matchId, CancellationToken ct)
@@ -263,9 +263,7 @@ public sealed partial class AnalysisPipeline(
             return (captions, "live-caption");
         }
 
-        return await ReadClientTranscriptAsync(blobs, matchId, ct) is { } browser
-            ? (browser, "on-device")
-            : (null, "diarized");
+        return (null, "diarized");
     }
 
     /// <summary>Reads one stored transcript. Anything missing or malformed is simply not there.</summary>
@@ -287,47 +285,6 @@ public sealed partial class AnalysisPipeline(
             LogTranscriptUnusable(logger, matchId.Value, ex);
             return null;
         }
-    }
-
-    /// <summary>
-    /// A transcript the browser made while the fight ran, if that is switched on and one was posted. Best-effort:
-    /// anything missing or unreadable falls straight back to the transcribe model.
-    /// </summary>
-    private async Task<TranscriptDto?> ReadClientTranscriptAsync(IAudioBlobStore blobs, MatchId matchId, CancellationToken ct)
-    {
-        if (!options.Value.AcceptClientTranscript)
-        {
-            return null;
-        }
-
-        var name = IAudioBlobStore.ClientTranscript(matchId);
-        var backoff = new PollBackoff(
-            TimeSpan.FromMilliseconds(200),
-            TimeSpan.FromSeconds(1),
-            TimeSpan.FromSeconds(Math.Max(0, options.Value.ClientTranscriptWaitSeconds)),
-            clock);
-
-        do
-        {
-            await using var stream = await blobs.OpenReadAsync(name, ct);
-            if (stream is not null)
-            {
-                try
-                {
-                    var transcript = await JsonSerializer.DeserializeAsync<TranscriptDto>(stream, GeminiJudgeClient.JsonOptions, ct);
-                    return transcript is { Words.Count: > 0 } ? transcript : null;
-                }
-                catch (Exception ex) when (ex is JsonException or InvalidOperationException)
-                {
-                    // It arrived and it is unusable; waiting longer will not improve it.
-                    LogTranscriptUnusable(logger, matchId.Value, ex);
-                    return null;
-                }
-            }
-        }
-        while (await backoff.WaitAsync(ct));
-
-        return null;
     }
 
     private static Speaker ToSpeaker(string value) =>

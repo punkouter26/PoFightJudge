@@ -28,29 +28,6 @@ public sealed class AnalysisOptions
     public int MinCaptionTranscriptWords { get; set; } = 30;
 
     /// <summary>
-    /// Accept a word-level transcript produced in the browser instead of calling the transcribe model. Off by
-    /// default, so it cannot stand in front of the verbatim diarization. When on, it sits behind the host's own live
-    /// captions and in front of the transcribe model. What arrives is bounded by <see cref="ClientTranscript"/>
-    /// before it is stored, and the source every run actually used is logged.
-    /// </summary>
-    public bool AcceptClientTranscript { get; set; }
-
-    /// <summary>
-    /// How long to wait for that transcript to arrive, on top of the time the recording's upload already takes.
-    /// </summary>
-    /// <remarks>
-    /// Zero by default, which means "take it if it is already there". The browser posts it as the fight ends —
-    /// before it navigates away, which is the same moment the analysis is queued — and the upload of the recording
-    /// then runs ahead of this check, so in practice it has arrived. Waiting longer buys the rare late post at the
-    /// cost of delaying every fight, including the ones whose live captions were going to win anyway.
-    ///
-    /// It is also the one knob here that can stop the pipeline dead: the wait runs on <c>TimeProvider</c>, so a
-    /// non-zero value against a clock nobody advances never returns. That is a test concern rather than a
-    /// production one, but it is the reason the default is the value that does not wait.
-    /// </remarks>
-    public double ClientTranscriptWaitSeconds { get; set; }
-
-    /// <summary>
     /// Upload the two assessments' shared prefix — the instructions, the recording and the session data — once as a
     /// cachedContents resource, so both read it by name and can go out together. On by default: it is the same
     /// bytes either way, and the alternative is hoping the provider's implicit cache is still warm while the calls

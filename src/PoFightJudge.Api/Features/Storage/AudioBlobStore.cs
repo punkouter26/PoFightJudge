@@ -21,9 +21,6 @@ public interface IAudioBlobStore
 
     static string HostTrack(MatchId matchId, string extension = "wav") => $"{matchId.Value}/host.{extension}";
 
-    /// <summary>Word-level transcript produced in the browser. Shares the match prefix so deletion still cascades.</summary>
-    static string ClientTranscript(MatchId matchId) => $"{matchId.Value}/transcript.json";
-
     /// <summary>Transcript built from the host's own live captions, written by the orchestrator as the fight ends.</summary>
     static string LiveTranscript(MatchId matchId) => $"{matchId.Value}/live-transcript.json";
 

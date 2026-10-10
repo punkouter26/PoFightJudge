@@ -31,11 +31,6 @@ public sealed class AnalysisEndpoints : ICarterModule
             .Produces(StatusCodes.Status200OK, contentType: "audio/wav")
             .Produces(StatusCodes.Status404NotFound);
 
-        fights.MapPost(ApiRoutes.Fights.TranscriptSegment, PostTranscriptAsync)
-            .Produces(StatusCodes.Status202Accepted)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound);
-
         fights.MapPost(ApiRoutes.Fights.AnalysisRetrySegment, RetryAsync)
             .Produces<AnalysisResponse>(StatusCodes.Status202Accepted)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -109,34 +104,6 @@ public sealed class AnalysisEndpoints : ICarterModule
         return WavSlicer.SliceRecording(buffer.ToArray(), match.AudioBlobName, DebateOrchestrator.PlayerSampleRate, highlight.StartSeconds, highlight.EndSeconds) is { } clip
             ? Results.File(clip, "audio/wav", $"{id.Value}-clip{index}.wav")
             : Results.NotFound();
-    }
-
-    /// <summary>
-    /// A transcript the browser made while the fight ran. Taken only while that is switched on, only for the
-    /// caller's own fight, and bounded before it is stored: the words are untrusted data on their way to a prompt.
-    /// </summary>
-    private static async Task<IResult> PostTranscriptAsync(
-        MatchId id,
-        TranscriptDto? transcript,
-        ClaimsPrincipal user,
-        IMatchRepository matches,
-        IAudioBlobStore blobs,
-        IOptions<AnalysisOptions> options,
-        CancellationToken ct)
-    {
-        if (!options.Value.AcceptClientTranscript || await matches.GetAsync(user.UserId(), id, ct) is null)
-        {
-            return Results.NotFound();
-        }
-
-        if (ClientTranscript.Sanitize(transcript) is not { } clean)
-        {
-            return Results.Problem("That transcript is empty or too large.", statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        using var payload = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(clean, GeminiJudgeClient.JsonOptions));
-        await blobs.UploadAsync(IAudioBlobStore.ClientTranscript(id), payload, "application/json", ct);
-        return Results.Accepted(ApiRoutes.Fights.Analysis(id));
     }
 
     /// <summary>Only a finished attempt can be retried; one still running answers 409 so the button cannot be spammed.</summary>

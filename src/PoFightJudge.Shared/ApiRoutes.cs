@@ -116,14 +116,12 @@ public static class ApiRoutes
         public const string Base = $"{ApiPrefix}/fights";
         public const string ByIdSegment = "/{id}";
         public const string EndSegment = "/{id}/end";
-        public const string TranscriptSegment = "/{id}/transcript";
         public const string AnalysisSegment = "/{id}/analysis";
         public const string AnalysisRetrySegment = "/{id}/analysis/retry";
         public const string ClipSegment = "/{id}/clips/{index:int}";
 
         public static string ById(MatchId id) => $"{Base}/{id.Value}";
         public static string End(MatchId id) => $"{ById(id)}/end";
-        public static string Transcript(MatchId id) => $"{ById(id)}/transcript";
         public static string Analysis(MatchId id) => $"{ById(id)}/analysis";
         public static string AnalysisRetry(MatchId id) => $"{Analysis(id)}/retry";
         public static string Clip(MatchId id, int index) => $"{ById(id)}/clips/{index}";
