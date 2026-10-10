@@ -112,7 +112,7 @@ public sealed class WatchEndpoints : ICarterModule
     /// The same audio, clause by clause as NDJSON, so playback can start on the first phrase instead of the whole
     /// line. Each object carries its own format: the provider chain can fall back mid-line.
     /// </summary>
-    private static async Task StreamRoundAudioAsync(HttpContext http, RoundAudioRequest request, IProfileRepository profiles, ITtsService voice, CancellationToken ct)
+    private static async Task StreamRoundAudioAsync(HttpContext http, RoundAudioRequest request, IProfileRepository profiles, CachingTtsService voice, CancellationToken ct)
     {
         var persona = await profiles.GetByIdAsync(request.Speaker, ct);
         if (persona is null)
@@ -170,7 +170,7 @@ public sealed class WatchEndpoints : ICarterModule
         IFighterRepository fighters,
         IFighterResultRepository fighterResults,
         IFighterWordsRepository fighterWords,
-        IWatchPersonaIntake personas,
+        WatchPersonaBacklog personas,
         IWatchAudioStore audio,
         TimeProvider clock,
         CancellationToken ct)

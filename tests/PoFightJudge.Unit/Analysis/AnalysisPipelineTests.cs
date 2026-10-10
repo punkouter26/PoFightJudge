@@ -50,7 +50,7 @@ public sealed class AnalysisPipelineTests : IDisposable
         services.AddSingleton<IFighterResultRepository>(_fighterResults);
         services.AddSingleton<IFighterWordsRepository>(_fighterWords);
         services.AddSingleton<IAudioBlobStore>(_blobs);
-        services.AddSingleton<IFighterPersonaWriter>(new FighterPersonaWriter(
+        services.AddSingleton(new FighterPersonaWriter(
             _fighters, _fighterResults, _fighterWords, _profiles,
             new FakeGeminiText(new AiLatencyTracker(), TimeSpan.Zero),
             GeminiModelOptions.Defaults,

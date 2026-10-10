@@ -6,19 +6,14 @@ using PoFightJudge.Shared.Models;
 
 namespace PoFightJudge.Api.Features.Profiles;
 
-/// <summary>Invents a WATCH persona for a role, distinct from the cast that already exists. Returns an unsaved draft for the editor.</summary>
-public interface IProfileGenerator
-{
-    Task<CreateProfileRequest> GenerateAsync(ProfileRole role, IReadOnlyList<Profile> existing, CancellationToken ct = default);
-}
-
 /// <summary>
-/// One schema-constrained <c>gemini-3.7-flash</c> call (the fake answers the same schema). The schema carries
+/// Invents a WATCH persona for a role, distinct from the cast that already exists, and returns an unsaved draft for
+/// the editor. One schema-constrained <c>gemini-3.7-flash</c> call (the fake answers the same schema). The schema carries
 /// <c>minLength</c> on every free-text field so a thin result is rejected by the API rather than by us; one retry
 /// remains for the rare answer that satisfies the schema and is still filler. The draft gets unique initials and a
 /// role voice here; the user reviews it in the editor and decides whether it joins the cast.
 /// </summary>
-public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOptions models, ILogger<ProfileGenerator> logger) : IProfileGenerator
+public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOptions models, ILogger<ProfileGenerator> logger)
 {
     public const string Operation = "profile";
 

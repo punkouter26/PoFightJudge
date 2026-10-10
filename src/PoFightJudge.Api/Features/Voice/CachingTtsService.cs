@@ -20,7 +20,7 @@ public sealed record TtsRoutingOptions(string WireFormat, bool CacheEnabled);
 /// ordinary one. Anything that cannot speak for this persona — Fish Audio without a reference id for it — is not
 /// asked. Callers never learn which provider answered.
 /// </remarks>
-public sealed partial class CachingTtsService(IEnumerable<ITtsProvider> providers, TtsRoutingOptions routing, ITtsCache cache, ILogger<CachingTtsService> logger) : ITtsService
+public sealed partial class CachingTtsService(IEnumerable<ITtsProvider> providers, TtsRoutingOptions routing, ITtsCache cache, ILogger<CachingTtsService> logger)
 {
     private readonly IReadOnlyList<ITtsProvider> _providers = [.. providers];
 

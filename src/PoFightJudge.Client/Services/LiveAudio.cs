@@ -8,28 +8,6 @@ public interface IAudioFrameSink
     Task OnAudioFrameAsync(byte[] pcm16k);
 }
 
-/// <summary>
-/// The audio of a live fight: the microphone going up and the host's voice coming back. Separate from
-/// <see cref="AudioInterop"/>, which plays whole synthesized lines for a watch — different contracts, and only one
-/// of them is ever on screen at a time.
-/// </summary>
-public interface ILiveAudio : IAsyncDisposable
-{
-    /// <summary>
-    /// Asks for the microphone and starts streaming frames to <paramref name="sink"/>. Returns the device's sample
-    /// rate, or an error name when the microphone was refused, so the page can say which problem it is.
-    /// </summary>
-    Task<CaptureStart> StartCaptureAsync(IAudioFrameSink sink, string? deviceId = null, CancellationToken ct = default);
-
-    /// <summary>Queues a chunk of the host's voice, 24 kHz PCM, to play seamlessly after whatever is already queued.</summary>
-    Task PlayAsync(byte[] pcm24k, CancellationToken ct = default);
-
-    /// <summary>Drops what is queued: the host was cut off and must not carry on talking over the interruption.</summary>
-    Task ClearPlaybackAsync(CancellationToken ct = default);
-
-    Task StopAsync(CancellationToken ct = default);
-}
-
 /// <summary>What came back from asking for the microphone.</summary>
 public sealed record CaptureStart(int SampleRate, string Error)
 {
@@ -47,8 +25,12 @@ public sealed class AudioCaptureBridge(IAudioFrameSink sink)
     public Task OnAudioFrameAsync(byte[] pcm) => sink.OnAudioFrameAsync(pcm);
 }
 
-/// <summary>The .NET side of <c>PoLive</c>.</summary>
-public sealed class LiveAudio(IJSRuntime js) : ILiveAudio
+/// <summary>
+/// The .NET side of <c>PoLive</c> — the audio of a live fight: the microphone going up and the host's voice coming
+/// back. Separate from <see cref="AudioInterop"/>, which plays whole synthesized lines for a watch — different
+/// contracts, and only one of them is ever on screen at a time.
+/// </summary>
+public sealed class LiveAudio(IJSRuntime js) : IAsyncDisposable
 {
     public const string StartCapture = "PoLive.startCapture";
     public const string Play = "PoLive.play";

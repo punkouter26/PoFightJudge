@@ -151,11 +151,11 @@ try
     // A persona added to the cast in code should be on the site after the next deploy, not after somebody remembers
     // to call the seed endpoint. Adds what is missing; never touches what is already there.
     builder.Services.AddHostedService<SeedOnStartup>();
-    builder.Services.AddSingleton<IProfileGenerator, ProfileGenerator>();
+    builder.Services.AddSingleton<ProfileGenerator>();
     builder.Services.AddScoped<IMatchRepository, MatchRepository>();
     builder.Services.AddScoped<IShareRepository, ShareRepository>();
     builder.Services.AddScoped<IFighterRepository, FighterRepository>();
-    builder.Services.AddScoped<IFighterPersonaWriter, FighterPersonaWriter>();
+    builder.Services.AddScoped<FighterPersonaWriter>();
     builder.Services.AddScoped<IFighterResultRepository, FighterResultRepository>();
     builder.Services.AddScoped<IFighterWordsRepository, FighterWordsRepository>();
     builder.Services.AddScoped<IWatchResultRepository, WatchResultRepository>();

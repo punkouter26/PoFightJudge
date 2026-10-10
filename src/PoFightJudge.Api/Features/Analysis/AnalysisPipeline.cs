@@ -179,7 +179,7 @@ public sealed partial class AnalysisPipeline(
 
         // Last, and after the room can already read the ruling: the persona is a bonus read from a report that is
         // on the record, and it is the one step here that costs a model call per fighter.
-        var personas = scope.ServiceProvider.GetRequiredService<IFighterPersonaWriter>();
+        var personas = scope.ServiceProvider.GetRequiredService<FighterPersonaWriter>();
         await personas.WriteAsync(match, report, ct);
     }
 

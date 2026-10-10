@@ -45,7 +45,7 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     [Parameter] public string MatchIdText { get; set; } = string.Empty;
 
-    [Inject] private ILiveAudio Audio { get; set; } = default!;
+    [Inject] private LiveAudio Audio { get; set; } = default!;
 
     [Inject] private SetupMemory Memory { get; set; } = default!;
 

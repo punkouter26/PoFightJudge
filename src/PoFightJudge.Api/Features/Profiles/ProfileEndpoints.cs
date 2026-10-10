@@ -86,7 +86,7 @@ public sealed class ProfileEndpoints : ICarterModule
     }
 
     /// <summary>An unsaved draft for the editor: the user reviews it, edits, and only then creates the profile.</summary>
-    private static async Task<IResult> GenerateAsync(string? role, IProfileGenerator generator, IProfileRepository repo, CancellationToken ct)
+    private static async Task<IResult> GenerateAsync(string? role, ProfileGenerator generator, IProfileRepository repo, CancellationToken ct)
     {
         if (!Enum.TryParse<ProfileRole>(role, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
         {
@@ -102,7 +102,7 @@ public sealed class ProfileEndpoints : ICarterModule
     /// to hear what the voice and the sliders actually do before committing them. Never persisted. The
     /// prompt here is deliberately minimal; the real round prompts belong to the WATCH slice.
     /// </summary>
-    private static async Task<IResult> PreviewLineAsync(CreateProfileRequest persona, IGeminiText gemini, GeminiModelOptions models, ITtsService voice, CancellationToken ct)
+    private static async Task<IResult> PreviewLineAsync(CreateProfileRequest persona, IGeminiText gemini, GeminiModelOptions models, CachingTtsService voice, CancellationToken ct)
     {
         var raw = await gemini.GenerateAsync(new GeminiTextRequest(PreviewPrompt(persona), models.Round, "preview", PreviewSchema, MaxOutputTokens: 256, ThinkingLevel: "minimal"), ct);
         var (line, mood) = ParsePreview(raw);

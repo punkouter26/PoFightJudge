@@ -10,19 +10,13 @@ namespace PoFightJudge.Api.Features.Watch;
 /// fight gets this for free — its persona write is the last step of a pipeline that was already in the background —
 /// but a watch is ruled on inside the request that ends it, and a model call per person there is time the room
 /// spends staring at a spinner for something it is not waiting on.
-/// </summary>
-public interface IWatchPersonaIntake
-{
-    ValueTask SubmitAsync(string userId, MatchId matchId, CancellationToken ct);
-}
-
-/// <summary>
+///
 /// A channel drained by a background loop, the same shape the analysis pipeline uses. In-memory, so a process that
 /// is recycled mid-queue loses whatever had not been written — which costs somebody one rewrite of a card that is
 /// rewritten after every debate anyway, and never costs them a record.
 /// </summary>
 public sealed partial class WatchPersonaBacklog(IServiceScopeFactory scopes, ILogger<WatchPersonaBacklog> logger)
-    : BackgroundService, IWatchPersonaIntake
+    : BackgroundService
 {
     private readonly Channel<(string UserId, MatchId MatchId)> _queue = Channel.CreateUnbounded<(string, MatchId)>();
 
@@ -52,7 +46,7 @@ public sealed partial class WatchPersonaBacklog(IServiceScopeFactory scopes, ILo
             }
 
             // No report: a watch is judged as a match rather than person by person. Their own words carry it.
-            await scope.ServiceProvider.GetRequiredService<IFighterPersonaWriter>().WriteAsync(match, report: null, ct);
+            await scope.ServiceProvider.GetRequiredService<FighterPersonaWriter>().WriteAsync(match, report: null, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

@@ -29,7 +29,7 @@ public static class VoiceServiceExtensions
             services.AddSingleton<ITtsCache, NullTtsCache>();
         }
 
-        services.AddSingleton<ITtsService, CachingTtsService>();
+        services.AddSingleton<CachingTtsService>();
 
         // The fake stands in whenever the AI mode is fake, so a spoken turn works with no key at all.
         if (mode.UseFakes)

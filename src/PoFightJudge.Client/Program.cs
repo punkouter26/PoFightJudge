@@ -31,7 +31,7 @@ builder.Services.AddScoped<SfxInterop>();
 builder.Services.AddScoped<GfxInterop>();
 builder.Services.AddScoped<ParticleInterop>();
 builder.Services.AddScoped<MicInterop>();
-builder.Services.AddScoped<ILiveAudio, LiveAudio>();
+builder.Services.AddScoped<LiveAudio>();
 builder.Services.AddScoped(sp => new LiveConnectionFactory(sp, new Uri(builder.HostEnvironment.BaseAddress)));
 builder.Services.AddScoped<SimulationState>();
 builder.Services.AddScoped<SetupMemory>();

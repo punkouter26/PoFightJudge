@@ -12,23 +12,13 @@ namespace PoFightJudge.Api.Features.Fighters;
 /// has been ruled on, for every human side of it, in either engine. A failure here costs them the persona and
 /// nothing else: the ruling and the record are already written by the time this is called.
 /// </summary>
-public interface IFighterPersonaWriter
-{
-    /// <summary>
-    /// Rewrites the persona of every real person in this debate. <paramref name="report"/> is the judge's read of
-    /// each of them, when the debate produced one — a 2P fight does, a watch does not.
-    /// </summary>
-    Task WriteAsync(MatchDto match, AnalysisReportDto? report, CancellationToken ct = default);
-}
-
-/// <summary>
+/// <remarks>
 /// The persona is read from evidence — everything they have said in every debate they have ever spoken in, the
 /// judge's read of them, and the style profile across every fight so far — through the same schema the
 /// invent-a-character generator uses, so the editor, the pickers and the round prompts need nothing new. It is
 /// rewritten after every fight: the fights are the truth about how somebody argues, and a card that stopped at
 /// their first one would be wrong by their third.
-/// </summary>
-/// <remarks>
+///
 /// Two things are never touched. An authored cast member who happens to share the initials keeps their row — that
 /// persona was written by a person, and a stranger typing the same three letters into 2P does not get to replace
 /// it. And a face somebody added by hand survives the rewrite, because a fight says nothing about what they look
@@ -42,7 +32,7 @@ public sealed partial class FighterPersonaWriter(
     IProfileRepository profiles,
     IGeminiText gemini,
     GeminiModelOptions models,
-    ILogger<FighterPersonaWriter> logger) : IFighterPersonaWriter
+    ILogger<FighterPersonaWriter> logger)
 {
     public const string Operation = "fighter-persona";
 
