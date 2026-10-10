@@ -29,13 +29,18 @@ dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
 
 - **master only.** All work goes on `master`. Another branch happens only when it is asked for by name.
 - **Restart and check.** After a code change, restart the app and confirm it came back up before saying it works.
-- **Overview first.** The overall summary of the project lives in `README.md` and this file.
+- **Overview first.** Check for a `DOCS` folder in the root for the overall summary of the project; until there
+  is one, it lives in `README.md` and this file.
 - **No `dotnet user-secrets`.** Local settings go in `appsettings*.json`; anything secret goes in Azure Key Vault.
 - **Never push.** `git push` happens only when the words **`git sync`** are typed — never off my own bat,
   and never because it seemed implied. On a `git sync`: commit with a short subject in American slang, so
   it reads like a person wrote it, then push.
 - **TL;DR.** Any answer over 100 words ends with a 20-word summary.
-- **Run the tests the change touched**, not the whole suite.
+- **Run the tests the change touched**, not the whole suite — and none at all when the change is simple.
+- **Warnings are errors.** A compile warning gets fixed, not left.
+- **Say when a lot goes.** If a prompt removes more than 100 lines of code overall, mention it.
+- **UI changes get a before/after.** Take annotated screenshots of the old and the new UI with the changes
+  marked, put them in an HTML file in the `SCREENSHOTS` folder, and give its full path.
 - **Screenshots.** After any change that affects what a page shows, run the screenshot runner for the affected
   routes and send the PNGs in chat with any console errors before saying the change is done. Cloud sessions can't
   be browsed, so this is how changes are reviewed before a deploy. Route names live in `ScreenshotRunner.Routes`;
@@ -44,7 +49,7 @@ dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
   SHOTS=<scratchpad>/shots ROUTES=home,watch dotnet test tests/PoFightJudge.E2EUI \
     --filter "FullyQualifiedName~ScreenshotRunner" --logger "console;verbosity=detailed"
   ```
-- **Do not hand over commands to type.** If it can be run here, run it.
+- **Do not hand over commands to type.** If it can be run here, run it — CLI or web GUI.
 
 ## Ask before
 
