@@ -1,8 +1,27 @@
 .rows {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
   gap: var(--po-space-4);
 }
+
+.rows.cards { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
+
+/* A table that has not arrived yet: one bordered block, a row to a line, the height of a compact grid row. */
+.rows.table {
+  gap: 0;
+  border: 1px solid var(--po-border);
+  border-radius: var(--po-radius-md);
+  background: var(--po-surface);
+}
+
+.line {
+  grid-template-columns: 8rem 1fr 6rem;
+  align-items: center;
+  padding: var(--po-space-3) var(--po-space-4);
+}
+
+.line + .line { border-top: 1px solid var(--po-rule); }
+
+.sk--cell { height: 0.85rem; }
 
 .row {
   display: grid;

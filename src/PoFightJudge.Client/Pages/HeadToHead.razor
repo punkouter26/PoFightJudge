@@ -12,7 +12,7 @@
     <ChildContent>
         @if (_loading)
         {
-            <LoadingRows Count="3" Label="Reading the series" />
+            <LoadingRows Count="3" Table="true" Label="Reading the series" />
         }
         else if (_error is not null)
         {

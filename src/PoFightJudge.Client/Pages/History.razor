@@ -59,11 +59,11 @@
            swapping it out on every page click and every letter typed made the page jump and lost the pager's place. *@
         @if (!_loaded)
         {
-            <LoadingRows Count="3" Label="Loading your history" />
+            <LoadingRows Count="3" Table="true" Label="Loading your history" />
         }
         else if (_matches.Count == 0 && _loading)
         {
-            <LoadingRows Count="3" Label="Loading your history" />
+            <LoadingRows Count="3" Table="true" Label="Loading your history" />
         }
         else if (_matches.Count == 0 && IsNarrowed)
         {

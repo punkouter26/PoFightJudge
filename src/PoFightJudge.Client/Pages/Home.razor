@@ -64,7 +64,11 @@
                 <h2>Replays</h2>
                 <RadzenLink Path="history" Text="All history" Icon="chevron_right" />
             </div>
-            @if (_matches.Count == 0)
+            @if (!_loaded)
+            {
+                <LoadingRows Count="3" Table="true" Label="Loading your replays" />
+            }
+            else if (_matches.Count == 0)
             {
                 <EmptyState Icon="history" Title="No matches yet" Text="Your first watch or fight will show up here with its replay." />
             }
@@ -91,7 +95,11 @@
                 <h2>Top fighters</h2>
                 <RadzenLink Path="fighters" Text="All fighters" Icon="chevron_right" />
             </div>
-            @if (_fighters.Count == 0)
+            @if (!_loaded)
+            {
+                <LoadingRows Count="3" Table="true" Label="Loading the fighters" />
+            }
+            else if (_fighters.Count == 0)
             {
                 <EmptyState Icon="sports_mma" Title="Nobody on the card" Text="Fighters are created the first time their tag steps up to the mic." />
             }
@@ -114,26 +122,45 @@
     private IReadOnlyList<MatchDto> _matches = [];
     private IReadOnlyList<FighterStatsDto> _fighters = [];
 
+    /// <summary>False until both lists have answered, so an empty one is not announced before it is known to be empty.</summary>
+    private bool _loaded;
+
     protected override async Task OnInitializedAsync()
     {
         Viewport.Changed += OnViewportChanged;
         await Viewport.InitializeAsync();
 
-        // Neither list is what the page is for, so neither failure is worth an error: an empty section still reads.
-        try
-        {
-            _matches = [.. (await Api.GetMatchesAsync()).Take(Recent)];
-        }
-        catch (Exception ex) when (ex is ApiException or HttpRequestException)
-        {
-        }
+        // Asked for together, and "nothing yet" is only said once both have answered: until then the page does not
+        // know, and saying "No matches yet" to somebody with forty of them for half a second is a small lie.
+        var matches = RecentMatchesAsync();
+        var fighters = TopFightersAsync();
+        await Task.WhenAll(matches, fighters);
+        (_matches, _fighters) = (await matches, await fighters);
+        _loaded = true;
+    }
 
+    // Neither list is what the page is for, so neither failure is worth an error: an empty section still reads.
+    private async Task<IReadOnlyList<MatchDto>> RecentMatchesAsync()
+    {
         try
         {
-            _fighters = [.. (await Api.GetRosterAsync()).Where(f => f.Fights > 0).Take(Recent)];
+            return [.. (await Api.GetMatchesAsync()).Take(Recent)];
         }
         catch (Exception ex) when (ex is ApiException or HttpRequestException)
         {
+            return [];
+        }
+    }
+
+    private async Task<IReadOnlyList<FighterStatsDto>> TopFightersAsync()
+    {
+        try
+        {
+            return [.. (await Api.GetRosterAsync()).Where(f => f.Fights > 0).Take(Recent)];
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
+        {
+            return [];
         }
     }
 

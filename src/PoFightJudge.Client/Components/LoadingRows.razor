@@ -1,15 +1,27 @@
-@* The one loading treatment for lists and grids: card-shaped placeholders so the page keeps its final height. *@
-<div class="rows" role="status" aria-busy="true" aria-label="@Label">
+@* The one loading treatment for lists and grids. It takes the shape of what is coming — cards for a card grid,
+   full-width rows for a table — so the page does not change height, or shape, when the real thing arrives. *@
+<div class="rows @(Table ? "table" : "cards")" role="status" aria-busy="true" aria-label="@Label">
     @for (var i = 0; i < Count; i++)
     {
-        <div class="row po-card po-card--quiet" aria-hidden="true">
-            <div class="sk sk--circle"></div>
-            <div class="lines">
+        @if (Table)
+        {
+            <div class="row line" aria-hidden="true">
+                <div class="sk sk--cell"></div>
                 <div class="sk sk--wide"></div>
                 <div class="sk sk--narrow"></div>
-                <div class="sk sk--block"></div>
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="row po-card po-card--quiet" aria-hidden="true">
+                <div class="sk sk--circle"></div>
+                <div class="lines">
+                    <div class="sk sk--wide"></div>
+                    <div class="sk sk--narrow"></div>
+                    <div class="sk sk--block"></div>
+                </div>
+            </div>
+        }
     }
 </div>
 
@@ -17,4 +29,7 @@
     [Parameter] public int Count { get; set; } = 3;
 
     [Parameter] public string Label { get; set; } = "Loading";
+
+    /// <summary>True where a table or a list of rows is coming, so the placeholder is rows and not cards.</summary>
+    [Parameter] public bool Table { get; set; }
 }
