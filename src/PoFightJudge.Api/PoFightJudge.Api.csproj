@@ -36,9 +36,4 @@
     <PackageReference Include="Bogus" />
     <PackageReference Include="MinVer" PrivateAssets="all" />
   </ItemGroup>
-  <!-- Husky.Net: installs the git hooks on first restore. HUSKY=0 skips it (CI). -->
-  <Target Name="husky" BeforeTargets="Restore;CollectPackageReferences" Condition="'$(HUSKY)' != '0' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <Exec Command="dotnet tool restore" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory="$(RepoRoot)" ContinueOnError="true" />
-    <Exec Command="dotnet husky install" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory="$(RepoRoot)" ContinueOnError="true" />
-  </Target>
 </Project>

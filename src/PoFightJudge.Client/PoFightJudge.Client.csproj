@@ -1,8 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
   <PropertyGroup>
-    <!-- Publish-time only (deploy.yml passes -p:Aot=true). Local builds and tests stay JIT so they are fast. -->
-    <RunAOTCompilation Condition="'$(Aot)' == 'true'">true</RunAOTCompilation>
-    <PublishTrimmed Condition="'$(Aot)' == 'true'">true</PublishTrimmed>
     <BlazorEnableCompression>true</BlazorEnableCompression>
   </PropertyGroup>
   <ItemGroup>

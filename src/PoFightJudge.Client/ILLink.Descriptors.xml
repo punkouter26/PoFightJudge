@@ -2,7 +2,7 @@
 <!--
   The MessagePack hub protocol resolves DTO members by reflection at runtime, which the trimmer cannot see.
   Rooting the shared contract assembly keeps every hub payload (captions, snapshots, verdicts) serializable
-  in a published, trimmed client (deploy.yml publishes with -p:Aot=true, which turns trimming on).
+  in a published client, which is always trimmed.
 -->
 <linker>
   <assembly fullname="PoFightJudge.Shared" preserve="all" />
