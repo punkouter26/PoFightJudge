@@ -80,6 +80,49 @@ public class StageEffectTests(AppFixture app)
     }
 
     /// <summary>
+    /// A clip becomes mountains: decoded in the browser, through the FFT, drawn onto its canvas. Any one of those
+    /// failing leaves the canvas blank and says nothing, so the pixels are what is checked.
+    /// </summary>
+    [SkippableFact]
+    public async Task A_clip_is_drawn_as_mountains()
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
+        await using var _ = context;
+
+        var lit = await page.EvaluateAsync<int>(
+            """
+            async () => {
+              const rate = 16000, seconds = 0.5, samples = rate * seconds;
+              const wav = new DataView(new ArrayBuffer(44 + samples * 2));
+              const text = (at, s) => [...s].forEach((c, i) => wav.setUint8(at + i, c.charCodeAt(0)));
+              text(0, 'RIFF'); wav.setUint32(4, 36 + samples * 2, true); text(8, 'WAVEfmt ');
+              wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true);
+              wav.setUint32(24, rate, true); wav.setUint32(28, rate * 2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true);
+              text(36, 'data'); wav.setUint32(40, samples * 2, true);
+              for (let i = 0; i < samples; i++) { wav.setInt16(44 + i * 2, Math.sin(2 * Math.PI * 440 * i / rate) * 12000, true); }
+              const bytes = new Uint8Array(wav.buffer);
+              let binary = ''; bytes.forEach(b => binary += String.fromCharCode(b));
+
+              const host = document.createElement('div');
+              host.className = 'probe-terrain';
+              host.innerHTML = '<canvas style="display:block;width:400px;height:120px"></canvas><audio src="data:audio/wav;base64,' + btoa(binary) + '"></audio>';
+              document.body.appendChild(host);
+              if (!PoTerrain.attach('.probe-terrain audio', '.probe-terrain canvas', '--po-p1')) { return -1; }
+
+              await new Promise(r => setTimeout(r, 800));
+              const canvas = host.querySelector('canvas');
+              const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+              let count = 0;
+              for (let i = 3; i < pixels.length; i += 4) { if (pixels[i] > 0) count++; }
+              return count;
+            }
+            """);
+
+        lit.Should().BeGreaterThan(1000, "a tone is a mountain, and a mountain is drawn");
+        errors.Should().BeEmpty();
+    }
+
+    /// <summary>
     /// A stamp is armed off the page and lands the first time it is seen, not before: one in a tab nobody has opened
     /// must still be waiting when the tab is.
     /// </summary>

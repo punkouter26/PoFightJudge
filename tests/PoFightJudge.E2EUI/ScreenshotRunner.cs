@@ -197,6 +197,15 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await MomentAsync(page, folder, "verdict-stamp", "() => PoFx.stamps('.fallacy-stamp')", 120);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-stamped.png") });
             Report($"SHOT verdict-stamped -> {Path.Combine(folder, "verdict-stamped.png")}");
+
+            // A moment played: the clip, cut from the fake microphone's recording, rolling past as mountains.
+            await page.GetByRole(AriaRole.Button, new() { Name = "Hear it" }).First.ClickAsync();
+            var terrain = page.Locator("canvas.terrain").First;
+            await terrain.WaitForAsync(new() { Timeout = 15_000 });
+            await terrain.ScrollIntoViewIfNeededAsync();
+            await page.WaitForTimeoutAsync(1200);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-mountains.png") });
+            Report($"SHOT verdict-mountains -> {Path.Combine(folder, "verdict-mountains.png")}");
         }
         finally
         {

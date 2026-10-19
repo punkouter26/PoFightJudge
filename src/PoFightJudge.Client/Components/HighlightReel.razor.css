@@ -33,3 +33,12 @@ blockquote p { margin: 0; font-size: var(--po-text-lg); }
 .ways .player {
   flex: 1 1 14rem;
 }
+
+/* The clip being heard, as a range of mountains rolling toward the listener (PoTerrain). */
+.terrain {
+  display: block;
+  width: 100%;
+  height: 8rem;
+  border-radius: var(--po-radius-sm);
+  background: var(--po-surface);
+}
