@@ -5,7 +5,7 @@
     <RadzenProgressBar Value="@Percent" Max="100" ShowValue="false"
                        ProgressBarStyle="@(RemainingSeconds <= 15 ? ProgressBarStyle.Danger : ProgressBarStyle.Info)" class="bar" />
     <div class="numbers">
-        <span class="left po-display">@Clock</span>
+        <span class="left po-display @(Hot ? "hot" : null)">@Clock</span>
         <span class="po-muted">left</span>
     </div>
 </div>
@@ -20,6 +20,9 @@
     private double Percent => Math.Clamp(100.0 * RemainingSeconds / Total, 0, 100);
 
     private string Clock => $"{RemainingSeconds / 60}:{RemainingSeconds % 60:00}";
+
+    /// <summary>The last ten seconds, while there are still some: the number starts to come apart.</summary>
+    private bool Hot => RemainingSeconds is > 0 and <= 10;
 
     private int _drawnElapsed = -1;
     private int _drawnRemaining = -1;

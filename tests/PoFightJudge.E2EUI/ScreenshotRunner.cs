@@ -138,8 +138,11 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.WaitForFunctionAsync("() => document.querySelectorAll('article.caption').length > 1", null, new() { Timeout = 90_000 });
             await ShootAsync(page, folder, "fight-live", "/fight/{id}", errors);
 
-            // The scripted host is never talked over, so the cut-in is forced.
+            // The scripted host is never talked over, so the cut-in is forced; and it rules long before the clock runs
+            // down, so the last seconds are forced too.
             await MomentAsync(page, folder, "fight-glitch", "() => PoFx.burst('glitch')", 60);
+            // Pinned rather than set: the next snapshot would put the clock's own heat straight back.
+            await MomentAsync(page, folder, "fight-heat", "() => { const set = PoGfx.set; PoGfx.set = (s, n, v) => set(s, n, n === 'heat' ? 1 : v); PoGfx.set('.stage', 'heat', 1); }", null);
 
             await page.Locator("section.ruling").WaitForAsync(new() { Timeout = 180_000 });
             await page.WaitForTimeoutAsync(700);
@@ -154,18 +157,25 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
     }
 
     /// <summary>
-    /// An effect too quick to catch in passing, frozen part-way: the script starts it, every CSS animation on the page
-    /// is paused <paramref name="atMs"/> in, and the window is shot. Canvas effects have no clock to stop; they are
-    /// whatever frame the shot lands on.
+    /// An effect too quick to catch in passing, frozen part-way: the script starts it, every CSS animation still
+    /// running is paused <paramref name="atMs"/> in, and the window is shot. Finished ones are left alone — rewinding
+    /// the page's own fade-in blanks it. Canvas effects have no clock to stop (pass null); they are whatever frame
+    /// the shot lands on.
     /// </summary>
-    private async Task MomentAsync(IPage page, string folder, string name, string script, int atMs)
+    private async Task MomentAsync(IPage page, string folder, string name, string script, int? atMs)
     {
         await page.EvaluateAsync(script);
-        await page.EvaluateAsync("t => document.getAnimations().forEach(a => { a.pause(); a.currentTime = t; })", atMs);
+        await page.WaitForTimeoutAsync(150); // a canvas draws what it was told on the next frame, not this one
+        if (atMs is { } at)
+        {
+            await page.EvaluateAsync("t => document.getAnimations().filter(a => a.playState === 'running').forEach(a => { a.pause(); a.currentTime = t; })", at);
+        }
+
         var file = Path.Combine(folder, name + ".png");
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = file });
-        await page.EvaluateAsync("() => document.getAnimations().forEach(a => a.play())");
-        Report($"SHOT {name} (moment, {atMs} ms) -> {file}");
+        await page.EvaluateAsync("() => document.getAnimations().filter(a => a.playState === 'paused').forEach(a => a.play())");
+        Report($"SHOT {name} (moment) -> {file}");
+        await page.WaitForTimeoutAsync(1000); // let it finish, so the next moment is not photographed through this one
     }
 
     private async Task ShootAsync(IPage page, string folder, string name, string path, List<string> errors)

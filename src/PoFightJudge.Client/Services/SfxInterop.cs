@@ -54,11 +54,14 @@ public static class Sfx
     /// <summary>Somebody cut in on the host: a crushed, stuttering blip — the sound of a signal breaking up.</summary>
     public const string Glitch = "glitch";
 
+    /// <summary>The clock is running out: a Shepard rise, a climb that never arrives anywhere. A stinger, never a bed.</summary>
+    public const string Riser = "riser";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Bell, BellThree, Slap, Gavel, GavelThree, Tick, Whoosh,
-        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch,
+        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser,
     ];
 }
 

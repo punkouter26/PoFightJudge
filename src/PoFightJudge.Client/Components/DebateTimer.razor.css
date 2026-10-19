@@ -14,3 +14,14 @@
 }
 
 .left { font-size: var(--po-text-2xl); font-variant-numeric: tabular-nums; }
+
+/* The last ten seconds: once a second the number jolts and pulls apart into the two fighters' colours, then settles. */
+.left.hot {
+  color: var(--po-danger);
+  animation: po-split 1s var(--po-ease) infinite;
+}
+
+@keyframes po-split {
+  0% { transform: scale(1.14); text-shadow: 3px 0 0 var(--po-p2), -3px 0 0 var(--po-p1); }
+  55%, 100% { transform: none; text-shadow: none; }
+}

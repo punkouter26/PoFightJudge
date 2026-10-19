@@ -102,19 +102,35 @@ uniform vec3 u_c1;
 uniform vec3 u_c2;
 uniform vec3 u_c3;
 ${NOISE}
+vec3 paint(float field) {
+  float pull = (clamp(u_mix, 0.0, 1.0) - 0.5) * 0.8;
+  vec3 colour = mix(u_c1, u_c2, clamp(v_uv.x * 0.8 + field * 0.5 - 0.15 - pull, 0.0, 1.0));
+  return mix(colour, u_c3, u_heat * 0.5 * (0.35 + 0.65 * field));
+}
+
 void main() {
   float aspect = u_res.x / max(u_res.y, 1.0);
   vec2 p = vec2(v_uv.x * aspect, v_uv.y);
   float t = u_time * (0.05 + u_heat * 0.2);
 
+  // Heat haze: the hotter it runs, the more the field is seen through a shimmer rising off the floor — stronger
+  // low down, where the heat would be coming from.
+  p.x += sin(p.y * 38.0 - u_time * 6.0) * 0.008 * u_heat * (1.2 - v_uv.y);
+
   // Warping the domain before sampling it again is what turns four octaves of value noise into something that
   // looks like it is moving rather than scrolling.
   vec2 warp = vec2(fbm(p * 1.5 + t), fbm(p * 1.5 + 4.7 - t));
-  float field = fbm(p * 2.1 + warp * 1.3 + vec2(0.0, t * 0.6));
+  vec2 flow = warp * 1.3 + vec2(0.0, t * 0.6);
+  float field = fbm(p * 2.1 + flow);
+  vec3 colour = paint(field);
 
-  float pull = (clamp(u_mix, 0.0, 1.0) - 0.5) * 0.8;
-  vec3 colour = mix(u_c1, u_c2, clamp(v_uv.x * 0.8 + field * 0.5 - 0.15 - pull, 0.0, 1.0));
-  colour = mix(colour, u_c3, u_heat * 0.5 * (0.35 + 0.65 * field));
+  // Chromatic aberration at the death: red and blue are read a little apart from green, further toward the edges,
+  // the way a lens that is being pushed too hard splits light. Only paid for once there is heat to show.
+  if (u_heat > 0.0) {
+    vec2 split = (v_uv - 0.5) * vec2(aspect, 1.0) * 0.06 * u_heat;
+    colour.r = paint(fbm((p + split) * 2.1 + flow)).r;
+    colour.b = paint(fbm((p - split) * 2.1 + flow)).b;
+  }
 
   float vignette = smoothstep(1.2, 0.2, length((v_uv - 0.5) * vec2(aspect, 1.0)));
   float alpha = (0.14 + 0.2 * field + u_heat * 0.13 + u_level * 0.08) * vignette;
@@ -451,6 +467,7 @@ void main() {
     }
 
     mounts.delete(selector);
+    entry.host.style.removeProperty("--po-heat");
     if (entry.observer) {
       entry.observer.disconnect();
     }
@@ -503,11 +520,17 @@ void main() {
       }
     },
 
-    /** One numeric uniform a page drives: "side", "mix" or "heat". Anything else is ignored. */
+    /**
+     * One numeric uniform a page drives: "side", "mix" or "heat". Anything else is ignored. Heat is published on the
+     * host as --po-heat as well, so the page's own CSS can run hot with the shader rather than beside it.
+     */
     set: function (selector, name, value) {
       const entry = mounts.get(selector);
       if (entry && typeof value === "number" && (name === "side" || name === "mix" || name === "heat")) {
         entry[name] = value;
+        if (name === "heat") {
+          entry.host.style.setProperty("--po-heat", value.toFixed(3));
+        }
       }
     },
 

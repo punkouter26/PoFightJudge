@@ -46,6 +46,9 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     /// <summary>Who was last handed the floor, so the cue is played on the change rather than on every snapshot.</summary>
     private Speaker? _lastFloor;
 
+    /// <summary>The clock on the last snapshot, so a riser is played on the crossing rather than on every one after it.</summary>
+    private int _lastRemaining = int.MaxValue;
+
     [Parameter] public string MatchIdText { get; set; } = string.Empty;
 
     [Inject] private LiveAudio Audio { get; set; } = default!;
@@ -200,6 +203,14 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
             }
         }
 
+        // Half a minute to go, and ten seconds: a climb that never arrives, under the host rather than over them.
+        if (RiserDue(snapshot.Phase, _lastRemaining, snapshot.DebateRemainingSeconds))
+        {
+            await Sound.PlayAsync(Sfx.Riser);
+        }
+
+        _lastRemaining = snapshot.DebateRemainingSeconds;
+
         // Only a real hand-over, and only while somebody actually has the floor: the host taking it back is their
         // own voice saying so.
         if (_lastFloor != snapshot.Speaking)
@@ -270,6 +281,17 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         SessionPhase.Probe or SessionPhase.Verdict => 0.5,
         _ => 0,
     };
+
+    /// <summary>The clock readings a riser announces: half a minute to go, and ten seconds.</summary>
+    private static readonly int[] RiserMarks = [HeatFromSeconds, 10];
+
+    /// <summary>
+    /// Whether the clock has just crossed one of <see cref="RiserMarks"/>, going from <paramref name="before"/> to
+    /// <paramref name="now"/> seconds left. Once per mark, only while they are arguing, and never on the zero — the
+    /// bell has that. Public because it is the whole decision.
+    /// </summary>
+    public static bool RiserDue(SessionPhase phase, int before, int now) =>
+        phase == SessionPhase.Debate && now > 0 && RiserMarks.Any(mark => before > mark && now <= mark);
 
     /// <summary>What each of them has done before. Missing records are simply absent; the fight does not need them.</summary>
     private async Task LoadRecordsAsync(DebateSnapshotDto snapshot)

@@ -186,6 +186,40 @@ window.PoSfx = (function () {
     o.stop(at + options.duration + 0.02);
   }
 
+  /**
+   * A Shepard–Risset rise: six sines an octave apart, all gliding up one octave together, each loudest in the middle
+   * of the range and silent at both ends. The top one fades out as the bottom one fades in, so the ear hears a climb
+   * that never arrives anywhere — which is what the last half-minute of an argument feels like. The gain curves are
+   * the illusion; the gain's own value is zeroed first rather than scheduled, because a curve may not overlap an event.
+   */
+  function shepard(at, seconds, gain) {
+    const partials = 6;
+    const base = 55;
+    const points = 64;
+    for (let i = 0; i < partials; i++) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(base * Math.pow(2, i), at);
+      o.frequency.exponentialRampToValueAtTime(base * Math.pow(2, i + 1), at + seconds);
+
+      const curve = new Float32Array(points);
+      for (let k = 0; k < points; k++) {
+        const t = k / (points - 1);
+        const place = (i + t) / partials;
+        const bell = Math.exp(-Math.pow(place - 0.5, 2) / 0.045);
+        const swell = Math.min(1, t * 5, (1 - t) * 3);
+        curve[k] = gain * bell * swell;
+      }
+
+      g.gain.value = 0;
+      g.gain.setValueCurveAtTime(curve, at, seconds);
+      o.connect(g).connect(out || master);
+      o.start(at);
+      o.stop(at + seconds + 0.05);
+    }
+  }
+
   /** A boxing bell: four inharmonic partials, struck. The ratios are what stop it sounding like a doorbell. */
   function bell(at, gain) {
     const ratios = [1, 1.51, 2.31, 3.07];
@@ -247,6 +281,11 @@ window.PoSfx = (function () {
       }
 
       hit(at, { freq: 6500, duration: 0.17, gain: 0.1, filter: "highpass" });
+    },
+    // The clock running out: under three seconds of endless climb, with a tick at the top to say it is done.
+    "riser": function (at) {
+      shepard(at, 2.6, 0.13);
+      tone(at + 2.6, { type: "sine", freq: 1760, duration: 0.05, gain: 0.08 });
     },
   };
 
@@ -343,26 +382,33 @@ window.PoSfx = (function () {
      * Plays one effect. `value` is 0–1 for the voices that take one; `pan` puts it on a side of the stage, below
      * zero the left and above it the right, the way the voices are placed. Silent when muted, when the name is
      * unknown, and when the browser has no Web Audio at all — an app that stopped because a bell would not ring is
-     * worse than one that rings no bell.
+     * worse than one that rings no bell. True when it was scheduled, so a test can find a voice that throws.
      */
     play: function (name, value, pan) {
       if (muted || typeof name !== "string") {
-        return;
+        return false;
       }
 
       const voice = VOICES[name];
       if (!voice || !ensure()) {
-        return;
+        return false;
       }
 
       try {
         out = panned(pan);
         voice(ctx.currentTime + 0.005, typeof value === "number" ? Math.min(Math.max(value, 0), 1) : 0);
+        return true;
       } catch (e) {
         // One malformed schedule must not take the page with it.
+        return false;
       } finally {
         out = null;
       }
+    },
+
+    /** Every voice there is, for the test that plays each one. */
+    names: function () {
+      return Object.keys(VOICES);
     },
 
     duck: duck,

@@ -39,6 +39,24 @@ public class FightLiveComponentTests : BunitContext
 }
 
 /// <summary>
+/// The riser is punctuation, not a bed (T65: an open microphone hears whatever the speakers play), so it is played
+/// on the snapshot that crosses a mark, once, and only while the clock is actually running.
+/// </summary>
+public class RiserTests
+{
+    [Theory]
+    [InlineData(SessionPhase.Debate, 31, 30, true)]
+    [InlineData(SessionPhase.Debate, 30, 29, false)]
+    [InlineData(SessionPhase.Debate, 11, 10, true)]
+    [InlineData(SessionPhase.Debate, 12, 9, true)]
+    [InlineData(SessionPhase.Debate, 1, 0, false)]
+    [InlineData(SessionPhase.Probe, 31, 30, false)]
+    [InlineData(SessionPhase.Debate, int.MaxValue, 180, false)]
+    public void A_riser_marks_half_a_minute_and_ten_seconds_left(SessionPhase phase, int before, int now, bool due) =>
+        PoFightJudge.Client.Pages.FightLive.RiserDue(phase, before, now).Should().Be(due);
+}
+
+/// <summary>
 /// A caption arrives in pieces and is rewritten as it grows, so the log has to replace rather than append — or a
 /// sentence would appear a fragment at a time, each one a line of its own.
 /// </summary>

@@ -123,6 +123,7 @@ public partial class DesignRulesTests
     private static readonly HashSet<string> PublishedAtRuntime = new(StringComparer.Ordinal)
     {
         "--po-speak-level",
+        "--po-heat",
         "--po-mic-level",
         "--po-host-level",
         "--po-band-0", "--po-band-1", "--po-band-2", "--po-band-3",
