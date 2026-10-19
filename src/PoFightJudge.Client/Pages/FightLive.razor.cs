@@ -120,14 +120,16 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     }
 
     /// <summary>
-    /// Mounts the backdrop once the stage is really in the page. It breathes with the host rather than with the
-    /// microphone: the fighters are in the room, and the voice that belongs to the screen is the host's.
+    /// Mounts the stage's ink once the stage is really in the page: a fluid that whoever has the floor pours their
+    /// colour into from their side, as hard as they are talking, and the host pours into from below. A browser that
+    /// cannot simulate it (no float render targets) gets the backdrop that breathes with the host instead.
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _fatal is null)
         {
-            _drawn = await Gfx.MountAsync(StageSelector, Shaders.Backdrop, GfxInterop.LiveLevel);
+            _drawn = await Gfx.MountAsync(StageSelector, Shaders.Fluid, GfxInterop.LiveLevel)
+                || await Gfx.MountAsync(StageSelector, Shaders.Backdrop, GfxInterop.LiveLevel);
         }
     }
 

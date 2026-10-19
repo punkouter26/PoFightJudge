@@ -15,6 +15,9 @@ window.PoGfx = (function () {
   /** Retina is not worth the fill rate for a soft glow; 1.5× is past the point anybody can see the difference. */
   const MAX_DPR = 1.5;
 
+  /** Two triangles covering the canvas: every pass of every shader here is drawn on this. */
+  const QUAD = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
+
   const VERTEX = `#version 300 es
 in vec2 a_position;
 out vec2 v_uv;
@@ -158,7 +161,169 @@ void main() {
   outColour = vec4(colour, clamp(alpha, 0.0, 0.42));
 }`;
 
-  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN };
+  // ── The live fight's ink: a real fluid, not a picture of one ──
+  // Stable fluids on the GPU (Stam, after Dobryakov's WebGL port): velocity, pressure and dye live in half-float
+  // textures and are stepped every frame — vorticity confinement for the curl, a Jacobi solve to keep it
+  // incompressible, and semi-Lagrangian advection to carry the ink. Whoever has the floor pours their colour in from
+  // their side of the stage, as hard as they are talking; the host pours from the bottom. Every pass shares one
+  // vertex shader that hands the fragment its four neighbours.
+  const FLUID_VERTEX = `#version 300 es
+in vec2 a_position;
+out vec2 v_uv;
+out vec2 v_l;
+out vec2 v_r;
+out vec2 v_t;
+out vec2 v_b;
+uniform vec2 u_texel;
+void main() {
+  v_uv = a_position * 0.5 + 0.5;
+  v_l = v_uv - vec2(u_texel.x, 0.0);
+  v_r = v_uv + vec2(u_texel.x, 0.0);
+  v_t = v_uv + vec2(0.0, u_texel.y);
+  v_b = v_uv - vec2(0.0, u_texel.y);
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+
+  const FLUID_HEAD = `#version 300 es
+precision highp float;
+precision highp sampler2D;
+in vec2 v_uv;
+in vec2 v_l;
+in vec2 v_r;
+in vec2 v_t;
+in vec2 v_b;
+out vec4 outColour;
+`;
+
+  const FLUID_PASSES = {
+    // A gaussian of colour (or of momentum) added where somebody is pouring.
+    splat: FLUID_HEAD + `
+uniform sampler2D u_target;
+uniform float u_aspect;
+uniform vec3 u_colour;
+uniform vec2 u_point;
+uniform float u_radius;
+void main() {
+  vec2 p = v_uv - u_point;
+  p.x *= u_aspect;
+  vec3 splat = exp(-dot(p, p) / u_radius) * u_colour;
+  outColour = vec4(texture(u_target, v_uv).xyz + splat, 1.0);
+}`,
+    // Carry a quantity along the velocity field by looking backwards along it, and let it fade.
+    advect: FLUID_HEAD + `
+uniform sampler2D u_velocity;
+uniform sampler2D u_source;
+uniform vec2 u_simTexel;
+uniform float u_dt;
+uniform float u_dissipation;
+void main() {
+  vec2 coord = v_uv - u_dt * texture(u_velocity, v_uv).xy * u_simTexel;
+  outColour = texture(u_source, coord) / (1.0 + u_dissipation * u_dt);
+}`,
+    divergence: FLUID_HEAD + `
+uniform sampler2D u_velocity;
+void main() {
+  float l = texture(u_velocity, v_l).x;
+  float r = texture(u_velocity, v_r).x;
+  float t = texture(u_velocity, v_t).y;
+  float b = texture(u_velocity, v_b).y;
+  vec2 c = texture(u_velocity, v_uv).xy;
+  // The walls reflect: nothing flows out of the stage.
+  if (v_l.x < 0.0) { l = -c.x; }
+  if (v_r.x > 1.0) { r = -c.x; }
+  if (v_t.y > 1.0) { t = -c.y; }
+  if (v_b.y < 0.0) { b = -c.y; }
+  outColour = vec4(0.5 * (r - l + t - b), 0.0, 0.0, 1.0);
+}`,
+    curl: FLUID_HEAD + `
+uniform sampler2D u_velocity;
+void main() {
+  float l = texture(u_velocity, v_l).y;
+  float r = texture(u_velocity, v_r).y;
+  float t = texture(u_velocity, v_t).x;
+  float b = texture(u_velocity, v_b).x;
+  outColour = vec4(0.5 * (r - l - t + b), 0.0, 0.0, 1.0);
+}`,
+    // Vorticity confinement: the swirls numerical damping would smear out are pushed back in, so the ink curls.
+    vorticity: FLUID_HEAD + `
+uniform sampler2D u_velocity;
+uniform sampler2D u_curl;
+uniform float u_strength;
+uniform float u_dt;
+void main() {
+  float l = texture(u_curl, v_l).x;
+  float r = texture(u_curl, v_r).x;
+  float t = texture(u_curl, v_t).x;
+  float b = texture(u_curl, v_b).x;
+  float c = texture(u_curl, v_uv).x;
+  vec2 force = 0.5 * vec2(abs(t) - abs(b), abs(r) - abs(l));
+  force /= length(force) + 0.0001;
+  force *= u_strength * c;
+  force.y *= -1.0;
+  vec2 velocity = texture(u_velocity, v_uv).xy + force * u_dt;
+  outColour = vec4(clamp(velocity, -1000.0, 1000.0), 0.0, 1.0);
+}`,
+    pressure: FLUID_HEAD + `
+uniform sampler2D u_pressure;
+uniform sampler2D u_divergence;
+void main() {
+  float l = texture(u_pressure, v_l).x;
+  float r = texture(u_pressure, v_r).x;
+  float t = texture(u_pressure, v_t).x;
+  float b = texture(u_pressure, v_b).x;
+  outColour = vec4((l + r + b + t - texture(u_divergence, v_uv).x) * 0.25, 0.0, 0.0, 1.0);
+}`,
+    // What is left once the pressure gradient is taken off is a field with no divergence: the fluid neither piles
+    // up nor thins out, which is the whole difference between ink and smoke from a cheap particle system.
+    gradient: FLUID_HEAD + `
+uniform sampler2D u_pressure;
+uniform sampler2D u_velocity;
+void main() {
+  float l = texture(u_pressure, v_l).x;
+  float r = texture(u_pressure, v_r).x;
+  float t = texture(u_pressure, v_t).x;
+  float b = texture(u_pressure, v_b).x;
+  outColour = vec4(texture(u_velocity, v_uv).xy - vec2(r - l, t - b), 0.0, 1.0);
+}`,
+    scale: FLUID_HEAD + `
+uniform sampler2D u_source;
+uniform float u_value;
+void main() {
+  outColour = u_value * texture(u_source, v_uv);
+}`,
+  };
+
+  // The dye, shown. Tone-mapped so a pile-up of ink saturates instead of clipping, its alpha taken from how much ink
+  // there is, run hot toward the danger colour as the clock runs down, and pulled in by a vignette like the rest.
+  const FLUID = FLUID_HEAD + `
+uniform sampler2D u_dye;
+uniform vec2 u_res;
+uniform float u_heat;
+uniform vec3 u_c3;
+void main() {
+  float aspect = u_res.x / max(u_res.y, 1.0);
+  vec3 ink = 1.0 - exp(-texture(u_dye, v_uv).rgb * 1.8);
+  float amount = max(ink.r, max(ink.g, ink.b));
+  vec3 colour = mix(ink / max(amount, 0.001), u_c3, u_heat * 0.45);
+  float vignette = smoothstep(1.3, 0.25, length((v_uv - 0.5) * vec2(aspect, 1.0)));
+  outColour = vec4(colour, clamp(amount * 0.9, 0.0, 0.85) * vignette);
+}`;
+
+  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN, "fluid": FLUID };
+
+  /** The tuning, in one place. Units are the simulation's own: texels per second, per-second dissipation. */
+  const FLUID_TUNING = {
+    simResolution: 128,
+    dyeResolution: 512,
+    velocityDissipation: 0.25,
+    dyeDissipation: 0.55,
+    pressureDecay: 0.8,
+    pressureIterations: 20,
+    curl: 28,
+    radius: 0.0035,
+    force: 6500,
+    ink: 2.2,
+  };
 
   const mounts = new Map();
   let frame = 0;
@@ -256,6 +421,314 @@ void main() {
     return prog;
   }
 
+  // ── Fluid plumbing ──
+
+  /** Compiled against the fluid's vertex shader, the quad pinned to attribute 0 so one vertex array serves every pass. */
+  function fluidProgram(gl, fragment) {
+    const vs = compile(gl, gl.VERTEX_SHADER, FLUID_VERTEX);
+    const fs = compile(gl, gl.FRAGMENT_SHADER, fragment);
+    if (!vs || !fs) {
+      return null;
+    }
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.bindAttribLocation(prog, 0, "a_position");
+    gl.linkProgram(prog);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      gl.deleteProgram(prog);
+      return null;
+    }
+
+    // Every uniform the linker kept, by name. One the linker dropped is undefined, which WebGL treats as null: a
+    // uniform call on it does nothing, which is the right answer for a value the pass never reads.
+    const u = {};
+    const count = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < count; i++) {
+      const name = gl.getActiveUniform(prog, i).name;
+      u[name] = gl.getUniformLocation(prog, name);
+    }
+
+    return { prog: prog, u: u };
+  }
+
+  /** One half-float texture and the framebuffer that draws into it, or null when this GPU will not draw into one. */
+  function renderTarget(gl, w, h, internal, format) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, gl.HALF_FLOAT, null);
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+      return null;
+    }
+
+    gl.viewport(0, 0, w, h);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    return { texture: texture, fbo: fbo, w: w, h: h };
+  }
+
+  /** Two targets: every pass reads one and writes the other, and they swap. A texture cannot be both at once. */
+  function pingPong(gl, w, h, internal, format) {
+    let read = renderTarget(gl, w, h, internal, format);
+    let write = renderTarget(gl, w, h, internal, format);
+    if (!read || !write) {
+      return null;
+    }
+
+    return {
+      w: w,
+      h: h,
+      get read() { return read; },
+      get write() { return write; },
+      swap: function () { const t = read; read = write; write = t; },
+      all: function () { return [read, write]; },
+    };
+  }
+
+  /** The short side at `resolution` texels and the long side in proportion, so a texel is square on screen. */
+  function gridFor(canvas, resolution) {
+    const ratio = canvas.width / Math.max(canvas.height, 1);
+    const long = Math.round(resolution * (ratio >= 1 ? ratio : 1 / ratio));
+    return ratio >= 1 ? { w: long, h: resolution } : { w: resolution, h: long };
+  }
+
+  function buildFluid(entry) {
+    const gl = entry.gl;
+
+    // Without float render targets there is nothing to simulate in. False, and the page mounts the backdrop.
+    if (!gl.getExtension("EXT_color_buffer_float")) {
+      return false;
+    }
+
+    const passes = {};
+    for (const name in FLUID_PASSES) {
+      passes[name] = fluidProgram(gl, FLUID_PASSES[name]);
+      if (!passes[name]) {
+        return false;
+      }
+    }
+
+    const display = fluidProgram(gl, entry.source);
+    if (!display) {
+      return false;
+    }
+
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, QUAD, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.disable(gl.BLEND);
+
+    entry.passes = passes;
+    entry.display = display;
+    entry.targets = [];
+    entry.lastStep = 0;
+    entry.nextWisp = 0;
+    return allocate(entry);
+  }
+
+  /** Every texture the simulation steps, sized to the canvas as it is now. Run again when the canvas changes size. */
+  function allocate(entry) {
+    const gl = entry.gl;
+    entry.targets.forEach(function (t) {
+      gl.deleteTexture(t.texture);
+      gl.deleteFramebuffer(t.fbo);
+    });
+
+    const sim = gridFor(entry.canvas, FLUID_TUNING.simResolution);
+    const dye = gridFor(entry.canvas, FLUID_TUNING.dyeResolution);
+    entry.velocity = pingPong(gl, sim.w, sim.h, gl.RG16F, gl.RG);
+    entry.dye = pingPong(gl, dye.w, dye.h, gl.RGBA16F, gl.RGBA);
+    entry.pressure = pingPong(gl, sim.w, sim.h, gl.R16F, gl.RED);
+    entry.divergence = renderTarget(gl, sim.w, sim.h, gl.R16F, gl.RED);
+    entry.curl = renderTarget(gl, sim.w, sim.h, gl.R16F, gl.RED);
+    entry.grid = entry.canvas.width + "x" + entry.canvas.height;
+    if (!entry.velocity || !entry.dye || !entry.pressure || !entry.divergence || !entry.curl) {
+      entry.targets = [];
+      return false;
+    }
+
+    entry.targets = entry.velocity.all().concat(entry.dye.all(), entry.pressure.all(), [entry.divergence, entry.curl]);
+    return true;
+  }
+
+  function texture(gl, unit, target) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, target.texture);
+    return unit;
+  }
+
+  /** One pass: its program, its uniforms, drawn into `target` (or onto the canvas when there is none). */
+  function run(entry, pass, target, set) {
+    const gl = entry.gl;
+    gl.useProgram(pass.prog);
+    set(pass.u);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fbo : null);
+    gl.viewport(0, 0, target ? target.w : entry.canvas.width, target ? target.h : entry.canvas.height);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  /** Momentum (dx, dy) and colour poured in at one point, in the 0–1 space of the stage. */
+  function splat(entry, x, y, dx, dy, colour) {
+    const gl = entry.gl;
+    const ratio = entry.canvas.width / Math.max(entry.canvas.height, 1);
+    const radius = FLUID_TUNING.radius * Math.max(ratio, 1);
+    [[entry.velocity, [dx, dy, 0]], [entry.dye, colour]].forEach(function (job) {
+      const field = job[0];
+      run(entry, entry.passes.splat, field.write, function (u) {
+        gl.uniform2f(u.u_texel, 1 / field.w, 1 / field.h);
+        gl.uniform1i(u.u_target, texture(gl, 0, field.read));
+        gl.uniform1f(u.u_aspect, ratio);
+        gl.uniform2f(u.u_point, x, y);
+        gl.uniform3f(u.u_colour, job[1][0], job[1][1], job[1][2]);
+        gl.uniform1f(u.u_radius, radius);
+      });
+      field.swap();
+    });
+  }
+
+  function blend(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+
+  /**
+   * Who is pouring, and how hard. A fighter with the floor pours from their own side toward the middle; nobody with
+   * the floor means the host, pouring up from the bottom between them. The ink is that side's colour, warmed toward
+   * the danger colour by the heat — and a wisp from one side or the other every couple of seconds, so a silent room
+   * still has something moving in it.
+   */
+  function pour(entry, now, dt) {
+    const side = entry.mix < 0.4 ? -1 : entry.mix > 0.6 ? 1 : 0;
+    const level = entry.smoothed;
+    const t = now / 1000;
+    if (level > 0.03) {
+      const sway = Math.sin(t * 1.3 + side) * 0.18;
+      const x = side < 0 ? 0.05 : side > 0 ? 0.95 : 0.5 + sway * 0.6;
+      const y = side === 0 ? 0.04 : 0.45 + sway;
+      const dx = side === 0 ? sway * 0.8 : -side;
+      const dy = side === 0 ? 1 : Math.cos(t * 1.7) * 0.35;
+      const force = FLUID_TUNING.force * level * dt;
+      const base = side < 0 ? entry.c1 : side > 0 ? entry.c2 : blend(entry.c1, entry.c2, 0.5);
+      const ink = FLUID_TUNING.ink * level * dt * 4;
+      const warm = blend(base, entry.c3, entry.heat * 0.5);
+      splat(entry, x, y, dx * force, dy * force, [warm[0] * ink, warm[1] * ink, warm[2] * ink]);
+    }
+
+    if (now > entry.nextWisp) {
+      entry.nextWisp = now + 1800 + Math.random() * 1600;
+      const left = Math.random() < 0.5;
+      const colour = left ? entry.c1 : entry.c2;
+      splat(entry, left ? 0.08 : 0.92, 0.2 + Math.random() * 0.6, (left ? 1 : -1) * 240, (Math.random() - 0.5) * 160,
+        [colour[0] * 0.6, colour[1] * 0.6, colour[2] * 0.6]);
+    }
+  }
+
+  /** One step of the fluid: curl, confinement, divergence, pressure, projection, then carry velocity and ink along. */
+  function simulate(entry, dt) {
+    const gl = entry.gl;
+    const P = entry.passes;
+    const v = entry.velocity;
+    const pressure = entry.pressure;
+    const sx = 1 / v.w;
+    const sy = 1 / v.h;
+
+    run(entry, P.curl, entry.curl, function (u) {
+      gl.uniform2f(u.u_texel, sx, sy);
+      gl.uniform1i(u.u_velocity, texture(gl, 0, v.read));
+    });
+    run(entry, P.vorticity, v.write, function (u) {
+      gl.uniform2f(u.u_texel, sx, sy);
+      gl.uniform1i(u.u_velocity, texture(gl, 0, v.read));
+      gl.uniform1i(u.u_curl, texture(gl, 1, entry.curl));
+      // More curl as the clock runs down: the last half-minute churns.
+      gl.uniform1f(u.u_strength, FLUID_TUNING.curl * (1 + entry.heat));
+      gl.uniform1f(u.u_dt, dt);
+    });
+    v.swap();
+
+    run(entry, P.divergence, entry.divergence, function (u) {
+      gl.uniform2f(u.u_texel, sx, sy);
+      gl.uniform1i(u.u_velocity, texture(gl, 0, v.read));
+    });
+
+    // Last frame's pressure, decayed, is a far better first guess for the solve than zero.
+    run(entry, P.scale, pressure.write, function (u) {
+      gl.uniform2f(u.u_texel, sx, sy);
+      gl.uniform1i(u.u_source, texture(gl, 0, pressure.read));
+      gl.uniform1f(u.u_value, FLUID_TUNING.pressureDecay);
+    });
+    pressure.swap();
+    for (let i = 0; i < FLUID_TUNING.pressureIterations; i++) {
+      run(entry, P.pressure, pressure.write, function (u) {
+        gl.uniform2f(u.u_texel, sx, sy);
+        gl.uniform1i(u.u_pressure, texture(gl, 0, pressure.read));
+        gl.uniform1i(u.u_divergence, texture(gl, 1, entry.divergence));
+      });
+      pressure.swap();
+    }
+
+    run(entry, P.gradient, v.write, function (u) {
+      gl.uniform2f(u.u_texel, sx, sy);
+      gl.uniform1i(u.u_pressure, texture(gl, 0, pressure.read));
+      gl.uniform1i(u.u_velocity, texture(gl, 1, v.read));
+    });
+    v.swap();
+
+    run(entry, P.advect, v.write, function (u) {
+      gl.uniform2f(u.u_texel, sx, sy);
+      gl.uniform2f(u.u_simTexel, sx, sy);
+      gl.uniform1i(u.u_velocity, texture(gl, 0, v.read));
+      gl.uniform1i(u.u_source, 0);
+      gl.uniform1f(u.u_dt, dt);
+      gl.uniform1f(u.u_dissipation, FLUID_TUNING.velocityDissipation);
+    });
+    v.swap();
+
+    const dye = entry.dye;
+    run(entry, P.advect, dye.write, function (u) {
+      gl.uniform2f(u.u_texel, 1 / dye.w, 1 / dye.h);
+      gl.uniform2f(u.u_simTexel, sx, sy);
+      gl.uniform1i(u.u_velocity, texture(gl, 0, v.read));
+      gl.uniform1i(u.u_source, texture(gl, 1, dye.read));
+      gl.uniform1f(u.u_dt, dt);
+      gl.uniform1f(u.u_dissipation, FLUID_TUNING.dyeDissipation);
+    });
+    dye.swap();
+  }
+
+  function stepFluid(entry, now) {
+    const gl = entry.gl;
+    if (entry.grid !== entry.canvas.width + "x" + entry.canvas.height && !allocate(entry)) {
+      return;
+    }
+
+    // Capped, so a tab that was in the background for a minute does not take one enormous step and blow up.
+    const dt = entry.lastStep ? Math.min((now - entry.lastStep) / 1000, 1 / 30) : 1 / 60;
+    entry.lastStep = now;
+    pour(entry, now, dt);
+    simulate(entry, dt);
+
+    run(entry, entry.display, null, function (u) {
+      gl.uniform2f(u.u_texel, 1 / entry.dye.w, 1 / entry.dye.h);
+      gl.uniform1i(u.u_dye, texture(gl, 0, entry.dye.read));
+      gl.uniform2f(u.u_res, entry.canvas.width, entry.canvas.height);
+      gl.uniform1f(u.u_heat, entry.heat);
+      gl.uniform3f(u.u_c3, entry.c3[0], entry.c3[1], entry.c3[2]);
+    });
+  }
+
   function readColours(mount) {
     mount.c1 = tokenColour(mount.tokens[0], [0.25, 0.66, 0.96]);
     mount.c2 = tokenColour(mount.tokens[1], [1.0, 0.31, 0.55]);
@@ -291,6 +764,13 @@ void main() {
         return window.PoAudio.level();
       }
 
+      // The fluid pours for whoever has the floor, so while a fighter has it, it listens to the room; everything else
+      // breathes with the host, the voice that belongs to the screen.
+      if (mount.level === "live" && mount.fluid && Math.abs(mount.mix - 0.5) > 0.1
+          && window.PoLive && typeof window.PoLive.micLevel === "function") {
+        return window.PoLive.micLevel();
+      }
+
       if (mount.level === "live" && window.PoLive && typeof window.PoLive.hostLevel === "function") {
         return window.PoLive.hostLevel();
       }
@@ -314,13 +794,18 @@ void main() {
           return;
         }
 
+        // Eased rather than taken raw: the level is sampled at whatever rate the bus updates it, and a glow that
+        // steps between two values reads as a fault.
+        mount.smoothed += (levelOf(mount) - mount.smoothed) * 0.18;
+        if (mount.fluid) {
+          stepFluid(mount, now);
+          return;
+        }
+
         gl.viewport(0, 0, mount.canvas.width, mount.canvas.height);
         gl.useProgram(mount.program);
         gl.uniform2f(mount.u.res, mount.canvas.width, mount.canvas.height);
         gl.uniform1f(mount.u.time, (now - mount.start) / 1000);
-        // Eased rather than taken raw: the level is sampled at whatever rate the bus updates it, and a glow that
-        // steps between two values reads as a fault.
-        mount.smoothed += (levelOf(mount) - mount.smoothed) * 0.18;
         gl.uniform1f(mount.u.level, mount.smoothed);
         gl.uniform1f(mount.u.side, mount.side);
         gl.uniform2f(mount.u.focus, mount.focus[0], mount.focus[1]);
@@ -352,6 +837,10 @@ void main() {
   // Compiles the shader into the mount's context and looks up what it takes. Run at mount, and again whenever a
   // lost context is restored. False when the program will not build.
   function build(entry) {
+    if (entry.fluid) {
+      return buildFluid(entry);
+    }
+
     const gl = entry.gl;
     const prog = program(gl, entry.source);
     if (!prog) {
@@ -360,7 +849,7 @@ void main() {
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, QUAD, gl.STATIC_DRAW);
     const position = gl.getAttribLocation(prog, "a_position");
     gl.enableVertexAttribArray(position);
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
@@ -419,6 +908,7 @@ void main() {
       canvas: canvas,
       gl: gl,
       source: source,
+      fluid: shader === "fluid",
       program: null,
       u: null,
       start: performance.now(),

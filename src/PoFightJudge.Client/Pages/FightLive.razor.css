@@ -97,14 +97,21 @@
   .stage.fx-glitch::after { content: none; }
 }
 
-/* The last half-minute. The backdrop heats under everything, and two things let it be seen: the stage's edge glows
-   the colour of the clock running out, and the glass behind the captions thins so the shimmer and the split colours
-   come through between the lines. Each line keeps its own opaque floor, so the words are read against exactly what
-   they were before. --po-heat is published by PoGfx alongside the shader's own. */
+/* The ink under the stage is the show, so the glass behind the captions is thin: the fluid curls between the lines
+   and below them, blurred. Each line keeps its own opaque floor, and so does the one sentence that sits on the glass
+   itself, so the words are read against exactly what they were before. In the last half-minute the glass thins
+   further and the stage's edge glows the colour of the clock running out. --po-heat is published by PoGfx alongside
+   the shader's own. */
 .stage {
   box-shadow: inset 0 0 calc(var(--po-heat, 0) * 5rem) color-mix(in srgb, var(--po-danger) calc(var(--po-heat, 0) * 50%), transparent);
 }
 
 .stage > ::deep .captions {
-  background: color-mix(in srgb, var(--po-glass) calc(100% - var(--po-heat, 0) * 75%), transparent);
+  background: color-mix(in srgb, var(--po-glass) calc(40% - var(--po-heat, 0) * 25%), transparent);
+}
+
+.stage > ::deep .captions .empty {
+  padding: var(--po-space-3);
+  border-radius: var(--po-radius-md);
+  background: var(--po-surface-2);
 }

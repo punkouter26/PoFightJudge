@@ -14,8 +14,14 @@ public static class Shaders
     /// <summary>The verdict, finished like film: a vignette and grain, over the page rather than behind it.</summary>
     public const string Grain = "grain";
 
+    /// <summary>
+    /// The live fight's ink: a real fluid simulation, poured into from the side of whoever has the floor as hard as
+    /// they are talking. Needs float render targets; a browser without them says no, and the page mounts the backdrop.
+    /// </summary>
+    public const string Fluid = "fluid";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
-    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain];
+    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain, Fluid];
 }
 
 /// <summary>

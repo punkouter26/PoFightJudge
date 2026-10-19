@@ -31,7 +31,7 @@ public class StageEffectTests(AppFixture app)
               host.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:120px;';
               document.body.appendChild(host);
               const drawn = [];
-              for (const shader of ['stage', 'backdrop', 'grain']) {
+              for (const shader of ['stage', 'backdrop', 'grain', 'fluid']) {
                 if (PoGfx.mount('#gfx-probe', shader)) { drawn.push(shader); }
                 PoGfx.unmount('#gfx-probe');
               }
@@ -40,7 +40,7 @@ public class StageEffectTests(AppFixture app)
             }
             """);
 
-        mounted.Should().Equal(["stage", "backdrop", "grain"], "every shader must compile and link, or it draws nothing at all");
+        mounted.Should().Equal(["stage", "backdrop", "grain", "fluid"], "every shader must compile and link, or it draws nothing at all");
         errors.Should().BeEmpty();
     }
 

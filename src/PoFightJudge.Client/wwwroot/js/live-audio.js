@@ -264,5 +264,8 @@ window.PoLive = (function () {
     duck: duck,
     stop: stop,
     hostLevel: function () { return hostLevel; },
+
+    /** How loud the room is, on the same curve as the meter: what the live fluid pours with while a fighter talks. */
+    micLevel: function () { return Math.min(1, Math.pow(micLevel * 3.2, 0.7)); },
   };
 })();
