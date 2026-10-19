@@ -73,6 +73,10 @@ Two rules run through all of it:
 Configuration keys are `PoFightJudge:*`; the same values live in Key Vault as `PoFightJudge--*`. Nothing is ever
 committed.
 
+`PoFightJudge:Ai:DailyTokenBudget` (2,000,000 in `appsettings.json`, `0` to switch it off) is how many Gemini tokens
+one caller may spend per UTC day. Past it, every rate-limited AI route answers 429 until midnight UTC, and `/health`
+shows the caller where they stand. The count is in memory, so a restart forgives the day.
+
 ```powershell
 ./SCRIPTS/seed-secrets.ps1          # prints what it would copy into kv-poshared; writes nothing
 ./SCRIPTS/seed-secrets.ps1 -Apply   # carries it out

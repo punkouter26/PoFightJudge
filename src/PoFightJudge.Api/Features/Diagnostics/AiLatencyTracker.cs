@@ -10,7 +10,7 @@ namespace PoFightJudge.Api.Features.Diagnostics;
 /// separately because total wall time says little about when the first word appears, and the ledger keeps the
 /// token counts the API returns so a prompt change can be shown to have reduced cost (or hit the context cache).
 /// </summary>
-public sealed class AiLatencyTracker
+public sealed class AiLatencyTracker(TimeProvider? clock = null)
 {
     public const int WindowSize = 200;
 
@@ -30,6 +30,21 @@ public sealed class AiLatencyTracker
     private readonly Lock _gate = new();
     private readonly Dictionary<string, List<double>> _samples = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TokenLedger> _tokens = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, long> _callerTokens = new(StringComparer.Ordinal);
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+    private DateOnly _callerDay;
+
+    private static readonly AsyncLocal<string?> CallerSlot = new();
+
+    /// <summary>
+    /// Who the AI work in this async flow is for. <see cref="AiBudgetGate"/> sets it per request and the analysis
+    /// drain per job; work nobody is named for (a background persona rewrite) is counted per operation only.
+    /// </summary>
+    public static string? Caller
+    {
+        get => CallerSlot.Value;
+        set => CallerSlot.Value = value;
+    }
 
     public void Record(string operation, double milliseconds)
     {
@@ -63,6 +78,46 @@ public sealed class AiLatencyTracker
         {
             _tokens.TryGetValue(operation, out var ledger);
             _tokens[operation] = new TokenLedger(ledger.Calls + 1, ledger.PromptTokens + promptTokens, ledger.OutputTokens + outputTokens, ledger.CachedTokens + cachedTokens);
+
+            if (Caller is { } caller)
+            {
+                RollDay();
+                _callerTokens[caller] = _callerTokens.GetValueOrDefault(caller) + promptTokens + outputTokens;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Prompt plus output tokens spent for one caller since midnight UTC.
+    /// </summary>
+    /// <remarks>
+    /// ponytail: in memory, so a restart forgives the day. A runaway caller keeps the host warm, which is the case
+    /// this guards; a table row per caller-day is the upgrade if restarts start mattering.
+    /// </remarks>
+    public long TokensToday(string caller)
+    {
+        lock (_gate)
+        {
+            RollDay();
+            return _callerTokens.GetValueOrDefault(caller);
+        }
+    }
+
+    /// <summary>How long until the allowance starts again.</summary>
+    public TimeSpan UntilTomorrow()
+    {
+        var now = _clock.GetUtcNow();
+        return new DateTimeOffset(now.UtcDateTime.Date.AddDays(1), TimeSpan.Zero) - now;
+    }
+
+    /// <summary>Forgets yesterday the first time today is asked about. Called under the lock.</summary>
+    private void RollDay()
+    {
+        var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
+        if (today != _callerDay)
+        {
+            _callerTokens.Clear();
+            _callerDay = today;
         }
     }
 

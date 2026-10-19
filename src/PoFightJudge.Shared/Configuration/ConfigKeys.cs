@@ -69,6 +69,12 @@ public static class ConfigKeys
         public const string JudgeThinkingLevel = $"{Section}:JudgeThinkingLevel";
         public const string JudgeServiceTier = $"{Section}:JudgeServiceTier";
 
+        /// <summary>
+        /// Prompt plus output tokens one caller may spend per UTC day before AI routes answer 429. Zero or absent
+        /// switches the allowance off.
+        /// </summary>
+        public const string DailyTokenBudget = $"{Section}:DailyTokenBudget";
+
         /// <summary>Wire format the voice asks for: <c>mp3</c> (default) or <c>pcm</c>.</summary>
         public const string TtsWireFormat = $"{Section}:TtsWireFormat";
     }

@@ -233,7 +233,9 @@ try
 
     app.UseAuthorization();
 
-    // After authorization, so the AI limit partitions by the caller rather than by connection.
+    // After authorization, so the AI limit partitions by the caller rather than by connection. The daily allowance
+    // goes first: a caller who is out for the day should not also spend a permit finding that out.
+    app.UseMiddleware<AiBudgetGate>();
     app.UseRateLimiter();
 
     // Degraded gate: in Production with missing config every /api route except diag answers 503 with the missing keys.

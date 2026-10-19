@@ -1,7 +1,9 @@
+using System.Globalization;
 using Carter;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PoFightJudge.Api.Common;
+using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Configuration;
 using PoFightJudge.Shared.Models;
@@ -26,7 +28,7 @@ public sealed class HealthEndpoints : ICarterModule
         app.MapHealthChecks(ApiRoutes.Health.ProbeUrl, ready).AllowAnonymous();
         app.MapHealthChecks(ApiRoutes.Health.ReadyProbeUrl, ready).AllowAnonymous();
 
-        app.MapGet(ApiRoutes.Health.DetailsUrl, async (HealthCheckService health, IConfiguration config, IHostEnvironment env, TimeProvider clock, CancellationToken ct) =>
+        app.MapGet(ApiRoutes.Health.DetailsUrl, async (HttpContext http, HealthCheckService health, IConfiguration config, IHostEnvironment env, TimeProvider clock, AiLatencyTracker tracker, CancellationToken ct) =>
         {
             var report = await health.CheckHealthAsync(ct);
             var checks = new List<HealthCheckDto>();
@@ -41,6 +43,17 @@ public sealed class HealthEndpoints : ICarterModule
             checks.Add(new HealthCheckDto("Key Vault", string.IsNullOrWhiteSpace(config[ConfigKeys.KeyVault.Uri]) ? HealthState.NotConfigured : HealthState.Ok, SecretMasker.MaskHost(config[ConfigKeys.KeyVault.Uri]), HealthCategory.Configuration));
             checks.Add(new HealthCheckDto("Table endpoint", string.IsNullOrWhiteSpace(config[ConfigKeys.Storage.TableEndpoint]) ? HealthState.Failed : HealthState.Ok, SecretMasker.MaskHost(config[ConfigKeys.Storage.TableEndpoint]), HealthCategory.Configuration));
             checks.Add(new HealthCheckDto("Blob endpoint", string.IsNullOrWhiteSpace(config[ConfigKeys.Storage.BlobEndpoint]) ? HealthState.Failed : HealthState.Ok, SecretMasker.MaskHost(config[ConfigKeys.Storage.BlobEndpoint]), HealthCategory.Configuration));
+
+            // Anonymous route, so only a signed-in caller gets a row, and only their own number.
+            if (http.User.UserIdOrNull() is { } caller && config.GetValue<long>(ConfigKeys.Ai.DailyTokenBudget) is > 0 and var limit)
+            {
+                var used = tracker.TokensToday(caller);
+                checks.Add(new HealthCheckDto(
+                    "AI allowance today",
+                    used >= limit ? HealthState.Degraded : HealthState.Ok,
+                    string.Create(CultureInfo.InvariantCulture, $"{used:N0} of {limit:N0} tokens ({used * 100.0 / limit:0}%)"),
+                    HealthCategory.Feature));
+            }
 
             foreach (var toggle in Toggles.All)
             {

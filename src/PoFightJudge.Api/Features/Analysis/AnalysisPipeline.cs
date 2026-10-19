@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using PoFightJudge.Api.Features.Ai;
+using PoFightJudge.Api.Features.Diagnostics;
 using PoFightJudge.Api.Features.Fight;
 using PoFightJudge.Api.Features.Fighters;
 using PoFightJudge.Api.Features.Live;
@@ -58,6 +59,8 @@ public sealed partial class AnalysisPipeline(
     /// <summary>One job, guarded: only cancellation may escape, or the whole drain loop stops with it.</summary>
     private async ValueTask RunAsync(string userId, MatchId matchId, CancellationToken ct)
     {
+        // The judge is the biggest prompt in the app; it counts against the allowance of whoever fought.
+        AiLatencyTracker.Caller = userId;
         try
         {
             await ProcessAsync(userId, matchId, ct);
