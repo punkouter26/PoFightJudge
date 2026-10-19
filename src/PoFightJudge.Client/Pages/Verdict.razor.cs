@@ -82,6 +82,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     [Inject] private FxInterop Fx { get; set; } = default!;
 
+    [Inject] private SetupMemory Memory { get; set; } = default!;
+
     [Inject] private IJSRuntime Js { get; set; } = default!;
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
@@ -209,6 +211,73 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         if (_reel is not null)
         {
             await _reel.HearAsync(index);
+        }
+    }
+
+    /// <summary>
+    /// The card a one-tap rematch starts from: this fight again — its two tags, its topic, its host. The record does
+    /// not keep the seats or the microphone, so they come from the last fight set up on this device: the seats only
+    /// when that was these same two (whichever box each tag was typed in), the microphone whoever it was.
+    /// </summary>
+    public static FightCard RematchCard(MatchDto match, FightCard? last)
+    {
+        var one = match.Side1.Id;
+        var two = match.Side2.Id;
+        var persona = Enum.TryParse<HostPersonaId>(match.Persona, ignoreCase: true, out var hosted) ? hosted : HostPersonaId.Referee;
+
+        var (oneRole, twoRole) = (ProfileRole.Husband, ProfileRole.Wife);
+        if (last is not null)
+        {
+            if (Same(last.One, one) && Same(last.Two, two))
+            {
+                (oneRole, twoRole) = (last.OneRole, last.TwoRole);
+            }
+            else if (Same(last.One, two) && Same(last.Two, one))
+            {
+                (oneRole, twoRole) = (last.TwoRole, last.OneRole);
+            }
+        }
+
+        return new FightCard(one, two, match.Topic, oneRole, twoRole, persona) { Device = last?.Device ?? string.Empty };
+
+        static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Why a rematch could not be started, under the buttons rather than in place of the ruling.</summary>
+    private string? _rematchProblem;
+
+    private bool _rematching;
+
+    /// <summary>
+    /// The same two, the same topic, the same host — started now, and straight into it. The click is the gesture the
+    /// live page's audio needs, so it is armed here on the way.
+    /// </summary>
+    private async Task RematchAsync()
+    {
+        if (_match is null || _rematching)
+        {
+            return;
+        }
+
+        _rematching = true;
+        _rematchProblem = null;
+        try
+        {
+            await Sound.ArmAsync(_leaving.Token);
+            var card = RematchCard(_match, await Memory.LastFightAsync());
+            var started = await Api.StartFightAsync(
+                new CreateFightRequest(card.Persona, card.One, card.Two, card.Topic.Length > 0 ? card.Topic : null, card.OneRole, card.TwoRole),
+                _leaving.Token);
+            await Memory.RememberAsync(card);
+            Nav.NavigateTo($"fight/{started.MatchId.Value}");
+        }
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The rematch could not be started") is { } why)
+        {
+            _rematchProblem = why;
+        }
+        finally
+        {
+            _rematching = false;
         }
     }
 

@@ -206,6 +206,18 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.WaitForTimeoutAsync(1200);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-mountains.png") });
             Report($"SHOT verdict-mountains -> {Path.Combine(folder, "verdict-mountains.png")}");
+
+            // The footer, then one press: the same two, the same topic, the same host, straight back into a fight.
+            var rematch = page.GetByRole(AriaRole.Button, new() { Name = "Rematch" });
+            await rematch.ScrollIntoViewIfNeededAsync();
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-footer.png") });
+            Report($"SHOT verdict-footer -> {Path.Combine(folder, "verdict-footer.png")}");
+            var verdictUrl = page.Url;
+            await rematch.ClickAsync();
+            await page.WaitForURLAsync(u => u.Contains("/fight/", StringComparison.Ordinal) && !string.Equals(u, verdictUrl, StringComparison.Ordinal), new() { Timeout = 30_000 });
+            await page.Locator("section.tape").WaitForAsync(new() { Timeout = 60_000 });
+            await page.WaitForTimeoutAsync(1800);
+            await ShootAsync(page, folder, "rematch", "/fight/{id}", errors);
         }
         finally
         {

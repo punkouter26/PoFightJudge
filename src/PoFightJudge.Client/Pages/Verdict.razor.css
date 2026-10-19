@@ -43,6 +43,8 @@
 
 ::deep .problem { margin: 0; }
 
+.again { display: flex; gap: var(--po-space-2); flex-wrap: wrap; }
+
 .failure, .after {
   display: flex;
   gap: var(--po-space-3);

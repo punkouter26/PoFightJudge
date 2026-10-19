@@ -171,7 +171,21 @@
 
                 <footer class="after">
                     <span class="po-muted">Read in @StatFormat.Number(_report.AnalysisSeconds) seconds.</span>
-                    <RadzenButton Text="Fight again" Icon="mic" ButtonStyle="ButtonStyle.Primary" Click="@(() => Nav.NavigateTo("fight"))" />
+                    <div class="again">
+                        @* The same two, the same topic, the same host, straight back in: one press. The setup is there
+                           for anybody who wants to change something first. *@
+                        @if (_match is not null)
+                        {
+                            <RadzenButton Text="@(_rematching ? "Starting…" : "Rematch")" Icon="replay" ButtonStyle="ButtonStyle.Primary"
+                                          Disabled="@_rematching" Click="@RematchAsync" />
+                        }
+                        <RadzenButton Text="Set up another" Icon="tune" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                                      Click="@(() => Nav.NavigateTo("fight"))" />
+                    </div>
+                    @if (_rematchProblem is not null)
+                    {
+                        <PageAlert Kind="AlertStyle.Danger" Class="problem">@_rematchProblem</PageAlert>
+                    }
                 </footer>
             </div>
         }

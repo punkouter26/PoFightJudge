@@ -74,8 +74,11 @@
     private static string Run(FighterStatsDto? s) =>
         IsNew(s) || s!.Streak == 0 ? "—" : s.Streak > 0 ? $"W{s.Streak}" : $"L{-s.Streak}";
 
+    /// <summary>The line under a tag: their name if they have given one, and otherwise whether this is their first fight.</summary>
     private static string NameOf(FighterStatsDto? stats, string tag) =>
-        stats is null || string.Equals(stats.DisplayName, tag, StringComparison.Ordinal) ? "First fight on the card" : stats.DisplayName;
+        IsNew(stats) ? "First fight on the card"
+        : string.Equals(stats!.DisplayName, tag, StringComparison.Ordinal) ? "Argued here before"
+        : stats.DisplayName;
 
     /// <summary>How the series stands, as the one line under the card. Public because it is the whole decision.</summary>
     public static string Series(HeadToHeadDto? series, string one, string two)
