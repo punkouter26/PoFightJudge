@@ -85,7 +85,7 @@ public sealed class AppFixture : IAsyncLifetime
     /// credentials (the anonymous path). Console errors, page errors and failed/4xx+ requests are collected so a
     /// failing test names the cause instead of timing out silently.
     /// </summary>
-    public async Task<(IBrowserContext Context, IPage Page, List<string> Errors)> OpenAsync(ViewportSize viewport, string path = "/", string? user = "e2e-ui")
+    public async Task<(IBrowserContext Context, IPage Page, List<string> Errors)> OpenAsync(ViewportSize viewport, string path = "/", string? user = "e2e-ui", bool tour = false)
     {
         Skip.If(Browser is null, Unavailable);
         var options = new BrowserNewContextOptions { ViewportSize = viewport, Permissions = ["microphone"] };
@@ -95,6 +95,13 @@ public sealed class AppFixture : IAsyncLifetime
         }
 
         var context = await Browser!.NewContextAsync(options);
+
+        // Every context is a first visit, and a first visit to Home is walked round by a tour whose bubble sits over
+        // the page. That is not what the other tests are about, so it is marked as seen unless one asks for it.
+        if (!tour)
+        {
+            await context.AddInitScriptAsync("try { localStorage.setItem('po-tour', 'done'); } catch (e) { }");
+        }
         // Extra headers apply to every request; keep the fake-auth header off third-party hosts (fonts) to avoid CORS noise.
         await context.RouteAsync(url => !url.StartsWith(BaseUrl, StringComparison.OrdinalIgnoreCase), route =>
             route.ContinueAsync(new RouteContinueOptions

@@ -2,6 +2,8 @@
 @inject TimeProvider Clock
 @inject IApiClient Api
 @inject Viewport Viewport
+@inject SimulationState Simulation
+@inject NavigationManager Nav
 @implements IDisposable
 
 <PageTitle>PoFightJudge</PageTitle>
@@ -14,8 +16,24 @@
             <div class="po-eyebrow">@Clock.GetLocalNow().ToString("dddd · h:mm tt", System.Globalization.CultureInfo.InvariantCulture)</div>
             <h1>What are we fighting about tonight?</h1>
         </div>
-        <span class="po-chip po-chip--live">Live</span>
+        <div class="hero-side">
+            <RadzenButton Text="Take the tour" Icon="tour" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                          Click="@(() => _tour?.StartAsync() ?? Task.CompletedTask)" />
+            <span class="po-chip po-chip--live">Live</span>
+        </div>
     </div>
+
+    @* The first visit gets walked round the three channels, and is offered a demo at the end of it. *@
+    <CoachMarks @ref="_tour" Steps="@TourSteps">
+        <Finale>
+            <RadzenButton Text="@(_demoing ? "Starting…" : "Watch a 60-second demo")" Icon="play_circle" ButtonStyle="ButtonStyle.Primary"
+                          Size="ButtonSize.Small" Disabled="@_demoing" Click="@DemoAsync" />
+        </Finale>
+    </CoachMarks>
+    @if (_demoProblem is not null)
+    {
+        <PageAlert Kind="AlertStyle.Warning">@_demoProblem</PageAlert>
+    }
 
     <div class="channels">
         <ChannelCard Number="CPU" Title="CPU vs CPU" Icon="theaters" Href="cpu" Cta="Pick the two" Accent="ChannelCard.ChannelAccent.P1"
@@ -120,6 +138,71 @@
                 </ul>
             }
         </section>;
+
+    /// <summary>The tour: one stop per channel, in the order somebody new would want them.</summary>
+    private static readonly IReadOnlyList<CoachMarks.Step> TourSteps =
+    [
+        new("[data-channel='CPU']", "Watch two of them go at it",
+            "Pick two personas from your cast and a topic. They argue it out in their own voices, three rounds each, and a judge rules."),
+        new("[data-channel='1P']", "Or take a side yourself",
+            "The same argument, except one seat is yours. Speak your turns into the microphone, or type them."),
+        new("[data-channel='2P']", "Or bring the real argument",
+            "Two of you, one microphone. A host runs the show, cuts in when somebody runs long, and rules at the end — then it is all read back, line by line."),
+    ];
+
+    private CoachMarks? _tour;
+    private bool _demoing;
+    private string? _demoProblem;
+
+    /// <summary>
+    /// The demo's two: the first husband and the first wife in the cast. Null when either seat cannot be filled.
+    /// Public because it is the whole decision.
+    /// </summary>
+    public static (MatchSide Husband, MatchSide Wife)? DemoPair(IReadOnlyList<ProfileDto> cast)
+    {
+        var husband = cast.FirstOrDefault(p => p.Persona.Role == ProfileRole.Husband);
+        var wife = cast.FirstOrDefault(p => p.Persona.Role == ProfileRole.Wife);
+        return husband is null || wife is null ? null : (Side(husband), Side(wife));
+
+        static MatchSide Side(ProfileDto profile) =>
+            MatchSide.Persona(profile.Persona.Initials, profile.Persona.Name ?? profile.Persona.Initials);
+    }
+
+    /// <summary>
+    /// A watch, set up for them: two of the cast on the thermostat. With no cast yet, the default one is loaded first —
+    /// a demo that asked them to author two personas before it started would not be a demo.
+    /// </summary>
+    private async Task DemoAsync()
+    {
+        _demoing = true;
+        _demoProblem = null;
+        try
+        {
+            var cast = await Api.GetProfilesAsync();
+            if (DemoPair(cast) is null)
+            {
+                await Api.SeedProfilesAsync();
+                cast = await Api.GetProfilesAsync();
+            }
+
+            if (DemoPair(cast) is { } pair)
+            {
+                Simulation.Set(pair.Husband, pair.Wife, "the thermostat");
+                Nav.NavigateTo("watch/play");
+                return;
+            }
+
+            _demoProblem = "There is nobody in the cast to argue. Add a husband and a wife on the Profiles page.";
+        }
+        catch (Exception ex) when (ApiFailure.Describe(ex, "The demo could not be set up") is { } why)
+        {
+            _demoProblem = why;
+        }
+        finally
+        {
+            _demoing = false;
+        }
+    }
 
     private IReadOnlyList<MatchDto> _matches = [];
     private IReadOnlyList<FighterStatsDto> _fighters = [];

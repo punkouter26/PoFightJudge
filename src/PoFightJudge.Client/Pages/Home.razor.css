@@ -131,3 +131,5 @@ h2 {
     gap: var(--po-space-1) var(--po-space-2);
   }
 }
+
+.hero-side { display: flex; align-items: center; gap: var(--po-space-2); }

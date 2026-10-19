@@ -462,3 +462,14 @@ body { background: transparent; }
    class on <html> and takes it off again when the page goes. Named from here rather than scoped, because the
    chrome belongs to the layout and the decision belongs to the fight page. */
 html.po-table .shell > :not(main) { display: none; }
+
+/* ── The first-visit tour's spotlight (PoFx.spot) ──
+   One element lifted over a scrim the size of the screen, ringed in the accent. Global, because the tour points at
+   whatever page markup it is told to, and none of that markup knows it is being pointed at. */
+.po-spotlit {
+  position: relative;
+  z-index: 70;
+  border-radius: var(--po-radius-md);
+  box-shadow: 0 0 0 4px var(--po-accent), 0 0 0 100vmax var(--po-scrim);
+  transition: box-shadow var(--po-dur-base) var(--po-ease);
+}

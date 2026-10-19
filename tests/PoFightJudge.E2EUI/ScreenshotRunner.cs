@@ -110,6 +110,38 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
         }
 
         await FightAsync(folder);
+        await TourAsync(folder);
+    }
+
+    /// <summary>
+    /// A first visit to Home: the tour's first stop, its last (with the demo on it), and where the demo lands — a
+    /// watch between two of the default cast, already under way.
+    /// </summary>
+    private async Task TourAsync(string folder)
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/", user: "e2e-tour", tour: true);
+        try
+        {
+            await page.Locator(".coach").WaitForAsync(new() { Timeout = 30_000 });
+            await page.WaitForTimeoutAsync(600);
+            await ShootAsync(page, folder, "home-tour", "/", errors);
+            for (var step = 0; step < 2; step++)
+            {
+                await page.Locator(".coach").GetByRole(AriaRole.Button, new() { Name = "Next" }).ClickAsync();
+                await page.WaitForTimeoutAsync(500);
+            }
+
+            await ShootAsync(page, folder, "home-tour-last", "/", errors);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Watch a 60-second demo" }).ClickAsync();
+            await page.WaitForURLAsync(u => u.Contains("/watch/play", StringComparison.Ordinal), new() { Timeout = 30_000 });
+            await page.WaitForFunctionAsync("() => " + AppFixture.LinesSaid + " > 0", null, new() { Timeout = 60_000 });
+            await page.WaitForTimeoutAsync(800);
+            await ShootAsync(page, folder, "demo", "/watch/play", errors);
+        }
+        finally
+        {
+            await context.CloseAsync();
+        }
     }
 
     /// <summary>
