@@ -72,11 +72,14 @@ public static class Sfx
     /// </summary>
     public const string Crowd = "crowd";
 
+    /// <summary>A rubber stamp on paper. Played by PoFx itself as each fallacy stamp lands, not from .NET.</summary>
+    public const string Stamp = "stamp";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Bell, BellThree, Slap, Gavel, GavelThree, Tick, Whoosh,
-        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser, Drumroll, Slam, Shatter, Crowd,
+        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser, Drumroll, Slam, Shatter, Crowd, Stamp,
     ];
 }
 

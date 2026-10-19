@@ -354,6 +354,12 @@ window.PoSfx = (function () {
         hit(t, { freq: 5000 + Math.random() * 3000, duration: 0.03, gain: 0.12, q: 4 });
       }
     },
+    // A rubber stamp coming down on paper: a short thunk, the knock of the handle, and the paper itself.
+    "stamp": function (at) {
+      tone(at, { type: "sine", freq: 150, sweepTo: 55, duration: 0.14, gain: 0.55 });
+      hit(at, { freq: 700, duration: 0.06, gain: 0.5, filter: "lowpass" });
+      hit(at + 0.012, { freq: 4500, duration: 0.09, gain: 0.12, filter: "highpass" });
+    },
     // A crowd on its feet, made up: two bands of noise swelling and falling away under a flutter (many voices are
     // never steady), about forty claps scattered over it, thickest in the middle, and one whistle near the start.
     "crowd": function (at) {

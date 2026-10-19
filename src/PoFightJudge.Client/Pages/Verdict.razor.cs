@@ -161,6 +161,9 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             _finished = true;
             await Gfx.MountAsync(RevealSelector, Shaders.Grain, level: null, over: true, _leaving.Token);
 
+            // The fallacies are in a tab nobody has opened yet: each stamp lands when it is first seen.
+            await Fx.StampsAsync(".fallacy-stamp", _leaving.Token);
+
             // A ruling that is not being revealed still has a winner, and their light is up from the start.
             if (!_staged)
             {

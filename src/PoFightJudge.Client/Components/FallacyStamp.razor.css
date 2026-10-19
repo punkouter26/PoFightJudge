@@ -1,4 +1,8 @@
+/* A rubber stamp on the page: set at a slight angle, as a stamp never lands square. Isolated, so the ink under it
+   (::after) sits over its own paint and not behind the whole card. */
 .fallacy-stamp {
+  position: relative;
+  isolation: isolate;
   display: inline-block;
   padding: 0.15rem 0.4rem;
   font-size: var(--po-text-xs);
@@ -9,4 +13,40 @@
   border-radius: var(--po-radius-sm);
   vertical-align: middle;
   margin-right: 0.5rem;
+  transform: rotate(-4deg);
+}
+
+/* Armed by PoFx before it has been seen: up off the page, big and turned, waiting. A browser without the script
+   never arms it, and the stamp is simply there. */
+.fallacy-stamp.armed {
+  opacity: 0;
+  transform: translateY(-1.2rem) scale(2.6) rotate(-18deg);
+}
+
+/* Stamped as it comes into view: down onto the page on a spring — linear() overshoots past flat and settles back —
+   and the ink spreads out from under it and sinks in. */
+.fallacy-stamp.stamped {
+  animation: stamp-down 0.45s linear(0, 0.62 25%, 1.08 45%, 0.97 65%, 1.01 82%, 1) both;
+}
+
+.fallacy-stamp.stamped::after {
+  content: "";
+  position: absolute;
+  inset: -6px -10px;
+  z-index: -1;
+  border-radius: 40% 55% 45% 60%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--po-warning) 55%, transparent), transparent);
+  filter: blur(2px);
+  animation: ink-bleed 0.9s ease-out both;
+}
+
+@keyframes stamp-down {
+  from { opacity: 0; transform: translateY(-1.2rem) scale(2.6) rotate(-18deg); }
+  30% { opacity: 1; }
+  to { opacity: 1; transform: rotate(-4deg); }
+}
+
+@keyframes ink-bleed {
+  from { opacity: 0.95; transform: scale(0.4); }
+  to { opacity: 0.4; transform: scale(1.15); }
 }

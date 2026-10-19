@@ -114,6 +114,8 @@ public partial class DesignRulesTests
         "fx-slap",
         "fx-glitch",
         "fx-slam",
+        "armed",
+        "stamped",
         "po-particles",
     };
 

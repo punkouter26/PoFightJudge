@@ -63,5 +63,48 @@ window.PoFx = (function () {
     }
   }
 
-  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal, table: table };
+  // Stamps that drop onto the page the first time they are seen. Armed now (up off the page, waiting); stamped as
+  // they come into view — a tab opened, a list scrolled to — one after another when several arrive together, each
+  // with its thunk. A browser with no IntersectionObserver, or somebody who asked for less motion, gets them as they
+  // are, and the class names are FallacyStamp.razor.css's.
+  function stamps(selector) {
+    let still = false;
+    try {
+      still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (e) {
+      still = false;
+    }
+
+    if (still || typeof IntersectionObserver !== "function") {
+      return;
+    }
+
+    const observer = new IntersectionObserver(function (entries) {
+      let order = 0;
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        observer.unobserve(entry.target);
+        const el = entry.target;
+        window.setTimeout(function () {
+          el.classList.remove("armed");
+          el.classList.add("stamped");
+          if (window.PoSfx) {
+            window.PoSfx.play("stamp");
+          }
+        }, order++ * 180);
+      });
+    }, { threshold: 0.6 });
+
+    document.querySelectorAll(selector).forEach(function (el) {
+      if (!el.classList.contains("stamped")) {
+        el.classList.add("armed");
+        observer.observe(el);
+      }
+    });
+  }
+
+  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal, table: table, stamps: stamps };
 })();

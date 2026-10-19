@@ -177,6 +177,26 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
 
             // The gavel's ring again, on its own: it is under a second long, and the beat is easy to miss.
             await MomentAsync(page, folder, "verdict-shock", "() => { scrollTo(0, 0); PoGfx.focus('.verdict', '.ruling h2'); PoGfx.shock('.verdict'); }", null);
+
+            // The fake judge finds no fallacies — it judged nothing — so one stamp is put on the page by hand, dressed
+            // by its own component's scoped styles, and armed the way the page arms its own. Caught mid-drop, then landed.
+            await page.GetByText("What they claimed").ClickAsync();
+            await page.EvaluateAsync(
+                """
+                () => {
+                  const rule = [...document.styleSheets].flatMap(s => { try { return [...s.cssRules]; } catch { return []; } })
+                    .find(r => r.selectorText && r.selectorText.startsWith('.fallacy-stamp['));
+                  const scope = rule.selectorText.match(/\[(b-[a-z0-9]+)\]/)[1];
+                  const column = document.querySelectorAll('.side-by-side')[1].querySelector('.column');
+                  const list = document.createElement('ul');
+                  list.innerHTML = '<li><span class="fallacy-stamp" ' + scope + '>FALLACY</span><strong>Appeal to volume</strong> — "I said it louder, so it is true"</li>';
+                  column.appendChild(list);
+                  list.scrollIntoView({ block: 'center' });
+                }
+                """);
+            await MomentAsync(page, folder, "verdict-stamp", "() => PoFx.stamps('.fallacy-stamp')", 120);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-stamped.png") });
+            Report($"SHOT verdict-stamped -> {Path.Combine(folder, "verdict-stamped.png")}");
         }
         finally
         {

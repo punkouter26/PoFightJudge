@@ -80,6 +80,33 @@ public class StageEffectTests(AppFixture app)
     }
 
     /// <summary>
+    /// A stamp is armed off the page and lands the first time it is seen, not before: one in a tab nobody has opened
+    /// must still be waiting when the tab is.
+    /// </summary>
+    [SkippableFact]
+    public async Task A_stamp_waits_until_it_is_seen_and_then_lands()
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
+        await using var _ = context;
+
+        await page.EvaluateAsync(
+            """
+            () => {
+              const below = document.createElement('div');
+              below.style.cssText = 'height:3000px';
+              below.innerHTML = '<span class="probe-stamp" style="display:inline-block;margin-top:2800px">FALLACY</span>';
+              document.body.appendChild(below);
+              PoFx.stamps('.probe-stamp');
+            }
+            """);
+        (await page.EvaluateAsync<string>("() => document.querySelector('.probe-stamp').className")).Should().Contain("armed");
+
+        await page.EvaluateAsync("() => document.querySelector('.probe-stamp').scrollIntoView()");
+        await page.WaitForFunctionAsync("() => document.querySelector('.probe-stamp').classList.contains('stamped')", null, new() { Timeout = 5_000 });
+        errors.Should().BeEmpty();
+    }
+
+    /// <summary>
     /// Every synthesized sound schedules without throwing. A voice that throws is caught and is simply silent, for
     /// ever, so this is the only place it would ever be noticed: an automation curve that overlaps an event, a node
     /// this browser cannot build.
