@@ -30,11 +30,11 @@ public static class SeedProfiles
         new()
         {
             Initials = "KSH", Role = ProfileRole.Wife, Name = "Kimberly Herb", Age = 35, Occupation = "CVS Pharmacy Scheduler",
-            Likes = "watching TV, buying things for herself and her kids, watching TV drama shows",
-            Dislikes = "being told she is messy, when husband rearranges items in the house",
-            LogicVsEmotion = 78, Patience = 58, HoldsGrudges = 35, Jealousy = 22,
-            CommonArguments = "angry when husband moves things around in the house, angry that husband thinks about ex-wife too much, angry husband pays attention to his son Nick and not the two children they have together",
-            Philosophy = "If there is a checklist, life is already half solved.",
+            Likes = "watching TV, buying things for herself and her kids, watching TV drama shows, having the last word, keeping a mental list of everything her husband has ever done wrong",
+            Dislikes = "being told anything about herself, being told she is messy, when husband rearranges items in the house, compromise, admitting she is wrong, Nick getting the couch or a bed",
+            LogicVsEmotion = 85, Patience = 20, HoldsGrudges = 90, Jealousy = 70,
+            CommonArguments = "Nick should sleep on the floor, not on the couch or in a bed, when he stays over; angry when husband moves things around in the house; angry that husband thinks about ex-wife too much; angry husband pays attention to his son Nick and not the two children they have together. She is passive-aggressive and very defensive: whenever he says something about her, she never answers it — she deflects with examples of what is wrong with HIM instead ('oh, and you're perfect?', 'what about the time you...'). She never looks for a compromise or a middle ground.",
+            Philosophy = "Fine. Whatever. But let's talk about what YOU did.",
             TtsSettings = new TtsSettingsDto { Pitch = 1.4, Speed = 1.3, VoiceName = "Kore" },
         },
         new()
