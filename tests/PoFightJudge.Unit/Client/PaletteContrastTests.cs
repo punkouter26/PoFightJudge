@@ -41,6 +41,11 @@ public partial class PaletteContrastTests
         ("--po-warning", "--po-surface", TextMinimum, "unverifiable claims"),
         ("--po-focus", "--po-bg", NonTextMinimum, "the focus ring"),
         ("--po-border", "--po-surface", OutlineMinimum, "card outlines"),
+        ("--po-tier-ink", "--po-tier-bronze", TextMinimum, "a Bronze badge"),
+        ("--po-tier-ink", "--po-tier-silver", TextMinimum, "a Silver badge"),
+        ("--po-tier-ink", "--po-tier-gold", TextMinimum, "a Gold badge"),
+        ("--po-tier-ink", "--po-tier-platinum", TextMinimum, "a Platinum badge"),
+        ("--po-tier-ink", "--po-tier-diamond", TextMinimum, "a Diamond badge"),
     ];
 
     [Fact]

@@ -6,7 +6,8 @@
 
 ::deep .name { min-width: 12rem; }
 
-.record { display: grid; gap: var(--po-space-3); margin-block: var(--po-space-3); }
+/* Positioned, because the sparks a promotion throws off the badge hang their canvas in here. */
+.record { position: relative; display: grid; gap: var(--po-space-3); margin-block: var(--po-space-3); }
 
 .tally .big { font-size: var(--po-text-3xl); line-height: 1; }
 

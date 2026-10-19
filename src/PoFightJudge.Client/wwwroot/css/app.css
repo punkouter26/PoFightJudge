@@ -124,6 +124,15 @@
   --po-focus: light-dark(#0b5fa5, #7cc7ff);
   --po-live: light-dark(#b3261e, #ff5a5a);
 
+  /* ── Rank tiers (Elo, read against the ladder): one fill each, every one light enough to carry the same dark ink,
+     and the same in both themes — a medal is the colour it is. ── */
+  --po-tier-ink: light-dark(#0b0d12, #0b0d12);
+  --po-tier-bronze: light-dark(#d08a4f, #d08a4f);
+  --po-tier-silver: light-dark(#c3cad6, #c3cad6);
+  --po-tier-gold: light-dark(#ffcc33, #ffcc33);
+  --po-tier-platinum: light-dark(#5fd4c9, #5fd4c9);
+  --po-tier-diamond: light-dark(#9ad8ff, #9ad8ff);
+
   /* ── Radzen bridge ──
      Radzen's own stylesheet is injected by <RadzenTheme> after this file, so the
      bridge sits on html:root (higher specificity than Radzen's :root) and maps

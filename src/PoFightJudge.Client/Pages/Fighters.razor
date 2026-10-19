@@ -68,7 +68,7 @@
                                     }
                                 </span>
                                 <span class="po-stacked__fine po-muted">
-                                    @row.Rating · @row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty) over @row.Fights
+                                    <RankBadge Rating="@row.Rating" Fights="@row.Fights" /> @row.Rating · @row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty) over @row.Fights
                                     @if (row.LastFoughtAt is { } seen)
                                     {
                                         @($" · last {seen.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)}")
@@ -93,7 +93,9 @@
                             }
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Rating" Width="6rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Rating)" />
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Rating" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Rating)">
+                        <Template Context="row">@row.Rating <RankBadge Rating="@row.Rating" Fights="@row.Fights" /></Template>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fights" Width="6rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Fights)" />
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="W–L" Width="6rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="row">@row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty)</Template>

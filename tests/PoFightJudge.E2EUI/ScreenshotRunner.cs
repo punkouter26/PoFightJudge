@@ -226,6 +226,18 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.Locator("section.tape").WaitForAsync(new() { Timeout = 60_000 });
             await page.WaitForTimeoutAsync(1800);
             await ShootAsync(page, folder, "rematch", "/fight/{id}", errors);
+
+            // A fighter's page, as a browser that last saw them a tier lower: the badge arrives as a promotion. In a
+            // tab of its own — the rematch is live, and its guard would hold a navigation away from it.
+            var profile = await context.NewPageAsync();
+            await profile.GotoAsync(app.BaseUrl + "/fighters", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
+            await profile.EvaluateAsync("() => localStorage.setItem('po-tier-AL', 'Bronze')");
+            await profile.GotoAsync(app.BaseUrl + "/fighters/AL", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
+            await profile.Locator(".tier.promoted").First.WaitForAsync(new() { Timeout = 30_000 });
+            await profile.EvaluateAsync("() => document.getAnimations().filter(a => a.playState === 'running').forEach(a => { a.pause(); a.currentTime = 300; })");
+            Report($"  fighter-promoted: badge is \"{await profile.Locator(".tier").First.GetAttributeAsync("class")}\"");
+            await profile.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "fighter-promoted.png") });
+            Report($"SHOT fighter-promoted -> {Path.Combine(folder, "fighter-promoted.png")}");
         }
         finally
         {

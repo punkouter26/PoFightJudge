@@ -354,6 +354,13 @@ window.PoSfx = (function () {
         hit(t, { freq: 5000 + Math.random() * 3000, duration: 0.03, gain: 0.12, q: 4 });
       }
     },
+    // Up a tier: a quick climb of five notes, and a shimmer of high pings over the top of it.
+    "levelup": function (at) {
+      motif(at, [523.3, 659.3, 784, 1046.5, 1318.5], "triangle", 0.15, 0.06, 0.25);
+      for (let i = 0; i < 6; i++) {
+        tone(at + 0.3 + i * 0.04, { type: "sine", freq: 2637 + i * 220, duration: 0.18, gain: 0.04 });
+      }
+    },
     // A rubber stamp coming down on paper: a short thunk, the knock of the handle, and the paper itself.
     "stamp": function (at) {
       tone(at, { type: "sine", freq: 150, sweepTo: 55, duration: 0.14, gain: 0.55 });

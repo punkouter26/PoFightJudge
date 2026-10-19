@@ -1,0 +1,55 @@
+.tier {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--po-space-1);
+  padding: 0.1rem 0.55rem 0.1rem 0.35rem;
+  overflow: hidden;
+  border-radius: var(--po-radius-pill);
+  font-family: var(--po-font-display);
+  font-size: var(--po-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--po-tier-ink);
+  vertical-align: middle;
+}
+
+::deep .medal { font-size: 1.1em; }
+
+.tier.unranked { background: var(--po-surface-2); color: var(--po-muted); }
+.tier.bronze { background: var(--po-tier-bronze); }
+.tier.silver { background: var(--po-tier-silver); }
+.tier.gold { background: var(--po-tier-gold); }
+.tier.platinum { background: var(--po-tier-platinum); }
+.tier.diamond { background: var(--po-tier-diamond); }
+
+/* Gold and up catch the light: a band of white sweeps across every few seconds, the way a medal turns. */
+.tier.gold::after,
+.tier.platinum::after,
+.tier.diamond::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.7) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: sheen 3.2s ease-in-out infinite;
+}
+
+@keyframes sheen {
+  0%, 70% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+/* Promoted since last time: the badge arrives big and settles, with a ring going out from it. */
+.tier.promoted {
+  animation: promoted 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  box-shadow: 0 0 0 0 var(--po-accent);
+}
+
+@keyframes promoted {
+  0% { transform: scale(2.2) rotate(-10deg); opacity: 0; box-shadow: 0 0 0 0 var(--po-accent); }
+  40% { opacity: 1; }
+  100% { transform: none; box-shadow: 0 0 0 14px transparent; }
+}

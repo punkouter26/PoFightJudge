@@ -7,6 +7,8 @@
 @inject NotificationService Notifications
 
 @inject Viewport Viewport
+@inject Blazored.LocalStorage.ILocalStorageService Storage
+@inject IServiceProvider Services
 @implements IDisposable
 
 <PageTitle>@Title · PoFightJudge</PageTitle>
@@ -56,7 +58,7 @@
                     <FormSparkline Scores="@_profile.Stats.Form" />
                 </div>
                 <dl class="facts">
-                    <div><dt>Rating</dt><dd>@_profile.Stats.Rating</dd></div>
+                    <div><dt>Rating</dt><dd>@_profile.Stats.Rating <RankBadge Rating="@_profile.Stats.Rating" Fights="@_profile.Stats.Fights" Promoted="@_promoted" /></dd></div>
                     <div><dt>Average score</dt><dd>@_profile.Stats.AverageScore.ToString("0.#", CultureInfo.CurrentCulture)</dd></div>
                     <div><dt>Best night</dt><dd>@_profile.Stats.BestScore</dd></div>
                     <div><dt>Run</dt><dd>@Run</dd></div>
@@ -206,6 +208,7 @@
             _profile = await Api.GetFighterProfileAsync(FighterId.From(Initials.Normalize(Tag)));
             _results = _profile is null ? [] : [.. _profile.Results.OrderByDescending(r => r.At)];
             _name = _profile?.Fighter.DisplayName;
+            await CheckTierAsync();
         }
         catch (Exception ex) when (ApiFailure.Describe(ex, "Their record could not be read") is { } why)
         {
@@ -216,6 +219,56 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    /// <summary>They have climbed a tier since this page was last looked at, on this browser.</summary>
+    private bool _promoted;
+
+    private bool _celebrated;
+
+    /// <summary>Whose tier has been measured, so a page that loads twice does not find the climb already spent.</summary>
+    private string? _measured;
+
+    /// <summary>
+    /// Measures their tier against the last one this browser saw for them, and remembers the new one. The first look
+    /// at anybody is not a climb: there is nothing to have climbed from.
+    /// </summary>
+    private async Task CheckTierAsync()
+    {
+        if (_profile is null || string.Equals(_measured, _profile.Fighter.Tag, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _measured = _profile.Fighter.Tag;
+        var key = $"po-tier-{_profile.Fighter.Tag}";
+        var now = RankTiers.For(_profile.Stats.Rating, _profile.Stats.Fights);
+        try
+        {
+            var stored = (await Storage.GetItemAsStringAsync(key))?.Trim('"');
+            _promoted = RankTiers.Promoted(Enum.TryParse<Tier>(stored, out var before) ? before : null, now);
+            await Storage.SetItemAsStringAsync(key, now.ToString());
+        }
+        catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or InvalidOperationException)
+        {
+            // Storage blocked: nothing to compare against, so nothing to celebrate.
+        }
+    }
+
+    /// <summary>A climb is announced once the badge is on the page: the level-up, and sparks thrown off it.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_promoted || _celebrated)
+        {
+            return;
+        }
+
+        _celebrated = true;
+        await Services.CueAsync(Sfx.LevelUp);
+        if (Services.GetService(typeof(ParticleInterop)) is ParticleInterop particles)
+        {
+            await particles.BurstAsync(".record", ParticleInterop.Sparks, ".tier");
         }
     }
 

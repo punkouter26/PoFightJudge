@@ -5,11 +5,13 @@
     <div class="side p1">
         <span class="tag po-display">@Player1</span>
         <span class="name po-muted">@NameOf(One, Player1)</span>
+        <RankBadge Rating="@(One?.Rating ?? 0)" Fights="@(One?.Fights ?? 0)" />
     </div>
     <span class="vs po-display" aria-hidden="true">VS</span>
     <div class="side p2">
         <span class="tag po-display">@Player2</span>
         <span class="name po-muted">@NameOf(Two, Player2)</span>
+        <RankBadge Rating="@(Two?.Rating ?? 0)" Fights="@(Two?.Fights ?? 0)" />
     </div>
 
     <dl class="rows">
