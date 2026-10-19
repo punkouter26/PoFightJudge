@@ -4,6 +4,12 @@
 <PageTitle>The ruling · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="After the fight" Title="@Title" Lead="@Lead">
+    <Actions>
+        @if (_staged)
+        {
+            <RadzenButton Text="Skip" Icon="skip_next" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Size="ButtonSize.Small" Click="@Skip" />
+        }
+    </Actions>
     <ChildContent>
         @if (_problem is not null)
         {
@@ -25,7 +31,7 @@
         }
         else
         {
-            <div class="verdict">
+            <div class="verdict @(_staged ? "staged" : null)">
                 <RulingCard Winner="@Winner" Summary="@_report.Overall.Summary" Reasons="@_report.Overall.Reasons">
                     @if (_report.SpeakerMappingFlagged)
                     {

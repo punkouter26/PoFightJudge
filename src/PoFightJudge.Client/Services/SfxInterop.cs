@@ -57,11 +57,14 @@ public static class Sfx
     /// <summary>The clock is running out: a Shepard rise, a climb that never arrives anywhere. A stinger, never a bed.</summary>
     public const string Riser = "riser";
 
+    /// <summary>The beat before somebody is named: a snare roll that swells into a crash.</summary>
+    public const string Drumroll = "drumroll";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Bell, BellThree, Slap, Gavel, GavelThree, Tick, Whoosh,
-        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser,
+        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser, Drumroll,
     ];
 }
 

@@ -161,10 +161,15 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.WaitForTimeoutAsync(300);
             await page.SetViewportSizeAsync(AppFixture.Desktop.Width, AppFixture.Desktop.Height);
 
+            // A fresh ruling is revealed: the drumroll, the name landing on the beat, then the settled page.
             await page.Locator("section.ruling").WaitForAsync(new() { Timeout = 180_000 });
             await page.WaitForTimeoutAsync(700);
-            await ShootAsync(page, folder, "verdict-reveal", "/verdict/{id}", errors);
-            await page.WaitForTimeoutAsync(5000);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-reveal.png") });
+            Report($"SHOT verdict-reveal (drumroll) -> {Path.Combine(folder, "verdict-reveal.png")}");
+            await page.WaitForTimeoutAsync(1400);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-named.png") });
+            Report($"SHOT verdict-named (the beat) -> {Path.Combine(folder, "verdict-named.png")}");
+            await page.WaitForTimeoutAsync(4000);
             await ShootAsync(page, folder, "verdict", "/verdict/{id}", errors);
         }
         finally

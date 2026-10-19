@@ -87,6 +87,31 @@
   from { opacity: 0; transform: translateY(12px); }
 }
 
+/* Staged — a ruling that has only just come in. A drumroll first: the card is up from the start with its name held
+   back and its eyebrow beating time, the name slams down on the beat (Verdict.RevealAt), the reasons follow, and the
+   rest of the report rises after them. Skip drops the class, and every delay goes with it. */
+.verdict.staged > *:nth-child(2) { animation-delay: 2.5s; }
+.verdict.staged > *:nth-child(3) { animation-delay: 2.7s; }
+.verdict.staged > *:nth-child(4) { animation-delay: 2.9s; }
+.verdict.staged > *:nth-child(n+5) { animation-delay: 3.1s; }
+
+.verdict.staged ::deep .ruling .po-eyebrow { animation: drum 0.18s ease-in-out 10 alternate; transform-origin: left center; }
+
+.verdict.staged ::deep .ruling h2 { animation: slam 0.6s 1.8s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+
+.verdict.staged ::deep .ruling .summary,
+.verdict.staged ::deep .ruling .reasons { animation: rise var(--po-dur-slow) 2.2s var(--po-ease) both; }
+
+@keyframes drum {
+  to { transform: scale(1.12); opacity: 0.6; }
+}
+
+@keyframes slam {
+  from { opacity: 0; transform: scale(2.4); letter-spacing: 0.25em; }
+  60% { opacity: 1; }
+  to { transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .verdict > *:not(canvas) { animation: none; }
 }

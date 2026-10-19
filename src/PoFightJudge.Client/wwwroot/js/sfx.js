@@ -282,6 +282,25 @@ window.PoSfx = (function () {
 
       hit(at, { freq: 6500, duration: 0.17, gain: 0.1, filter: "highpass" });
     },
+    // The beat before somebody is named: a snare roll that speeds up and swells, a tom under every other stroke, and
+    // a crash where it lands. 1.75 s to the crash, which is where Verdict.RevealAt names the winner.
+    "drumroll": function (at) {
+      const roll = 1.7;
+      let t = 0;
+      let stroke = 0;
+      while (t < roll) {
+        const swell = t / roll;
+        hit(at + t, { freq: 1900, duration: 0.07, gain: 0.12 + swell * 0.3, q: 0.8 });
+        if (stroke % 2 === 0) {
+          tone(at + t, { type: "triangle", freq: 180, sweepTo: 150, duration: 0.05, gain: 0.05 + swell * 0.08 });
+        }
+
+        t += 0.085 - swell * 0.05;
+        stroke++;
+      }
+
+      hit(at + 1.75, { freq: 6000, duration: 1.4, gain: 0.35, filter: "highpass" });
+    },
     // The clock running out: under three seconds of endless climb, with a tick at the top to say it is done.
     "riser": function (at) {
       shepard(at, 2.6, 0.13);

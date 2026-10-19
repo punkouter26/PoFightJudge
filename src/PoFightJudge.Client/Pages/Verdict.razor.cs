@@ -25,6 +25,24 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     /// <summary>Give up after this long rather than spinning forever in front of somebody.</summary>
     internal static readonly TimeSpan PollLimit = TimeSpan.FromMinutes(5);
 
+    /// <summary>How long the drumroll runs before the winner is named. Verdict.razor.css lands the headline on it.</summary>
+    internal static readonly TimeSpan RevealAt = TimeSpan.FromSeconds(1.8);
+
+    /// <summary>How fresh a ruling has to be to be revealed rather than shown: one read straight after its fight.</summary>
+    private static readonly TimeSpan Fresh = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Whether a ruling generated at <paramref name="generatedAt"/> is revealed — drumroll, then the name — or simply
+    /// shown. Opened from the history a day later it is a document, and a drumroll every time is a toll.
+    /// </summary>
+    public static bool Staged(DateTimeOffset generatedAt, DateTimeOffset now) => now - generatedAt <= Fresh;
+
+    /// <summary>The reveal is running: the page holds its parts back until the drumroll has landed.</summary>
+    private bool _staged;
+
+    /// <summary>Cancelled by Skip (or by leaving), which ends the reveal's waits at once.</summary>
+    private CancellationTokenSource? _skip;
+
     private readonly CancellationTokenSource _leaving = new();
     private AnalysisReportDto? _report;
 
@@ -162,6 +180,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
                 {
                     _report = answer.Report;
                     _problem = null;
+                    _staged = Staged(_report.GeneratedAt, Clock.GetUtcNow());
                     StateHasChanged();
                     await CelebrateAsync();
                     return;
@@ -213,17 +232,63 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     /// </summary>
     private async Task CelebrateAsync()
     {
-        // Nobody won a fight that was too short to rule on, and there is nothing to celebrate about that.
-        if (_report is null || Winner is not { } won)
+        if (_report is null)
         {
             return;
         }
 
-        await Sound.PlayAsync(Sfx.Fanfare, ct: _leaving.Token);
+        // A fresh ruling gets its drumroll, and the name lands on the beat — or at once, for somebody who skipped.
+        _skip = CancellationTokenSource.CreateLinkedTokenSource(_leaving.Token);
+        if (_staged)
+        {
+            await Sound.PlayAsync(Sfx.Drumroll, ct: _leaving.Token);
+            if (!await HoldAsync(RevealAt))
+            {
+                return;
+            }
+        }
 
-        // After the render that put the cards on the page, or there is nothing to measure the burst against.
-        await Task.Yield();
-        await Particles.BurstAsync(RevealSelector, ParticleInterop.Confetti, $".player[data-tag='{won}']", _leaving.Token);
+        // Nobody won a fight that was too short to rule on, and there is nothing to celebrate about that.
+        if (Winner is { } won)
+        {
+            await Sound.PlayAsync(Sfx.Fanfare, ct: _leaving.Token);
+
+            // After the render that put the cards on the page, or there is nothing to measure the burst against.
+            await Task.Yield();
+            await Particles.BurstAsync(RevealSelector, ParticleInterop.Confetti, $".player[data-tag='{won}']", _leaving.Token);
+        }
+
+        // Once the rest has risen there is nothing left to skip: the button goes and the page is a page again.
+        if (_staged && await HoldAsync(Settle))
+        {
+            _staged = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Waits <paramref name="span"/>, or less if Skip is pressed. False when the page is being left.</summary>
+    private async Task<bool> HoldAsync(TimeSpan span)
+    {
+        try
+        {
+            await Task.Delay(span, Clock, _skip!.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Skipped, or leaving; which one is answered below.
+        }
+
+        return !_leaving.IsCancellationRequested;
+    }
+
+    /// <summary>From the name landing to the last part of the report having risen (Verdict.razor.css).</summary>
+    private static readonly TimeSpan Settle = TimeSpan.FromSeconds(1.8);
+
+    /// <summary>Straight to the ruling: every part shows now, and the drumroll's wait ends.</summary>
+    private void Skip()
+    {
+        _staged = false;
+        _skip?.Cancel();
     }
 
     private async Task RetryAsync()
@@ -256,6 +321,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     public void Dispose()
     {
         _leaving.Cancel();
+        _skip?.Dispose();
         _leaving.Dispose();
 
         // This page disposes synchronously, so the canvases are let go rather than awaited. Neither call can fail
