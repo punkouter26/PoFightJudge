@@ -1,0 +1,93 @@
+@using System.Globalization
+@* The fight card, before the bell: who these two are, what each has done, and how it went the last time. Shown over
+   the stage while the host does the introductions, then gone. *@
+<section class="tape" aria-label="Tale of the tape">
+    <div class="side p1">
+        <span class="tag po-display">@Player1</span>
+        <span class="name po-muted">@NameOf(One, Player1)</span>
+    </div>
+    <span class="vs po-display" aria-hidden="true">VS</span>
+    <div class="side p2">
+        <span class="tag po-display">@Player2</span>
+        <span class="name po-muted">@NameOf(Two, Player2)</span>
+    </div>
+
+    <dl class="rows">
+        @foreach (var (label, left, right) in Rows)
+        {
+            <div class="row">
+                <dt class="po-eyebrow">@label</dt>
+                <dd class="l po-display po-num">@left</dd>
+                <dd class="r po-display po-num">@right</dd>
+            </div>
+        }
+    </dl>
+
+    <div class="forms">
+        <span class="p1"><FormSparkline Scores="@(One?.Form ?? [])" /></span>
+        <span class="po-eyebrow">Form</span>
+        <span class="p2"><FormSparkline Scores="@(Two?.Form ?? [])" /></span>
+    </div>
+
+    <p class="series">@Series(HeadToHead, Player1, Player2)</p>
+
+    <RadzenButton Text="Skip" Icon="skip_next" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                  class="skip" Click="@OnSkip" />
+</section>
+
+@code {
+    [Parameter] public string Player1 { get; set; } = "Fighter one";
+
+    [Parameter] public string Player2 { get; set; } = "Fighter two";
+
+    /// <summary>Their record, or null for somebody who has never argued here.</summary>
+    [Parameter] public FighterStatsDto? One { get; set; }
+
+    [Parameter] public FighterStatsDto? Two { get; set; }
+
+    /// <summary>The series between the two, from fighter one's side, when there is one.</summary>
+    [Parameter] public HeadToHeadDto? HeadToHead { get; set; }
+
+    [Parameter] public EventCallback OnSkip { get; set; }
+
+    /// <summary>The figures, side by side. Somebody new is said to be new, not shown as a column of zeroes.</summary>
+    private IEnumerable<(string Label, string Left, string Right)> Rows =>
+    [
+        ("Rating", Rating(One), Rating(Two)),
+        ("Record", Record(One), Record(Two)),
+        ("Average", Average(One), Average(Two)),
+        ("Best night", Best(One), Best(Two)),
+        ("Run", Run(One), Run(Two)),
+    ];
+
+    private static bool IsNew(FighterStatsDto? stats) => stats is null || stats.Fights == 0;
+
+    private static string Rating(FighterStatsDto? s) => IsNew(s) ? "New" : s!.Rating.ToString(CultureInfo.CurrentCulture);
+
+    private static string Record(FighterStatsDto? s) =>
+        IsNew(s) ? "—" : $"{s!.Wins}–{s.Losses}" + (s.Draws > 0 ? $"–{s.Draws}" : string.Empty);
+
+    private static string Average(FighterStatsDto? s) => IsNew(s) ? "—" : s!.AverageScore.ToString("0.#", CultureInfo.CurrentCulture);
+
+    private static string Best(FighterStatsDto? s) => IsNew(s) ? "—" : s!.BestScore.ToString(CultureInfo.CurrentCulture);
+
+    private static string Run(FighterStatsDto? s) =>
+        IsNew(s) || s!.Streak == 0 ? "—" : s.Streak > 0 ? $"W{s.Streak}" : $"L{-s.Streak}";
+
+    private static string NameOf(FighterStatsDto? stats, string tag) =>
+        stats is null || string.Equals(stats.DisplayName, tag, StringComparison.Ordinal) ? "First fight on the card" : stats.DisplayName;
+
+    /// <summary>How the series stands, as the one line under the card. Public because it is the whole decision.</summary>
+    public static string Series(HeadToHeadDto? series, string one, string two)
+    {
+        if (series is null || series.NeverMet)
+        {
+            return "First time these two have met.";
+        }
+
+        var drawn = series.Draws > 0 ? $", with {series.Draws} drawn" : string.Empty;
+        return series.Wins == series.Losses ? $"Level at {series.Wins}–{series.Losses}{drawn}."
+            : series.IsAhead ? $"{one} leads the series {series.Wins}–{series.Losses}{drawn}."
+            : $"{two} leads the series {series.Losses}–{series.Wins}{drawn}.";
+    }
+}

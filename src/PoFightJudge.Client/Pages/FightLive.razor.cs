@@ -30,6 +30,17 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     /// <summary>Who has done the talking so far, for the tug-of-war under the scoreboard.</summary>
     private readonly FloorClock _floor = new();
+
+    private readonly CancellationTokenSource _leaving = new();
+
+    /// <summary>Their records and their series, for the tale of the tape before the bell.</summary>
+    private FighterStatsDto? _oneStats;
+    private FighterStatsDto? _twoStats;
+    private HeadToHeadDto? _series;
+
+    /// <summary>Whether the tale of the tape is over the stage, and the timer that takes it down.</summary>
+    private bool _tape;
+    private Task? _tapeDown;
     private LiveConnection? _connection;
     private FighterDto? _oneRecord;
     private FighterDto? _twoRecord;
@@ -76,6 +87,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     [Inject] private FxInterop Fx { get; set; } = default!;
 
     [Inject] private IJSRuntime Js { get; set; } = default!;
+
+    [Inject] private TimeProvider Clock { get; set; } = default!;
 
     private SessionPhase Phase => _snapshot?.Phase ?? SessionPhase.Intro;
 
@@ -189,6 +202,12 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         if (first)
         {
             await LoadRecordsAsync(snapshot);
+        }
+
+        // The bell takes the card down if the host gets there before the timer does.
+        if (snapshot.Phase is not (SessionPhase.Intro or SessionPhase.Setup))
+        {
+            _tape = false;
         }
 
         await AnnounceAsync(snapshot);
@@ -318,19 +337,62 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     public static bool RiserDue(SessionPhase phase, int before, int now) =>
         phase == SessionPhase.Debate && now > 0 && RiserMarks.Any(mark => before > mark && now <= mark);
 
-    /// <summary>What each of them has done before. Missing records are simply absent; the fight does not need them.</summary>
+    /// <summary>
+    /// What each of them has done before, and how it went between them, for the scoreboard and the tale of the tape.
+    /// Missing records are simply absent; the fight does not need them, and a card that could not be read is a card
+    /// that is not shown.
+    /// </summary>
     private async Task LoadRecordsAsync(DebateSnapshotDto snapshot)
     {
-        if (FighterId.TryParse(snapshot.Player1Name, null, out var one))
+        if (!FighterId.TryParse(snapshot.Player1Name, null, out var one) || !FighterId.TryParse(snapshot.Player2Name, null, out var two))
         {
-            _oneRecord = await Api.GetFighterAsync(one);
+            return;
         }
 
-        if (FighterId.TryParse(snapshot.Player2Name, null, out var two))
+        try
         {
-            _twoRecord = await Api.GetFighterAsync(two);
+            var first = await Api.GetFighterProfileAsync(one);
+            var second = await Api.GetFighterProfileAsync(two);
+            (_oneRecord, _oneStats) = (first?.Fighter, first?.Stats);
+            (_twoRecord, _twoStats) = (second?.Fighter, second?.Stats);
+            _series = await Api.GetHeadToHeadAsync(one, two);
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
+        {
+            // The records are decoration on a fight, never a reason to stop one.
+        }
+
+        // Only before the arguing starts: a card over the stage once they are at it would be in the way.
+        if (snapshot.Phase is SessionPhase.Intro or SessionPhase.Setup)
+        {
+            _tape = true;
+            await Sound.PlayAsync(Sfx.Whoosh);
+            _tapeDown = TakeTapeDownAsync();
         }
     }
+
+    /// <summary>The card stays up while the host introduces them, and no longer than this.</summary>
+    private static readonly TimeSpan TapeFor = TimeSpan.FromSeconds(7);
+
+    private async Task TakeTapeDownAsync()
+    {
+        try
+        {
+            await Task.Delay(TapeFor, Clock, _leaving.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await InvokeAsync(() =>
+        {
+            _tape = false;
+            StateHasChanged();
+        });
+    }
+
+    private void SkipTape() => _tape = false;
 
     public void OnEnded(string matchId) => Dispatch(async () =>
     {
@@ -406,6 +468,10 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     public async ValueTask DisposeAsync()
     {
+        await _leaving.CancelAsync();
+        _tapeDown = null;
+        _leaving.Dispose();
+
         // The canvas first: it holds a GL context and a frame loop, and both outlive a page that only half
         // finished tidying itself up.
         await Gfx.UnmountAsync(StageSelector, CancellationToken.None);

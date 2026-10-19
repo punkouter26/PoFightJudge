@@ -135,6 +135,13 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await AppFixture.ToTheLastStepAsync(page);
             await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();
 
+            // The tale of the tape is up while the host introduces them; it is photographed once it has come in, and
+            // the stage once it has gone.
+            await page.Locator("section.tape").WaitForAsync(new() { Timeout = 60_000 });
+            await page.WaitForTimeoutAsync(1800);
+            await ShootAsync(page, folder, "fight-tape", "/fight/{id}", errors);
+            await page.Locator("section.tape").WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 30_000 });
+
             await page.WaitForFunctionAsync("() => document.querySelectorAll('article.caption').length > 1", null, new() { Timeout = 90_000 });
             await ShootAsync(page, folder, "fight-live", "/fight/{id}", errors);
 

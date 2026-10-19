@@ -47,6 +47,11 @@
                     </PageAlert>
                 }
 
+                @if (_tape)
+                {
+                    <TaleOfTheTape Player1="@Player1" Player2="@Player2" One="@_oneStats" Two="@_twoStats" HeadToHead="@_series" OnSkip="@SkipTape" />
+                }
+
                 <CaptionFeed Log="@_captions" Player1Name="@Player1" Player2Name="@Player2" HostName="@HostName" />
             </div>
         }
