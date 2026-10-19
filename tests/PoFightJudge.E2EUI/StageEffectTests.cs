@@ -78,4 +78,30 @@ public class StageEffectTests(AppFixture app)
 
         mounted.Should().BeFalse("reduced motion is the app's one switch, and this is the most motion in it");
     }
+
+    /// <summary>
+    /// A voice placed on one side of the stage, and an effect placed on the other, go through an HRTF panner — a
+    /// node a browser can refuse to build. Either refusing would be a line nobody hears, so both are played here.
+    /// </summary>
+    [SkippableFact]
+    public async Task A_voice_and_an_effect_can_be_placed_on_a_side_of_the_stage()
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
+        await using var _ = context;
+
+        var seconds = await page.EvaluateAsync<double>(
+            """
+            async () => {
+              const silence = btoa(String.fromCharCode(...new Uint8Array(4800)));
+              const left = await PoAudio.enqueue(silence, 'pcm', -1);
+              const right = await PoAudio.enqueue(silence, 'pcm', 1);
+              PoSfx.play('slap', 0, 1);
+              PoAudio.stop();
+              return left + right;
+            }
+            """);
+
+        seconds.Should().BeApproximately(0.2, 0.01, "two tenths of a second of 24 kHz silence, one from each side");
+        errors.Should().BeEmpty();
+    }
 }

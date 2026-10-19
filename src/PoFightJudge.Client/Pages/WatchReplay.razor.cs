@@ -161,7 +161,9 @@ public sealed partial class WatchReplay : ComponentBase, IDisposable
             _speaking = index;
             StateHasChanged();
 
-            var length = await Audio.PlayAsync(audio, _leaving.Token);
+            // Heard from where they stood when it was argued: storage keeps the husband as Player1.
+            var husband = _turns.FirstOrDefault(t => t.Index == index)?.Speaker == Speaker.Player1;
+            var length = await Audio.PlayAsync(audio, AudioInterop.PanFor(husband), _leaving.Token);
             await Task.Delay(length, _leaving.Token);
         }
         catch (OperationCanceledException)

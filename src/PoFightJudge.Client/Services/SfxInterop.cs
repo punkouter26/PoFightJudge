@@ -153,10 +153,14 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
         SafelyAsync(() => js.InvokeVoidAsync(Duck, ct, seconds));
 
     /// <summary>Plays an effect over the top of whoever is talking: the duck and the sound go together.</summary>
-    public async Task PlayOverAsync(string name, double duckSeconds, CancellationToken ct = default)
+    public Task PlayOverAsync(string name, double duckSeconds, CancellationToken ct = default) =>
+        PlayOverAtAsync(name, duckSeconds, AudioInterop.Centre, ct);
+
+    /// <summary>The same, heard from one side of the stage (see <see cref="AudioInterop.PanFor"/>).</summary>
+    public async Task PlayOverAtAsync(string name, double duckSeconds, double pan, CancellationToken ct = default)
     {
         await DuckAsync(duckSeconds, ct);
-        await PlayAsync(name, 0, ct);
+        await SafelyAsync(() => js.InvokeVoidAsync(Play, ct, name, 0, pan));
     }
 
     private static async Task SafelyAsync(Func<ValueTask> call)

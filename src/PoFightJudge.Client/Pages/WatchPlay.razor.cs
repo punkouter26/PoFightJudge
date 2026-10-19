@@ -371,7 +371,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
                 }
 
                 clauses.Add(clause);
-                var spoken = await Audio.EnqueueAsync(clause, ct);
+                var spoken = await Audio.EnqueueAsync(clause, AudioInterop.PanFor(WatchTurns.IsHusband(round.Speaker)), ct);
                 var now = Clock.GetUtcNow();
                 endsAt = (endsAt > now ? endsAt : now) + spoken;
 
@@ -457,9 +457,11 @@ public sealed partial class WatchPlay : IAsyncDisposable
         {
         }
 
-        // The crack lands over the top of the line it interrupts, and the ring goes out from the middle of the
-        // stage — one gesture in three places, which is the only reason it reads as a hit rather than a glitch.
-        await Sound.PlayOverAsync(Sfx.Slap, 0.6, _leaving.Token);
+        // The crack lands over the top of the line it interrupts, on the side of whoever was saying it, and the ring
+        // goes out from the middle of the stage — one gesture in three places, which is the only reason it reads as
+        // a hit rather than a glitch.
+        var struck = _speaking is null ? AudioInterop.Centre : AudioInterop.PanFor(WatchTurns.IsHusband(_speaking));
+        await Sound.PlayOverAtAsync(Sfx.Slap, 0.6, struck, _leaving.Token);
         await Gfx.ShockAsync(StageSelector, _leaving.Token);
         await Particles.BurstAsync(StageSelector, ParticleInterop.Sparks, ".corner.speaking", _leaving.Token);
         await Audio.StopAsync(_leaving.Token);

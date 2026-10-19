@@ -22,6 +22,9 @@ const PoAudio = (() => {
   let nextStartTime = 0;
   let sources = [];
 
+  /** One panner per side of the stage, made once: every clause a side speaks goes through the same one. */
+  const panners = {};
+
   function ensureContext() {
     if (!context) {
       const Ctor = window.AudioContext || window.webkitAudioContext;
@@ -100,6 +103,42 @@ const PoAudio = (() => {
     return buffer;
   }
 
+  /**
+   * Where a voice stands. The husband's card is on the left and the wife's on the right, so that is where they are
+   * heard: an HRTF panner a little in front of the listener and a little apart, which on headphones places them in
+   * the room rather than in one ear. The reference distance is past where they stand, so neither is quieter for it.
+   * No side (or a browser with no panner) goes straight onto the bus, which is the middle it always was.
+   */
+  function inputFor(pan) {
+    if (typeof pan !== 'number' || pan === 0 || typeof context.createPanner !== 'function') {
+      return bus;
+    }
+
+    const key = pan < 0 ? 'left' : 'right';
+    if (!panners[key]) {
+      const panner = context.createPanner();
+      panner.panningModel = 'HRTF';
+      panner.distanceModel = 'inverse';
+      panner.refDistance = 2;
+      place(panner, Math.sign(pan) * 0.9, 0, -1);
+      panner.connect(bus);
+      panners[key] = panner;
+    }
+
+    return panners[key];
+  }
+
+  /** Safari before 14.1 has no positionX AudioParams, only the old setter. */
+  function place(panner, x, y, z) {
+    if (panner.positionX) {
+      panner.positionX.value = x;
+      panner.positionY.value = y;
+      panner.positionZ.value = z;
+    } else {
+      panner.setPosition(x, y, z);
+    }
+  }
+
   async function toBuffer(ctx, base64, format) {
     const bytes = base64ToBytes(base64);
     if (format === 'pcm') {
@@ -115,20 +154,21 @@ const PoAudio = (() => {
      * once it is actually scheduled, which is the point: the caller waits out the line before moving on, and a
      * promise that resolved before the decode finished had the speaker cut off a second into their sentence.
      */
-    async play(base64, format) {
+    async play(base64, format, pan) {
       if (!base64) {
         return 0;
       }
       PoAudio.stop();
       nextStartTime = ensureContext().currentTime;
-      return await PoAudio.enqueue(base64, format);
+      return await PoAudio.enqueue(base64, format, pan);
     },
 
     /**
      * Appends a chunk to the rolling schedule: each chunk starts where the previous one ends, so a line synthesized
-     * clause by clause still plays as one continuous utterance. Returns the scheduled duration in seconds.
+     * clause by clause still plays as one continuous utterance. Returns the scheduled duration in seconds. `pan` is
+     * which side of the stage it comes from: below zero the left, above it the right, zero or absent the middle.
      */
-    async enqueue(base64, format) {
+    async enqueue(base64, format, pan) {
       if (!base64) {
         return 0;
       }
@@ -136,7 +176,7 @@ const PoAudio = (() => {
       const buffer = await toBuffer(ctx, base64, format);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(bus);
+      source.connect(inputFor(pan));
       const startAt = Math.max(nextStartTime, ctx.currentTime);
       source.start(startAt);
       nextStartTime = startAt + buffer.duration;

@@ -27,6 +27,10 @@ window.PoSfx = (function () {
   let noise = null;
   let muted = readMuted();
 
+  // Where the sound being scheduled right now goes: the master, or a panner in front of it for an effect that has a
+  // side. Swapped for the length of one voice's call — every voice schedules all its nodes synchronously.
+  let out = null;
+
   // One volume for everything the app plays: the effects here, and the voices in audio.js and live-audio.js, which
   // listen for the "po-volume" event. Kept here, and read at load like the mute, so the first sound is already at
   // the level somebody chose last time.
@@ -118,7 +122,7 @@ window.PoSfx = (function () {
     g.gain.exponentialRampToValueAtTime(peak, at + attack);
     g.gain.exponentialRampToValueAtTime(SILENT, at + duration);
 
-    o.connect(g).connect(master);
+    o.connect(g).connect(out || master);
     o.start(at);
     o.stop(at + duration + 0.02);
   }
@@ -141,7 +145,7 @@ window.PoSfx = (function () {
     const g = ctx.createGain();
     g.gain.setValueAtTime(Math.max(options.gain, SILENT * 2), at);
     g.gain.exponentialRampToValueAtTime(SILENT, at + options.duration);
-    src.connect(filter).connect(g).connect(master);
+    src.connect(filter).connect(g).connect(out || master);
     src.start(at, Math.random() * (NOISE_SECONDS - options.duration - 0.05));
     src.stop(at + options.duration + 0.02);
   }
@@ -201,6 +205,30 @@ window.PoSfx = (function () {
     // The one voice the caller shapes: a scoreboard counting up plays this per tick, climbing with the number.
     "count": function (at, value) { tone(at, { type: "sine", freq: 440 + value * 620, duration: 0.035, gain: 0.06 }); },
   };
+
+  /**
+   * A panner for one sound, placed where audio.js places the voice on that side, or null for the middle. One per
+   * play: it goes when the sound's sources do, and a slap on the left must not drag the next bell over with it.
+   */
+  function panned(pan) {
+    if (typeof pan !== "number" || pan === 0 || typeof ctx.createPanner !== "function") {
+      return null;
+    }
+
+    const panner = ctx.createPanner();
+    panner.panningModel = "HRTF";
+    panner.refDistance = 2;
+    const x = Math.sign(pan) * 0.9;
+    if (panner.positionX) {
+      panner.positionX.value = x;
+      panner.positionZ.value = -1;
+    } else {
+      panner.setPosition(x, 0, -1);
+    }
+
+    panner.connect(master);
+    return panner;
+  }
 
   /** Dips the voice buses so an effect lands over the top of a line instead of underneath it. */
   function duck(seconds) {
@@ -268,11 +296,12 @@ window.PoSfx = (function () {
     },
 
     /**
-     * Plays one effect. `value` is 0–1 for the voices that take one. Silent when muted, when the name is unknown,
-     * and when the browser has no Web Audio at all — an app that stopped because a bell would not ring is worse
-     * than one that rings no bell.
+     * Plays one effect. `value` is 0–1 for the voices that take one; `pan` puts it on a side of the stage, below
+     * zero the left and above it the right, the way the voices are placed. Silent when muted, when the name is
+     * unknown, and when the browser has no Web Audio at all — an app that stopped because a bell would not ring is
+     * worse than one that rings no bell.
      */
-    play: function (name, value) {
+    play: function (name, value, pan) {
       if (muted || typeof name !== "string") {
         return;
       }
@@ -283,9 +312,12 @@ window.PoSfx = (function () {
       }
 
       try {
+        out = panned(pan);
         voice(ctx.currentTime + 0.005, typeof value === "number" ? Math.min(Math.max(value, 0), 1) : 0);
       } catch (e) {
         // One malformed schedule must not take the page with it.
+      } finally {
+        out = null;
       }
     },
 
