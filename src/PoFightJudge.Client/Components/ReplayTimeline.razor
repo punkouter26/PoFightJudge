@@ -1,0 +1,112 @@
+@using System.Globalization
+@* The whole fight on one line: who held the floor when, where the host stepped in, where somebody was cut off, where
+   the judge saw a mood run high, and the moments worth hearing again — each of those a button that plays it. *@
+<div class="timeline" role="group" aria-label="The fight, start to finish">
+    <div class="row marks">
+        <span></span>
+        <div class="track">
+            @foreach (var (highlight, index) in Highlights.Select((h, i) => (h, i)))
+            {
+                var at = Clock(highlight.StartSeconds);
+                <RadzenButton Icon="graphic_eq" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                              class="@(highlight.Speaker == Speaker.Player2 ? "mark p2" : "mark p1")" style="@Left(highlight.StartSeconds)"
+                              title="@($"{highlight.Label} at {at}: hear it")" aria-label="@($"Hear {highlight.Label} at {at}")"
+                              Click="@(() => OnHighlight.InvokeAsync(index))" />
+            }
+        </div>
+    </div>
+
+    @foreach (var (speaker, name, side) in Lanes)
+    {
+        <div class="row lane @side">
+            <span class="who po-eyebrow">@name</span>
+            <div class="track">
+                @foreach (var turn in Turns.Where(t => t.Speaker == speaker))
+                {
+                    <span class="turn @(turn.Kind == TurnKind.Interrupt ? "cut" : null)" style="@Span(turn)"
+                          title="@($"{Clock(turn.StartSeconds)}–{Clock(End(turn))}{(turn.Kind == TurnKind.Interrupt ? ", cut in" : string.Empty)}")"></span>
+                }
+                @foreach (var peak in PeaksFor(speaker))
+                {
+                    <span class="peak" style="@Left(peak.AtSeconds)" title="@($"{peak.Dominant}, {peak.Intensity}/10 at {Clock(peak.AtSeconds)}")"></span>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="row axis po-muted">
+        <span></span>
+        <div class="track">
+            @foreach (var tick in Ticks)
+            {
+                <span class="tick po-num" style="@Left(tick)">@Clock(tick)</span>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>A mood the judge marked at least this strongly is worth a dot on the line.</summary>
+    private const int PeakIntensity = 7;
+
+    [Parameter] public string Player1 { get; set; } = "Fighter one";
+
+    [Parameter] public string Player2 { get; set; } = "Fighter two";
+
+    [Parameter] public string Host { get; set; } = "Host";
+
+    /// <summary>Every turn with its timings: who talked, from when to when, and whether it was a cut-in.</summary>
+    [Parameter] public IReadOnlyList<TurnDto> Turns { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<HighlightDto> Highlights { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<EmotionPointDto> Player1Moods { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<EmotionPointDto> Player2Moods { get; set; } = [];
+
+    /// <summary>A highlight's marker was pressed: its index in <see cref="Highlights"/>.</summary>
+    [Parameter] public EventCallback<int> OnHighlight { get; set; }
+
+    private double _length = 1;
+
+    protected override void OnParametersSet() => _length = Length(Turns, Highlights, [.. Player1Moods, .. Player2Moods]);
+
+    /// <summary>
+    /// How long the line is: as long as the last thing on it, in seconds. Never zero, so an empty fight still has a
+    /// line to draw rather than a division to fail. Public because it is the decision every position rests on.
+    /// </summary>
+    public static double Length(IEnumerable<TurnDto> turns, IEnumerable<HighlightDto> highlights, IEnumerable<EmotionPointDto> moods) =>
+        Math.Max(1, turns.Select(End)
+            .Concat(highlights.Select(h => h.EndSeconds))
+            .Concat(moods.Select(m => (double)m.AtSeconds))
+            .DefaultIfEmpty(0)
+            .Max());
+
+    private IEnumerable<(Speaker Speaker, string Name, string Side)> Lanes =>
+        [(Speaker.Player1, Player1, "p1"), (Speaker.Host, Host, "host"), (Speaker.Player2, Player2, "p2")];
+
+    private IEnumerable<EmotionPointDto> PeaksFor(Speaker speaker) => speaker switch
+    {
+        Speaker.Player1 => Player1Moods.Where(m => m.Intensity >= PeakIntensity),
+        Speaker.Player2 => Player2Moods.Where(m => m.Intensity >= PeakIntensity),
+        _ => [],
+    };
+
+    private IEnumerable<double> Ticks => [0, _length / 4, _length / 2, _length * 3 / 4, _length];
+
+    private static double End(TurnDto turn) => turn.EndSeconds ?? turn.StartSeconds;
+
+    private string Left(double seconds) => $"left: {Percent(seconds)}%";
+
+    private string Span(TurnDto turn) =>
+        $"left: {Percent(turn.StartSeconds)}%; width: {Percent(Math.Max(0, End(turn) - turn.StartSeconds))}%";
+
+    private string Percent(double seconds) =>
+        Math.Round(Math.Clamp(seconds / _length, 0, 1) * 100, 2).ToString(CultureInfo.InvariantCulture);
+
+    private static string Clock(double seconds)
+    {
+        var whole = (int)Math.Round(seconds);
+        return $"{whole / 60}:{whole % 60:00}";
+    }
+}

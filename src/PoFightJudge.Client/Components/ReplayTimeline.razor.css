@@ -1,0 +1,95 @@
+.timeline {
+  display: grid;
+  gap: var(--po-space-1);
+  padding: var(--po-space-3) var(--po-space-4);
+  border: 1px solid var(--po-border);
+  border-radius: var(--po-radius-md);
+  background: var(--po-surface);
+}
+
+/* Every row is the same two columns, so the tracks line up: a name, then the line itself. */
+.row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  align-items: center;
+  gap: var(--po-space-3);
+}
+
+.track {
+  position: relative;
+  height: 1.25rem;
+}
+
+.lane .track {
+  border-radius: var(--po-radius-xs);
+  background: var(--po-surface-2);
+}
+
+.who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.turn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  border-radius: var(--po-radius-xs);
+}
+
+.lane.p1 .turn { background: var(--po-p1); }
+
+.lane.p2 .turn { background: var(--po-p2); }
+
+.lane.host .turn { background: var(--po-accent); }
+
+/* A cut-in: hatched in the danger colour over whoever's colour it is, so it reads as a foul at a glance. */
+.turn.cut {
+  background-image: repeating-linear-gradient(135deg, var(--po-danger) 0 3px, transparent 3px 6px);
+  box-shadow: 0 0 0 1px var(--po-danger);
+}
+
+/* A mood the judge saw run high: a dot above the lane at the moment it did. */
+.peak {
+  position: absolute;
+  top: -0.3rem;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--po-warning);
+  box-shadow: 0 0 0 2px var(--po-surface);
+  transform: translateX(-50%);
+}
+
+/* The moments are buttons, at the height a finger needs; their row is that tall and the rest stay thin. */
+.marks .track { height: 2.75rem; }
+
+::deep .mark {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  border-bottom: 3px solid currentColor;
+}
+
+::deep .mark.p1 { color: var(--po-p1); }
+
+::deep .mark.p2 { color: var(--po-p2); }
+
+.axis .track { height: 1rem; }
+
+.tick {
+  position: absolute;
+  font-size: var(--po-text-2xs);
+  transform: translateX(-50%);
+}
+
+.tick:first-child { transform: none; }
+
+.tick:last-child { transform: translateX(-100%); }
+
+@media (max-width: 40rem) {
+  .row { grid-template-columns: 3.5rem 1fr; gap: var(--po-space-2); }
+  .timeline { padding: var(--po-space-2) var(--po-space-3); }
+}

@@ -11,9 +11,9 @@
 
 .waiting p { margin: 0; }
 
-.reel-section { display: grid; gap: var(--po-space-3); }
+.reel-section, .timeline-section { display: grid; gap: var(--po-space-3); }
 
-.reel-section h2 { margin: 0; }
+.reel-section h2, .timeline-section h2 { margin: 0; }
 
 .pair { display: grid; grid-template-columns: 1fr; gap: var(--po-space-4); }
 

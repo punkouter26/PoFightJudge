@@ -89,6 +89,16 @@
     }
 
     /// <summary>
+    /// Plays one moment as its own button would, for the timeline above the reel, which points at them. From outside
+    /// the component, so it asks for its own render.
+    /// </summary>
+    public Task HearAsync(int index) => InvokeAsync(async () =>
+    {
+        await PlayAsync(index);
+        StateHasChanged();
+    });
+
+    /// <summary>
     /// The clip is fetched rather than linked: the recording lives in a private container and the route carries the
     /// caller's own credentials, which a plain audio source would not.
     /// </summary>

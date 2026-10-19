@@ -45,11 +45,22 @@
                     }
                 </RulingCard>
 
+                @if (_turns.Count > 0)
+                {
+                    <section class="timeline-section">
+                        <h2 class="po-eyebrow">The fight, start to finish</h2>
+                        <ReplayTimeline Player1="@_report.Player1.Name" Player2="@_report.Player2.Name" Turns="@_turns"
+                                        Highlights="@(_report.Highlights ?? [])"
+                                        Player1Moods="@_report.Player1.Assessment.EmotionTimeline" Player2Moods="@_report.Player2.Assessment.EmotionTimeline"
+                                        OnHighlight="@HearAsync" />
+                    </section>
+                }
+
                 @if (_report.Highlights is { Count: > 0 } highlights)
                 {
                     <section class="reel-section">
                         <h2 class="po-eyebrow">Worth hearing again</h2>
-                        <HighlightReel MatchId="@_report.MatchId" Highlights="@highlights" Topic="@_report.Topic" />
+                        <HighlightReel @ref="_reel" MatchId="@_report.MatchId" Highlights="@highlights" Topic="@_report.Topic" />
                     </section>
                 }
 

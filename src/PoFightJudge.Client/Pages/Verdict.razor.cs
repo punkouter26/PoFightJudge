@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using PoFightJudge.Client.Components;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Client.Stats;
 using PoFightJudge.Shared.Identifiers;
@@ -45,6 +46,11 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     private readonly CancellationTokenSource _leaving = new();
     private AnalysisReportDto? _report;
+
+    /// <summary>The fight's turns, with their timings, for the timeline above the clips.</summary>
+    private IReadOnlyList<TurnDto> _turns = [];
+
+    private HighlightReel? _reel;
 
     /// <summary>The match row, read once for the share control: the report says what was decided, not who owns it.</summary>
     private MatchDto? _match;
@@ -172,6 +178,40 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Every turn of the fight with its timings, for the timeline. A list that cannot be read is a timeline that is not
+    /// drawn; the ruling does not wait on it.
+    /// </summary>
+    private async Task<IReadOnlyList<TurnDto>> TurnsAsync(MatchId id)
+    {
+        try
+        {
+            return await Api.GetMatchTurnsAsync(id, _leaving.Token);
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>A moment on the timeline was pressed: bring its clip into view and play it there.</summary>
+    private async Task HearAsync(int index)
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("PoFx.reveal", $".moment[data-index='{index}']");
+        }
+        catch (JSException)
+        {
+            // Not scrolled to; it plays where it is.
+        }
+
+        if (_reel is not null)
+        {
+            await _reel.HearAsync(index);
+        }
+    }
+
     /// <summary>Keeps the page's own copy of the match true after the share is made or taken back.</summary>
     private void OnShareChanged(string? token)
     {
@@ -194,6 +234,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
                 if (answer.Report is not null)
                 {
+                    _turns = await TurnsAsync(id);
                     _report = answer.Report;
                     _problem = null;
                     _staged = Staged(_report.GeneratedAt, Clock.GetUtcNow());
