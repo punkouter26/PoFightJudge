@@ -116,3 +116,52 @@
   border-radius: var(--po-radius-md);
   background: var(--po-surface-2);
 }
+
+/* Table mode: the phone lies between the two of them, so the stage takes the whole screen and everything on it is read
+   from a chair. Fixed rather than relying on fullscreen, because an iPhone has no element fullscreen; the safe-area
+   insets keep it out from under the notch either way. Only the last three lines are kept, as big as they will go. */
+.stage.table {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  min-height: 0;
+  max-height: none;
+  border-radius: 0;
+  padding: max(var(--po-space-3), var(--po-safe-t)) max(var(--po-space-3), var(--po-safe-r))
+    max(var(--po-space-3), var(--po-safe-b)) max(var(--po-space-3), var(--po-safe-l));
+  background: var(--po-bg);
+}
+
+.stage.table > ::deep .captions .caption:not(:nth-last-child(-n + 3)) { display: none; }
+
+.stage.table > ::deep .captions .caption p { font-size: var(--po-text-2xl); line-height: 1.25; }
+
+.stage.table > ::deep .scoreboard .tag { font-size: var(--po-text-3xl); }
+
+/* A phone on its side is short and wide: the scoreboard, the clock and the rope on the left, what is being said on
+   the right, all of it on one screen. The phase banner goes — the host says it out loud. */
+@media (orientation: landscape) and (max-height: 40rem) {
+  .stage.table {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-auto-rows: min-content;
+    align-content: start;
+  }
+
+  .stage.table > ::deep .captions { grid-column: 2; grid-row: 1 / span 8; height: 100%; }
+
+  .stage.table .bar { grid-template-columns: 1fr auto; }
+
+  .stage.table .bar > ::deep .phase { display: none; }
+
+  .stage.table > ::deep .scoreboard .tag { font-size: var(--po-text-2xl); }
+
+  .stage.table > ::deep .scoreboard .record { display: none; }
+}
+
+.stage > ::deep .untable {
+  position: absolute;
+  top: max(var(--po-space-2), var(--po-safe-t));
+  right: max(var(--po-space-2), var(--po-safe-r));
+  z-index: 5;
+}

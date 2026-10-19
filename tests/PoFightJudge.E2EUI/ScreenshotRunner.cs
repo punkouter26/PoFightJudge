@@ -151,6 +151,16 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             // Pinned rather than set: the next snapshot would put the clock's own heat straight back.
             await MomentAsync(page, folder, "fight-heat", "() => { const set = PoGfx.set; PoGfx.set = (s, n, v) => set(s, n, n === 'heat' ? 1 : v); PoGfx.set('.stage', 'heat', 1); }", null);
 
+            // Table mode, the way a phone lying between them sees it: landscape, the whole screen. Then back. The
+            // window is sized before going fullscreen and after leaving it — a fullscreen window cannot be resized.
+            await page.SetViewportSizeAsync(844, 390);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Table mode" }).ClickAsync();
+            await page.WaitForTimeoutAsync(500);
+            await ShootAsync(page, folder, "fight-table", "/fight/{id}", errors);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Leave table mode" }).ClickAsync();
+            await page.WaitForTimeoutAsync(300);
+            await page.SetViewportSizeAsync(AppFixture.Desktop.Width, AppFixture.Desktop.Height);
+
             await page.Locator("section.ruling").WaitForAsync(new() { Timeout = 180_000 });
             await page.WaitForTimeoutAsync(700);
             await ShootAsync(page, folder, "verdict-reveal", "/verdict/{id}", errors);

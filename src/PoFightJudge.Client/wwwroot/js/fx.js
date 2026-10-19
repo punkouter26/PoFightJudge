@@ -42,5 +42,25 @@ window.PoFx = (function () {
     }
   }
 
-  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal };
+  // Table mode, for a phone lying between two people: the class on <html> moves the app's own chrome out of the way
+  // of the stage (app.css), and fullscreen — only when `full`, because only a click may ask for it — takes the
+  // browser's too. A browser that will not go fullscreen (an iPhone has no element fullscreen) still gets the page.
+  function table(on, full) {
+    document.documentElement.classList.toggle("po-table", !!on);
+    if (!full) {
+      return;
+    }
+
+    try {
+      if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(function () {});
+      } else if (!on && document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(function () {});
+      }
+    } catch (e) {
+      // Not here, not now. The takeover does not depend on it.
+    }
+  }
+
+  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal, table: table };
 })();

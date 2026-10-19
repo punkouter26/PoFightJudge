@@ -447,3 +447,9 @@ body { background: transparent; }
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Table mode (the live fight, for a phone lying between two people) ──
+   The stage takes the whole screen, so everything the layout puts around the page steps aside. PoFx stamps the
+   class on <html> and takes it off again when the page goes. Named from here rather than scoped, because the
+   chrome belongs to the layout and the decision belongs to the fight page. */
+html.po-table .shell > :not(main) { display: none; }

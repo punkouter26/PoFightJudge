@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using PoFightJudge.Client.Components;
@@ -37,6 +38,12 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     private FighterStatsDto? _oneStats;
     private FighterStatsDto? _twoStats;
     private HeadToHeadDto? _series;
+
+    /// <summary>Where the choice of table mode is kept, so a phone that lives on the table opens in it next time.</summary>
+    private const string TableKey = "po-table";
+
+    /// <summary>Table mode: the stage takes the whole screen, in words big enough to read from a chair.</summary>
+    private bool _table;
 
     /// <summary>Whether the tale of the tape is over the stage, and the timer that takes it down.</summary>
     private bool _tape;
@@ -90,6 +97,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     [Inject] private TimeProvider Clock { get; set; } = default!;
 
+    [Inject] private ILocalStorageService Storage { get; set; } = default!;
+
     private SessionPhase Phase => _snapshot?.Phase ?? SessionPhase.Intro;
 
     private string Player1 => _snapshot?.Player1Name is { Length: > 0 } name ? name : "Fighter one";
@@ -114,6 +123,19 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
         // The click that started the fight is the gesture the effects context needs.
         await Sound.ArmAsync();
+
+        try
+        {
+            _table = string.Equals((await Storage.GetItemAsStringAsync(TableKey))?.Trim('"'), "on", StringComparison.Ordinal);
+            if (_table)
+            {
+                await Js.InvokeVoidAsync("PoFx.table", true, false);
+            }
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // Storage blocked: the ordinary stage, as it always was.
+        }
 
         _connection = Connections.Create();
         try
@@ -264,6 +286,10 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
             if (snapshot.Speaking is not null && had is not null)
             {
                 await Sound.PlayAsync(Sfx.Cue);
+                if (_table)
+                {
+                    await BuzzAsync();
+                }
             }
         }
     }
@@ -394,6 +420,40 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     private void SkipTape() => _tape = false;
 
+    /// <summary>
+    /// Into or out of table mode. Fullscreen is asked for on this click, the only moment a browser allows it; the
+    /// takeover itself is CSS, so a phone that will not go fullscreen still gets the whole page. Remembered, so it
+    /// opens that way next time — without fullscreen, which only a click can ask for.
+    /// </summary>
+    private async Task TableAsync(bool on)
+    {
+        _table = on;
+        try
+        {
+            await Js.InvokeVoidAsync("PoFx.table", on, true);
+            await Storage.SetItemAsStringAsync(TableKey, on ? "on" : "off");
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // Not remembered, or not fullscreen. The stage is still the whole page.
+        }
+    }
+
+    /// <summary>Two short pulses: the floor has changed hands.</summary>
+    private static readonly int[] Buzz = [40, 60, 40];
+
+    /// <summary>A phone lying flat buzzes on the table when the floor changes hands. Nowhere else has a motor.</summary>
+    private async Task BuzzAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.vibrate", Buzz);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+        }
+    }
+
     public void OnEnded(string matchId) => Dispatch(async () =>
     {
         _listening = false;
@@ -470,6 +530,19 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     {
         await _leaving.CancelAsync();
         _tapeDown = null;
+
+        // Table mode belongs to this page: the chrome comes back, and so does the browser's.
+        if (_table)
+        {
+            try
+            {
+                await Js.InvokeVoidAsync("PoFx.table", false, true);
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+            {
+            }
+        }
+
         _leaving.Dispose();
 
         // The canvas first: it holds a GL context and a frame loop, and both outlive a page that only half

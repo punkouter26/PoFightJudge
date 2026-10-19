@@ -7,6 +7,9 @@
 
 <PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="Channel 2" Title="@Title" Lead="@Lead">
     <Actions>
+        <RadzenButton Text="Table mode" Icon="table_restaurant" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                      title="For a phone lying between the two of you: the whole screen, big words, a buzz on each hand-over"
+                      Disabled="@(_snapshot is null)" Click="@(() => TableAsync(true))" />
         <RadzenButton Text="Stop the fight" Icon="stop_circle" ButtonStyle="ButtonStyle.Danger"
                       Variant="Variant.Outlined" Disabled="@(_ending || _snapshot is null)" Click="@StopAsync" />
     </Actions>
@@ -22,7 +25,13 @@
         }
         else
         {
-            <div class="stage">
+            <div class="stage @(_table ? "table" : null)">
+                @if (_table)
+                {
+                    <RadzenButton Text="Leave table mode" Icon="close_fullscreen" ButtonStyle="ButtonStyle.Base" Variant="Variant.Flat"
+                                  Size="ButtonSize.Small" class="untable" Click="@(() => TableAsync(false))" />
+                }
+
                 <section class="bar" aria-label="Where the fight is">
                     <PhaseBanner Phase="@Phase" Topic="@_snapshot?.Topic" />
                     <DebateTimer ElapsedSeconds="@(_snapshot?.DebateElapsedSeconds ?? 0)" RemainingSeconds="@(_snapshot?.DebateRemainingSeconds ?? 0)" />
