@@ -66,11 +66,17 @@ public static class Sfx
     /// <summary>Something breaking like glass: the loser's card, on the verdict.</summary>
     public const string Shatter = "shatter";
 
+    /// <summary>
+    /// A crowd on its feet: a roar, claps and a whistle. Only where no microphone is open — a page that is recording
+    /// would hear a room that is not there (T65).
+    /// </summary>
+    public const string Crowd = "crowd";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Bell, BellThree, Slap, Gavel, GavelThree, Tick, Whoosh,
-        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser, Drumroll, Slam, Shatter,
+        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser, Drumroll, Slam, Shatter, Crowd,
     ];
 }
 

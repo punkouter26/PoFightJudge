@@ -354,6 +354,46 @@ window.PoSfx = (function () {
         hit(t, { freq: 5000 + Math.random() * 3000, duration: 0.03, gain: 0.12, q: 4 });
       }
     },
+    // A crowd on its feet, made up: two bands of noise swelling and falling away under a flutter (many voices are
+    // never steady), about forty claps scattered over it, thickest in the middle, and one whistle near the start.
+    "crowd": function (at) {
+      const length = 3.2;
+      [[520, 0.6, 0.22], [1350, 0.9, 0.12]].forEach(function (band) {
+        const src = ctx.createBufferSource();
+        src.buffer = noiseBuffer();
+        src.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = band[0];
+        filter.Q.value = band[1];
+        const swell = ctx.createGain();
+        swell.gain.setValueAtTime(SILENT, at);
+        swell.gain.exponentialRampToValueAtTime(band[2], at + 0.5);
+        swell.gain.setValueAtTime(band[2], at + 1.2);
+        swell.gain.exponentialRampToValueAtTime(SILENT, at + length);
+        const flutter = ctx.createGain();
+        flutter.gain.value = 0.75;
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = 5.3 + Math.random() * 2;
+        const depth = ctx.createGain();
+        depth.gain.value = 0.25;
+        lfo.connect(depth).connect(flutter.gain);
+        src.connect(filter).connect(swell).connect(flutter).connect(out || master);
+        src.start(at);
+        src.stop(at + length + 0.05);
+        lfo.start(at);
+        lfo.stop(at + length + 0.05);
+      });
+
+      for (let i = 0; i < 40; i++) {
+        // Bunched toward the middle of the swell: two uniforms averaged lean that way.
+        const t = at + 0.2 + ((Math.random() + Math.random()) / 2) * (length - 0.6);
+        hit(t, { freq: 1500 + Math.random() * 900, duration: 0.025, gain: 0.12 + Math.random() * 0.18, q: 1.4 });
+      }
+
+      tone(at + 0.6, { type: "sine", freq: 1800, sweepTo: 2600, duration: 0.25, gain: 0.05, attack: 0.03 });
+      tone(at + 0.85, { type: "sine", freq: 2600, sweepTo: 2100, duration: 0.35, gain: 0.05, attack: 0.01 });
+    },
     // The clock running out: under three seconds of endless climb, with a tick at the top to say it is done.
     "riser": function (at) {
       shepard(at, 2.6, 0.13);

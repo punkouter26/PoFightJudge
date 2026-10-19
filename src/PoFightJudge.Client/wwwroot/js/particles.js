@@ -184,6 +184,75 @@ window.PoParticles = (function () {
     }
   }
 
+  /**
+   * A win, in ribbons: streamers that flutter down rather than tumble. Each is a chain of points stepped by Verlet
+   * integration — a point's velocity is simply where it is minus where it was — with every link pulled back to its
+   * length a few times a frame, so the ribbon bends and trails and cannot stretch. A breeze that changes with height
+   * and time is what makes them flutter instead of fall.
+   */
+  function streamers(stage, size) {
+    const tint = [
+      colour("--po-accent", "#ffcc33"),
+      colour("--po-p1", "#3fa9f5"),
+      colour("--po-p2", "#ff4f8b"),
+      colour("--po-success", "#4ade80"),
+    ];
+    const links = 9;
+    for (let i = 0; i < 26; i++) {
+      const x = Math.random() * size.width;
+      const y = -Math.random() * size.height * 0.3;
+      const link = (7 + Math.random() * 6) * size.dpr;
+      const drift = (Math.random() - 0.5) * 3 * size.dpr;
+      const points = [];
+      for (let k = 0; k < links; k++) {
+        // Hanging straight up from the head, already moving: the previous position is a little behind the current.
+        points.push({ x: x, y: y - k * link, px: x - drift, py: y - k * link - 4 * size.dpr });
+      }
+
+      spawn(stage, {
+        x: x, y: y, vx: 0, vy: 0,
+        life: 3.5 + Math.random() * 1.5,
+        age: 0,
+        size: (2.5 + Math.random() * 2.5) * size.dpr,
+        spin: 0, angle: 0, drag: 0, gravity: 0,
+        colour: pick(tint),
+        shape: "ribbon",
+        points: points,
+        link: link,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  /** One Verlet step of a ribbon, and its links held to length. */
+  function stepRibbon(p, seconds, size) {
+    const gravity = 260 * size.dpr * seconds * seconds;
+    p.points.forEach(function (point, k) {
+      const breeze = Math.sin(p.age * 2.6 + p.phase + k * 0.18) * 140 * size.dpr * seconds * seconds;
+      const vx = (point.x - point.px) * 0.985;
+      const vy = (point.y - point.py) * 0.985;
+      point.px = point.x;
+      point.py = point.y;
+      point.x += vx + breeze;
+      point.y += vy + gravity;
+    });
+
+    for (let pass = 0; pass < 6; pass++) {
+      for (let k = 1; k < p.points.length; k++) {
+        const a = p.points[k - 1];
+        const b = p.points[k];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const length = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+        const pull = (length - p.link) / length / 2;
+        a.x += dx * pull;
+        a.y += dy * pull;
+        b.x -= dx * pull;
+        b.y -= dy * pull;
+      }
+    }
+  }
+
   /** One ember, drifting up from the bottom edge. Emitted continuously rather than in a burst. */
   function ember(stage, size) {
     spawn(stage, {
@@ -220,6 +289,28 @@ window.PoParticles = (function () {
       const p = stage.live[i];
       p.age += seconds;
       if (p.age >= p.life) {
+        continue;
+      }
+
+      if (p.shape === "ribbon") {
+        stepRibbon(p, seconds, size);
+        ctx.globalAlpha = Math.min(1, (1 - p.age / p.life) * 3);
+        ctx.strokeStyle = p.colour;
+        ctx.lineWidth = p.size;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        // Through the midpoints, with each point as the control: a ribbon, not a chain of straight links.
+        ctx.beginPath();
+        ctx.moveTo(p.points[0].x, p.points[0].y);
+        for (let k = 1; k < p.points.length - 1; k++) {
+          const next = p.points[k + 1];
+          ctx.quadraticCurveTo(p.points[k].x, p.points[k].y, (p.points[k].x + next.x) / 2, (p.points[k].y + next.y) / 2);
+        }
+
+        const tail = p.points[p.points.length - 1];
+        ctx.lineTo(tail.x, tail.y);
+        ctx.stroke();
+        alive.push(p);
         continue;
       }
 
@@ -361,6 +452,8 @@ window.PoParticles = (function () {
           sparks(stage, size, pointAt(stage, size, childSelector));
         } else if (kind === "shatter") {
           shatter(stage, size, rectAt(stage, size, childSelector));
+        } else if (kind === "streamers") {
+          streamers(stage, size);
         } else {
           return false;
         }

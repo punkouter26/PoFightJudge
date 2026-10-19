@@ -160,6 +160,12 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         {
             _finished = true;
             await Gfx.MountAsync(RevealSelector, Shaders.Grain, level: null, over: true, _leaving.Token);
+
+            // A ruling that is not being revealed still has a winner, and their light is up from the start.
+            if (!_staged)
+            {
+                await LightAsync(loud: false);
+            }
         }
     }
 
@@ -268,10 +274,16 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         }
 
         // The loser's card has risen by now, and it breaks: the crack in its CSS, the shards thrown off it here.
-        if (_staged && await HoldAsync(ShatterAfter) && Loser is { } lost)
+        // And the winner's light breaks out behind theirs in the same moment, with the room on its feet.
+        if (_staged && await HoldAsync(ShatterAfter))
         {
-            await Sound.PlayAsync(Sfx.Shatter, ct: _leaving.Token);
-            await Particles.BurstAsync(RevealSelector, ParticleInterop.Shatter, $".player[data-tag='{lost}']", _leaving.Token);
+            if (Loser is { } lost)
+            {
+                await Sound.PlayAsync(Sfx.Shatter, ct: _leaving.Token);
+                await Particles.BurstAsync(RevealSelector, ParticleInterop.Shatter, $".player[data-tag='{lost}']", _leaving.Token);
+            }
+
+            await LightAsync(loud: true);
         }
 
         // Once the rest has risen there is nothing left to skip: the button goes and the page is a page again.
@@ -302,6 +314,36 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     /// <summary>From the card breaking to the last part of the report having risen.</summary>
     private static readonly TimeSpan Settle = TimeSpan.FromSeconds(0.6);
+
+    /// <summary>
+    /// Where the winner's light is drawn: the report again, under everything this time. A second selector for the
+    /// same element, because PoGfx keeps one canvas per selector and the grain already has the first.
+    /// </summary>
+    private const string RaysSelector = "div.verdict";
+
+    /// <summary>
+    /// The winner's light, breaking out from behind their card and tinted toward their colour. Loud is the night itself:
+    /// the crowd on its feet and streamers coming down. Nothing at all for a fight nobody won.
+    /// </summary>
+    private async Task LightAsync(bool loud)
+    {
+        if (_report is null || Winner is not { } won)
+        {
+            return;
+        }
+
+        if (await Gfx.MountAsync(RaysSelector, Shaders.Rays, ct: _leaving.Token))
+        {
+            await Gfx.FocusAsync(RaysSelector, $".player[data-tag='{won}']", _leaving.Token);
+            await Gfx.SetAsync(RaysSelector, "side", _report.Overall.Overall == Speaker.Player1 ? -1 : 1, _leaving.Token);
+        }
+
+        if (loud)
+        {
+            await Sound.PlayAsync(Sfx.Crowd, ct: _leaving.Token);
+            await Particles.BurstAsync(RevealSelector, ParticleInterop.Streamers, ct: _leaving.Token);
+        }
+    }
 
     /// <summary>The PoFx class the report jolts with on the beat (Verdict.razor.css).</summary>
     private const string SlamEffect = "slam";
@@ -361,6 +403,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         // This page disposes synchronously, so the canvases are let go rather than awaited. Neither call can fail
         // in a way anybody could act on.
         Gfx.Release(RevealSelector);
+        Gfx.Release(RaysSelector);
         Particles.Release(RevealSelector);
 
         // Fire and forget, for the same reason: closing a socket on the way out has nothing to report.

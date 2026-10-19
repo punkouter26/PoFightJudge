@@ -1,6 +1,15 @@
+/* Positioned, because the winner's light (PoGfx, under) and the streamers (PoParticles, over) hang their canvases
+   in here once the judge has ruled; everything the page laid out sits on a layer above the light — ::deep, because
+   the ruling card is a component's root and carries its own scope. */
 .play {
+  position: relative;
   display: grid;
   gap: var(--po-space-5);
+}
+
+.play > ::deep *:not(canvas) {
+  position: relative;
+  z-index: 1;
 }
 
 /* Positioned, because PoGfx hangs an absolutely-positioned canvas in here for the aura and the slap. It is not a

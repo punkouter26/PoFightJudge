@@ -20,8 +20,14 @@ public static class Shaders
     /// </summary>
     public const string Fluid = "fluid";
 
+    /// <summary>
+    /// The winner's light: shafts breaking out from behind their card. Mounted under the page and pointed at the card
+    /// with <see cref="GfxInterop.FocusAsync"/>; <c>side</c> tints it toward their colour (−1 one, +1 two).
+    /// </summary>
+    public const string Rays = "rays";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
-    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain, Fluid];
+    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain, Fluid, Rays];
 }
 
 /// <summary>

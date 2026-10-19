@@ -21,6 +21,9 @@ public sealed class ParticleInterop(IJSRuntime js)
     /// <summary>A loss: the card named as the child breaks, and its shards are thrown up and away from the crack.</summary>
     public const string Shatter = "shatter";
 
+    /// <summary>A win, in ribbons: streamers that flutter down from above rather than tumble.</summary>
+    public const string Streamers = "streamers";
+
     /// <summary>
     /// Throws a burst into an element, optionally centred on a child of it — the browser measures where that child
     /// actually is, so it follows the layout rather than assuming one.

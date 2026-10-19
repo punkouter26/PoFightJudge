@@ -180,6 +180,40 @@ void main() {
   outColour = vec4(colour, clamp(alpha, 0.0, 0.9));
 }`;
 
+  // The winner's light: shafts breaking out from behind their card, turning slowly, bright on the moment and settling
+  // into a glow that stays while the page is up. The shafts are noise sampled around a circle rather than along the
+  // angle, so there is no seam where the angle wraps; two layers turn opposite ways at different rates, which is what
+  // makes them shimmer instead of rotate. Mounted under the page, so the card itself blocks its own light and the
+  // shafts are seen breaking out around it.
+  const RAYS = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 outColour;
+uniform vec2 u_res;
+uniform vec2 u_focus;
+uniform float u_time;
+uniform float u_side;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+uniform vec3 u_c3;
+${NOISE}
+vec2 turned(float a) { return vec2(cos(a), sin(a)); }
+void main() {
+  vec2 q = (v_uv - u_focus) * u_res / max(u_res.y, 1.0);
+  float r = length(q);
+  float a = atan(q.y, q.x);
+  float t = u_time;
+
+  float wide = pow(noise(turned(a + t * 0.08) * 9.0 + 3.1), 4.0) * 1.2;
+  float thin = pow(noise(turned(a - t * 0.05) * 17.0 - 1.7), 6.0);
+  float burst = smoothstep(0.0, 0.35, t) * (0.5 + 0.5 * exp(-t * 0.7));
+  float reach = 0.25 + burst * 1.4;
+  float light = ((wide + thin) * smoothstep(reach, 0.0, r) + smoothstep(0.4, 0.0, r) * 0.6) * burst;
+
+  vec3 tint = mix(u_c3, u_side < 0.0 ? u_c1 : u_c2, 0.35);
+  outColour = vec4(tint, clamp(light * 0.8, 0.0, 0.75));
+}`;
+
   // ── The live fight's ink: a real fluid, not a picture of one ──
   // Stable fluids on the GPU (Stam, after Dobryakov's WebGL port): velocity, pressure and dye live in half-float
   // textures and are stepped every frame — vorticity confinement for the curl, a Jacobi solve to keep it
@@ -328,7 +362,7 @@ void main() {
   outColour = vec4(colour, clamp(amount * 0.9, 0.0, 0.85) * vignette);
 }`;
 
-  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN, "fluid": FLUID };
+  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN, "fluid": FLUID, "rays": RAYS };
 
   /** The tuning, in one place. Units are the simulation's own: texels per second, per-second dissipation. */
   const FLUID_TUNING = {
@@ -932,7 +966,8 @@ void main() {
       u: null,
       start: performance.now(),
       level: settings.level || null,
-      tokens: settings.tokens || ["--po-p1", "--po-p2", "--po-danger"],
+      // The third colour is danger for everything that runs hot, and gold for the winner's light.
+      tokens: settings.tokens || ["--po-p1", "--po-p2", shader === "rays" ? "--po-accent" : "--po-danger"],
       side: 0,
       mix: 0.5,
       heat: 0,

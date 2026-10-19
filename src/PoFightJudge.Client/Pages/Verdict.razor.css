@@ -78,6 +78,14 @@
   animation: rise var(--po-dur-slow) var(--po-ease) both;
 }
 
+/* Above the winner's light, which PoGfx draws under the report: the cards block their own light, and the shafts are
+   seen breaking out around them. The grain (z 3) and the particles (z 2) still go over. ::deep, because the ruling
+   card is a component's root and carries that component's scope rather than this page's. */
+.verdict > ::deep *:not(canvas) {
+  position: relative;
+  z-index: 1;
+}
+
 .verdict > *:nth-child(2) { animation-delay: 90ms; }
 .verdict > *:nth-child(3) { animation-delay: 180ms; }
 .verdict > *:nth-child(4) { animation-delay: 270ms; }

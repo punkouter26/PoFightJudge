@@ -522,6 +522,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
             StateHasChanged();
             await Task.Yield();
             await Particles.BurstAsync(StageSelector, ParticleInterop.Confetti, WinnerCorner, ct);
+            await LightAsync(ct);
         }
         catch (ApiException ex)
         {
@@ -535,6 +536,33 @@ public sealed partial class WatchPlay : IAsyncDisposable
         StateHasChanged();
     }
 
+    /// <summary>
+    /// The whole play area, under everything on it: the stage is nearly all opaque cards, so light under it alone
+    /// would only show in the gaps. The streamers come down across all of it too.
+    /// </summary>
+    private const string RaysSelector = "div.play";
+
+    /// <summary>
+    /// The winner's light breaking out from behind their corner, the crowd on its feet and streamers coming down. A
+    /// draw gets none of it. Nobody is recording by now: the microphone closed with the last turn (T65).
+    /// </summary>
+    private async Task LightAsync(CancellationToken ct)
+    {
+        if (WinnerCorner is not { } corner)
+        {
+            return;
+        }
+
+        if (await Gfx.MountAsync(RaysSelector, Shaders.Rays, ct: ct))
+        {
+            await Gfx.FocusAsync(RaysSelector, corner, ct);
+            await Gfx.SetAsync(RaysSelector, "side", corner.Contains("first", StringComparison.Ordinal) ? -1 : 1, ct);
+        }
+
+        await Sound.PlayAsync(Sfx.Crowd, ct: ct);
+        await Particles.BurstAsync(RaysSelector, ParticleInterop.Streamers, ct: ct);
+    }
+
     private async Task RetryAsync()
     {
         _error = null;
@@ -546,6 +574,8 @@ public sealed partial class WatchPlay : IAsyncDisposable
     private async Task RematchAsync()
     {
         await Audio.StopAsync(_leaving.Token);
+        await Gfx.UnmountAsync(RaysSelector, _leaving.Token);
+        await Particles.ClearAsync(RaysSelector, _leaving.Token);
         _rounds.Clear();
         _revealedRounds = 0;
         _clips.Clear();
@@ -664,13 +694,15 @@ public sealed partial class WatchPlay : IAsyncDisposable
     }
 
     /// <summary>
-    /// Which corner the confetti falls on. A draw gets the middle of the stage rather than an arbitrary side.
+    /// Which corner the confetti falls on and the light breaks out behind. A draw gets the middle of the stage rather
+    /// than an arbitrary side. Of-type rather than last-child: PoGfx appends its canvases to the stage, so its last
+    /// child is a canvas and "the last corner" by position matched nothing.
     /// </summary>
     private string? WinnerCorner =>
         _verdict is null || _verdict.Winner.Length == 0 ? null
         : string.Equals(Simulation.Husband?.Id, _verdict.Winner, StringComparison.OrdinalIgnoreCase)
-            ? ".corner:first-child"
-            : ".corner:last-child";
+            ? ".corner:first-of-type"
+            : ".corner:last-of-type";
 
     private MatchSide SideOf(string speaker) =>
         WatchTurns.IsHusband(speaker) ? Simulation.Husband! : Simulation.Wife!;
@@ -702,6 +734,8 @@ public sealed partial class WatchPlay : IAsyncDisposable
         // Then the canvas, before anything that might take its time: it holds a GL context and a frame loop, and
         // both of those outlive a page that only half finished tidying itself up.
         await Gfx.UnmountAsync(StageSelector, CancellationToken.None);
+        await Gfx.UnmountAsync(RaysSelector, CancellationToken.None);
+        await Particles.ClearAsync(RaysSelector, CancellationToken.None);
 
         // The beat owns its own lifetime through a using in BeatAsync; disposing it again here is free and is what
         // proves the field cannot outlive the page.
