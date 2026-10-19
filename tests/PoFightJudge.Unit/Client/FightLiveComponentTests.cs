@@ -36,6 +36,20 @@ public class FightLiveComponentTests : BunitContext
         lines[1].TextContent.Should().Contain("The Referee");
         lines[1].ClassList.Should().Contain("host");
     }
+
+    [Fact]
+    public void The_momentum_bar_splits_the_room_between_the_two_tags()
+    {
+        var cut = Render<MomentumBar>(p => p
+            .Add(b => b.Player1, "AL")
+            .Add(b => b.Player2, "SM")
+            .Add(b => b.Share, 0.624));
+
+        cut.Find(".name.p1").TextContent.Should().Contain("AL").And.Contain("62%");
+        cut.Find(".name.p2").TextContent.Should().Contain("38%").And.Contain("SM");
+        cut.Find(".rope").GetAttribute("aria-valuenow").Should().Be("62");
+        cut.Find(".momentum").GetAttribute("style").Should().Contain("--share: 0.624");
+    }
 }
 
 /// <summary>

@@ -19,6 +19,7 @@
 /* Above the backdrop. Everything the page laid out sits on this layer; only the canvas is below it. */
 .bar,
 .stage > ::deep .scoreboard,
+.stage > ::deep .momentum,
 .stage > ::deep .captions,
 .stage > ::deep .problem {
   position: relative;

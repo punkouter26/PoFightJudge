@@ -1,0 +1,21 @@
+@using System.Globalization
+@* Who has done the talking so far: a tug-of-war between the two colours, the knot where the room is split. *@
+<section class="momentum po-glass" aria-label="Share of the room so far" style="--share: @Share.ToString("0.000", CultureInfo.InvariantCulture)">
+    <span class="name p1 po-display">@Player1 <span class="po-num">@One%</span></span>
+    <div class="rope" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@One" aria-label="@($"{Player1}'s share of the room")">
+        <span class="pull"></span>
+        <span class="knot"></span>
+    </div>
+    <span class="name p2 po-display"><span class="po-num">@(100 - One)%</span> @Player2</span>
+</section>
+
+@code {
+    [Parameter] public string Player1 { get; set; } = "Fighter one";
+
+    [Parameter] public string Player2 { get; set; } = "Fighter two";
+
+    /// <summary>Fighter one's part of the room, 0 to 1 (see <see cref="FloorClock.Share"/>).</summary>
+    [Parameter] public double Share { get; set; } = 0.5;
+
+    private int One => (int)Math.Round(Math.Clamp(Share, 0, 1) * 100);
+}

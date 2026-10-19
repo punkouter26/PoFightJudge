@@ -33,6 +33,8 @@
                                   Player1Record="@_oneRecord" Player2Record="@_twoRecord"
                                   Speaking="@_snapshot?.Speaking" Listening="@_listening" HostSpeaking="@_hostSpeaking" />
 
+                <MomentumBar Player1="@Player1" Player2="@Player2" Share="@_floor.Share" />
+
                 @if (_problem is not null)
                 {
                     <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="true" Close="@(() => _problem = null)" class="problem">@_problem</RadzenAlert>

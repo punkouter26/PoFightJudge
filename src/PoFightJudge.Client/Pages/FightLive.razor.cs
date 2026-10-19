@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using PoFightJudge.Client.Components;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Identifiers;
@@ -26,6 +27,9 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     private const int HeatFromSeconds = 30;
 
     private readonly CaptionLog _captions = new();
+
+    /// <summary>Who has done the talking so far, for the tug-of-war under the scoreboard.</summary>
+    private readonly FloorClock _floor = new();
     private LiveConnection? _connection;
     private FighterDto? _oneRecord;
     private FighterDto? _twoRecord;
@@ -70,6 +74,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     [Inject] private ParticleInterop Particles { get; set; } = default!;
 
     [Inject] private FxInterop Fx { get; set; } = default!;
+
+    [Inject] private IJSRuntime Js { get; set; } = default!;
 
     private SessionPhase Phase => _snapshot?.Phase ?? SessionPhase.Intro;
 
@@ -187,7 +193,24 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
         await AnnounceAsync(snapshot);
         await PaintAsync(snapshot);
+        if (await VoicedAsync() is { } voiced)
+        {
+            _floor.Tick(snapshot.Speaking, _hostSpeaking, voiced);
+        }
     });
+
+    /// <summary>Seconds of voice the microphone has heard, counted by the browser. Null when it will not say.</summary>
+    private async Task<double?> VoicedAsync()
+    {
+        try
+        {
+            return await Js.InvokeAsync<double>("PoLive.voiced");
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// The show's punctuation: a sting on each new phase and a cue when the floor changes hands. Both land over
