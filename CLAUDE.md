@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 Read [AGENTS.md](AGENTS.md) first — it carries the rules, the environment matrix and the deviations table. This file
 is the short version for a working session.
 
@@ -9,11 +11,25 @@ is the short version for a working session.
 dotnet build PoFightJudge.slnx -c Release       # warnings are errors; this must be clean
 dotnet test PoFightJudge.slnx                   # Unit, Integration (Docker), E2EAPI, E2EUI (Playwright)
 dotnet test tests/PoFightJudge.Unit             # the fast tier
+dotnet test tests/PoFightJudge.Unit --filter "FullyQualifiedName~GeminiVoiceStyleTests"   # one class or test
 dotnet format PoFightJudge.slnx                 # run it before committing
 ./SCRIPTS/setup.ps1                               # clean machine → running app
 ./SCRIPTS/azurite.ps1                             # just the emulator (and -Down -Wipe to throw it away)
 dotnet run --project src/PoFightJudge.Api       # https://localhost:5001
 ```
+
+## Architecture in one breath
+
+- `Shared` (contracts, `ApiRoutes`, `ConfigKeys`, Vogen ids, validators) is the one truth both the minimal-API host
+  (`Api`) and the Blazor WASM client (`Client`, Radzen) compile against. A new config key goes in `ConfigKeys.cs`.
+- `Api/Features/{Name}/` are vertical slices (Profiles, Watch, Fight, Live, Analysis, Fighters, Records, Voice, Ai,
+  Auth, Storage, Diagnostics). Slices talk through `Shared` contracts and repositories, never each other's services.
+- WATCH: AI personas argue in rounds; `IGeminiText` is transport, `IWatchAi` the prompting (the fake sits there).
+- FIGHT: two humans, one mic, a Gemini Live host over SignalR. `ILiveSocket` → `IGeminiLiveClient` → `DebateSession`
+  (pure state machine, no I/O). Afterwards `Analysis` transcribes, measures and judges the recording.
+- Records/leaderboards are computed on read (`FighterStatsBuilder`, `StyleProfileBuilder`); nothing increments.
+- Every AI seam has a deterministic fake, used when no key is present; registration refuses fakes in Production.
+- Storage is `DefaultAzureCredential` + endpoints only (Azurite locally); connection-string ctors are banned.
 
 ## Working rules
 

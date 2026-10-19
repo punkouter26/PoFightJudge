@@ -156,6 +156,12 @@
                     </ChildContent>
                     <Helper><ValidationMessage For="@(() => _model.TtsSettings.VoiceName)" /></Helper>
                 </RadzenFormField>
+                <RadzenFormField Text="Accent" Variant="Variant.Outlined">
+                    <ChildContent>
+                        <RadzenTextBox @bind-Value="_model.TtsSettings.Accent" Name="Accent" MaxLength="@CreateProfileRequestValidator.MaxAccentLength" Placeholder="e.g. Filipino" aria-label="Accent" />
+                    </ChildContent>
+                    <Helper><ValidationMessage For="@(() => _model.TtsSettings.Accent)" /></Helper>
+                </RadzenFormField>
                 <div class="slider">
                     <div class="slider-head"><span>Pitch</span><span class="po-num">@_model.TtsSettings.Pitch.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span><span></span></div>
                     <RadzenSlider TValue="double" Min="@((decimal)CreateProfileRequestValidator.MinProsody)" Max="@((decimal)CreateProfileRequestValidator.MaxProsody)" Step="0.05" @bind-Value="_model.TtsSettings.Pitch" aria-label="Pitch" />

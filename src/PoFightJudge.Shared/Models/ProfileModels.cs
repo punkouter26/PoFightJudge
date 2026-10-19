@@ -25,6 +25,9 @@ public sealed class TtsSettingsDto
     /// means the persona has no voice of its own and the ordinary provider speaks for it.
     /// </summary>
     public string? FishReferenceId { get; set; }
+
+    /// <summary>An accent Gemini is asked to speak in, e.g. "Filipino". Blank means none.</summary>
+    public string? Accent { get; set; }
 }
 
 /// <summary>

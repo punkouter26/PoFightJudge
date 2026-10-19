@@ -56,7 +56,12 @@ public sealed partial class GeminiTtsService(IHttpClientFactory httpClients, Gem
     /// </summary>
     public static string ApplyVoiceStyle(string text, TtsSettings settings)
     {
-        var styles = new List<string>(2);
+        var styles = new List<string>(3);
+        if (!string.IsNullOrWhiteSpace(settings.Accent))
+        {
+            styles.Add($"in a {settings.Accent.Trim()} accent");
+        }
+
         if (settings.Pitch <= 0.85)
         {
             styles.Add("in a low, deep voice");

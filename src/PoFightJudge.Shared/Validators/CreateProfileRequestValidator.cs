@@ -17,6 +17,7 @@ public sealed class CreateProfileRequestValidator : AbstractValidator<CreateProf
     public const double MinProsody = 0.5;
     public const double MaxProsody = 2.0;
     public const int MaxVoiceNameLength = 40;
+    public const int MaxAccentLength = 40;
 
     public CreateProfileRequestValidator()
     {
@@ -57,5 +58,11 @@ public sealed class TtsSettingsDtoValidator : AbstractValidator<TtsSettingsDto>
         // A Fish reference id is opaque — it is whatever the voice's own page calls it — so only its length is this
         // side's business. Empty is legitimate: that persona is then spoken by the ordinary provider.
         RuleFor(t => t.FishReferenceId).MaximumLength(128);
+        // The accent is spoken into the Gemini prompt and the cache key, so it is a word or two and nothing that could
+        // punctuate either: no colon, newline or pipe.
+        RuleFor(t => t.Accent)
+            .MaximumLength(CreateProfileRequestValidator.MaxAccentLength)
+            .Must(a => a is null || a.All(c => char.IsLetter(c) || c is ' ' or '-' or '\''))
+            .WithMessage("An accent is letters, spaces, hyphens and apostrophes only.");
     }
 }

@@ -93,9 +93,12 @@ public sealed partial class CachingTtsService(IEnumerable<ITtsProvider> provider
         }
     }
 
-    /// <summary>The cache key includes the provider, so the fake and the real voice can never collide in one account.</summary>
+    /// <summary>
+    /// The cache key includes the provider, so the fake and the real voice can never collide in one account. The
+    /// accent segment is there only when one is set, so a persona without one keeps the keys it already had.
+    /// </summary>
     public static string CacheKey(string text, TtsSettings settings, string provider, string format) =>
-        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{provider}|{format}|{settings.VoiceName}|{settings.FishReferenceId}|{settings.Pitch:F2}|{settings.Speed:F2}|{text}");
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{provider}|{format}|{settings.VoiceName}|{settings.FishReferenceId}{(string.IsNullOrWhiteSpace(settings.Accent) ? "" : "|" + settings.Accent.Trim())}|{settings.Pitch:F2}|{settings.Speed:F2}|{text}");
 
     /// <summary>Runs the chain through the cache, best provider first. Null means every one of them failed or said nothing.</summary>
     private async Task<TtsAudio?> SpeakAsync(string text, TtsSettings settings, CancellationToken ct)

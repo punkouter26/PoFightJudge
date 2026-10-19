@@ -161,7 +161,8 @@ public sealed class Profile
 /// The Fish Audio voice model id from its <c>fish.audio/m/{id}</c> page — a cloned voice for this character. Null
 /// or blank means this persona has no voice of its own and is spoken by the ordinary provider.
 /// </param>
-public sealed record TtsSettings(double Pitch, double Speed, string VoiceName, string? FishReferenceId = null)
+/// <param name="Accent">An accent Gemini is asked to speak in ("Filipino"); null or blank means none. Fish ignores it.</param>
+public sealed record TtsSettings(double Pitch, double Speed, string VoiceName, string? FishReferenceId = null, string? Accent = null)
 {
     private static readonly string[] HusbandVoices = ["Charon", "Puck", "Fenrir"];
     private static readonly string[] WifeVoices = ["Kore", "Zephyr"];
