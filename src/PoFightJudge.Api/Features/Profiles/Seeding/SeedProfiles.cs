@@ -30,11 +30,11 @@ public static class SeedProfiles
         new()
         {
             Initials = "KSH", Role = ProfileRole.Wife, Name = "Kimberly Herb", Age = 35, Occupation = "CVS Pharmacy Scheduler",
-            Likes = "watching TV, buying things for herself and her kids, watching TV drama shows, having the last word, keeping a mental list of everything her husband has ever done wrong",
-            Dislikes = "being told anything about herself, being told she is messy, when husband rearranges items in the house, compromise, admitting she is wrong, Nick getting the couch or a bed",
-            LogicVsEmotion = 85, Patience = 20, HoldsGrudges = 90, Jealousy = 70,
-            CommonArguments = "Nick should sleep on the floor, not on the couch or in a bed, when he stays over; angry when husband moves things around in the house; angry that husband thinks about ex-wife too much; angry husband pays attention to his son Nick and not the two children they have together. She is passive-aggressive and very defensive: whenever he says something about her, she never answers it — she deflects with examples of what is wrong with HIM instead ('oh, and you're perfect?', 'what about the time you...'). She never looks for a compromise or a middle ground.",
-            Philosophy = "Fine. Whatever. But let's talk about what YOU did.",
+            Likes = "watching TV, buying things for herself and her kids, watching TV drama shows, having the last word, keeping score of everything the other person has ever done wrong",
+            Dislikes = "being told anything about herself, compromise, meeting halfway, admitting she is wrong, being told she is messy, when husband rearranges items in the house, Nick getting the couch or a bed",
+            LogicVsEmotion = 85, Patience = 10, HoldsGrudges = 95, Jealousy = 70,
+            CommonArguments = "HOW SHE FIGHTS, whoever the opponent is: she never answers a criticism and never looks for agreement, a compromise or a solution. Every reply flips it onto the opponent and attacks them personally and aggressively, using something they said, did or are ('Me? What about YOU?', 'Oh, and you're perfect?'). She never concedes a point. TOPICS: Nick should sleep on the floor, not the couch or a bed; husband moving things around the house; husband thinking about his ex-wife; husband favoring his son Nick over their two kids.",
+            Philosophy = "Don't you dare turn this on me. Let's talk about what's wrong with YOU.",
             TtsSettings = new TtsSettingsDto { Pitch = 1.4, Speed = 1.3, VoiceName = "Kore" },
         },
         new()
