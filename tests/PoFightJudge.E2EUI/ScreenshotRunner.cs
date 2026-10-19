@@ -207,6 +207,14 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-mountains.png") });
             Report($"SHOT verdict-mountains -> {Path.Combine(folder, "verdict-mountains.png")}");
 
+            // The story picture, through the real button: headless Chromium has no share sheet, so it is saved.
+            await page.EvaluateAsync("() => scrollTo(0, 0)");
+            var story = await page.RunAndWaitForDownloadAsync(() => page.GetByRole(AriaRole.Button, new() { Name = "Story image" }).ClickAsync());
+            await story.SaveAsAsync(Path.Combine(folder, "verdict-story.png"));
+            Report($"SHOT verdict-story (the picture itself) -> {Path.Combine(folder, "verdict-story.png")}");
+            await page.WaitForTimeoutAsync(300);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-story-button.png") });
+
             // The footer, then one press: the same two, the same topic, the same host, straight back into a fight.
             var rematch = page.GetByRole(AriaRole.Button, new() { Name = "Rematch" });
             await rematch.ScrollIntoViewIfNeededAsync();

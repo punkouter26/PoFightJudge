@@ -84,6 +84,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     [Inject] private SetupMemory Memory { get; set; } = default!;
 
+    [Inject] private SaveInterop Save { get; set; } = default!;
+
     [Inject] private IJSRuntime Js { get; set; } = default!;
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
@@ -241,6 +243,66 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         return new FightCard(one, two, match.Topic, oneRole, twoRole, persona) { Device = last?.Device ?? string.Empty };
 
         static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The ruling as a story-sized picture. The slip on it is the loser's when they made one — the picture is for the
+    /// one who took it to post — and otherwise anybody's.
+    /// </summary>
+    public static StoryCard Story(AnalysisReportDto report, bool rehearsal)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        var ruled = report.Overall.Ruled;
+        var oneWon = report.Overall.Overall == Speaker.Player1;
+        var winner = !ruled ? null : oneWon ? report.Player1.Name : report.Player2.Name;
+        var loser = !ruled ? null : oneWon ? report.Player2 : report.Player1;
+        var slip = (loser?.Assessment.Fallacies ?? [])
+            .Concat(report.Player1.Assessment.Fallacies)
+            .Concat(report.Player2.Assessment.Fallacies)
+            .FirstOrDefault();
+
+        return new StoryCard(
+            RulingCard.Headline(winner),
+            report.Topic,
+            report.Player1.Name,
+            report.Player2.Name,
+            report.Player1.Metrics.TalkShare,
+            report.Player2.Metrics.TalkShare,
+            report.Overall.Summary,
+            slip?.Name,
+            slip?.Quote,
+            rehearsal,
+            report.GeneratedAt.ToString("d MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture),
+            SaveInterop.FileName(report.Topic, "ruling", "png"));
+    }
+
+    private bool _storying;
+
+    /// <summary>What happened to the story picture, when it is worth saying.</summary>
+    private string? _storyNote;
+
+    private async Task StoryAsync()
+    {
+        if (_report is null || _storying)
+        {
+            return;
+        }
+
+        _storying = true;
+        _storyNote = null;
+        try
+        {
+            _storyNote = await Save.StoryAsync(Story(_report, _match?.IsFake ?? false), _leaving.Token) switch
+            {
+                "saved" => "Saved. It is a 1080 by 1920 picture, ready for a story.",
+                "failed" => "This browser would not draw the picture.",
+                _ => null,
+            };
+        }
+        finally
+        {
+            _storying = false;
+        }
     }
 
     /// <summary>Why a rematch could not be started, under the buttons rather than in place of the ruling.</summary>

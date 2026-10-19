@@ -9,9 +9,44 @@ namespace PoFightJudge.Client.Services;
 /// API client first, because the recording is in a private container and a link element would not carry the caller's
 /// credentials in Production.
 /// </summary>
+/// <summary>
+/// A ruling as a story-sized picture (1080 by 1920): what it was about, who took it, how the room split, what was said
+/// about it, and the worst slip. Drawn by <c>PoSave.story</c>; built by the page that has the report.
+/// </summary>
+public sealed record StoryCard(
+    string Headline,
+    string Topic,
+    string One,
+    string Two,
+    double OneShare,
+    double TwoShare,
+    string Summary,
+    string? Fallacy,
+    string? FallacyQuote,
+    bool Rehearsal,
+    string When,
+    string FileName);
+
 public sealed class SaveInterop(IJSRuntime js)
 {
     public const string File = "PoSave.file";
+    public const string Story = "PoSave.story";
+
+    /// <summary>
+    /// Draws the card and hands it to the share sheet, or saves it where there is none. Says which: <c>shared</c>,
+    /// <c>saved</c>, <c>cancelled</c> (somebody closed the sheet) or <c>failed</c>.
+    /// </summary>
+    public async Task<string> StoryAsync(StoryCard card, CancellationToken ct = default)
+    {
+        try
+        {
+            return await js.InvokeAsync<string>(Story, ct, card);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            return "failed";
+        }
+    }
 
     /// <summary>Saves one file. Returns false when the browser refused, so a page can say so rather than look broken.</summary>
     public async Task<bool> FileAsync(string name, string mime, byte[] bytes, CancellationToken ct = default)

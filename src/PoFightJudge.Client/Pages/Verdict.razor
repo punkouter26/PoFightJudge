@@ -43,6 +43,13 @@
                     {
                         <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
                     }
+                    @* The ruling as a picture the size of a phone screen, for a story: to the share sheet, or saved. *@
+                    <RadzenButton Text="@(_storying ? "Drawing it…" : "Story image")" Icon="photo_camera" ButtonStyle="ButtonStyle.Base"
+                                  Variant="Variant.Outlined" Disabled="@_storying" Click="@StoryAsync" class="story" />
+                    @if (_storyNote is not null)
+                    {
+                        <p class="po-muted story-note" role="status">@_storyNote</p>
+                    }
                 </RulingCard>
 
                 @if (_turns.Count > 0)

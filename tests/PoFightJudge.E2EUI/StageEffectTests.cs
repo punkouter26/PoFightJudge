@@ -79,6 +79,30 @@ public class StageEffectTests(AppFixture app)
         mounted.Should().BeFalse("reduced motion is the app's one switch, and this is the most motion in it");
     }
 
+    /// <summary>The story picture is drawn at the size a story is, with a long topic and a slip on it.</summary>
+    [SkippableFact]
+    public async Task The_ruling_is_drawn_as_a_story_sized_picture()
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
+        await using var _ = context;
+
+        var size = await page.EvaluateAsync<int[]>(
+            """
+            async () => {
+              const url = await PoSave.story({
+                headline: 'AL took it.', topic: 'whose turn it is to load the dishwasher, again, on a Sunday night', one: 'AL', two: 'SM',
+                oneShare: 0.62, twoShare: 0.38, summary: 'One of them meant it. '.repeat(20), fallacy: 'Moving the goalposts',
+                fallacyQuote: 'that is not what I meant', rehearsal: true, when: '19 October 2026', fileName: 'x.png' }, 'data');
+              const image = new Image();
+              await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = url; });
+              return [image.naturalWidth, image.naturalHeight];
+            }
+            """);
+
+        size.Should().Equal(1080, 1920);
+        errors.Should().BeEmpty();
+    }
+
     /// <summary>
     /// A clip becomes mountains: decoded in the browser, through the FFT, drawn onto its canvas. Any one of those
     /// failing leaves the canvas blank and says nothing, so the pixels are what is checked.
