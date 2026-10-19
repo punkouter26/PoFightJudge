@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 
 @inject Viewport Viewport
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Fighters · PoFightJudge</PageTitle>
@@ -37,6 +38,19 @@
         {
             @* The roster and the standings are two readings of the same people. One below the other they were two
                tables to scroll past; as tabs it is one screen, and both are rendered so either is a click away. *@
+            @* The top three by rating, as cards with a foil that catches the light as they turn. *@
+            @if (_podium.Count > 0)
+            {
+                <section class="podium" aria-label="Top of the card">
+                    @foreach (var (fighter, index) in _podium.Select((f, i) => (f, i)))
+                    {
+                        <a href="@($"fighters/{fighter.Tag}")" class="podium-link" aria-label="@($"Number {index + 1}: {fighter.Tag}")">
+                            <FoilCard Fighter="@fighter" Rank="@(index + 1)" />
+                        </a>
+                    }
+                </section>
+            }
+
             <RadzenTabs RenderMode="TabRenderMode.Client" class="views">
                 <Tabs>
                     <RadzenTabsItem Text="Roster" Icon="groups">
@@ -133,6 +147,11 @@
 @code {
     private IReadOnlyList<FighterStatsDto> _roster = [];
     private IReadOnlyList<LeaderboardRowDto> _board = [];
+
+    /// <summary>The top three by rating, for the cards above the tabs.</summary>
+    private IReadOnlyList<FighterStatsDto> _podium = [];
+
+    private bool _foiled;
     private bool _loading = true;
     private string? _error;
     private string _find = string.Empty;
@@ -152,6 +171,7 @@
         try
         {
             _roster = await Api.GetRosterAsync();
+            _podium = FoilCard.Podium(_roster);
             _board = await Api.GetLeaderboardAsync(MatchMode.Fight);
         }
         catch (Exception ex) when (ApiFailure.Describe(ex, "The card could not be read") is { } why)
@@ -161,6 +181,25 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    /// <summary>Once the cards are in the page, their foil is set turning. Decoration: a browser that will not, will not.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_foiled || _podium.Count == 0)
+        {
+            return;
+        }
+
+        _foiled = true;
+        try
+        {
+            await JS.InvokeVoidAsync("PoFx.holo", ".foil");
+        }
+        catch (JSException)
+        {
+            // Still cards; just still.
         }
     }
 

@@ -1,0 +1,66 @@
+/* A trading card. --mx and --my run 0 to 1 across it (PoFx.holo), and everything holographic reads them: the tilt,
+   where the rainbow bands sit, where the glare is. 0.5 is face on, which is also what it is without the script. */
+.foil {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: var(--po-space-2);
+  justify-items: start;
+  overflow: hidden;
+  padding: var(--po-space-4);
+  border-width: 2px;
+  transform: perspective(700px) rotateX(calc((var(--my, 0.5) - 0.5) * -16deg)) rotateY(calc((var(--mx, 0.5) - 0.5) * 16deg));
+  transform-style: preserve-3d;
+  box-shadow: var(--po-shadow-2);
+}
+
+.foil.first { border-color: var(--po-tier-gold); }
+
+.foil.second { border-color: var(--po-tier-silver); }
+
+.foil.third { border-color: var(--po-tier-bronze); }
+
+/* The foil: thin-film bands of the palette's own colours, sliding as the card turns, laid over the card with
+   color-dodge so they light what is there rather than painting over it, and a scatter of glints across the top. */
+.foil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.5) 0 1px, transparent 1.5px) 0 0 / 23px 23px,
+    radial-gradient(circle at 70% 60%, rgb(255 255 255 / 0.35) 0 1px, transparent 1.5px) 0 0 / 31px 31px,
+    repeating-linear-gradient(115deg,
+      transparent 0%, var(--po-p1) 5%, var(--po-tier-platinum) 9%, transparent 13%,
+      transparent 19%, var(--po-accent) 23%, var(--po-p2) 27%, transparent 31%,
+      transparent 36%, var(--po-tier-diamond) 40%, transparent 44%);
+  background-size: auto, auto, 300% 300%;
+  background-position: 0 0, 0 0, calc(var(--mx, 0.5) * 100%) calc(var(--my, 0.5) * 100%);
+  mix-blend-mode: color-dodge;
+  opacity: 0.4;
+}
+
+/* The glare: a soft light where the card faces the viewer, over everything. */
+.foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at calc(var(--mx, 0.5) * 100%) calc(var(--my, 0.5) * 100%), rgb(255 255 255 / 0.28), transparent 55%);
+  mix-blend-mode: overlay;
+}
+
+.rank { font-size: var(--po-text-lg); color: var(--po-muted); }
+
+.first .rank { color: var(--po-accent-text); }
+
+.tag { font-size: var(--po-text-4xl); letter-spacing: 0.04em; line-height: 0.9; }
+
+.name { color: var(--po-muted); }
+
+.numbers { display: flex; gap: var(--po-space-5); margin: 0; }
+
+.numbers div { display: grid; gap: var(--po-space-1); }
+
+.numbers dd { margin: 0; font-size: var(--po-text-xl); }

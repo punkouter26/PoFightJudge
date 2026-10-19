@@ -238,6 +238,20 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             Report($"  fighter-promoted: badge is \"{await profile.Locator(".tier").First.GetAttributeAsync("class")}\"");
             await profile.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "fighter-promoted.png") });
             Report($"SHOT fighter-promoted -> {Path.Combine(folder, "fighter-promoted.png")}");
+
+            // The card's podium, with the pointer resting near the leader's top corner so the foil turns toward it.
+            await profile.GotoAsync(app.BaseUrl + "/fighters", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
+            var leader = profile.Locator(".foil").First;
+            await leader.WaitForAsync(new() { Timeout = 30_000 });
+            var box = await leader.BoundingBoxAsync();
+            if (box is not null)
+            {
+                await profile.Mouse.MoveAsync(box.X + (box.Width * 0.82f), box.Y + (box.Height * 0.2f));
+            }
+
+            await profile.WaitForTimeoutAsync(900);
+            await profile.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "fighters-podium.png") });
+            Report($"SHOT fighters-podium -> {Path.Combine(folder, "fighters-podium.png")}");
         }
         finally
         {

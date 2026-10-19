@@ -106,5 +106,86 @@ window.PoFx = (function () {
     });
   }
 
-  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal, table: table, stamps: stamps };
+  // Holographic cards. Each one's --mx and --my (0 to 1 across it) ease toward a target every frame: the pointer while
+  // it is over the card, the tilt of the phone where there is one, and otherwise a slow orbit so the foil is never
+  // dead. One loop for all of them, and it stops when none is left in the page. Reduced motion: face on, still.
+  const holos = [];
+  let holoFrame = 0;
+  let tilt = null;
+
+  function holoStep(now) {
+    holoFrame = 0;
+    for (let i = holos.length - 1; i >= 0; i--) {
+      const card = holos[i];
+      if (!card.el.isConnected) {
+        holos.splice(i, 1);
+        continue;
+      }
+
+      let tx = 0.5 + Math.cos(now / 2600 + card.phase) * 0.28;
+      let ty = 0.5 + Math.sin(now / 3100 + card.phase) * 0.22;
+      if (card.pointer) {
+        tx = card.pointer.x;
+        ty = card.pointer.y;
+      } else if (tilt) {
+        tx = tilt.x;
+        ty = tilt.y;
+      }
+
+      card.x += (tx - card.x) * 0.12;
+      card.y += (ty - card.y) * 0.12;
+      card.el.style.setProperty("--mx", card.x.toFixed(3));
+      card.el.style.setProperty("--my", card.y.toFixed(3));
+    }
+
+    if (holos.length > 0 && !document.hidden) {
+      holoFrame = requestAnimationFrame(holoStep);
+    }
+  }
+
+  function holo(selector) {
+    try {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
+    } catch (e) {
+      // No media queries: carry on.
+    }
+
+    document.querySelectorAll(selector).forEach(function (el) {
+      if (holos.some(function (card) { return card.el === el; })) {
+        return;
+      }
+
+      const card = { el: el, x: 0.5, y: 0.5, pointer: null, phase: holos.length * 2.1 };
+      el.addEventListener("pointermove", function (e) {
+        const box = el.getBoundingClientRect();
+        card.pointer = { x: (e.clientX - box.left) / box.width, y: (e.clientY - box.top) / box.height };
+      });
+      el.addEventListener("pointerleave", function () { card.pointer = null; });
+      holos.push(card);
+    });
+
+    // A phone held in the hand turns every card at once. Where the browser asks permission first (iOS), it is not
+    // asked for: a card that only moves with the finger is fine.
+    if (!tilt && typeof window.DeviceOrientationEvent === "function" && typeof DeviceOrientationEvent.requestPermission !== "function") {
+      window.addEventListener("deviceorientation", function (e) {
+        if (typeof e.gamma === "number" && typeof e.beta === "number") {
+          tilt = { x: Math.min(1, Math.max(0, 0.5 + e.gamma / 60)), y: Math.min(1, Math.max(0, 0.5 + (e.beta - 45) / 60)) };
+        }
+      });
+    }
+
+    if (!holoFrame && holos.length > 0) {
+      holoFrame = requestAnimationFrame(holoStep);
+    }
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && !holoFrame && holos.length > 0) {
+      holoFrame = requestAnimationFrame(holoStep);
+    }
+  });
+
+  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal, table: table, stamps: stamps, holo: holo };
 })();
