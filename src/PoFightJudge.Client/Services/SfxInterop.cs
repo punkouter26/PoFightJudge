@@ -60,11 +60,17 @@ public static class Sfx
     /// <summary>The beat before somebody is named: a snare roll that swells into a crash.</summary>
     public const string Drumroll = "drumroll";
 
+    /// <summary>The gavel coming down on a ruling, in a courtroom that answers it.</summary>
+    public const string Slam = "slam";
+
+    /// <summary>Something breaking like glass: the loser's card, on the verdict.</summary>
+    public const string Shatter = "shatter";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Bell, BellThree, Slap, Gavel, GavelThree, Tick, Whoosh,
-        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser, Drumroll,
+        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch, Riser, Drumroll, Slam, Shatter,
     ];
 }
 

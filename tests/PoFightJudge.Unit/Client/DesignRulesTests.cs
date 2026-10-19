@@ -113,6 +113,7 @@ public partial class DesignRulesTests
     {
         "fx-slap",
         "fx-glitch",
+        "fx-slam",
         "po-particles",
     };
 

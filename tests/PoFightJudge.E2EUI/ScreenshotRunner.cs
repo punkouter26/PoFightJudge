@@ -166,11 +166,17 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.WaitForTimeoutAsync(700);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-reveal.png") });
             Report($"SHOT verdict-reveal (drumroll) -> {Path.Combine(folder, "verdict-reveal.png")}");
-            await page.WaitForTimeoutAsync(1400);
+            await page.WaitForTimeoutAsync(1150);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-named.png") });
             Report($"SHOT verdict-named (the beat) -> {Path.Combine(folder, "verdict-named.png")}");
-            await page.WaitForTimeoutAsync(4000);
+            await page.WaitForTimeoutAsync(1400);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-shatter.png"), FullPage = true });
+            Report($"SHOT verdict-shatter (the loser's card) -> {Path.Combine(folder, "verdict-shatter.png")}");
+            await page.WaitForTimeoutAsync(2600);
             await ShootAsync(page, folder, "verdict", "/verdict/{id}", errors);
+
+            // The gavel's ring again, on its own: it is under a second long, and the beat is easy to miss.
+            await MomentAsync(page, folder, "verdict-shock", "() => { scrollTo(0, 0); PoGfx.focus('.verdict', '.ruling h2'); PoGfx.shock('.verdict'); }", null);
         }
         finally
         {

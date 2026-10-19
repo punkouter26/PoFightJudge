@@ -18,6 +18,9 @@ public sealed class ParticleInterop(IJSRuntime js)
     /// <summary>A win: slow, broad and tumbling, from above.</summary>
     public const string Confetti = "confetti";
 
+    /// <summary>A loss: the card named as the child breaks, and its shards are thrown up and away from the crack.</summary>
+    public const string Shatter = "shatter";
+
     /// <summary>
     /// Throws a burst into an element, optionally centred on a child of it — the browser measures where that child
     /// actually is, so it follows the layout rather than assuming one.

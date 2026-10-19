@@ -54,8 +54,10 @@
                 }
 
                 <section class="pair">
-                    <PlayerCard Report="@_report.Player1" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player1)" />
-                    <PlayerCard Report="@_report.Player2" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player2)" IsSecond="true" />
+                    <PlayerCard Report="@_report.Player1" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player1)"
+                                Lost="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player2)" />
+                    <PlayerCard Report="@_report.Player2" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player2)"
+                                Lost="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player1)" IsSecond="true" />
                 </section>
 
                 @* All tabs rendered, not just the selected one: a report is a document, so find-in-page and printing should reach every part of it. *@

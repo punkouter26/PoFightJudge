@@ -102,6 +102,18 @@
 .verdict.staged ::deep .ruling .summary,
 .verdict.staged ::deep .ruling .reasons { animation: rise var(--po-dur-slow) 2.2s var(--po-ease) both; }
 
+/* The loser's card cracks when the shards fly (Verdict.ShatterAfter after the name), not when it rises. */
+.verdict.staged ::deep .player.lost { --crack-delay: 3.3s; }
+
+/* The gavel on the beat: the whole report takes the blow. Driven by PoFx, which adds the class and takes it off. */
+.verdict.fx-slam { animation: jolt 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+
+@keyframes jolt {
+  15% { transform: translateY(6px) scale(0.995); }
+  35% { transform: translateY(-3px); }
+  60% { transform: translateY(1px); }
+}
+
 @keyframes drum {
   to { transform: scale(1.12); opacity: 0.6; }
 }

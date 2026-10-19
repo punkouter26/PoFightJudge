@@ -74,6 +74,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     [Inject] private GfxInterop Gfx { get; set; } = default!;
 
+    [Inject] private FxInterop Fx { get; set; } = default!;
+
     [Inject] private IJSRuntime Js { get; set; } = default!;
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
@@ -95,6 +97,11 @@ public sealed partial class Verdict : ComponentBase, IDisposable
     private string? Winner => _report is not { Overall.Ruled: true }
         ? null
         : _report.Overall.Overall == Speaker.Player1 ? _report.Player1.Name : _report.Player2.Name;
+
+    /// <summary>Who did not take it, when somebody did.</summary>
+    private string? Loser => _report is not { Overall.Ruled: true }
+        ? null
+        : _report.Overall.Overall == Speaker.Player1 ? _report.Player2.Name : _report.Player1.Name;
 
     /// <summary>Both sides in a fixed order, so every tab lays them out the same way round.</summary>
     private IEnumerable<(Speaker Side, PlayerReportDto Report)> Sides =>
@@ -246,6 +253,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             {
                 return;
             }
+
+            await GavelAsync();
         }
 
         // Nobody won a fight that was too short to rule on, and there is nothing to celebrate about that.
@@ -256,6 +265,13 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             // After the render that put the cards on the page, or there is nothing to measure the burst against.
             await Task.Yield();
             await Particles.BurstAsync(RevealSelector, ParticleInterop.Confetti, $".player[data-tag='{won}']", _leaving.Token);
+        }
+
+        // The loser's card has risen by now, and it breaks: the crack in its CSS, the shards thrown off it here.
+        if (_staged && await HoldAsync(ShatterAfter) && Loser is { } lost)
+        {
+            await Sound.PlayAsync(Sfx.Shatter, ct: _leaving.Token);
+            await Particles.BurstAsync(RevealSelector, ParticleInterop.Shatter, $".player[data-tag='{lost}']", _leaving.Token);
         }
 
         // Once the rest has risen there is nothing left to skip: the button goes and the page is a page again.
@@ -281,8 +297,26 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         return !_leaving.IsCancellationRequested;
     }
 
-    /// <summary>From the name landing to the last part of the report having risen (Verdict.razor.css).</summary>
-    private static readonly TimeSpan Settle = TimeSpan.FromSeconds(1.8);
+    /// <summary>From the name landing to the loser's card breaking, once it has risen (Verdict.razor.css cracks it then).</summary>
+    private static readonly TimeSpan ShatterAfter = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>From the card breaking to the last part of the report having risen.</summary>
+    private static readonly TimeSpan Settle = TimeSpan.FromSeconds(0.6);
+
+    /// <summary>The PoFx class the report jolts with on the beat (Verdict.razor.css).</summary>
+    private const string SlamEffect = "slam";
+
+    /// <summary>
+    /// The beat: the gavel comes down in a courtroom, a ring goes out through the grain from the winner's name, and the
+    /// whole report takes the blow.
+    /// </summary>
+    private async Task GavelAsync()
+    {
+        await Sound.PlayAsync(Sfx.Slam, ct: _leaving.Token);
+        await Gfx.FocusAsync(RevealSelector, ".ruling h2", _leaving.Token);
+        await Gfx.ShockAsync(RevealSelector, _leaving.Token);
+        await Fx.BurstAsync(SlamEffect, RevealSelector, _leaving.Token);
+    }
 
     /// <summary>Straight to the ruling: every part shows now, and the drumroll's wait ends.</summary>
     private void Skip()

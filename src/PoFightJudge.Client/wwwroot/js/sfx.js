@@ -150,6 +150,41 @@ window.PoSfx = (function () {
     src.stop(at + options.duration + 0.02);
   }
 
+  let room = null;
+
+  /**
+   * A courtroom, made up: a convolver fed 1.8 s of stereo noise falling away steeply, which is what a big hard room
+   * does to a hit. Built once, on the first sound that wants it.
+   */
+  function reverb() {
+    if (!room) {
+      const length = Math.floor(ctx.sampleRate * 1.8);
+      const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+      for (let channel = 0; channel < 2; channel++) {
+        const data = impulse.getChannelData(channel);
+        for (let i = 0; i < length; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3.2);
+        }
+      }
+
+      room = ctx.createConvolver();
+      room.buffer = impulse;
+      const wet = ctx.createGain();
+      wet.gain.value = 0.45;
+      room.connect(wet).connect(master);
+    }
+
+    return room;
+  }
+
+  /** Where a sound goes to be heard in the room: dry to wherever it was going, and a send into the reverb. */
+  function roomy() {
+    const split = ctx.createGain();
+    split.connect(out || master);
+    split.connect(reverb());
+    return split;
+  }
+
   // Staircase curves for the bit crusher, by number of steps: every sample rounded to one of a few levels.
   const crushCurves = {};
 
@@ -300,6 +335,24 @@ window.PoSfx = (function () {
       }
 
       hit(at + 1.75, { freq: 6000, duration: 1.4, gain: 0.35, filter: "highpass" });
+    },
+    // The gavel coming down on a ruling, in a courtroom: a deep drop, the crack of wood, and the room answering.
+    "slam": function (at) {
+      out = roomy();
+      tone(at, { type: "sine", freq: 95, sweepTo: 36, duration: 0.55, gain: 0.95 });
+      hit(at, { freq: 900, duration: 0.12, gain: 0.8, filter: "lowpass" });
+      hit(at, { freq: 2400, duration: 0.03, gain: 0.45, q: 1.2 });
+    },
+    // Something breaking like glass: the break itself, then the pieces landing — nine pings at random, each one
+    // high, short and gone, in the same room.
+    "shatter": function (at) {
+      out = roomy();
+      hit(at, { freq: 3200, duration: 0.25, gain: 0.5, filter: "highpass" });
+      for (let i = 0; i < 9; i++) {
+        const t = at + 0.02 + Math.random() * 0.5;
+        tone(t, { type: "sine", freq: 2500 + Math.random() * 4500, duration: 0.08 + Math.random() * 0.15, gain: 0.05 });
+        hit(t, { freq: 5000 + Math.random() * 3000, duration: 0.03, gain: 0.12, q: 4 });
+      }
     },
     // The clock running out: under three seconds of endless climb, with a tick at the top to say it is done.
     "riser": function (at) {

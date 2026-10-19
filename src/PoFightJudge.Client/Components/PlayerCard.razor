@@ -1,6 +1,6 @@
 @using PoFightJudge.Client.Stats
 @* One fighter as the report saw them: how they came across, and the line that was worth keeping. *@
-<article class="player po-card @(IsSecond ? "p2" : "p1")" data-tag="@Report.Name">
+<article class="player po-card @(IsSecond ? "p2" : "p1") @(Lost ? "lost" : null)" data-tag="@Report.Name">
     <header>
         <span class="tag po-display">@Report.Name</span>
         @if (Won)
@@ -37,6 +37,9 @@
     [Parameter, EditorRequired] public PlayerReportDto Report { get; set; } = default!;
 
     [Parameter] public bool Won { get; set; }
+
+    /// <summary>The other one took it. Their card is cracked where the gavel landed.</summary>
+    [Parameter] public bool Lost { get; set; }
 
     [Parameter] public bool IsSecond { get; set; }
 }

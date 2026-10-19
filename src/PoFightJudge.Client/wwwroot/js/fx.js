@@ -5,18 +5,19 @@ window.PoFx = (function () {
   const DURATION = 700;
   let timer = 0;
 
-  function target() {
-    return document.querySelector(".stage") || document.body;
+  // The play screen's stage, unless the caller names something else — the verdict jolts its report.
+  function target(selector) {
+    return (selector && document.querySelector(selector)) || document.querySelector(".stage") || document.body;
   }
 
   // Re-triggers a CSS animation on the stage. Removing the class and forcing a reflow before adding it back is
   // what makes a second slap animate at all; without the reflow the browser coalesces the two class changes.
-  function burst(kind) {
+  function burst(kind, selector) {
     if (typeof kind !== "string" || kind.length === 0) {
       return;
     }
 
-    const el = target();
+    const el = target(selector);
     const name = "fx-" + kind.replace(/[^a-z0-9-]/gi, "");
     el.classList.remove(name);
     void el.offsetWidth;

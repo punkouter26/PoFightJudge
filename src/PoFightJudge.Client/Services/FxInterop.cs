@@ -11,11 +11,14 @@ public sealed class FxInterop(IJSRuntime js)
     public const string Burst = "PoFx.burst";
 
     /// <summary>Plays the effect registered for an interjection key, if the browser has one.</summary>
-    public async Task BurstAsync(string kind, CancellationToken ct = default)
+    public Task BurstAsync(string kind, CancellationToken ct = default) => BurstAsync(kind, null, ct);
+
+    /// <summary>The same, on the first element matching <paramref name="selector"/> rather than the stage.</summary>
+    public async Task BurstAsync(string kind, string? selector, CancellationToken ct = default)
     {
         try
         {
-            await js.InvokeVoidAsync(Burst, ct, kind);
+            await js.InvokeVoidAsync(Burst, ct, kind, selector);
         }
         catch (JSException)
         {

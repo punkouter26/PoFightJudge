@@ -147,7 +147,9 @@ precision highp float;
 in vec2 v_uv;
 out vec4 outColour;
 uniform vec2 u_res;
+uniform vec2 u_focus;
 uniform float u_time;
+uniform float u_shock;
 uniform vec3 u_c3;
 ${NOISE}
 void main() {
@@ -158,7 +160,24 @@ void main() {
   float grain = hash(v_uv * u_res + fract(u_time) * 431.0) - 0.5;
   float alpha = vignette * 0.3 + abs(grain) * 0.05;
   vec3 colour = mix(vec3(0.0), u_c3 * 0.35, vignette * 0.25) + vec3(grain * 0.12);
-  outColour = vec4(colour, clamp(alpha, 0.0, 0.42));
+
+  // The gavel: a ring out from the winner's name, measured in widths so it travels at the same speed down a long
+  // report as a short one, its three channels a hair apart at the edge, and a flash where it started.
+  if (u_shock >= 0.0) {
+    float life = clamp(1.0 - u_shock / 0.8, 0.0, 1.0);
+    vec2 q = (v_uv - u_focus) * u_res / max(u_res.x, 1.0);
+    float r = length(q);
+    float radius = u_shock * 1.4;
+    vec3 split = vec3(
+      smoothstep(0.03, 0.0, abs(r - radius * 1.05)),
+      smoothstep(0.03, 0.0, abs(r - radius)),
+      smoothstep(0.03, 0.0, abs(r - radius * 0.95)));
+    float flash = life * life * 0.4 * smoothstep(0.35, 0.0, r);
+    colour += split * life * 1.3 + vec3(flash);
+    alpha = max(alpha, max(max(split.r, split.g), max(split.b, flash)) * life * 0.9);
+  }
+
+  outColour = vec4(colour, clamp(alpha, 0.0, 0.9));
 }`;
 
   // ── The live fight's ink: a real fluid, not a picture of one ──

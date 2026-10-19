@@ -145,6 +145,45 @@ window.PoParticles = (function () {
     }
   }
 
+  /**
+   * A card breaking: shards of it thrown up and away from where it was struck — the same point the crack in
+   * PlayerCard's CSS radiates from, 70% across and 30% down — spinning as they fall. Each shard is its own triangle.
+   */
+  function shatter(stage, size, rect) {
+    const tint = [colour("--po-surface-2", "#1c2230"), colour("--po-border-strong", "#525c73"), colour("--po-danger", "#ff5a5a"), "#ffffff"];
+    const hitX = rect.x + rect.w * 0.7;
+    const hitY = rect.y + rect.h * 0.3;
+    for (let i = 0; i < 70; i++) {
+      const x = rect.x + Math.random() * rect.w;
+      const y = rect.y + Math.random() * rect.h;
+      const angle = Math.atan2(y - hitY, x - hitX) + (Math.random() - 0.5) * 0.6;
+      const speed = (150 + Math.random() * 450) * size.dpr;
+      const radius = (4 + Math.random() * 12) * size.dpr;
+      const corners = [];
+      for (let k = 0; k < 3; k++) {
+        const a = k * 2.1 + (Math.random() - 0.5) * 0.9;
+        const r = radius * (0.6 + Math.random() * 0.6);
+        corners.push(Math.cos(a) * r, Math.sin(a) * r);
+      }
+
+      spawn(stage, {
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 220 * size.dpr,
+        life: 1.2 + Math.random(),
+        age: 0,
+        size: radius,
+        spin: (Math.random() - 0.5) * 16,
+        angle: Math.random() * Math.PI * 2,
+        drag: 0.8,
+        gravity: 1,
+        colour: pick(tint),
+        shape: "shard",
+        corners: corners,
+      });
+    }
+  }
+
   /** One ember, drifting up from the bottom edge. Emitted continuously rather than in a burst. */
   function ember(stage, size) {
     spawn(stage, {
@@ -201,6 +240,21 @@ window.PoParticles = (function () {
         ctx.translate(p.x, p.y);
         ctx.rotate(p.angle);
         ctx.fillRect(-p.size, -p.size * 0.4, p.size * 2, p.size * 0.8);
+        ctx.restore();
+      } else if (p.shape === "shard") {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.beginPath();
+        ctx.moveTo(p.corners[0], p.corners[1]);
+        ctx.lineTo(p.corners[2], p.corners[3]);
+        ctx.lineTo(p.corners[4], p.corners[5]);
+        ctx.closePath();
+        ctx.fill();
+        // A bright edge on one side, which is all it takes for a flat triangle to read as broken glass.
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
         ctx.restore();
       } else {
         ctx.beginPath();
@@ -267,6 +321,23 @@ window.PoParticles = (function () {
     };
   }
 
+  /** The box a child element occupies, in device pixels. The whole canvas when there is no such child. */
+  function rectAt(stage, size, childSelector) {
+    const child = childSelector ? stage.host.querySelector(childSelector) : null;
+    if (!child) {
+      return { x: 0, y: 0, w: size.width, h: size.height };
+    }
+
+    const host = stage.host.getBoundingClientRect();
+    const rect = child.getBoundingClientRect();
+    return {
+      x: (rect.left - host.left) * size.dpr,
+      y: (rect.top - host.top) * size.dpr,
+      w: rect.width * size.dpr,
+      h: rect.height * size.dpr,
+    };
+  }
+
   return {
     /**
      * Throws a burst of `kind` into the element at `selector`, optionally centred on a child of it. Silent about
@@ -288,6 +359,8 @@ window.PoParticles = (function () {
           confetti(stage, size);
         } else if (kind === "sparks") {
           sparks(stage, size, pointAt(stage, size, childSelector));
+        } else if (kind === "shatter") {
+          shatter(stage, size, rectAt(stage, size, childSelector));
         } else {
           return false;
         }
