@@ -61,12 +61,19 @@ other through `Shared` contracts and repositories, not through each other's serv
   all. The scripted host replaces the client, so the state machine under test is the real one.
 - Records are computed on read by `FighterStatsBuilder` and `StyleProfileBuilder` from
   result rows. Nothing anywhere increments a counter.
-- The effects layer is four files in `wwwroot/js` and nothing in the app depends on any of it: `sfx.js` synthesizes
-  every sound that is not a voice, `gfx.js` runs the WebGL2 shaders, `particles.js` the canvas physics, and
-  `fx.js` the one-shot CSS classes. Each entry point answers "no" rather than throwing, reduced motion turns the
-  drawn half off entirely, and the sound switch is stored where JS can read it before Blazor boots. The catalogues
-  are spelled twice — `Sfx`/`Shaders` in C#, the voices and shaders in JS — and tests hold the pairs together,
-  because a name the browser does not know is silence rather than an error.
+- The effects layer is five files in `wwwroot/js` and nothing in the app depends on any of it: `sfx.js` synthesizes
+  every sound that is not a voice (HRTF-placed when it has a side, a made-up courtroom reverb when it wants one),
+  `gfx.js` runs the WebGL2 shaders — single passes, plus two simulated kinds: `fluid` (stable fluids in half-float
+  ping-pong targets) and `swarm` (particles stepped by transform feedback) — `particles.js` the canvas physics
+  (sparks, confetti, shards, Verlet streamers), `terrain.js` a clip's spectrum drawn as mountains, and `fx.js` the
+  one-shot CSS classes, the stamps, the holo foil, table mode and the tour's spotlight. Each entry point answers "no"
+  rather than throwing, reduced motion turns the drawn half off entirely, and the sound switch is stored where JS
+  can read it before Blazor boots. The catalogues are spelled twice — `Sfx`/`Shaders` in C#, the voices and shaders
+  in JS — and `EffectCatalogueTests` holds the pairs together, because a name the browser does not know is silence
+  rather than an error; `StageEffectTests` compiles every shader and plays every voice in a real browser.
+- `ScreenshotRunner` with `SEED=1` plays a watch and a fight on the fakes and photographs the moments the effects
+  live in (the tape, the glitch, the heat, table mode, the verdict's reveal, shatter, story image, rematch, the
+  podium, the tour). A CSS effect too quick to catch is frozen part-way; a canvas is whatever frame it lands on.
 
 ## Deviations from the plan
 
@@ -92,6 +99,14 @@ Each was a deliberate decision made while building; the commit that made it says
 | T100 | the pages and their endpoints | plus `.husky/commit-msg` | the hook took two-digit task numbers only, so T100 could not be committed under the rule the hook exists to enforce |
 | T101 | trim the suites | 62 Unit files deleted outright | at one test per decision most of those files had no decision left that another test did not already make |
 | T110–T116 | ship the seven visual effects end to end, with full Unit tests on every commit, then run E2EUI | ship T110–T116 one task one commit each, Unit tier + `dotnet format --verify-no-changes` green on every commit; E2EUI (StageEffectTests additions) deferred to the next time `./SCRIPTS/setup.ps1` brings Azurite + the host up | the user asked for all in one session without bringing the dev env online, and Unit + format are the contracts that already run on every commit; E2EUI's job is to prove the shader/canvas paths, which the existing StageEffectTests pattern covers once the host is reachable |
+| T120 | the crosstalk glitch only | plus `EffectCatalogueTests` | the pair test between `Sfx`/`Shaders` and the JS went in T101, and T119–T138 add nine voices and three shaders to the two lists |
+| T121 | a Shepard-tone bed under the last half-minute | a 2.6 s riser at 30 s and 10 s left | T65: an open microphone records whatever the speakers play, so the climb is punctuation, never a bed |
+| T122 | fluid behind the live fight and the watch rounds | the live fight only | the watch stage already carries the speaker's aura and the slap's ring on its own canvas; the fluid is the live stage's |
+| T125 | table mode with tap zones to take a turn | table mode without tap zones | the live hub has no call for a fighter to claim the floor, so tap zones are server work, not a page |
+| T127 | the gavel's ring refracting the page | a chromatic ring in the grain shader over the report | a WebGL canvas cannot read the DOM under it; the ring is drawn over it instead |
+| T134 | rank tiers with an Elo history chart | tiers, badges and a promotion, no chart | ratings are replayed whole on read, so there is no per-fight rating to draw without a change on the server |
+| T137 | WebGPU flocks with a WebGL2 fallback | WebGL2 transform feedback only | T68's reason: headless Chromium has no `navigator.gpu`, so a second backend would be untested code |
+| T138 | a demo fight on the stand-in AI | a demo watch on whatever AI the environment has | in Production the fakes refuse to register; the demo is a real watch there and counts against the daily allowance |
 | — | face uploads decoded and re-encoded on the server with ImageSharp | the browser crops to a 512 px PNG (`js/face.js`); the server checks the PNG header and size, and decodes nothing | every ImageSharp 3.x has open advisories (three high), the fixes are 4.1.2+ only, and 4.x will not build without a paid-for licence key |
 
 ## Still outstanding
