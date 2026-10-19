@@ -218,5 +218,9 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
 public static class Cues
 {
     public static Task CueAsync(this IServiceProvider services, string sound, CancellationToken ct = default) =>
-        services.GetService(typeof(SfxInterop)) is SfxInterop sfx ? sfx.PlayAsync(sound, ct: ct) : Task.CompletedTask;
+        services.CueAsync(sound, 0, ct);
+
+    /// <summary>The same, for a voice that takes a 0–1 value (a counting tick climbs with it).</summary>
+    public static Task CueAsync(this IServiceProvider services, string sound, double value, CancellationToken ct = default) =>
+        services.GetService(typeof(SfxInterop)) is SfxInterop sfx ? sfx.PlayAsync(sound, value, ct) : Task.CompletedTask;
 }

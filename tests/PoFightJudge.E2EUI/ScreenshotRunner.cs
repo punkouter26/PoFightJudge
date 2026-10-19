@@ -131,6 +131,16 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             }
 
             await page.Locator("button.rz-steps-next").ClickAsync();
+
+            // Spinning for a topic, mid-reel and landed — then the topic the rest of the shots expect, typed over it.
+            await page.GetByText("Spicy").ClickAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "Spin" }).ClickAsync();
+            await page.WaitForTimeoutAsync(350);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "fight-spin.png") });
+            await page.Locator(".reel.landed").WaitForAsync(new() { Timeout = 10_000 });
+            await page.WaitForTimeoutAsync(500);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "fight-spun.png") });
+            Report($"SHOT fight-spin, fight-spun -> {folder}");
             await page.Locator("input[name=topic]").FillAsync("who does the dishes");
             await AppFixture.ToTheLastStepAsync(page);
             await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();

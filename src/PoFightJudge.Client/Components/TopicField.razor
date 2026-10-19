@@ -1,23 +1,67 @@
 @* What the argument is about: the same box, the same hint and the same way out of a blank mind on both channels. *@
+@inject IServiceProvider Services
 <section class="topic">
     <RadzenFormField Text="@Label" Variant="Variant.Outlined">
         <ChildContent>
             @* Published as it is typed, so nothing is lost by pressing Start without leaving the box first. *@
-            <RadzenTextBox Value="@Value" ValueChanged="@PublishAsync" @oninput="@(e => PublishAsync(e.Value?.ToString() ?? string.Empty))"
+            <RadzenTextBox Value="@Value" ValueChanged="@TypedAsync" @oninput="@(e => TypedAsync(e.Value?.ToString() ?? string.Empty))"
                            Name="topic" MaxLength="200" Placeholder="@Placeholder" />
         </ChildContent>
         <Helper><span class="po-muted">@Hint</span></Helper>
     </RadzenFormField>
-    <RadzenButton Text="Random" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="@PickRandomAsync" />
+
+    @* The way out of a blank mind: pick how hot, pull the lever. *@
+    <div class="spin">
+        <RadzenSelectBar @bind-Value="_heat" TValue="Heat" Size="ButtonSize.Small" Name="heat" aria-label="How spicy a topic">
+            <Items>
+                <RadzenSelectBarItem Text="Mild" Value="@Heat.Mild" />
+                <RadzenSelectBarItem Text="Medium" Value="@Heat.Medium" />
+                <RadzenSelectBarItem Text="Spicy" Value="@Heat.Spicy" />
+            </Items>
+        </RadzenSelectBar>
+        <RadzenButton Text="@(_spinning ? "Spinning…" : "Spin")" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                      Disabled="@_spinning" Click="@SpinAsync" />
+    </div>
+
+    @if (_showing is not null)
+    {
+        @* Each frame of the reel is a new element, so its slide-in plays again; the landing gets a glow. *@
+        <div class="reel @(_spinning ? null : "landed")" aria-hidden="true">
+            <span @key="_frame" class="frame">@_showing</span>
+        </div>
+    }
 </section>
 
 @code {
-    private static readonly string[] RandomTopics =
-    [
-        "the thermostat", "whose turn it is to load the dishwasher", "the in-laws at Christmas",
-        "screen time after nine", "who forgot the anniversary", "the correct way to load a car",
-        "leaving every light on", "weekend plans, again", "whose family we visit first",
-    ];
+    public enum Heat
+    {
+        Mild,
+        Medium,
+        Spicy,
+    }
+
+    /// <summary>What there is to argue about, by how hot it runs. The reel only ever shows the heat asked for.</summary>
+    public static IReadOnlyDictionary<Heat, string[]> Topics { get; } = new Dictionary<Heat, string[]>
+    {
+        [Heat.Mild] =
+        [
+            "the thermostat", "whose turn it is to load the dishwasher", "the correct way to load a car",
+            "leaving every light on", "weekend plans, again", "what to watch tonight",
+        ],
+        [Heat.Medium] =
+        [
+            "screen time after nine", "whose family we visit first", "the in-laws at Christmas",
+            "who forgot the anniversary", "splitting the bills fairly", "the friend who always stays too long",
+        ],
+        [Heat.Spicy] =
+        [
+            "who really does more around the house", "the ex who still texts", "your mother's opinions about us",
+            "the money spent without asking", "moving for your job, or mine", "who apologises first",
+        ],
+    };
+
+    /// <summary>How many topics flick past before it lands.</summary>
+    private const int Frames = 14;
 
     [Parameter] public string Value { get; set; } = string.Empty;
 
@@ -29,11 +73,79 @@
 
     [Parameter] public string Hint { get; set; } = "Leave it blank and they will find something.";
 
+    private Heat _heat = Heat.Medium;
+
+    /// <summary>Asked for rather than injected: a page rendered without a clock registered still has a topic box.</summary>
+    private TimeProvider Clock => Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private bool _spinning;
+    private string? _showing;
+    private int _frame;
+
+    /// <summary>
+    /// The run of topics a spin shows, the last being where it lands: all of one heat, never the same one twice in a
+    /// row. Public, with the random source passed in, because it is the whole decision.
+    /// </summary>
+    public static IReadOnlyList<string> Reel(Random random, Heat heat, int frames)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        var pool = Topics[heat];
+        var reel = new List<string>(frames);
+        for (var i = 0; i < frames; i++)
+        {
+            string next;
+            do
+            {
+                next = pool[random.Next(pool.Length)];
+            }
+            while (reel.Count > 0 && next == reel[^1]);
+
+            reel.Add(next);
+        }
+
+        return reel;
+    }
+
+    /// <summary>How long frame <paramref name="frame"/> of <paramref name="frames"/> stays up: quick at first, slowing to the landing.</summary>
+    public static TimeSpan Pause(int frame, int frames) =>
+        TimeSpan.FromMilliseconds(45 + (260 * Math.Pow((double)frame / Math.Max(1, frames - 1), 2.2)));
+
+    /// <summary>Somebody typing has their own topic: the reel, if there was one, has said its piece.</summary>
+    private Task TypedAsync(string value)
+    {
+        _showing = null;
+        return PublishAsync(value);
+    }
+
     private Task PublishAsync(string value)
     {
         Value = value ?? string.Empty;
         return ValueChanged.InvokeAsync(Value);
     }
 
-    private Task PickRandomAsync() => PublishAsync(RandomTopics[Random.Shared.Next(RandomTopics.Length)]);
+    /// <summary>
+    /// Pulls the lever: the reel flicks through topics of the chosen heat, ticking higher as it slows, and lands with
+    /// a cue — and the topic it lands on goes into the box.
+    /// </summary>
+    private async Task SpinAsync()
+    {
+        if (_spinning)
+        {
+            return;
+        }
+
+        _spinning = true;
+        var reel = Reel(Random.Shared, _heat, Frames);
+        for (var frame = 0; frame < reel.Count; frame++)
+        {
+            _showing = reel[frame];
+            _frame++;
+            StateHasChanged();
+            await Services.CueAsync(Sfx.Count, (double)frame / reel.Count);
+            await Task.Delay(Pause(frame, reel.Count), Clock);
+        }
+
+        _spinning = false;
+        await Services.CueAsync(Sfx.Cue);
+        await PublishAsync(reel[^1]);
+    }
 }

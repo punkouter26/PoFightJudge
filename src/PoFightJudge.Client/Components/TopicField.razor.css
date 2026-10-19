@@ -4,3 +4,59 @@
   gap: var(--po-space-3);
   align-items: start;
 }
+
+.spin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--po-space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* The reel: one window, a topic in it at a time, each one dropping in from above as the last drops out. */
+.reel {
+  grid-column: 1 / -1;
+  margin-bottom: var(--po-space-3);
+  overflow: hidden;
+  padding: var(--po-space-3) var(--po-space-4);
+  border: 1px solid var(--po-border);
+  border-radius: var(--po-radius-md);
+  background: var(--po-surface-2);
+  text-align: center;
+}
+
+.frame {
+  display: block;
+  font-family: var(--po-font-display);
+  font-size: var(--po-text-xl);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  animation: reel-in 90ms linear both;
+}
+
+/* Where it landed: the window lights up in gold, and the topic settles with a bump. */
+.reel.landed {
+  border-color: var(--po-accent);
+  box-shadow: 0 0 0 3px var(--po-accent-soft), 0 0 24px var(--po-accent-soft);
+}
+
+.reel.landed .frame {
+  color: var(--po-accent-text);
+  animation: reel-land 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+@keyframes reel-in {
+  from { transform: translateY(-110%); filter: blur(2px); }
+  to { transform: none; filter: none; }
+}
+
+@keyframes reel-land {
+  from { transform: translateY(-40%) scale(1.15); }
+  to { transform: none; }
+}
+
+@media (max-width: 40rem) {
+  .topic { grid-template-columns: 1fr; }
+  .spin { justify-content: flex-start; }
+}
