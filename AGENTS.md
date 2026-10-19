@@ -130,10 +130,11 @@ running when the wire format or a schema changes, and not otherwise.
 - **master only.** All work goes on `master`. Another branch happens only when it is asked for by name.
 - **Restart and check.** After a code change, restart the app and confirm it came back up before saying it works.
 - **Overview first.** Check for a `DOCS` folder in the root for the overall summary of the project; until there
-  is one, it lives in `README.md` and this file.
+  is one, it lives in `README.md` and this file. When a dependency, a configuration key or a major endpoint
+  changes, update `DOCS/` and `README.md` in the same commit.
 - **No `dotnet user-secrets`.** Local settings go in `appsettings*.json`; anything secret goes in Azure Key Vault.
 - **Never push.** `git push` happens only when the words **`git sync`** are typed — never off my own bat,
-  and never because it seemed implied. On a `git sync`: commit with a short subject in American slang, so
+  and never because it seemed implied. On a `git sync`: commit with a short, non-technical subject in American slang, so
   it reads like a person wrote it, then push.
 - **TL;DR.** Any answer over 100 words ends with a 20-word summary.
 - **Run the tests the change touched**, not the whole suite — and none at all when the change is simple.
@@ -141,4 +142,6 @@ running when the wire format or a schema changes, and not otherwise.
 - **Warnings are errors.** A compile warning gets fixed, not left.
 - **Say when a lot goes.** If a prompt removes more than 100 lines of code overall, mention it.
 - **UI changes get a before/after.** Take annotated screenshots of the old and the new UI with the changes
-  marked, put them in an HTML file in the `SCREENSHOTS` folder, and give its full path.
+  marked, put them in `SCREENSHOTS/YYMMDD-feature-name.html`, and give its full path.
+- **3-tier diff summary.** A code change over 20 lines ends with three one-line summaries: *Toddler* (the
+  simple idea), *Child* (what it does), *Adult* (the technical/architectural change).
