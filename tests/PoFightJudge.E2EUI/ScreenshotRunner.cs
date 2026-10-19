@@ -10,7 +10,8 @@ namespace PoFightJudge.E2EUI;
 /// to the pages a change touched. Skipped when <c>SHOTS</c> is unset, so the suite is unaffected.
 /// <c>VIEWPORTS=desktop,phone</c> takes each page at both sizes (a phone shot is named <c>-phone</c>), and
 /// <c>SEED=1</c> loads the default cast and plays one watch through first, so the lists have something in them and
-/// the finished argument is captured as <c>watch-play</c>.
+/// the finished argument is captured as <c>watch-play</c>; then one fight is played on the fake microphone and
+/// captured as <c>fight-live</c>, <c>verdict-reveal</c> and <c>verdict</c>.
 /// </summary>
 [Collection(AppCollection.Name)]
 public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
@@ -102,6 +103,46 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.Locator("section.verdict").WaitForAsync(new() { Timeout = 150_000 });
             await page.WaitForTimeoutAsync(1500);
             await ShootAsync(page, folder, "watch-play", "/watch/play", errors);
+        }
+        finally
+        {
+            await context.CloseAsync();
+        }
+
+        await FightAsync(folder);
+    }
+
+    /// <summary>
+    /// One whole fight on the fake microphone and the scripted host, so the live stage and the ruling it hands over
+    /// to are photographed too: <c>fight-live</c> mid-argument, <c>verdict-reveal</c> while the ruling is still
+    /// arriving, and <c>verdict</c> once it has settled.
+    /// </summary>
+    private async Task FightAsync(string folder)
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/2p", user: "e2e-shots");
+        try
+        {
+            foreach (var (name, tag) in new[] { ("player1Tag", "AL"), ("player2Tag", "SM") })
+            {
+                var input = page.Locator($"div.tag-input[data-name={name}] input");
+                await input.WaitForAsync(new() { Timeout = 30_000 });
+                await input.FillAsync(tag);
+                await input.PressAsync("Tab", new() { Delay = 20 });
+            }
+
+            await page.Locator("button.rz-steps-next").ClickAsync();
+            await page.Locator("input[name=topic]").FillAsync("who does the dishes");
+            await AppFixture.ToTheLastStepAsync(page);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();
+
+            await page.WaitForFunctionAsync("() => document.querySelectorAll('article.caption').length > 1", null, new() { Timeout = 90_000 });
+            await ShootAsync(page, folder, "fight-live", "/fight/{id}", errors);
+
+            await page.Locator("section.ruling").WaitForAsync(new() { Timeout = 180_000 });
+            await page.WaitForTimeoutAsync(700);
+            await ShootAsync(page, folder, "verdict-reveal", "/verdict/{id}", errors);
+            await page.WaitForTimeoutAsync(5000);
+            await ShootAsync(page, folder, "verdict", "/verdict/{id}", errors);
         }
         finally
         {
