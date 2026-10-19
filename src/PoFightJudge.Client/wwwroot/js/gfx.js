@@ -214,6 +214,100 @@ void main() {
   outColour = vec4(tint, clamp(light * 0.8, 0.0, 0.75));
 }`;
 
+  // ── The home page's two swarms ──
+  // Every particle is stepped on the GPU: a vertex shader reads one particle's position and velocity, steers it, and
+  // transform feedback writes the result into the other buffer of a pair — no pixel is drawn on that pass. Each of
+  // the two flocks is pulled toward a home of its own, wandering a Lissajous path on its side of the screen, and
+  // shoved off the other flock's home when it gets close; curl noise (the curl of a value-noise field, so it swirls
+  // without bunching) gives them somewhere to go in between. Every so often both homes drift into the middle and the
+  // flocks meet head on. Then they are drawn as soft points, brighter the faster they move, added on top of each
+  // other so a crowd glows. Space is the height's units: x runs ±aspect, y runs ±1.
+  const SWARM_STEP = `#version 300 es
+precision highp float;
+in vec2 a_pos;
+in vec2 a_vel;
+in float a_flock;
+out vec2 v_pos;
+out vec2 v_vel;
+out float v_flock;
+uniform float u_time;
+uniform float u_dt;
+uniform vec2 u_home[2];
+uniform float u_aspect;
+${NOISE}
+void main() {
+  bool first = a_flock < 0.5;
+  vec2 p = a_pos;
+  vec2 v = a_vel;
+  vec2 home = first ? u_home[0] : u_home[1];
+  vec2 rival = first ? u_home[1] : u_home[0];
+
+  vec2 toHome = home - p;
+  float d = length(toHome);
+  vec2 dir = toHome / max(d, 0.001);
+  vec2 steer = dir * min(d * 1.5, 1.0) * 1.2;
+  // Round and round their home rather than straight at it — a murmuration, not a queue — the two turning opposite
+  // ways, so where they meet they shear.
+  steer += vec2(-dir.y, dir.x) * (first ? 1.0 : -1.0) * 1.0 * smoothstep(0.0, 0.35, d);
+  vec2 away = p - rival;
+  float r = length(away);
+  steer += away / max(r, 0.001) * smoothstep(0.45, 0.0, r) * 1.4;
+
+  float e = 0.02;
+  vec2 q = p * 2.2 + vec2(u_time * 0.06, first ? 0.0 : 9.0);
+  vec2 curl = vec2(noise(q + vec2(0.0, e)) - noise(q - vec2(0.0, e)), noise(q - vec2(e, 0.0)) - noise(q + vec2(e, 0.0))) / (2.0 * e);
+
+  v += (steer + curl * 0.35) * u_dt;
+  v *= 1.0 - 1.1 * u_dt;
+  float speed = length(v);
+  if (speed > 0.9) { v *= 0.9 / speed; }
+  p += v * u_dt;
+  p = clamp(p, vec2(-u_aspect * 1.1, -1.1), vec2(u_aspect * 1.1, 1.1));
+
+  v_pos = p;
+  v_vel = v;
+  v_flock = a_flock;
+  gl_Position = vec4(0.0);
+}`;
+
+  const SWARM_NOTHING = `#version 300 es
+precision mediump float;
+out vec4 outColour;
+void main() { outColour = vec4(0.0); }`;
+
+  const SWARM_POINTS = `#version 300 es
+precision highp float;
+in vec2 a_pos;
+in vec2 a_vel;
+in float a_flock;
+out vec3 v_colour;
+out float v_glow;
+uniform float u_aspect;
+uniform float u_size;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+void main() {
+  gl_Position = vec4(a_pos.x / u_aspect, a_pos.y, 0.0, 1.0);
+  float speed = length(a_vel);
+  gl_PointSize = u_size * (0.8 + speed * 2.2);
+  v_colour = a_flock < 0.5 ? u_c1 : u_c2;
+  v_glow = 0.3 + speed * 1.6;
+}`;
+
+  const SWARM = `#version 300 es
+precision highp float;
+in vec3 v_colour;
+in float v_glow;
+out vec4 outColour;
+void main() {
+  // Dim each one: a crowd of them adds up to a glow, and a page's words are read over the top of it.
+  float a = smoothstep(0.5, 0.0, length(gl_PointCoord - 0.5)) * v_glow * 0.32;
+  outColour = vec4(v_colour * a, a);
+}`;
+
+  /** How many in each flock. Twelve thousand apiece is a crowd, and still nothing to a phone's GPU. */
+  const SWARM_EACH = 12000;
+
   // ── The live fight's ink: a real fluid, not a picture of one ──
   // Stable fluids on the GPU (Stam, after Dobryakov's WebGL port): velocity, pressure and dye live in half-float
   // textures and are stepped every frame — vorticity confinement for the curl, a Jacobi solve to keep it
@@ -362,7 +456,7 @@ void main() {
   outColour = vec4(colour, clamp(amount * 0.9, 0.0, 0.85) * vignette);
 }`;
 
-  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN, "fluid": FLUID, "rays": RAYS };
+  const SHADERS = { "stage": STAGE, "backdrop": BACKDROP, "grain": GRAIN, "fluid": FLUID, "rays": RAYS, "swarm": SWARM };
 
   /** The tuning, in one place. Units are the simulation's own: texels per second, per-second dissipation. */
   const FLUID_TUNING = {
@@ -782,6 +876,155 @@ void main() {
     });
   }
 
+  // ── Swarm plumbing ──
+
+  /** A program with the three particle attributes pinned, so one vertex array layout serves both passes. */
+  function swarmProgram(gl, vertex, fragment, outputs) {
+    const vs = compile(gl, gl.VERTEX_SHADER, vertex);
+    const fs = compile(gl, gl.FRAGMENT_SHADER, fragment);
+    if (!vs || !fs) {
+      return null;
+    }
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.bindAttribLocation(prog, 0, "a_pos");
+    gl.bindAttribLocation(prog, 1, "a_vel");
+    gl.bindAttribLocation(prog, 2, "a_flock");
+    if (outputs) {
+      // Declared before linking: these are what transform feedback writes, one particle's worth at a time.
+      gl.transformFeedbackVaryings(prog, outputs, gl.INTERLEAVED_ATTRIBS);
+    }
+
+    gl.linkProgram(prog);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      gl.deleteProgram(prog);
+      return null;
+    }
+
+    const u = {};
+    const count = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < count; i++) {
+      const name = gl.getActiveUniform(prog, i).name;
+      u[name.replace(/\[0\]$/, "")] = gl.getUniformLocation(prog, name);
+    }
+
+    return { prog: prog, u: u };
+  }
+
+  /**
+   * Where the two homes are at a moment: each wandering its own side — lower down more than up, where a page usually
+   * has the room — and both drifting to the middle now and then.
+   */
+  function homes(t, aspect) {
+    const clash = Math.pow(Math.max(0, Math.sin(t * 0.11)), 6);
+    const reach = aspect * (0.6 - clash * 0.55);
+    return [
+      -reach + Math.sin(t * 0.31) * 0.2 * aspect, -0.2 + Math.sin(t * 0.47 - 1.4) * 0.55,
+      reach + Math.sin(t * 0.29 + 2.1) * 0.2 * aspect, -0.2 + Math.sin(t * 0.43 - 1.1) * 0.55,
+    ];
+  }
+
+  function buildSwarm(entry) {
+    const gl = entry.gl;
+    const step = swarmProgram(gl, SWARM_STEP, SWARM_NOTHING, ["v_pos", "v_vel", "v_flock"]);
+    const points = swarmProgram(gl, SWARM_POINTS, entry.source, null);
+    if (!step || !points) {
+      return false;
+    }
+
+    // Five floats a particle — position, velocity, which flock — each flock starting in a cloud round its home.
+    const count = SWARM_EACH * 2;
+    const seed = new Float32Array(count * 5);
+    const aspect = Math.max(entry.canvas.width / Math.max(entry.canvas.height, 1), 0.5);
+    const start = homes(0, aspect);
+    for (let i = 0; i < count; i++) {
+      const flock = i < SWARM_EACH ? 0 : 1;
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.sqrt(Math.random()) * 0.2;
+      seed[i * 5] = start[flock * 2] + Math.cos(angle) * radius;
+      seed[i * 5 + 1] = start[flock * 2 + 1] + Math.sin(angle) * radius;
+      seed[i * 5 + 2] = 0;
+      seed[i * 5 + 3] = 0;
+      seed[i * 5 + 4] = flock;
+    }
+
+    function pair() {
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, seed, gl.DYNAMIC_COPY);
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 8);
+      gl.enableVertexAttribArray(2);
+      gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 20, 16);
+      gl.bindVertexArray(null);
+      return { buffer: buffer, vao: vao };
+    }
+
+    entry.swarmStep = step;
+    entry.swarmPoints = points;
+    entry.particles = [pair(), pair()];
+
+    // Let go of the generic binding: WebGL refuses a draw that writes by transform feedback into a buffer still
+    // bound anywhere else, and says so only as an error nobody reads — the swarm would sit frozen where it started.
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    entry.reading = 0;
+    entry.count = count;
+    entry.feedback = gl.createTransformFeedback();
+    entry.lastStep = 0;
+    return true;
+  }
+
+  function stepSwarm(entry, now) {
+    const gl = entry.gl;
+    const dt = entry.lastStep ? Math.min((now - entry.lastStep) / 1000, 1 / 30) : 1 / 60;
+    entry.lastStep = now;
+    const t = (now - entry.start) / 1000;
+    const aspect = entry.canvas.width / Math.max(entry.canvas.height, 1);
+    const from = entry.particles[entry.reading];
+    const to = entry.particles[1 - entry.reading];
+
+    // The step: every particle read from one buffer and written to the other, and not a pixel drawn.
+    gl.useProgram(entry.swarmStep.prog);
+    gl.uniform1f(entry.swarmStep.u.u_time, t);
+    gl.uniform1f(entry.swarmStep.u.u_dt, dt);
+    gl.uniform1f(entry.swarmStep.u.u_aspect, aspect);
+    gl.uniform2fv(entry.swarmStep.u.u_home, homes(t, aspect));
+    gl.bindVertexArray(from.vao);
+    gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, entry.feedback);
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, to.buffer);
+    gl.enable(gl.RASTERIZER_DISCARD);
+    gl.beginTransformFeedback(gl.POINTS);
+    gl.drawArrays(gl.POINTS, 0, entry.count);
+    gl.endTransformFeedback();
+    gl.disable(gl.RASTERIZER_DISCARD);
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+    gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+
+    // The picture: the stepped particles as soft points, added on top of one another so a crowd glows.
+    gl.viewport(0, 0, entry.canvas.width, entry.canvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.useProgram(entry.swarmPoints.prog);
+    gl.uniform1f(entry.swarmPoints.u.u_aspect, aspect);
+    gl.uniform1f(entry.swarmPoints.u.u_size, Math.max(2, entry.canvas.height / 300));
+    gl.uniform3f(entry.swarmPoints.u.u_c1, entry.c1[0], entry.c1[1], entry.c1[2]);
+    gl.uniform3f(entry.swarmPoints.u.u_c2, entry.c2[0], entry.c2[1], entry.c2[2]);
+    gl.bindVertexArray(to.vao);
+    gl.drawArrays(gl.POINTS, 0, entry.count);
+    gl.bindVertexArray(null);
+    entry.reading = 1 - entry.reading;
+  }
+
   function readColours(mount) {
     mount.c1 = tokenColour(mount.tokens[0], [0.25, 0.66, 0.96]);
     mount.c2 = tokenColour(mount.tokens[1], [1.0, 0.31, 0.55]);
@@ -855,6 +1098,11 @@ void main() {
           return;
         }
 
+        if (mount.swarm) {
+          stepSwarm(mount, now);
+          return;
+        }
+
         gl.viewport(0, 0, mount.canvas.width, mount.canvas.height);
         gl.useProgram(mount.program);
         gl.uniform2f(mount.u.res, mount.canvas.width, mount.canvas.height);
@@ -892,6 +1140,10 @@ void main() {
   function build(entry) {
     if (entry.fluid) {
       return buildFluid(entry);
+    }
+
+    if (entry.swarm) {
+      return buildSwarm(entry);
     }
 
     const gl = entry.gl;
@@ -947,7 +1199,9 @@ void main() {
     const layer = settings.over ? 3 : 0;
     canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:" + layer + ";";
     try {
-      gl = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: false, powerPreference: "low-power" });
+      // The swarm adds glowing points on top of one another, which is premultiplied colour by nature; everything
+      // else here writes plain colour and an alpha.
+      gl = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: shader === "swarm", powerPreference: "low-power" });
     } catch (e) {
       gl = null;
     }
@@ -962,6 +1216,7 @@ void main() {
       gl: gl,
       source: source,
       fluid: shader === "fluid",
+      swarm: shader === "swarm",
       program: null,
       u: null,
       start: performance.now(),

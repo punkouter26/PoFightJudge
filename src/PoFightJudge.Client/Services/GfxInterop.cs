@@ -26,8 +26,14 @@ public static class Shaders
     /// </summary>
     public const string Rays = "rays";
 
+    /// <summary>
+    /// The home page's two swarms: twenty-four thousand particles stepped on the GPU, one flock in each fighter's
+    /// colour, wandering their own sides and meeting in the middle now and then. Falls back to the backdrop.
+    /// </summary>
+    public const string Swarm = "swarm";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
-    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain, Fluid, Rays];
+    public static IReadOnlyList<string> All { get; } = [Stage, Backdrop, Grain, Fluid, Rays, Swarm];
 }
 
 /// <summary>

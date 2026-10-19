@@ -1,6 +1,7 @@
-@* The two sides' colours, moving slowly behind a page that has no argument on it yet. It is the shader the live
-   fight runs behind its stage, at rest. Decoration and nothing else: it sits under the whole page, takes no clicks,
-   is not drawn at all for anybody who asked for less motion, and a browser without WebGL2 simply shows the page. *@
+@* The two sides' colours, moving slowly behind a page that has no argument on it yet. It is the shader the live fight
+   runs behind its stage, at rest — or, where a page asks for it, the two swarms, with that as the fallback.
+   Decoration and nothing else: it sits under the whole page, takes no clicks, is not drawn at all for anybody who
+   asked for less motion, and a browser without WebGL2 simply shows the page. *@
 @implements IAsyncDisposable
 @inject IServiceProvider Services
 
@@ -11,6 +12,9 @@
 
     private GfxInterop? _gfx;
 
+    /// <summary>What to draw. Anything that will not mount here falls back to the backdrop, which nearly always will.</summary>
+    [Parameter] public string Shader { get; set; } = Shaders.Backdrop;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -20,7 +24,7 @@
 
         // Asked for rather than injected: a page that is rendered without the effects layer is a page, not an error.
         _gfx = Services.GetService<GfxInterop>();
-        if (_gfx is not null)
+        if (_gfx is not null && !await _gfx.MountAsync(Selector, Shader) && Shader != Shaders.Backdrop)
         {
             await _gfx.MountAsync(Selector, Shaders.Backdrop);
         }
