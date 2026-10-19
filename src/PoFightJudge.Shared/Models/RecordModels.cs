@@ -194,6 +194,9 @@ public sealed record FighterStatsDto(
     IReadOnlyList<string> Badges,
     RivalryDto? TopRival)
 {
+    /// <summary>Elo, replayed from this account's fights on read. Set by the endpoint, which has everybody's rows.</summary>
+    public int Rating { get; init; }
+
     public double WinRate => Fights == 0 ? 0 : (double)Wins / Fights;
 
     public static FighterStatsDto Empty(string tag, string displayName) =>
@@ -287,7 +290,11 @@ public sealed record CareerWordsDto(
 public sealed record FighterProfileDto(FighterDto Fighter, FighterStatsDto Stats, StyleProfileDto Style, IReadOnlyList<FighterResultDto> Results, CareerWordsDto Words);
 
 /// <summary>One row of a leaderboard, whichever kind it is.</summary>
-public sealed record LeaderboardRowDto(string Id, string DisplayName, int Matches, int Wins, double WinRate, double AverageScore);
+public sealed record LeaderboardRowDto(string Id, string DisplayName, int Matches, int Wins, double WinRate, double AverageScore)
+{
+    /// <summary>Elo, replayed from the same rows the board is counted from. The board is ranked on it.</summary>
+    public int Rating { get; init; }
+}
 
 /// <summary>What a fighter may change about themselves: the name, never the tag.</summary>
 public sealed record RenameFighterRequest(string? DisplayName);

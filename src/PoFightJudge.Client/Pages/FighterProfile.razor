@@ -56,6 +56,7 @@
                     <FormSparkline Scores="@_profile.Stats.Form" />
                 </div>
                 <dl class="facts">
+                    <div><dt>Rating</dt><dd>@_profile.Stats.Rating</dd></div>
                     <div><dt>Average score</dt><dd>@_profile.Stats.AverageScore.ToString("0.#", CultureInfo.CurrentCulture)</dd></div>
                     <div><dt>Best night</dt><dd>@_profile.Stats.BestScore</dd></div>
                     <div><dt>Run</dt><dd>@Run</dd></div>

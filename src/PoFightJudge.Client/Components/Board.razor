@@ -16,6 +16,9 @@ else
             <RadzenDataGridColumn TItem="Placed" Title="Who">
                 <Template Context="placed">@placed.Row.DisplayName</Template>
             </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Placed" Title="Rating" Width="6rem">
+                <Template Context="placed"><strong>@placed.Row.Rating</strong></Template>
+            </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="Placed" Title="Won" Width="7rem">
                 <Template Context="placed">@placed.Row.Wins of @placed.Row.Matches</Template>
             </RadzenDataGridColumn>

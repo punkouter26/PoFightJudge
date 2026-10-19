@@ -51,7 +51,7 @@
             <RadzenDataGrid Data="@Shown" TItem="FighterStatsDto" AllowSorting="true" AllowPaging="true" PageSize="20" Density="Density.Compact" class="roster"
                             RowClick="@(args => Open(args.Data))" RowRender="@(args => args.Attributes["class"] = "openable")">
                 <Columns>
-                    @* 5.5 + 6 + 6 + 9 + 10rem of declared width, before the name column, is 744 px of table. A phone
+                    @* 5.5 + 6 + 6 + 6 + 9 + 10rem of declared width, before the name column, is 840 px of table. A phone
                        gets the tag, the name, the record and the form in one cell; nothing is dropped, it is stacked. *@
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fighter" Visible="@Viewport.IsPhone" Sortable="false">
                         <Template Context="row">
@@ -68,7 +68,7 @@
                                     }
                                 </span>
                                 <span class="po-stacked__fine po-muted">
-                                    @row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty) over @row.Fights
+                                    @row.Rating · @row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty) over @row.Fights
                                     @if (row.LastFoughtAt is { } seen)
                                     {
                                         @($" · last {seen.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)}")
@@ -93,6 +93,7 @@
                             }
                         </Template>
                     </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Rating" Width="6rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Rating)" />
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fights" Width="6rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Fights)" />
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="W–L" Width="6rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="row">@row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty)</Template>

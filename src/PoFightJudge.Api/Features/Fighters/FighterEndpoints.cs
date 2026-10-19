@@ -65,7 +65,9 @@ public sealed class FighterEndpoints : ICarterModule
         CancellationToken ct)
     {
         var roster = await fighters.ListAsync(ct);
-        var byTag = (await results.ListAllAsync(user.UserId(), ct))
+        var all = await results.ListAllAsync(user.UserId(), ct);
+        var ratings = EloRatings.Compute(all);
+        var byTag = all
             .GroupBy(r => r.Tag, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, IReadOnlyList<FighterResultDto> (g) => [.. g], StringComparer.OrdinalIgnoreCase);
 
@@ -73,7 +75,10 @@ public sealed class FighterEndpoints : ICarterModule
         [
             .. roster
                 .Select(f => f.ToDto())
-                .Select(dto => FighterStatsBuilder.Build(dto, byTag.GetValueOrDefault(dto.Tag, [])))
+                .Select(dto => FighterStatsBuilder.Build(dto, byTag.GetValueOrDefault(dto.Tag, [])) with
+                {
+                    Rating = ratings.GetValueOrDefault(dto.Tag, EloRatings.Start),
+                })
                 .OrderByDescending(s => s.Fights)
                 .ThenByDescending(s => s.LastFoughtAt)
                 .ThenBy(s => s.Tag, StringComparer.Ordinal),
@@ -98,12 +103,15 @@ public sealed class FighterEndpoints : ICarterModule
         var rows = await results.ListForAsync(tag, user.UserId(), ct);
         var dto = fighter.ToDto();
 
+        // A rating depends on everybody they argued with, so it is replayed over the account's whole record.
+        var ratings = EloRatings.Compute(await results.ListAllAsync(user.UserId(), ct));
+
         // Every debate, not the model's bounded corpus: a career number that quietly stopped counting at twelve
         // would be wrong in a way nobody could see from the page.
         var spoken = await words.MineAsync(matches, tag, user.UserId(), ct);
         return Results.Ok(new FighterProfileDto(
             dto,
-            FighterStatsBuilder.Build(dto, rows),
+            FighterStatsBuilder.Build(dto, rows) with { Rating = ratings.GetValueOrDefault(dto.Tag, EloRatings.Start) },
             StyleProfileBuilder.Build(dto.Tag, rows),
             rows,
             CareerWords.Compute(spoken)));

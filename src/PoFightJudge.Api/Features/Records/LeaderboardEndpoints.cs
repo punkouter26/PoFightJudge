@@ -28,7 +28,8 @@ public sealed class LeaderboardEndpoints : ICarterModule
     private static async Task<IReadOnlyList<LeaderboardRowDto>> WatchAsync(IWatchResultRepository results, CancellationToken ct)
     {
         var all = await results.ListAllAsync(ct);
-        return Rank(all
+        var ratings = EloRatings.Compute(all);
+        return Rank(ratings, all
             .GroupBy(r => r.Initials, StringComparer.OrdinalIgnoreCase)
             .Select(g => new LeaderboardRowDto(
                 g.Key,
@@ -50,7 +51,7 @@ public sealed class LeaderboardEndpoints : ICarterModule
         var all = await results.ListAllAsync(user.UserId(), ct);
         var roster = (await fighters.ListAsync(ct)).ToDictionary(f => f.Tag, f => f.DisplayName, StringComparer.OrdinalIgnoreCase);
 
-        return Rank(all
+        return Rank(EloRatings.Compute(all), all
             .GroupBy(r => r.Tag, StringComparer.OrdinalIgnoreCase)
             .Select(g => new LeaderboardRowDto(
                 g.Key,
@@ -62,15 +63,20 @@ public sealed class LeaderboardEndpoints : ICarterModule
     }
 
     /// <summary>
-    /// Win rate first, then the average score, then how many they have argued — so somebody with a long record
-    /// outranks somebody with the same rate from two nights.
+    /// Rating first, because it knows who they beat; then win rate, the average score and how many they have
+    /// argued — so somebody with a long record outranks somebody with the same numbers from two nights.
     /// </summary>
-    private static IReadOnlyList<LeaderboardRowDto> Rank(IEnumerable<LeaderboardRowDto> rows) =>
+    private static IReadOnlyList<LeaderboardRowDto> Rank(IReadOnlyDictionary<string, int> ratings, IEnumerable<LeaderboardRowDto> rows) =>
     [
         .. rows
             .Where(r => r.Matches >= MinimumMatches)
-            .Select(r => r with { WinRate = r.Matches == 0 ? 0 : Math.Round((double)r.Wins / r.Matches, 3) })
-            .OrderByDescending(r => r.WinRate)
+            .Select(r => r with
+            {
+                WinRate = r.Matches == 0 ? 0 : Math.Round((double)r.Wins / r.Matches, 3),
+                Rating = ratings.GetValueOrDefault(r.Id, EloRatings.Start),
+            })
+            .OrderByDescending(r => r.Rating)
+            .ThenByDescending(r => r.WinRate)
             .ThenByDescending(r => r.AverageScore)
             .ThenByDescending(r => r.Matches)
             .ThenBy(r => r.Id, StringComparer.Ordinal),

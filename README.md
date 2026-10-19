@@ -65,7 +65,8 @@ Two rules run through all of it:
 - **Storage is identity-only.** Endpoints and `DefaultAzureCredential`, never a connection string — the
   constructors that take one are a build error, and the storage account has shared-key access switched off.
 - **Records are computed on read.** Nothing is accumulated on a counter, so re-reading a fight corrects its record
-  instead of counting it twice, and deleting one removes it everywhere.
+  instead of counting it twice, and deleting one removes it everywhere. The Elo rating on the boards and the roster
+  is replayed the same way (`EloRatings`), so a deleted fight takes its points with it.
 
 ## Secrets
 
