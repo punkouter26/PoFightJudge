@@ -19,6 +19,9 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     /// <summary>The element the backdrop is drawn on, and the one the glass above it blurs.</summary>
     public const string StageSelector = ".stage";
 
+    /// <summary>The PoFx class the stage breaks up with when the host is cut off (see FightLive.razor.css).</summary>
+    private const string GlitchEffect = "glitch";
+
     /// <summary>Where the debate clock starts running hot. The backdrop turns over the last half-minute.</summary>
     private const int HeatFromSeconds = 30;
 
@@ -62,6 +65,8 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
     [Inject] private GfxInterop Gfx { get; set; } = default!;
 
     [Inject] private ParticleInterop Particles { get; set; } = default!;
+
+    [Inject] private FxInterop Fx { get; set; } = default!;
 
     private SessionPhase Phase => _snapshot?.Phase ?? SessionPhase.Intro;
 
@@ -131,8 +136,17 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
     public void OnHostInterrupted() => Dispatch(async () =>
     {
+        var cutIn = _hostSpeaking;
         _hostSpeaking = false;
         await Audio.ClearPlaybackAsync();
+
+        // Somebody talked over the host, so the picture breaks up and the line crackles: a cut-in is a foul and it
+        // should feel like one. Only when the host really was mid-sentence — an interruption of silence is not one.
+        if (cutIn)
+        {
+            await Fx.BurstAsync(GlitchEffect);
+            await Sound.PlayAsync(Sfx.Glitch);
+        }
     });
 
     /// <summary>

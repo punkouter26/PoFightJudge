@@ -150,6 +150,42 @@ window.PoSfx = (function () {
     src.stop(at + options.duration + 0.02);
   }
 
+  // Staircase curves for the bit crusher, by number of steps: every sample rounded to one of a few levels.
+  const crushCurves = {};
+
+  function crushCurve(steps) {
+    if (!crushCurves[steps]) {
+      const curve = new Float32Array(1024);
+      for (let i = 0; i < curve.length; i++) {
+        const x = (i / (curve.length - 1)) * 2 - 1;
+        curve[i] = Math.round(x * steps) / steps;
+      }
+
+      crushCurves[steps] = curve;
+    }
+
+    return crushCurves[steps];
+  }
+
+  /**
+   * A chirp through a bit crusher, cut off rather than faded: the sound of a signal breaking up. The hard stop clicks,
+   * and the click is the point — digital failure does not decay.
+   */
+  function crushed(at, options) {
+    const o = ctx.createOscillator();
+    const shaper = ctx.createWaveShaper();
+    const g = ctx.createGain();
+    o.type = options.type || "sawtooth";
+    o.frequency.setValueAtTime(options.freq, at);
+    o.frequency.exponentialRampToValueAtTime(Math.max(options.sweepTo || options.freq, 1), at + options.duration);
+    shaper.curve = crushCurve(options.steps || 3);
+    g.gain.setValueAtTime(options.gain, at);
+    g.gain.setValueAtTime(0, at + options.duration);
+    o.connect(shaper).connect(g).connect(out || master);
+    o.start(at);
+    o.stop(at + options.duration + 0.02);
+  }
+
   /** A boxing bell: four inharmonic partials, struck. The ratios are what stop it sounding like a doorbell. */
   function bell(at, gain) {
     const ratios = [1, 1.51, 2.31, 3.07];
@@ -204,6 +240,14 @@ window.PoSfx = (function () {
     "cue": function (at) { tone(at, { type: "sine", freq: 660, sweepTo: 880, duration: 0.26, gain: 0.13, attack: 0.03 }); },
     // The one voice the caller shapes: a scoreboard counting up plays this per tick, climbing with the number.
     "count": function (at, value) { tone(at, { type: "sine", freq: 440 + value * 620, duration: 0.035, gain: 0.06 }); },
+    // Three stutters of the same crushed chirp, each lower and the last cut short, over a hiss of dropped packets.
+    "glitch": function (at) {
+      for (let i = 0; i < 3; i++) {
+        crushed(at + i * 0.055, { freq: 1500 - i * 420, sweepTo: 160, duration: i === 2 ? 0.028 : 0.045, gain: 0.14, steps: 4 });
+      }
+
+      hit(at, { freq: 6500, duration: 0.17, gain: 0.1, filter: "highpass" });
+    },
   };
 
   /**

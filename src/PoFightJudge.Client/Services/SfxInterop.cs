@@ -51,11 +51,14 @@ public static class Sfx
     /// <summary>A counting scoreboard, one per tick. Takes a 0–1 value and climbs with it.</summary>
     public const string Count = "count";
 
+    /// <summary>Somebody cut in on the host: a crushed, stuttering blip — the sound of a signal breaking up.</summary>
+    public const string Glitch = "glitch";
+
     /// <summary>Every name above, for the test that checks the browser knows them all.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Bell, BellThree, Slap, Gavel, GavelThree, Tick, Whoosh,
-        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count,
+        Intro, Probe, Ruling, Fanfare, Clipping, Cue, Count, Glitch,
     ];
 }
 

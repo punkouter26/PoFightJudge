@@ -138,6 +138,9 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.WaitForFunctionAsync("() => document.querySelectorAll('article.caption').length > 1", null, new() { Timeout = 90_000 });
             await ShootAsync(page, folder, "fight-live", "/fight/{id}", errors);
 
+            // The scripted host is never talked over, so the cut-in is forced.
+            await MomentAsync(page, folder, "fight-glitch", "() => PoFx.burst('glitch')", 60);
+
             await page.Locator("section.ruling").WaitForAsync(new() { Timeout = 180_000 });
             await page.WaitForTimeoutAsync(700);
             await ShootAsync(page, folder, "verdict-reveal", "/verdict/{id}", errors);
@@ -148,6 +151,21 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
         {
             await context.CloseAsync();
         }
+    }
+
+    /// <summary>
+    /// An effect too quick to catch in passing, frozen part-way: the script starts it, every CSS animation on the page
+    /// is paused <paramref name="atMs"/> in, and the window is shot. Canvas effects have no clock to stop; they are
+    /// whatever frame the shot lands on.
+    /// </summary>
+    private async Task MomentAsync(IPage page, string folder, string name, string script, int atMs)
+    {
+        await page.EvaluateAsync(script);
+        await page.EvaluateAsync("t => document.getAnimations().forEach(a => { a.pause(); a.currentTime = t; })", atMs);
+        var file = Path.Combine(folder, name + ".png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = file });
+        await page.EvaluateAsync("() => document.getAnimations().forEach(a => a.play())");
+        Report($"SHOT {name} (moment, {atMs} ms) -> {file}");
     }
 
     private async Task ShootAsync(IPage page, string folder, string name, string path, List<string> errors)

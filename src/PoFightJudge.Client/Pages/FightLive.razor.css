@@ -55,3 +55,44 @@
   }
 }
 
+
+/* Somebody cut in on the host: the picture breaks up for a moment. Driven by PoFx, which adds the class and takes it
+   off again. Stepped rather than eased, because a glitch that glides is a transition. The two fighters' colours are
+   the channels that pull apart. */
+.stage.fx-glitch {
+  animation: po-glitch 0.42s steps(1, end);
+}
+
+/* Scanlines, and a torn band of both colours rolling up through them, for as long as the glitch lasts. */
+.stage.fx-glitch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(transparent 0 46%, color-mix(in srgb, var(--po-p1) 40%, transparent) 46% 49%,
+      color-mix(in srgb, var(--po-p2) 40%, transparent) 49% 52%, transparent 52%),
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.24) 0 1px, transparent 1px 3px);
+  background-size: 100% 220%, 100% 100%;
+  animation: po-tear 0.42s steps(6, end);
+}
+
+@keyframes po-glitch {
+  0% { transform: none; filter: none; clip-path: none; }
+  10% { transform: translate(-6px, 1px) skewX(4deg); filter: drop-shadow(4px 0 0 var(--po-p2)) drop-shadow(-4px 0 0 var(--po-p1)); clip-path: inset(8% 0 0 0); }
+  25% { transform: translate(5px, -1px); filter: drop-shadow(-3px 0 0 var(--po-p2)) drop-shadow(3px 0 0 var(--po-p1)) hue-rotate(40deg); clip-path: inset(0 0 12% 0); }
+  45% { transform: translate(-2px, 0) skewX(-3deg); filter: drop-shadow(2px 0 0 var(--po-p2)) drop-shadow(-2px 0 0 var(--po-p1)); clip-path: none; }
+  70% { transform: translate(3px, 0); filter: contrast(1.6) saturate(0.3); }
+  100% { transform: none; filter: none; clip-path: none; }
+}
+
+@keyframes po-tear {
+  from { background-position: 0 100%, 0 0; }
+  to { background-position: 0 -20%, 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage.fx-glitch { animation: none; outline: 3px solid var(--po-p2); }
+  .stage.fx-glitch::after { content: none; }
+}

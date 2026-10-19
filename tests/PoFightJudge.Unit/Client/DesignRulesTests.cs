@@ -8,7 +8,7 @@ namespace PoFightJudge.Unit.Client;
 /// </summary>
 public partial class DesignRulesTests
 {
-    private static string ClientRoot => Path.Combine(RepositoryRoot(), "src", "PoFightJudge.Client");
+    internal static string ClientRoot => Path.Combine(RepositoryRoot(), "src", "PoFightJudge.Client");
 
     /// <summary>
     /// Every <c>var(--po-*)</c> must name a token that exists. A <c>var()</c> on an undefined property drops the
@@ -112,6 +112,7 @@ public partial class DesignRulesTests
     private static readonly HashSet<string> AddedByScript = new(StringComparer.Ordinal)
     {
         "fx-slap",
+        "fx-glitch",
         "po-particles",
     };
 
