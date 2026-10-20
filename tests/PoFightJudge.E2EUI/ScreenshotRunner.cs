@@ -215,8 +215,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
                 await input.PressAsync("Tab", new() { Delay = 20 });
             }
 
-            // Spinning for a topic, mid-reel and landed — then the topic the rest of the shots expect, typed over it.
-            await page.GetByText("Spicy").ClickAsync();
+            // Spinning for a topic (at the Settings heat), mid-reel and landed — then the topic the rest of the shots expect, typed over it.
             await page.GetByRole(AriaRole.Button, new() { Name = "Spin" }).ClickAsync();
             await page.WaitForTimeoutAsync(350);
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "fight-spin.png") });

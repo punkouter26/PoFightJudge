@@ -56,21 +56,28 @@
                 {
                     <section class="your-turn po-card" aria-label="Your turn">
                         <h2>Your turn, @Person.DisplayName</h2>
-                        <p class="po-muted">Answer what was just said. It goes on your record under @Person.Id.</p>
-                        <RadzenFormField Text="What you say back" Variant="Variant.Outlined" class="say">
-                            <ChildContent>
-                                @* Published as it is typed: a Say button that stays grey until you click elsewhere reads as broken. *@
-                                <RadzenTextArea Value="@_line" @oninput="@OnLineTypedAsync" @onkeydown="@OnLineKeyAsync" Name="line" Rows="3" MaxLength="600"
-                                                title="Ctrl+Enter says it"
-                                                Placeholder="That is not what I said and you know it." aria-label="What you say back" />
-                            </ChildContent>
-                        </RadzenFormField>
+                        @* The box is for a turn that is not being spoken: while the microphone listens or writes it
+                           down it would only take up the panel, so it appears once that path stops — by itself, or
+                           because they chose to type. *@
+                        @if (!_recording && !_transcribing)
+                        {
+                            <RadzenFormField Text="What you say back" Variant="Variant.Outlined" class="say">
+                                <ChildContent>
+                                    @* Published as it is typed: a Say button that stays grey until you click elsewhere reads as broken. *@
+                                    <RadzenTextArea Value="@_line" @oninput="@OnLineTypedAsync" @onkeydown="@OnLineKeyAsync" Name="line" Rows="3" MaxLength="600"
+                                                    title="Ctrl+Enter says it"
+                                                    Placeholder="That is not what I said and you know it." aria-label="What you say back" />
+                                </ChildContent>
+                            </RadzenFormField>
+                        }
                         <div class="ways">
                             @if (_recording)
                             {
                                 @* The microphone opened with the turn and closes itself on a pause. The meter is
-                                   the whole interface: there is nothing here to press. *@
+                                   the interface; typing instead is the one thing left to press. *@
                                 <LevelMeter Listening="true" Caption="Listening — just talk" />
+                                <RadzenButton Text="Type it instead" Icon="keyboard" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
+                                              Click="@StopListeningAsync" />
                             }
                             else if (_transcribing)
                             {

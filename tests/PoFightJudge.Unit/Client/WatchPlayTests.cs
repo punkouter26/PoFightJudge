@@ -153,6 +153,8 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     public async Task The_persons_turn_stops_the_loop_until_they_have_said_something()
     {
         _simulation.Set(Matthew, Person, null);
+        // Spoken turns on, so the turn opens listening — which is when the box is out of the way.
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(UseFakeAi: true, DevGuestEnabled: true, HumanInWatch: true, FishVoices: false));
 
         var cut = Render<WatchPlay>();
         await cut.WaitForAssertionAsync(() => cut.FindAll("article.line").Should().HaveCount(1), TimeSpan.FromSeconds(10));
@@ -161,6 +163,10 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         await cut.WaitForAssertionAsync(() => cut.FindAll("section.your-turn").Should().HaveCount(1), TimeSpan.FromSeconds(10));
         _asked.Should().HaveCount(1, "the page does not write the person's line for them");
         cut.Markup.Should().Contain("Kim", "the panel addresses the person by the name they argue under");
+
+        // While it listens the turn is spoken, so there is no box taking up the panel; typing is one press away.
+        cut.FindAll("textarea[name=line]").Should().BeEmpty("a turn that is being spoken has nothing to type into");
+        await cut.FindAll("button").Single(b => b.TextContent.Contains("Type it instead", StringComparison.Ordinal)).ClickAsync(new());
 
         // Typed, not changed: the line is published on every keystroke so the button answers straight away.
         await cut.Find("textarea[name=line]").InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "that is not what I said and you know it" });
