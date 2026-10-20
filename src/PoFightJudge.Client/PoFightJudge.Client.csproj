@@ -19,6 +19,5 @@
     <PackageReference Include="Radzen.Blazor" />
     <PackageReference Include="Blazored.LocalStorage" />
     <PackageReference Include="Blazored.FluentValidation" />
-    <PackageReference Include="Humanizer.Core" />
   </ItemGroup>
 </Project>

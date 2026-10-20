@@ -1,6 +1,5 @@
 @using System.Text.Json
 @using FluentValidation
-@using Humanizer
 @using Blazored.FluentValidation
 @using PoFightJudge.Shared.Validators
 @inject IApiClient Api
@@ -218,7 +217,7 @@
 
     private static IReadOnlyList<Option<T>> OptionsOf<T>()
         where T : struct, Enum =>
-        [.. Enum.GetValues<T>().Select(v => new Option<T>(v, v.Humanize(LetterCasing.Sentence)))];
+        [.. Enum.GetValues<T>().Select(v => new Option<T>(v, v.ToString()))];
 
     private static readonly IReadOnlyList<Option<ProfileRole>> Roles = OptionsOf<ProfileRole>();
 
