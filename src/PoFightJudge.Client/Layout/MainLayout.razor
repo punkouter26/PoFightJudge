@@ -23,7 +23,8 @@
                 {
                     @if (place.Children is null)
                     {
-                        <RadzenMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" />
+                        @* Home's path is "", which every path starts with: matched as a prefix it was lit on every page. *@
+                        <RadzenMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" Match="@(place.Path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
                     }
                     else
                     {

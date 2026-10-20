@@ -50,6 +50,11 @@ public class NavigationTests(AppFixture app)
 
             await nav.GetByRole(AriaRole.Link, new() { Name = label, Exact = true }).ClickAsync();
             await page.WaitForFunctionAsync($"() => location.pathname === '{path}'", null, new() { Timeout = 15_000 });
+
+            // Home is "", and every path starts with "": matched as a prefix it lit up on every page.
+            var homeLit = await nav.GetByRole(AriaRole.Link, new() { Name = "Home", Exact = true })
+                .EvaluateAsync<bool>("a => a.className.includes('active') || !!a.closest('.rz-navigation-item-wrapper-active')");
+            homeLit.Should().Be(string.Equals(path, "/", StringComparison.Ordinal), $"Home is the current page only at /, not at {path}");
         }
 
         errors.Should().BeEmpty();
