@@ -5,8 +5,8 @@
 <Backdrop Shader="@Shaders.Swarm" />
 
 <PageShell Width="PageShell.ShellWidth.Standard">
-    @* The three channels are the page: the cast is in the nav bar, and history and the leaderboard follow a match.
-       The title stays for a screen reader, which needs the page to open on one. *@
+    @* The three channels, and beside them the cast and the leaderboard. History follows a match. The title stays
+       for a screen reader, which needs the page to open on one. *@
     <h1 class="po-sr-only">PoFightJudge: pick a channel</h1>
 
     <div class="channels">
@@ -16,5 +16,9 @@
                      Description="You take a seat. A profile takes the other." />
         <ChannelCard Number="2P" Title="2P" Icon="mic" Href="2p" Cta="Both of you" Accent="ChannelCard.ChannelAccent.Accent"
                      Description="Two people, one microphone, a judge between you." />
+        <ChannelCard Number="CAST" Title="Profiles" Icon="groups" Href="profiles" Cta="See the cast" Accent="ChannelCard.ChannelAccent.Accent"
+                     Description="Everyone who argues here, and how they have done." />
+        <ChannelCard Number="TOP" Title="Leaderboard" Icon="emoji_events" Href="fighters" Cta="Who is winning" Accent="ChannelCard.ChannelAccent.Accent"
+                     Description="People and the cast, ranked together." />
     </div>
 </PageShell>

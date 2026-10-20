@@ -18,7 +18,7 @@ public class ThemeAndViewportTests(AppFixture app)
 
         await page.Locator("article.channel").First.WaitForAsync(new() { Timeout = 30_000 });
         page.Url.Should().Be(app.BaseUrl + "/");
-        (await page.Locator("article.channel").CountAsync()).Should().Be(3, "CPU, 1P and 2P");
+        (await page.Locator("article.channel").CountAsync()).Should().Be(5, "CPU, 1P and 2P, then profiles and the leaderboard");
         await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
         (await page.Locator(".po-settings .user").InnerTextAsync()).Should().Contain("GUEST-");
         errors.Should().BeEmpty();

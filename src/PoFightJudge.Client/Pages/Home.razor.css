@@ -1,14 +1,22 @@
-/* The page is the three channel cards: side by side, stacked on a phone. */
+/* The three channels in a row, and under them the cast and the leaderboard as a row of two: six columns, a channel
+   takes two and a place takes three. Stacked on a phone, where five rows of one card still fit the screen. */
 .channels {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--po-space-4);
   margin-bottom: var(--po-space-4);
 }
 
+.channels ::deep article.channel { grid-column: span 2; }
+
+.channels ::deep article.channel:nth-child(n+4) { grid-column: span 3; }
+
 @media (max-width: 40rem) {
   .channels {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--po-space-2);
   }
+
+  .channels ::deep article.channel,
+  .channels ::deep article.channel:nth-child(n+4) { grid-column: auto; }
 }

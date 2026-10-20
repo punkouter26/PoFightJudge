@@ -1,6 +1,7 @@
 @inject NavigationManager Nav
 
-@* One of the three "channels" on Home: CPU, 1P or 2P. The big number and the tinted corner are the broadcast idiom. *@
+@* One card on Home: a channel (CPU, 1P, 2P), or the cast or the leaderboard beside them. The big mark and the tinted
+   corner are the broadcast idiom. *@
 <article class="channel po-card @Accent.ToString().ToLowerInvariant()" data-channel="@Number">
     <span class="number po-display" aria-hidden="true">@Number</span>
     <h2>@Title</h2>
