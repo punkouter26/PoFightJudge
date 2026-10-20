@@ -17,6 +17,18 @@
 
 .pair { display: grid; grid-template-columns: 1fr; gap: var(--po-space-4); }
 
+/* The answer and the two of them, side by side on a desktop; stacked on anything narrower. */
+.top { display: grid; gap: var(--po-space-4); align-items: start; }
+
+.ruling-actions { display: flex; flex-wrap: wrap; gap: var(--po-space-2); align-items: flex-start; }
+
+.fight-tab { display: grid; gap: var(--po-space-5); padding-top: var(--po-space-3); }
+
+/* The cards say who took it, so they still wait for the name: they rise a beat after the ruling, as they did when
+   they were the report's own row. */
+.top > .pair { animation: rise var(--po-dur-slow) 90ms var(--po-ease) both; }
+.verdict.staged .top > .pair { animation-delay: 2.5s; }
+
 .side-by-side { display: grid; grid-template-columns: 1fr; gap: var(--po-space-5); padding-top: var(--po-space-3); }
 
 .column { display: grid; gap: var(--po-space-3); align-content: start; }
@@ -59,6 +71,8 @@
 }
 
 @media (min-width: 64rem) {
+  .top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .top > .pair { grid-template-columns: 1fr; }
   .verdict { gap: var(--po-space-4); }
   .side-by-side { gap: var(--po-space-6); }
 }
@@ -135,5 +149,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .verdict > *:not(canvas) { animation: none; }
+  .verdict > *:not(canvas),
+  .top > .pair { animation: none; }
 }

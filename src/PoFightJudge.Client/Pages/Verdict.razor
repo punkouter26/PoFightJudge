@@ -32,6 +32,9 @@
         else
         {
             <div class="verdict @(_staged ? "staged" : null)">
+                @* The first screen is the answer: who took it and why on the left, the two of them in numbers on the
+                   right. The timeline and the highlights are the first tab below, not 600 px between the two. *@
+                <div class="top">
                 <RulingCard Winner="@Winner" Summary="@_report.Overall.Summary" Reasons="@_report.Overall.Reasons">
                     @if (_report.SpeakerMappingFlagged)
                     {
@@ -39,37 +42,21 @@
                             Who said what is not certain here. @_report.SpeakerMappingNote
                         </PageAlert>
                     }
-                    @if (_match is not null)
-                    {
-                        <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
-                    }
-                    @* The ruling as a picture the size of a phone screen, for a story: to the share sheet, or saved. *@
-                    <RadzenButton Text="@(_storying ? "Drawing it…" : "Story image")" Icon="photo_camera" ButtonStyle="ButtonStyle.Base"
-                                  Variant="Variant.Outlined" Disabled="@_storying" Click="@StoryAsync" class="story" />
+                    @* One row of small buttons rather than two bars the width of the card. *@
+                    <div class="ruling-actions">
+                        @if (_match is not null)
+                        {
+                            <ShareLink Match="@_match.Id" Token="@_match.ShareToken" TokenChanged="@OnShareChanged" />
+                        }
+                        @* The ruling as a picture the size of a phone screen, for a story: to the share sheet, or saved. *@
+                        <RadzenButton Text="@(_storying ? "Drawing it…" : "Story image")" Icon="photo_camera" ButtonStyle="ButtonStyle.Base"
+                                      Variant="Variant.Outlined" Size="ButtonSize.Small" Disabled="@_storying" Click="@StoryAsync" class="story" />
+                    </div>
                     @if (_storyNote is not null)
                     {
                         <p class="po-muted story-note" role="status">@_storyNote</p>
                     }
                 </RulingCard>
-
-                @if (_turns.Count > 0)
-                {
-                    <section class="timeline-section">
-                        <h2 class="po-eyebrow">The fight, start to finish</h2>
-                        <ReplayTimeline Player1="@_report.Player1.Name" Player2="@_report.Player2.Name" Turns="@_turns"
-                                        Highlights="@(_report.Highlights ?? [])"
-                                        Player1Moods="@_report.Player1.Assessment.EmotionTimeline" Player2Moods="@_report.Player2.Assessment.EmotionTimeline"
-                                        OnHighlight="@HearAsync" />
-                    </section>
-                }
-
-                @if (_report.Highlights is { Count: > 0 } highlights)
-                {
-                    <section class="reel-section">
-                        <h2 class="po-eyebrow">Worth hearing again</h2>
-                        <HighlightReel @ref="_reel" MatchId="@_report.MatchId" Highlights="@highlights" Topic="@_report.Topic" />
-                    </section>
-                }
 
                 <section class="pair">
                     <PlayerCard Report="@_report.Player1" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player1)"
@@ -77,10 +64,37 @@
                     <PlayerCard Report="@_report.Player2" Won="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player2)"
                                 Lost="@(_report.Overall.Ruled && _report.Overall.Overall == Speaker.Player1)" IsSecond="true" />
                 </section>
+                </div>
 
                 @* All tabs rendered, not just the selected one: a report is a document, so find-in-page and printing should reach every part of it. *@
                 <RadzenTabs @bind-SelectedIndex="_tab" RenderMode="TabRenderMode.Client" class="detail">
                     <Tabs>
+                        @if (_turns.Count > 0 || _report.Highlights is { Count: > 0 })
+                        {
+                            <RadzenTabsItem Text="The fight">
+                                <div class="fight-tab">
+                                    @if (_turns.Count > 0)
+                                    {
+                                        <section class="timeline-section">
+                                            <h2 class="po-eyebrow">The fight, start to finish</h2>
+                                            <ReplayTimeline Player1="@_report.Player1.Name" Player2="@_report.Player2.Name" Turns="@_turns"
+                                                            Highlights="@(_report.Highlights ?? [])"
+                                                            Player1Moods="@_report.Player1.Assessment.EmotionTimeline" Player2Moods="@_report.Player2.Assessment.EmotionTimeline"
+                                                            OnHighlight="@HearAsync" />
+                                        </section>
+                                    }
+
+                                    @if (_report.Highlights is { Count: > 0 } highlights)
+                                    {
+                                        <section class="reel-section">
+                                            <h2 class="po-eyebrow">Worth hearing again</h2>
+                                            <HighlightReel @ref="_reel" MatchId="@_report.MatchId" Highlights="@highlights" Topic="@_report.Topic" />
+                                        </section>
+                                    }
+                                </div>
+                            </RadzenTabsItem>
+                        }
+
                         <RadzenTabsItem Text="How they argued">
                             <div class="side-by-side">
                                 @foreach (var (side, report) in Sides)
