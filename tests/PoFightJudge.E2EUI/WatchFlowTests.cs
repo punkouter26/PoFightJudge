@@ -79,7 +79,7 @@ public class WatchFlowTests(AppFixture app)
         (await page.Locator("article.line").CountAsync()).Should().Be(1, "the argument stops at the person's turn rather than speaking for them");
 
         // A stray tap on the nav bar mid-argument asks first, and "Stay" means nothing happened.
-        await page.Locator("nav a[href$='history'], nav a[href='/history']").First.ClickAsync();
+        await page.Locator("nav a[href$='profiles'], nav a[href='/profiles']").First.ClickAsync();
         var asking = page.Locator(".rz-dialog", new() { HasText = "Leave the argument?" });
         await asking.WaitForAsync(new() { Timeout = 10_000 });
         await asking.GetByRole(AriaRole.Button, new() { Name = "Stay" }).ClickAsync();

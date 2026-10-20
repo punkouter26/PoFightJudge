@@ -78,7 +78,7 @@ public class EveryRouteTests(AppFixture app)
                         viewportWidth: window.innerWidth,
                         headings: [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map(h => Number(h.tagName[1])),
                         sideways: [...document.querySelectorAll('*')]
-                            .filter(e => e.scrollWidth > e.clientWidth + 2 && e.clientWidth > 0 && getComputedStyle(e).overflowX !== 'auto' && getComputedStyle(e).overflowX !== 'scroll')
+                            .filter(e => !e.classList.contains('po-sr-only') && e.scrollWidth > e.clientWidth + 2 && e.clientWidth > 0 && getComputedStyle(e).overflowX !== 'auto' && getComputedStyle(e).overflowX !== 'scroll')
                             .slice(0, 3)
                             .map(e => e.tagName + '.' + String(e.className || '').split(' ').filter(c => !c.startsWith('b-')).join('.')),
                     })");
