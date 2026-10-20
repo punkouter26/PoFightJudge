@@ -73,7 +73,10 @@ other through `Shared` contracts and repositories, not through each other's serv
   `ProfileRecords` counts the cast's watches, or a person's fights, when `/api/profiles` is read.
 - Profiles are read-only. They are the pre-made cast (`SeedOnStartup`; the seed endpoint behind "Load default cast"
   puts it back) or written from play by `FighterPersonaWriter`. There is no create, edit, delete, generate or face
-  upload route, and no editor in the client.
+  upload route, and no editor in the client. The pre-made cast never changes; a person's persona is written after
+  their first match and rewritten from all their words after every one after that.
+- One leaderboard: `GET /api/leaderboard` (`LeaderboardEndpoints.Together`) ranks this account's people and the cast
+  on one Elo scale. A person whose persona was also argued appears once, as themselves; `IsPerson` marks which is which.
 - The effects layer is five files in `wwwroot/js` and nothing in the app depends on any of it: `sfx.js` synthesizes
   every sound that is not a voice (HRTF-placed when it has a side, a made-up courtroom reverb when it wants one),
   `gfx.js` runs the WebGL2 shaders — single passes, plus two simulated kinds: `fluid` (stable fluids in half-float

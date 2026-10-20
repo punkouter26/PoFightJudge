@@ -289,11 +289,14 @@ public sealed record CareerWordsDto(
 
 public sealed record FighterProfileDto(FighterDto Fighter, FighterStatsDto Stats, StyleProfileDto Style, IReadOnlyList<FighterResultDto> Results, CareerWordsDto Words);
 
-/// <summary>One row of a leaderboard, whichever kind it is.</summary>
+/// <summary>One row of the leaderboard: a person, or a member of the cast.</summary>
 public sealed record LeaderboardRowDto(string Id, string DisplayName, int Matches, int Wins, double WinRate, double AverageScore)
 {
     /// <summary>Elo, replayed from the same rows the board is counted from. The board is ranked on it.</summary>
     public int Rating { get; init; }
+
+    /// <summary>True for a person who argued at the microphone (their tag); false for a persona from the cast.</summary>
+    public bool IsPerson { get; init; }
 }
 
 /// <summary>What a fighter may change about themselves: the name, never the tag.</summary>

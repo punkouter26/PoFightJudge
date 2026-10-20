@@ -97,8 +97,8 @@ public interface IApiClient
     /// <summary>Reads a shared ruling. Travels anonymously: whoever opens the link has no account here.</summary>
     Task<SharedMatchDto?> GetSharedAsync(string token, CancellationToken ct = default);
 
-    /// <summary>The board for one mode. Empty rather than an error, because a board is never the point of the page.</summary>
-    Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default);
+    /// <summary>The leaderboard: people and the cast together. Empty rather than an error, because a board is never the point of the page.</summary>
+    Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(CancellationToken ct = default);
     /// <summary>One person's page: their record, how they argue, and what they argued.</summary>
     Task<FighterProfileDto?> GetFighterProfileAsync(FighterId tag, CancellationToken ct = default);
 
@@ -484,10 +484,9 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<SharedMatchDto>(ct) : null;
     }
 
-    public async Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(MatchMode mode, CancellationToken ct = default)
+    public async Task<IReadOnlyList<LeaderboardRowDto>> GetLeaderboardAsync(CancellationToken ct = default)
     {
-        var url = mode == MatchMode.Watch ? ApiRoutes.Leaderboard.WatchUrl : ApiRoutes.Leaderboard.FightUrl;
-        using var response = await http.GetAsync(Relative(url), ct);
+        using var response = await http.GetAsync(Relative(ApiRoutes.Leaderboard.Url), ct);
         return response.IsSuccessStatusCode
             ? await response.Content.ReadFromJsonAsync<IReadOnlyList<LeaderboardRowDto>>(ct) ?? []
             : [];

@@ -163,10 +163,8 @@ public class StandingsTests : BunitContext, IAsyncLifetime
         // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
         Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
-        _api.GetLeaderboardAsync(MatchMode.Watch, Arg.Any<CancellationToken>())
-            .Returns([Row("MAH", "Married Husband", 5, 4), Row("KSH", "Karen", 5, 1)]);
-        _api.GetLeaderboardAsync(MatchMode.Fight, Arg.Any<CancellationToken>())
-            .Returns([Row("AB", "Alex", 3, 2)]);
+        _api.GetLeaderboardAsync(Arg.Any<CancellationToken>())
+            .Returns([Row("MAH", "Married Husband", 5, 4), Row("AB", "Alex", 3, 2) with { IsPerson = true }, Row("KSH", "Karen", 5, 1)]);
         _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns([]);
         _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([]);
     }
@@ -180,18 +178,16 @@ public class StandingsTests : BunitContext, IAsyncLifetime
         new(id, name, matches, wins, (double)wins / matches, 61.5);
 
     [Fact]
-    public async Task The_page_titled_leaderboard_ranks_the_fighters_and_the_cast_is_one_switch_away()
+    public async Task The_leaderboard_ranks_people_and_the_cast_on_one_board_and_marks_the_cast()
     {
         _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex") with { Fights = 3, Wins = 2, Losses = 1 }]);
 
         var cut = Render<FightersPage>();
-        await cut.WaitForAssertionAsync(() => cut.Find("h1").TextContent.Should().Be("Leaderboard", "it is the page the nav calls leaderboard"));
-        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows.Select(r => r.DisplayName).Should().Equal("Alex"));
-
-        await cut.FindAll(".boards .rz-button").Single(b => b.TextContent.Contains("Cast", StringComparison.Ordinal)).ClickAsync(new());
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows
-            .Select(r => r.DisplayName).Should().Equal("Married Husband", "Karen"));
+        await cut.WaitForAssertionAsync(() => cut.Find("h1").TextContent.Should().Be("Leaderboard"));
+        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows.Select(r => r.DisplayName)
+            .Should().Equal(["Married Husband", "Alex", "Karen"], "one board, in the order the server ranked it"));
+        cut.FindAll(".board .cast-mark").Should().HaveCount(2, "the two personas are marked; the person is not");
+        cut.FindAll("[aria-label='Whose standings']").Should().BeEmpty("there is no switch between two boards");
     }
 
     [Fact]
@@ -206,6 +202,6 @@ public class StandingsTests : BunitContext, IAsyncLifetime
 
         await cut.WaitForAssertionAsync(() => cut.FindAll(".cast").Should().NotBeEmpty());
         cut.FindComponents<Board>().Should().BeEmpty();
-        await _api.DidNotReceive().GetLeaderboardAsync(Arg.Any<MatchMode>(), Arg.Any<CancellationToken>());
+        await _api.DidNotReceive().GetLeaderboardAsync(Arg.Any<CancellationToken>());
     }
 }

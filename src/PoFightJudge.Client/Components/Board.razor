@@ -1,5 +1,5 @@
 @using System.Globalization
-@* One leaderboard, whichever kind. Rank is the row's place in the order the server returned, not a stored number. *@
+@* The leaderboard: people and the cast together. Rank is the row's place in the order the server returned, not a stored number. *@
 
 <div class="po-scope">
 @if (Rows.Count == 0)
@@ -14,7 +14,14 @@ else
         <Columns>
             <RadzenDataGridColumn TItem="Placed" Title="#" Width="3.5rem" Property="@nameof(Placed.Rank)" />
             <RadzenDataGridColumn TItem="Placed" Title="Who">
-                <Template Context="placed">@placed.Row.DisplayName</Template>
+                <Template Context="placed">
+                    @placed.Row.DisplayName
+                    @if (!placed.Row.IsPerson)
+                    {
+                        @* People and the cast share the board; the cast is marked so a persona is not taken for somebody. *@
+                        <span class="po-chip cast-mark">cast</span>
+                    }
+                </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="Placed" Title="Rating" Width="10rem">
                 <Template Context="placed"><strong>@placed.Row.Rating</strong> <RankBadge Rating="@placed.Row.Rating" Fights="@placed.Row.Matches" /></Template>

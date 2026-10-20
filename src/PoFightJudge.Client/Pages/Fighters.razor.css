@@ -4,15 +4,7 @@
 
 ::deep .tag { letter-spacing: 0.06em; color: inherit; }
 
-.boards {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--po-space-3);
-  margin-bottom: var(--po-space-3);
-}
-
-.cut-off { margin: 0; font-size: var(--po-text-sm); }
+.cut-off { margin: 0 0 var(--po-space-3); font-size: var(--po-text-sm); }
 
 /* The top three, side by side above the tabs; on anything wider than a phone, a podium — second, first, third.
    A card is at most 18rem wide, so one fighter is a card rather than a banner across the page. */

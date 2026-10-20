@@ -164,12 +164,8 @@ public static class ApiRoutes
 
     public static class Leaderboard
     {
-        public const string Base = $"{ApiPrefix}/leaderboard";
-        public const string WatchSegment = "/watch";
-        public const string FightSegment = "/fight";
-
-        public const string WatchUrl = $"{Base}{WatchSegment}";
-        public const string FightUrl = $"{Base}{FightSegment}";
+        /// <summary>People and the cast, ranked together.</summary>
+        public const string Url = $"{ApiPrefix}/leaderboard";
     }
 
     public static class Hubs

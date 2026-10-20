@@ -117,7 +117,7 @@ public class RecordsTests(ApiFactory factory)
         var anonymous = factory.CreateClient();
 
         (await anonymous.GetAsync(ApiRoutes.Matches.Base)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await anonymous.GetAsync(ApiRoutes.Leaderboard.FightUrl)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await anonymous.GetAsync(ApiRoutes.Leaderboard.Url)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await anonymous.GetAsync(ApiRoutes.Fighters.Base)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
