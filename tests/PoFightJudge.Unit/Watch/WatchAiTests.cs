@@ -11,7 +11,7 @@ namespace PoFightJudge.Unit.Watch;
 public class WatchAiParsingTests
 {
     [Fact]
-    public void A_schema_answer_becomes_a_line_and_a_mood()
+    public void A_schema_answer_becomes_a_line_and_a_mood_a_broken_one_still_becomes_a_line_and_a_verdict_names_one_of_the_two_sides()
     {
         // A schema that requires a property it does not define is invalid, and the fake, which answers from the
         // properties, never notices.
@@ -25,11 +25,8 @@ public class WatchAiParsingTests
 
         result.Text.Should().Be("You left the freezer open. (snaps)");
         result.Mood.Should().Be("furious");
-    }
 
-    [Fact]
-    public void An_unparseable_answer_still_becomes_a_line_because_a_match_must_not_stop()
-    {
+        // An unparseable answer still becomes a line, because a match must not stop.
         var refusal = WatchAi.ParseArgument("I cannot help with that.");
 
         refusal.Text.Should().Be("I cannot help with that.");
@@ -40,11 +37,8 @@ public class WatchAiParsingTests
         WatchAi.ParseArgument("""{"line":"You left the freezer open and""").Text.Should().Be("You left the freezer open and");
         WatchAi.ParseArgument("""{"mood":"ang""").Text.Should().Be("…");
         WatchAi.ParseVerdict("""{"winner":"KSH","verdict":"She answ""", "MAH", "KSH").Verdict.Should().Be("The judge could not reach a ruling.");
-    }
 
-    [Fact]
-    public void A_verdict_parses_scores_and_only_ever_names_one_of_the_two_sides()
-    {
+        // A verdict parses its scores and only ever names one of the two sides.
         var verdict = WatchAi.ParseVerdict("""{"winner":"KSH","verdict":"She answered the point.\nHe changed the subject.","husbandScore":41,"wifeScore":78}""", "MAH", "KSH");
 
         verdict.Winner.Should().Be("KSH");

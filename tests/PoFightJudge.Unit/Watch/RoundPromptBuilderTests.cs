@@ -40,7 +40,7 @@ public class RoundPromptBuilderTests
     }
 
     [Fact]
-    public void The_user_half_is_identical_up_to_current_state_for_both_speakers()
+    public void The_user_half_is_identical_up_to_current_state_for_both_speakers_and_a_human_opponents_block_is_blank_on_purpose()
     {
         var husbandTurn = Prompt(WatchRound.Husband).User;
         var wifeTurn = Prompt(WatchRound.Wife).User;
@@ -51,11 +51,8 @@ public class RoundPromptBuilderTests
         divergesAt.Should().BeGreaterThan(0, "CURRENT STATE is where per-turn data belongs");
         shared.Should().BeGreaterThanOrEqualTo(divergesAt,
             "everything before CURRENT STATE must be byte-identical between the two speakers, or the profile boilerplate cannot be served from the provider's prompt cache");
-    }
 
-    [Fact]
-    public void The_human_opponents_block_says_the_profile_is_blank_on_purpose()
-    {
+        // The human opponent's block says the profile is blank on purpose.
         var user = Prompt(WatchRound.Husband, wife: Profile.CreateHuman(ProfileRole.Wife, "KD")).User;
 
         user.Should().Contain("REAL PERSON").And.Contain("intentionally empty",

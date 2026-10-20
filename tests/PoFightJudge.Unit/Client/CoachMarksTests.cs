@@ -36,7 +36,7 @@ public sealed class CoachMarksTests : BunitContext
     }
 
     [Fact]
-    public async Task It_walks_the_steps_skips_one_with_nothing_to_point_at_and_remembers_when_it_is_done()
+    public async Task It_walks_the_steps_skips_one_with_nothing_to_point_at_and_once_done_is_not_shown_again()
     {
         var cut = Render<CoachMarks>(p => p.Add(c => c.Steps, Steps));
 
@@ -49,16 +49,12 @@ public sealed class CoachMarksTests : BunitContext
         await cut.FindAll(".coach .rz-button").Single(b => b.TextContent.Contains("Done", StringComparison.Ordinal)).ClickAsync(new());
         await cut.WaitForAssertionAsync(() => cut.FindAll(".coach").Should().BeEmpty());
         await _storage.Received().SetItemAsStringAsync("po-tour", "done", Arg.Any<CancellationToken>());
-    }
 
-    [Fact]
-    public void Somebody_who_has_seen_it_is_not_shown_it_again()
-    {
+        // Somebody who has seen it is not shown it again.
         _storage.GetItemAsStringAsync("po-tour", Arg.Any<CancellationToken>()).Returns("done");
+        var again = Render<CoachMarks>(p => p.Add(c => c.Steps, Steps));
 
-        var cut = Render<CoachMarks>(p => p.Add(c => c.Steps, Steps));
-
-        cut.FindAll(".coach").Should().BeEmpty();
+        again.FindAll(".coach").Should().BeEmpty();
     }
 
     [Fact]

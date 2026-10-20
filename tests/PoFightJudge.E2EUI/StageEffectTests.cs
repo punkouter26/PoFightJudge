@@ -88,9 +88,13 @@ public class StageEffectTests(AppFixture app)
         mounted.Should().BeFalse(switchedOn ? "reduced motion outranks the switch" : "stage effects are off by default");
     }
 
-    /// <summary>The story picture is drawn at the size a story is, with a long topic and a slip on it.</summary>
+    /// <summary>
+    /// The two pictures drawn on a 2D canvas. The story picture is drawn at the size a story is, with a long topic
+    /// and a slip on it. A clip becomes mountains: decoded in the browser, through the FFT, drawn onto its canvas —
+    /// any one of those failing leaves the canvas blank and says nothing, so the pixels are what is checked.
+    /// </summary>
     [SkippableFact]
-    public async Task The_ruling_is_drawn_as_a_story_sized_picture()
+    public async Task The_ruling_is_drawn_story_sized_and_a_clip_as_mountains()
     {
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
         await using var _ = context;
@@ -109,18 +113,6 @@ public class StageEffectTests(AppFixture app)
             """);
 
         size.Should().Equal(1080, 1920);
-        errors.Should().BeEmpty();
-    }
-
-    /// <summary>
-    /// A clip becomes mountains: decoded in the browser, through the FFT, drawn onto its canvas. Any one of those
-    /// failing leaves the canvas blank and says nothing, so the pixels are what is checked.
-    /// </summary>
-    [SkippableFact]
-    public async Task A_clip_is_drawn_as_mountains()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
-        await using var _ = context;
 
         var lit = await page.EvaluateAsync<int>(
             """
@@ -183,31 +175,18 @@ public class StageEffectTests(AppFixture app)
     }
 
     /// <summary>
-    /// Every synthesized sound schedules without throwing. A voice that throws is caught and is simply silent, for
-    /// ever, so this is the only place it would ever be noticed: an automation curve that overlaps an event, a node
-    /// this browser cannot build.
+    /// Every synthesized sound schedules without throwing, and a voice placed on one side of the stage and an effect
+    /// on the other go through an HRTF panner. A voice that throws is caught and is simply silent, for ever, and a
+    /// panner is a node a browser can refuse to build, so this is the only place either would ever be noticed.
     /// </summary>
     [SkippableFact]
-    public async Task Every_sound_schedules_in_a_real_browser()
+    public async Task Every_sound_schedules_and_can_be_placed_on_a_side_of_the_stage()
     {
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
         await using var _ = context;
 
         var silent = await page.EvaluateAsync<string[]>("() => PoSfx.names().filter(n => !PoSfx.play(n, 0.5))");
-
         silent.Should().BeEmpty("a sound that cannot be scheduled is never heard and never reported");
-        errors.Should().BeEmpty();
-    }
-
-    /// <summary>
-    /// A voice placed on one side of the stage, and an effect placed on the other, go through an HRTF panner — a
-    /// node a browser can refuse to build. Either refusing would be a line nobody hears, so both are played here.
-    /// </summary>
-    [SkippableFact]
-    public async Task A_voice_and_an_effect_can_be_placed_on_a_side_of_the_stage()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
-        await using var _ = context;
 
         var seconds = await page.EvaluateAsync<double>(
             """

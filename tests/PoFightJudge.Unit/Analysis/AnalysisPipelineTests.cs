@@ -146,6 +146,10 @@ public sealed class AnalysisPipelineTests : IDisposable
         rows.Should().ContainSingle().Which.Won.Should().BeTrue();
         (await _fighterResults.ListForAsync(FighterId.From("SM"), "user-1", CancellationToken.None)).Should().ContainSingle()
             .Which.Won.Should().BeFalse();
+
+        // Somebody else's fight is not readable.
+        var process = async () => await pipeline.ProcessAsync("user-2", match.Id, CancellationToken.None);
+        await process.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
     }
 
     /// <summary>A files client that keeps what it was handed, so a test can say what the model was actually sent.</summary>
@@ -166,16 +170,18 @@ public sealed class AnalysisPipelineTests : IDisposable
     }
 
     [Fact]
-    public async Task A_fight_with_almost_nothing_in_it_is_not_handed_to_the_judge_to_invent_one()
+    public async Task By_default_a_fight_goes_to_the_transcribe_model_and_one_with_almost_nothing_in_it_is_not_handed_to_the_judge()
     {
         var thin = Substitute.For<IGeminiTranscribeClient>();
         thin.TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TranscriptDto("well", [new TranscriptWord("well", "spk_1", 0, 0.4)])));
         var match = await RecordedAsync();
+        await StoreCaptionsAsync(match.Id, 60);
 
-        using var pipeline = Pipeline(thin);
+        using var pipeline = Pipeline(thin, options: new AnalysisOptions());
         await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
 
+        await thin.Received(1).TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _judge.DidNotReceive().JudgeAsync(Arg.Any<JudgeRequest>(), Arg.Any<CancellationToken>());
         var analysis = await AnalysisOf(match.Id);
         analysis!.Status.Should().Be(AnalysisStatus.Ready, "a fight that produced nothing still has a report saying so");
@@ -217,40 +223,6 @@ public sealed class AnalysisPipelineTests : IDisposable
         var second = await AnalysisOf(match.Id);
         second!.Status.Should().Be(AnalysisStatus.Ready);
         second.Attempts.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task Somebody_elses_fight_is_not_readable()
-    {
-        var match = await RecordedAsync();
-
-        using var pipeline = Pipeline();
-        var process = async () => await pipeline.ProcessAsync("user-2", match.Id, CancellationToken.None);
-
-        await process.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
-    }
-
-    [Fact]
-    public void By_default_a_fight_is_transcribed_by_the_transcribe_model_not_its_captions()
-    {
-        var defaults = new AnalysisOptions();
-
-        defaults.UseLiveCaptionTranscript.Should().BeFalse("the verbatim, diarized transcript is the one the judge reads");
-    }
-
-    [Fact]
-    public async Task With_default_options_a_fight_with_plenty_of_captions_still_goes_to_the_transcribe_model()
-    {
-        var transcriber = Substitute.For<IGeminiTranscribeClient>();
-        transcriber.TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new TranscriptDto("well", [new TranscriptWord("well", "spk_1", 0, 0.4)])));
-        var match = await RecordedAsync();
-        await StoreCaptionsAsync(match.Id, 60);
-
-        using var pipeline = Pipeline(transcriber, options: new AnalysisOptions());
-        await pipeline.ProcessAsync("user-1", match.Id, CancellationToken.None);
-
-        await transcriber.Received(1).TranscribeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     private async Task StoreCaptionsAsync(MatchId id, int words)

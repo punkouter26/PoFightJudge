@@ -25,21 +25,17 @@ public class ProfileTests
     };
 
     [Fact]
-    public void Create_normalizes_initials_and_starts_with_the_role_default_voice()
+    public void Create_normalizes_initials_and_a_request_round_trips_every_field_through_the_dto_and_the_entity()
     {
-        var profile = Profile.Create("ab1", ProfileRole.Husband, "coffee", "mornings", "budget", "stoic");
+        var created = Profile.Create("ab1", ProfileRole.Husband, "coffee", "mornings", "budget", "stoic");
 
-        profile.Initials.Should().Be("AB1");
-        profile.Id.Should().Be(ProfileId.From("AB1"));
-        profile.Role.Should().Be(ProfileRole.Husband);
-        profile.TtsSettings.Should().Be(TtsSettings.Default(ProfileRole.Husband));
-        profile.IsHuman.Should().BeFalse();
-        profile.LogicVsEmotion.Should().Be(50, "sliders start neutral");
-    }
+        created.Initials.Should().Be("AB1");
+        created.Id.Should().Be(ProfileId.From("AB1"));
+        created.Role.Should().Be(ProfileRole.Husband);
+        created.TtsSettings.Should().Be(TtsSettings.Default(ProfileRole.Husband), "it starts with the role's default voice");
+        created.IsHuman.Should().BeFalse();
+        created.LogicVsEmotion.Should().Be(50, "sliders start neutral");
 
-    [Fact]
-    public void Request_to_domain_to_dto_round_trips_every_field()
-    {
         var request = FullRequest();
 
         var profile = request.ToDomain();
@@ -52,14 +48,8 @@ public class ProfileTests
 
         profile.UpdateFacePic("faces/ABC.png");
         profile.ToDto().HasFace.Should().BeTrue();
-    }
 
-    [Fact]
-    public void Entity_round_trip_keeps_the_role_by_name_and_tts_as_json()
-    {
-        var profile = FullRequest().ToDomain();
-        profile.UpdateFacePic("faces/ABC.png");
-
+        // The entity keeps the role by name and the voice as JSON.
         var entity = profile.ToEntity();
         var back = entity.ToDomain();
 

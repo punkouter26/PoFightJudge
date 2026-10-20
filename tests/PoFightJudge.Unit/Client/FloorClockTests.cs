@@ -11,12 +11,10 @@ namespace PoFightJudge.Unit.Client;
 public class FloorClockTests
 {
     [Fact]
-    public void Nobody_has_said_anything_so_it_is_level() =>
-        new FloorClock().Share.Should().Be(0.5);
-
-    [Fact]
-    public void Voice_heard_while_a_fighter_has_the_floor_is_theirs()
+    public void Only_voice_heard_while_a_fighter_has_the_floor_is_theirs_so_it_is_level_until_then()
     {
+        new FloorClock().Share.Should().Be(0.5, "nobody has said anything, so it is level");
+
         var clock = new FloorClock();
         clock.Tick(Speaker.Player1, hostSpeaking: false, voicedSeconds: 2.0);
         clock.Tick(Speaker.Player2, hostSpeaking: false, voicedSeconds: 2.8);
@@ -25,26 +23,21 @@ public class FloorClockTests
         clock.One.Should().BeApproximately(0.8, 0.001, "what was voiced up to the hand-over belongs to whoever held the floor through it");
         clock.Two.Should().BeApproximately(0.2, 0.001);
         clock.Share.Should().BeApproximately(0.8, 0.001);
+
+        // Voice under the host, before anybody has the floor or across a stall counts for nobody.
+        var under = new FloorClock();
+        under.Tick(null, hostSpeaking: false, voicedSeconds: 0);
+        under.Tick(Speaker.Player1, hostSpeaking: true, voicedSeconds: 0.5);
+        under.Tick(Speaker.Player1, hostSpeaking: false, voicedSeconds: 0.9);
+
+        under.One.Should().Be(0, "the room talking over the host is the host's time, not theirs");
+
+        // A stall in the snapshots is not handed to whoever had the floor before it.
+        var stalled = new FloorClock();
+        stalled.Tick(Speaker.Player1, hostSpeaking: false, voicedSeconds: 0);
+        stalled.Tick(Speaker.Player2, hostSpeaking: false, voicedSeconds: 30);
+
+        stalled.One.Should().Be(FloorClock.LongestGap.TotalSeconds, "after half a minute without word, nobody knows whose turn it was");
     }
 
-    [Fact]
-    public void Voice_under_the_host_or_before_anybody_has_the_floor_counts_for_nobody()
-    {
-        var clock = new FloorClock();
-        clock.Tick(null, hostSpeaking: false, voicedSeconds: 0);
-        clock.Tick(Speaker.Player1, hostSpeaking: true, voicedSeconds: 0.5);
-        clock.Tick(Speaker.Player1, hostSpeaking: false, voicedSeconds: 0.9);
-
-        clock.One.Should().Be(0, "the room talking over the host is the host's time, not theirs");
-    }
-
-    [Fact]
-    public void A_stall_in_the_snapshots_is_not_handed_to_whoever_had_the_floor_before_it()
-    {
-        var clock = new FloorClock();
-        clock.Tick(Speaker.Player1, hostSpeaking: false, voicedSeconds: 0);
-        clock.Tick(Speaker.Player2, hostSpeaking: false, voicedSeconds: 30);
-
-        clock.One.Should().Be(FloorClock.LongestGap.TotalSeconds, "after half a minute without word, nobody knows whose turn it was");
-    }
 }

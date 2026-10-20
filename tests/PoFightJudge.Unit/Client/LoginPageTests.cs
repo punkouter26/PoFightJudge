@@ -34,23 +34,6 @@ public class LoginPageTests : BunitContext
     }
 
     [Fact]
-    public void Outside_production_the_guest_door_is_the_only_door()
-    {
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, FishVoices: false));
-
-        var cut = Render<Login>();
-
-        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Continue as Guest (Dev)"));
-        cut.Markup.Should().NotContain("Sign in with Microsoft", "MSAL is the production path, and this is Development");
-
-        // When Microsoft refuses an account because its organisation has not allowed the app, the page says that
-        // and what to do, rather than printing a paragraph of ids.
-        PoFightJudge.Client.Services.MicrosoftSignIn.Explain("AADSTS500011: The resource principal named api://x was not found in the tenant named y.")
-            .Should().Contain("organisation").And.Contain("personal Microsoft account");
-        PoFightJudge.Client.Services.MicrosoftSignIn.Explain("AADSTS70008: expired").Should().NotContain("organisation");
-    }
-
-    [Fact]
     public void With_the_guest_door_shut_the_page_says_how_to_open_it()
     {
         _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, true, FishVoices: false));
@@ -62,7 +45,7 @@ public class LoginPageTests : BunitContext
     }
 
     [Fact]
-    public async Task Continue_as_guest_signs_in_and_returns_to_a_safe_url_only()
+    public async Task Outside_production_the_guest_door_is_the_only_door_and_it_returns_to_a_safe_url_only()
     {
         _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, FishVoices: false));
         _api.GuestSignInAsync(Arg.Any<CancellationToken>()).Returns(new AuthMeDto(true, "GUEST-1", "GUEST-1", "DevGuest"));
@@ -72,10 +55,17 @@ public class LoginPageTests : BunitContext
         nav.NavigateTo("login?returnUrl=https%3A%2F%2Fevil.example%2Fphish");
         var cut = Render<Login>();
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Continue as Guest (Dev)"));
+        cut.Markup.Should().NotContain("Sign in with Microsoft", "MSAL is the production path, and this is Development");
 
         await cut.Find(".rz-button.rz-secondary").ClickAsync(new());
 
         await _api.Received(1).GuestSignInAsync(Arg.Any<CancellationToken>());
         nav.Uri.Should().Be(nav.BaseUri, "an off-site return url falls back to home");
+
+        // When Microsoft refuses an account because its organisation has not allowed the app, the page says that
+        // and what to do, rather than printing a paragraph of ids.
+        PoFightJudge.Client.Services.MicrosoftSignIn.Explain("AADSTS500011: The resource principal named api://x was not found in the tenant named y.")
+            .Should().Contain("organisation").And.Contain("personal Microsoft account");
+        PoFightJudge.Client.Services.MicrosoftSignIn.Explain("AADSTS70008: expired").Should().NotContain("organisation");
     }
 }

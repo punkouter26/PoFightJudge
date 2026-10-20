@@ -16,18 +16,14 @@ public class CareerWordsTests
         new("MAH", MatchId.New(), Start.AddDays(dayOffset), MatchMode.Watch, words);
 
     [Fact]
-    public void Empty_and_whitespace_debates_are_empty()
+    public void Nothing_said_is_empty_tone_evidence_and_vocabulary_are_rates_and_catchphrases_grade_and_tense_are_read_across_debates()
     {
         var empty = CareerWords.Compute([]);
         empty.IsEmpty.Should().BeTrue();
         empty.Should().Be(CareerWordsDto.Empty);
 
         CareerWords.Compute([Said("   ")]).IsEmpty.Should().BeTrue();
-    }
 
-    [Fact]
-    public void Sentiment_attribution_and_tone_metrics_behave_as_rates()
-    {
         var accusing = CareerWords.Compute([Said("You always do this and you never listen.")]);
         var friendly = CareerWords.Compute([Said("You and I agreed on this together, you know.")]);
         accusing.BlamePer100.Should().BeGreaterThan(0);
@@ -48,11 +44,7 @@ public class CareerWordsTests
         var twice = CareerWords.Compute([Said("You always do this."), Said("You always do this.", 1)]);
         twice.BlamePer100.Should().Be(once.BlamePer100, "a rate describes how they argue, not how often they turn up");
         twice.Words.Should().Be(once.Words * 2, "the raw count still doubles; that is what makes it a total and not a rate");
-    }
 
-    [Fact]
-    public void Evidence_receipts_and_vocabulary_metrics()
-    {
         var specific = CareerWords.Compute([Said("You said Tuesday at 6 and it cost 40 dollars.")]);
         var vague = CareerWords.Compute([Said("You said it would be fine and it was not fine at all.")]);
         specific.ReceiptsPer100.Should().BeGreaterThan(vague.ReceiptsPer100);
@@ -66,12 +58,9 @@ public class CareerWordsTests
             Said("the freezer was open again yesterday", 1),
         ]);
         newWords.NewWordsLatest.Should().Be(2, "only \"again\" and \"yesterday\" had not been said before");
-    }
 
-    [Fact]
-    public void Catchphrases_require_recurrence_across_debates_and_longest_match()
-    {
-        var twice = CareerWords.Compute(
+        // Catchphrases need recurrence across debates and the longest match; grade, questions and tense are read across them.
+        var recurring = CareerWords.Compute(
         [
             Said("at the end of the day you promised me", 0),
             Said("at the end of the day it is fine", 1),
@@ -83,7 +72,7 @@ public class CareerWordsTests
             Said("something else entirely happened here", 1),
         ]);
 
-        twice.Catchphrases.Should().Contain(p => p.Contains("end of the day", StringComparison.Ordinal));
+        recurring.Catchphrases.Should().Contain(p => p.Contains("end of the day", StringComparison.Ordinal));
         onlyOnce.Catchphrases.Should().BeEmpty("said twice in one argument is a mood, not a habit");
 
         var longest = CareerWords.Compute(
@@ -92,11 +81,7 @@ public class CareerWordsTests
             Said("at the end of the day you promised", 1),
         ]);
         longest.Catchphrases.Should().NotContain("at the end", "the longer phrase already says it");
-    }
 
-    [Fact]
-    public void Readability_grade_trends_questions_and_temporal_orientation()
-    {
         var newestFirst = CareerWords.Compute(
         [
             Said("Consequently the arrangement necessitated considerable reconsideration.", 5),

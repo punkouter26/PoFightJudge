@@ -3,8 +3,8 @@ using Microsoft.Playwright;
 namespace PoFightJudge.E2EUI;
 
 /// <summary>
-/// The WATCH cases the two flow tests do not reach: the person arguing first rather than second, a phone-sized
-/// screen, and leaving mid-argument. These are the runs that produce the CP4 screenshots.
+/// The WATCH case the two flow tests do not reach: the person arguing first rather than second, on a phone-sized
+/// screen. The ruling it used to photograph is now part of <see cref="WatchFlowTests"/>' CPU flow.
 /// </summary>
 [Collection(AppCollection.Name)]
 public class WatchHardeningTests(AppFixture app)
@@ -48,36 +48,8 @@ public class WatchHardeningTests(AppFixture app)
         errors.Should().BeEmpty();
     }
 
-    [SkippableFact]
-    public async Task The_ruling_is_shown_and_photographed()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", user: "e2e-ruling");
-        await using var _ = context;
-
-        await SeedAsync(page);
-        await page.GotoAsync($"{app.BaseUrl}/cpu");
-        await page.Locator("div.picker").First.WaitForAsync(new() { Timeout = 30_000 });
-        await ChooseAsync(page, side: 0, "Donald");
-        await ChooseAsync(page, side: 1, "Hillary");
-        await AppFixture.ToTheLastStepAsync(page);
-        await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
-
-        var verdict = page.Locator("section.verdict");
-        await verdict.WaitForAsync(new() { Timeout = 120_000 });
-        (await verdict.InnerTextAsync()).Should().ContainEquivalentOf("took it", "the ruling says who took it, and innerText carries the display font uppercase");
-        await ShootAsync(page, "watch-verdict");
-
-        // A rematch starts a fresh argument rather than appending to the one just judged.
-        await page.GetByRole(AriaRole.Button, new() { Name = "Argue again" }).ClickAsync();
-        await page.WaitForFunctionAsync(
-            $"() => document.querySelectorAll('section.verdict').length === 0 && {AppFixture.LinesSaid} <= 2",
-            null,
-            new() { Timeout = 30_000 });
-
-        errors.Should().BeEmpty();
-    }
-
-    private static async Task ShootAsync(IPage page, string name)
+    /// <summary>A full-page photograph into docs/screenshots (ignored by git), once the icon font has landed.</summary>
+    internal static async Task ShootAsync(IPage page, string name)
     {
         Directory.CreateDirectory(ShotsDirectory);
 

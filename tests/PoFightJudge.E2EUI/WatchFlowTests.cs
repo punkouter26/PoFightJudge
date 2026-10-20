@@ -30,6 +30,15 @@ public class WatchFlowTests(AppFixture app)
         (await verdict.InnerTextAsync()).Should().NotBeNullOrWhiteSpace();
         (await page.EvaluateAsync<int>(AppFixture.LinesSaid)).Should().Be(6, "three rounds each, no slap");
         (await page.Locator("article.line").CountAsync()).Should().Be(1, "only the line just said is on the page");
+        (await verdict.InnerTextAsync()).Should().ContainEquivalentOf("took it", "the ruling says who took it, and innerText carries the display font uppercase");
+        await WatchHardeningTests.ShootAsync(page, "watch-verdict");
+
+        // A rematch starts a fresh argument rather than appending to the one just judged.
+        await page.GetByRole(AriaRole.Button, new() { Name = "Argue again" }).ClickAsync();
+        await page.WaitForFunctionAsync(
+            $"() => document.querySelectorAll('section.verdict').length === 0 && {AppFixture.LinesSaid} <= 2",
+            null,
+            new() { Timeout = 30_000 });
 
         // The matchup lives in the tab, not only in memory: a reload plays the same two again rather than dumping
         // whoever was watching back at the setup screen.

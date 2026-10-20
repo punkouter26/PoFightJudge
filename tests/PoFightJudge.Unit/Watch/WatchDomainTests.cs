@@ -26,7 +26,7 @@ public class WatchMatchTests
         Ended);
 
     [Fact]
-    public void A_match_carries_six_lines_or_seven_when_a_slap_added_one()
+    public void A_match_carries_six_lines_or_seven_when_a_slap_added_one_and_is_complete_only_when_both_sides_have_had_their_rounds()
     {
         WatchMatch.MaxRoundsPerMatch.Should().Be(3);
         WatchMatch.MaxLinesPerMatch.Should().Be(7, "a slap inserts one extra reaction, and every slapped match failed at the verdict without the allowance");
@@ -39,32 +39,8 @@ public class WatchMatchTests
 
         var none = () => WatchMatch.Complete(MatchId.New(), MatchSide.Persona("MAH"), MatchSide.Persona("KSH"), "u", null, [], "MAH", "v", AdvancedStats.Empty, AdvancedStats.Empty, Ended);
         none.Should().Throw<InvalidOperationException>();
-    }
-}
 
-public class WatchRulesTests
-{
-    [Fact]
-    public void The_human_rules_put_the_players_words_first_and_allow_deflection_only_out_loud()
-    {
-        WatchRules.HumanReplyLineRules.Should().Contain("ANSWER THEIR LAST LINE", "the player said those words out loud and is waiting to hear them engaged");
-        WatchRules.HumanReplyLineRules.Should().Contain("never by ignoring it", "refusing to answer is legitimate; silently changing the subject is the failure mode");
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Every_line_carries_a_point_the_judge_can_weigh_and_keeps_its_closing_cue(bool opponentIsHuman)
-    {
-        var rules = WatchRules.LineRulesFor(opponentIsHuman);
-
-        rules.Should().Contain("ONE CONCRETE POINT", "the judge scores on evidence and rebuttal; two sides trading only insults came back a draw in two of four real matches");
-        rules.Should().NotContain("No stage directions,", "the output contract asks for a closing stage cue, and the rules must not forbid what the contract demands");
-    }
-
-    [Fact]
-    public void A_match_is_complete_only_when_both_sides_have_had_all_their_rounds()
-    {
+        // Complete only when both sides have had all their rounds.
         List<WatchRound> Lines(int husband, int wife) =>
         [
             .. Enumerable.Repeat(new WatchRound(WatchRound.Husband, "h", "angry"), husband),
@@ -75,5 +51,26 @@ public class WatchRulesTests
         WatchRules.IsComplete(Lines(3, 2)).Should().BeFalse();
         WatchRules.IsComplete(Lines(4, 3)).Should().BeTrue("the slap reaction is an extra line, not an extra round");
         WatchRules.IsComplete([]).Should().BeFalse();
+    }
+}
+
+public class WatchRulesTests
+{
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Every_line_carries_a_point_the_judge_can_weigh_keeps_its_closing_cue_and_against_a_person_answers_them_first(bool opponentIsHuman)
+    {
+        var rules = WatchRules.LineRulesFor(opponentIsHuman);
+
+        rules.Should().Contain("ONE CONCRETE POINT", "the judge scores on evidence and rebuttal; two sides trading only insults came back a draw in two of four real matches");
+        rules.Should().NotContain("No stage directions,", "the output contract asks for a closing stage cue, and the rules must not forbid what the contract demands");
+
+        if (opponentIsHuman)
+        {
+            // The human rules put the player's words first and allow deflection only out loud.
+            rules.Should().Contain("ANSWER THEIR LAST LINE", "the player said those words out loud and is waiting to hear them engaged");
+            rules.Should().Contain("never by ignoring it", "refusing to answer is legitimate; silently changing the subject is the failure mode");
+        }
     }
 }

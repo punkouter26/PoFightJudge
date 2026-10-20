@@ -31,25 +31,22 @@ public class StyleProfileBuilderTests
         new(tone, phrases ?? [], fallacies ?? [], opener, cefr, emotions ?? ["frustrated"], quote, tips ?? ["one", "two", "three"]);
 
     [Fact]
-    public void Somebody_who_has_never_argued_has_no_style_and_the_host_is_told_so()
+    public void Somebody_who_has_never_argued_has_no_style_and_a_phrase_is_a_habit_only_once_it_turns_up_in_more_than_one_debate()
     {
         var profile = StyleProfileBuilder.Build("AL", []);
 
         profile.Debates.Should().Be(0);
         profile.Digest.Should().Be("First fight.");
         profile.Tone.Should().BeEmpty();
-    }
 
-    [Fact]
-    public void A_phrase_has_to_turn_up_in_more_than_one_debate_before_it_is_a_habit()
-    {
-        var profile = StyleProfileBuilder.Build("AL",
+        // A phrase has to turn up in more than one debate before it is a habit.
+        var habits = StyleProfileBuilder.Build("AL",
         [
             With(1, Snapshot(phrases: ["that is not (×3)", "once only (×2)"])),
             With(2, Snapshot(phrases: ["that is not (×2)"])),
         ]);
 
-        profile.Phrases.Should().Contain("that is not");
-        profile.Phrases.Should().NotContain("once only", "it was said in one argument, which is a sentence rather than a habit");
+        habits.Phrases.Should().Contain("that is not");
+        habits.Phrases.Should().NotContain("once only", "it was said in one argument, which is a sentence rather than a habit");
     }
 }

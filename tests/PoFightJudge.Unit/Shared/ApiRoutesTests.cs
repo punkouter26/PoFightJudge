@@ -21,7 +21,7 @@ public class ApiRoutesTests
             .Concat(type.GetNestedTypes(BindingFlags.Public).SelectMany(AllConstants));
 
     [Fact]
-    public void Absolute_urls_are_unique()
+    public void Absolute_urls_are_unique_and_the_helpers_build_the_paths_the_server_maps()
     {
         var absolute = AllConstants(typeof(ApiRoutes))
             .Where(c => c.Value.StartsWith("/api", StringComparison.Ordinal) || c.Value.StartsWith("/auth", StringComparison.Ordinal) || c.Value.StartsWith("/hubs", StringComparison.Ordinal) || c.Value.StartsWith("/health", StringComparison.Ordinal))
@@ -29,11 +29,7 @@ public class ApiRoutesTests
             .ToList();
 
         absolute.Select(c => c.Value).Should().OnlyHaveUniqueItems();
-    }
 
-    [Fact]
-    public void Helpers_build_the_paths_the_server_maps()
-    {
         var profile = ProfileId.From("KDH");
         var fighter = FighterId.From("MLT");
         var match = MatchId.From("0123456789abcdef0123456789abcdef");

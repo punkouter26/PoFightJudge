@@ -9,15 +9,11 @@ public class CreateProfileRequestValidatorTests
     private readonly CreateProfileRequestValidator _sut = new();
 
     [Fact]
-    public void A_complete_persona_passes()
+    public void A_complete_persona_passes_and_each_broken_rule_names_its_field()
     {
         _sut.TestValidate(ProfileTests.FullRequest()).ShouldNotHaveAnyValidationErrors();
         _sut.TestValidate(new CreateProfileRequest { Initials = "A", Likes = "x", Dislikes = "y" }).ShouldNotHaveAnyValidationErrors();
-    }
 
-    [Fact]
-    public void Each_rule_names_its_field()
-    {
         (string Property, Action<CreateProfileRequest> Mutate)[] invalidCases =
         [
             (nameof(CreateProfileRequest.Initials), r => r.Initials = ""),

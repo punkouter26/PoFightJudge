@@ -45,7 +45,7 @@ public class ProfileEditDialogTests : BunitContext
         new() { Id = ProfileId.From(persona.Initials), HasFace = hasFace, Persona = persona };
 
     [Fact]
-    public async Task A_valid_new_persona_is_posted_and_the_saved_profile_is_handed_back()
+    public async Task A_new_persona_is_posted_and_handed_back_and_an_edit_goes_through_update_on_a_copy_with_the_initials_locked()
     {
         var persona = Valid("abc");
         _api.CreateProfileAsync(Arg.Any<CreateProfileRequest>(), Arg.Any<CancellationToken>()).Returns(Dto(Valid("ABC")));
@@ -62,20 +62,17 @@ public class ProfileEditDialogTests : BunitContext
         await _api.Received(1).CreateProfileAsync(Arg.Is<CreateProfileRequest>(r => r.Initials == "abc" && r.Likes == "tea"), Arg.Any<CancellationToken>());
         // A Vogen id cannot be an NSubstitute arg spec (default(ProfileId) is not equal to itself), so match any args instead.
         await _api.DidNotReceiveWithAnyArgs().UploadFaceAsync(ProfileId.From("ABC"), [], string.Empty, CancellationToken.None);
-    }
 
-    [Fact]
-    public async Task Editing_locks_the_initials_puts_the_change_through_update_and_never_mutates_the_original()
-    {
+        // Editing locks the initials, puts the change through update and never mutates the original.
         var original = Dto(Valid("MAH"), hasFace: true);
         _api.UpdateProfileAsync(ProfileId.From("MAH"), Arg.Any<CreateProfileRequest>(), Arg.Any<CancellationToken>())
             .Returns(call => Dto(call.Arg<CreateProfileRequest>(), hasFace: true));
-        var cut = Render<ProfileEditDialog>(p => p.Add(x => x.Existing, original));
+        var editing = Render<ProfileEditDialog>(p => p.Add(x => x.Existing, original));
 
-        cut.Find("input[name=Initials]").HasAttribute("disabled").Should().BeTrue("initials are the key");
-        cut.Markup.Should().Contain("Save changes");
-        await cut.Find("textarea[name=Likes]").ChangeAsync(new ChangeEventArgs { Value = "coffee" });
-        await cut.Find("form").SubmitAsync();
+        editing.Find("input[name=Initials]").HasAttribute("disabled").Should().BeTrue("initials are the key");
+        editing.Markup.Should().Contain("Save changes");
+        await editing.Find("textarea[name=Likes]").ChangeAsync(new ChangeEventArgs { Value = "coffee" });
+        await editing.Find("form").SubmitAsync();
 
         await _api.Received(1).UpdateProfileAsync(ProfileId.From("MAH"), Arg.Is<CreateProfileRequest>(r => r.Likes == "coffee"), Arg.Any<CancellationToken>());
         original.Persona.Likes.Should().Be("tea", "the form edits a copy until the server accepts it");

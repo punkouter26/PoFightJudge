@@ -20,35 +20,25 @@ public class RematchTests
     };
 
     [Fact]
-    public void It_is_the_same_fight_again()
+    public void It_is_the_same_fight_again_seated_as_these_two_last_sat_on_this_devices_microphone()
     {
         var card = Verdict.RematchCard(Fought, last: null);
 
         card.Should().Be(new FightCard("AL", "SM", "the thermostat", ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Roastmaster));
-    }
 
-    [Fact]
-    public void The_seats_and_the_microphone_come_from_the_last_setup_of_these_two()
-    {
-        var last = new FightCard("sm", "al", "something else", ProfileRole.Wife, ProfileRole.Husband, HostPersonaId.Coach) { Device = "usb-mic" };
+        // The seats and the microphone come from the last setup of these two.
+        var theirs = Verdict.RematchCard(Fought, new FightCard("sm", "al", "something else", ProfileRole.Wife, ProfileRole.Husband, HostPersonaId.Coach) { Device = "usb-mic" });
 
-        var card = Verdict.RematchCard(Fought, last);
+        theirs.OneRole.Should().Be(ProfileRole.Husband, "AL sat as the husband last time, whichever box the tag was typed in");
+        theirs.TwoRole.Should().Be(ProfileRole.Wife);
+        theirs.Persona.Should().Be(HostPersonaId.Roastmaster, "the host is this fight's, not the last one set up");
+        theirs.Topic.Should().Be("the thermostat");
+        theirs.Device.Should().Be("usb-mic");
 
-        card.OneRole.Should().Be(ProfileRole.Husband, "AL sat as the husband last time, whichever box the tag was typed in");
-        card.TwoRole.Should().Be(ProfileRole.Wife);
-        card.Persona.Should().Be(HostPersonaId.Roastmaster, "the host is this fight's, not the last one set up");
-        card.Topic.Should().Be("the thermostat");
-        card.Device.Should().Be("usb-mic");
-    }
+        // Somebody else's seats are not borrowed.
+        var borrowed = Verdict.RematchCard(Fought, new FightCard("KD", "SM", "x", ProfileRole.Wife, ProfileRole.Husband, HostPersonaId.Coach) { Device = "usb-mic" });
 
-    [Fact]
-    public void Somebody_elses_seats_are_not_borrowed()
-    {
-        var last = new FightCard("KD", "SM", "x", ProfileRole.Wife, ProfileRole.Husband, HostPersonaId.Coach) { Device = "usb-mic" };
-
-        var card = Verdict.RematchCard(Fought, last);
-
-        (card.OneRole, card.TwoRole).Should().Be((ProfileRole.Husband, ProfileRole.Wife));
-        card.Device.Should().Be("usb-mic", "the microphone belongs to the device, not to the pair");
+        (borrowed.OneRole, borrowed.TwoRole).Should().Be((ProfileRole.Husband, ProfileRole.Wife));
+        borrowed.Device.Should().Be("usb-mic", "the microphone belongs to the device, not to the pair");
     }
 }

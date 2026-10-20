@@ -130,27 +130,16 @@ public sealed class DebateOrchestratorTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task The_hosts_tool_calls_drive_the_rules_and_each_one_is_answered()
+    public async Task The_hosts_tool_calls_drive_the_rules_and_ending_stores_the_match_the_turns_and_the_recording_and_queues_the_analysis()
     {
-        var orchestrator = await StartedAsync();
+        var orchestrator = await DebatingAsync();
 
-        await EmitAsync(
-            Call(ToolDeclarations.SetPlayers, new { topic = "the thermostat", player1 = "Alex", player2 = "Sam" }),
-            () => orchestrator.Session.Phase == SessionPhase.Setup);
-        await EmitAsync(
-            Call(ToolDeclarations.StartTurn, new { player = "player1" }),
-            () => orchestrator.Session.Phase == SessionPhase.Debate);
-
+        // The host's tool calls drive the rules, and each one is answered.
         orchestrator.Session.Player1Name.Should().Be("AB", "the host does not get to rename anyone");
         orchestrator.Session.CurrentSpeaker.Should().Be(PlayerId.Player1);
         _clients.Latest.ToolResponses.Should().HaveCount(2).And.OnlyContain(r => r.Id == "fc-1");
         _sink.Latest!.Phase.Should().Be(SessionPhase.Debate, "the room is told as it happens");
-    }
 
-    [Fact]
-    public async Task Ending_stores_the_match_the_turns_and_the_recording_and_queues_the_analysis()
-    {
-        var orchestrator = await DebatingAsync();
         await orchestrator.OnAudioInAsync(Loud(), CancellationToken.None);
 
         await orchestrator.EndAsync("user pressed end", CancellationToken.None);

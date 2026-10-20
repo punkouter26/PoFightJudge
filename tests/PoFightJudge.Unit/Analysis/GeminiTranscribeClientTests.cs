@@ -11,7 +11,7 @@ namespace PoFightJudge.Unit.Analysis;
 public class GeminiTranscribeClientTests
 {
     [Fact]
-    public void Request_asks_for_verbatim_speaker_diarized_word_timestamps()
+    public void Request_asks_for_verbatim_speaker_diarized_word_timestamps_and_the_response_keeps_each_words_speaker()
     {
         var request = JsonNode.Parse(GeminiTranscribeClient.BuildRequest("gemini-3.5-transcribe", "files/abc", "audio/webm"))!;
         var mode = request["generation_config"]!["transcription_config"]!["mode"]!;
@@ -20,11 +20,7 @@ public class GeminiTranscribeClientTests
         mode["type"]!.GetValue<string>().Should().Be("verbatim");
         mode["diarization_mode"]!.GetValue<string>().Should().Be("speaker");
         mode["timestamp_granularities"]!.AsArray().Select(g => g!.GetValue<string>()).Should().Equal("word");
-    }
 
-    [Fact]
-    public void Response_keeps_each_words_speaker_label()
-    {
         var response = JsonNode.Parse("""
             {"status":"completed","outputs":[{"text":"no you did","annotations":[
               {"type":"word_info","text":"no","speaker":"spk_1","start_offset":"0s","end_offset":"0.3s"},

@@ -10,11 +10,15 @@ namespace PoFightJudge.E2EUI;
 [Collection(AppCollection.Name)]
 public class PwaTests(AppFixture app)
 {
+    /// <summary>
+    /// The manifest describes an installable app with icons a launcher can use, and the worker registers without
+    /// caching anything. One page serves both halves: they are the same install.
+    /// </summary>
     [SkippableFact]
-    public async Task The_manifest_describes_an_installable_app_with_icons_a_launcher_can_use()
+    public async Task The_app_installs_from_its_manifest_and_its_worker_caches_nothing()
     {
-        var (context, page, _) = await app.OpenAsync(AppFixture.Desktop);
-        await using var _1 = context;
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
+        await using var _ = context;
 
         (await page.Locator("link[rel=manifest]").GetAttributeAsync("href")).Should().Be("manifest.webmanifest");
 
@@ -40,13 +44,6 @@ public class PwaTests(AppFixture app)
             image.Status.Should().Be(200, $"the launcher will ask for {src}");
             (await image.BodyAsync()).Length.Should().BeGreaterThan(0);
         }
-    }
-
-    [SkippableFact]
-    public async Task The_worker_registers_and_caches_nothing_it_is_asked_not_to()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop);
-        await using var _ = context;
 
         // Registration is deferred to load, so wait for it rather than assuming it has already happened.
         var registered = await page.WaitForFunctionAsync(

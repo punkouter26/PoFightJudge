@@ -62,35 +62,24 @@ public sealed class HomeTests : BunitContext
     };
 
     [Fact]
-    public async Task The_tally_counts_the_arguments_the_fighters_and_the_cast()
+    public async Task The_tally_counts_the_arguments_the_fighters_and_the_cast_the_standings_switch_and_the_recent_list_searches_the_server()
     {
         var cut = Render<Home>();
 
         await cut.WaitForAssertionAsync(() => cut.Find(".tally").TextContent.Should()
             .Contain("23 arguments").And.Contain("2 fighters").And.Contain("3 in the cast"));
-    }
 
-    [Fact]
-    public async Task Searching_the_recent_list_asks_the_server_and_shows_its_answer()
-    {
-        var cut = Render<Home>();
+        // The standings switch between the fighters and the cast.
+        await cut.WaitForAssertionAsync(() => cut.Find(".fighter-list").TextContent.Should().Contain("AB"));
+        await cut.FindAll(".standings .rz-button").Single(b => b.TextContent.Contains("Cast", StringComparison.Ordinal)).ClickAsync(new());
+        await cut.WaitForAssertionAsync(() => cut.Find(".fighter-list").TextContent.Should().Contain("Karen"));
+
+        // Searching the recent list asks the server and shows its answer.
         await cut.WaitForAssertionAsync(() => cut.FindAll(".replay-list li").Should().HaveCount(2));
-
         await cut.Find(".recent-find input").ChangeAsync(new() { Value = "bins" });
 
         await cut.WaitForAssertionAsync(() => cut.FindAll(".replay-list li").Should().ContainSingle());
         await _api.Received().GetMatchPageAsync(Arg.Is<MatchQuery>(q => q.Text == "bins"), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task The_standings_switch_between_the_fighters_and_the_cast()
-    {
-        var cut = Render<Home>();
-        await cut.WaitForAssertionAsync(() => cut.Find(".fighter-list").TextContent.Should().Contain("AB"));
-
-        await cut.FindAll(".standings .rz-button").Single(b => b.TextContent.Contains("Cast", StringComparison.Ordinal)).ClickAsync(new());
-
-        await cut.WaitForAssertionAsync(() => cut.Find(".fighter-list").TextContent.Should().Contain("Karen"));
     }
 
     [Fact]

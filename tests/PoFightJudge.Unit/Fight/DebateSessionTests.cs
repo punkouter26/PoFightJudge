@@ -38,7 +38,7 @@ public class DebateSessionTests
     }
 
     [Fact]
-    public void A_show_walks_from_the_introduction_through_to_the_ruling()
+    public void A_show_walks_from_the_introduction_to_the_ruling_refusing_steps_out_of_order_and_recording_every_turn()
     {
         var session = NewSession(Pair);
         session.Phase.Should().Be(SessionPhase.Intro);
@@ -61,45 +61,39 @@ public class DebateSessionTests
 
         session.Complete(At(140));
         session.Phase.Should().Be(SessionPhase.Done);
-    }
 
-    [Fact]
-    public void Steps_taken_out_of_order_are_refused_by_name_rather_than_half_applied()
-    {
-        var session = NewSession(Pair);
+        // Steps taken out of order are refused by name rather than half applied.
+        var refused = NewSession(Pair);
 
         // Skipping forward is allowed — a host that has moved on has moved on — but going back is not: the debate
         // is over once the questions start, and a refused step must leave the show exactly where it was.
-        session.SetPlayers("t", "AB", "CD", At(5));
-        session.StartTurn(PlayerId.Player1, At(10));
-        session.EndDebate(At(60));
+        refused.SetPlayers("t", "AB", "CD", At(5));
+        refused.StartTurn(PlayerId.Player1, At(10));
+        refused.EndDebate(At(60));
 
-        session.StartTurn(PlayerId.Player2, At(65)).Error.Should().Contain("Probe");
-        session.Phase.Should().Be(SessionPhase.Probe, "a refused step changes nothing");
+        refused.StartTurn(PlayerId.Player2, At(65)).Error.Should().Contain("Probe");
+        refused.Phase.Should().Be(SessionPhase.Probe, "a refused step changes nothing");
 
-        session.SetPlayers("something else", "ZZ", "YY", At(70)).Error.Should().Contain("Probe");
-        session.Player1Name.Should().Be("AB", "and nothing it refused was half applied");
-    }
+        refused.SetPlayers("something else", "ZZ", "YY", At(70)).Error.Should().Contain("Probe");
+        refused.Player1Name.Should().Be("AB", "and nothing it refused was half applied");
 
-    [Fact]
-    public void Turns_are_recorded_with_their_own_start_and_end_and_an_interruption_names_who_was_cut_off()
-    {
-        var session = Debating();
-        session.NoteInterrupt(At(55));
-        session.StartTurn(PlayerId.Player2, At(56));
-        session.EndDebate(At(90));
+        // Turns are recorded with their own start and end, and an interruption names who was cut off.
+        var debating = Debating();
+        debating.NoteInterrupt(At(55));
+        debating.StartTurn(PlayerId.Player2, At(56));
+        debating.EndDebate(At(90));
 
-        var talk = session.Turns.Where(t => t.Kind == TurnKind.Talk).ToList();
+        var talk = debating.Turns.Where(t => t.Kind == TurnKind.Talk).ToList();
         talk.Should().HaveCount(2);
         talk[0].Speaker.Should().Be(Speaker.Player1);
         talk[0].StartSeconds.Should().Be(10);
         talk[0].EndSeconds.Should().Be(56, "a turn ends when the next one starts");
         talk[1].EndSeconds.Should().Be(90, "the last turn ends when the debate does");
 
-        var interrupt = session.Turns.Should().ContainSingle(t => t.Kind == TurnKind.Interrupt).Subject;
+        var interrupt = debating.Turns.Should().ContainSingle(t => t.Kind == TurnKind.Interrupt).Subject;
         interrupt.Speaker.Should().Be(Speaker.Player1, "the interruption belongs to whoever was cut off");
         interrupt.Text.Should().Contain("AB");
-        session.Turns.Should().OnlyContain(t => t.MatchId == Match);
+        debating.Turns.Should().OnlyContain(t => t.MatchId == Match);
     }
 
     /// <summary>

@@ -28,7 +28,7 @@ public class FighterStatsBuilderTests
         new("AL", "u", MatchId.New(), mode, Start.AddDays(day), "the thermostat", opponent, won, draw, score, style ?? StyleSnapshot.Empty);
 
     [Fact]
-    public void Wins_losses_and_draws_add_up_to_the_fights_that_happened()
+    public void Wins_losses_and_draws_add_up_to_the_fights_and_a_run_is_counted_back_from_the_most_recent_until_a_draw()
     {
         var stats = FighterStatsBuilder.Build(Fighter(), [Result(1, true), Result(2, false), Result(3, false, draw: true)]);
 
@@ -38,11 +38,8 @@ public class FighterStatsBuilderTests
         stats.Draws.Should().Be(1);
         (stats.Wins + stats.Losses + stats.Draws).Should().Be(stats.Fights);
         stats.WinRate.Should().BeApproximately(1.0 / 3, 0.01);
-    }
 
-    [Fact]
-    public void A_run_is_counted_back_from_the_most_recent_and_a_draw_ends_it()
-    {
+        // A run is counted back from the most recent, and a draw ends it.
         FighterStatsBuilder.Build(Fighter(), [Result(1, false), Result(2, true), Result(3, true)]).Streak.Should().Be(2);
         FighterStatsBuilder.Build(Fighter(), [Result(1, true), Result(2, false), Result(3, false)]).Streak.Should().Be(-2);
         FighterStatsBuilder.Build(Fighter(), [Result(1, true), Result(2, true), Result(3, false, draw: true)]).Streak

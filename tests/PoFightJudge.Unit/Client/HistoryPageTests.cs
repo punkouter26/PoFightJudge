@@ -88,24 +88,21 @@ public class HistoryPageTests : BunitContext
     }
 
     [Fact]
-    public void Both_kinds_of_argument_are_listed_and_each_says_which_it_was()
+    public async Task Both_kinds_of_argument_are_listed_on_one_page_and_the_dates_and_the_order_wait_behind_one_filters_button()
     {
         var cut = RenderHistory();
 
         cut.FindComponents<ModeBadge>().Select(b => b.Instance.Mode)
             .Should().BeEquivalentTo([MatchMode.Watch, MatchMode.Fight]);
         cut.Markup.Should().Contain("the thermostat").And.Contain("who forgot the bins");
+        cut.FindAll(".rz-pager").Should().BeEmpty("two arguments fit on the first page");
 
         _api.ReceivedCalls().Should().Contain(c => c.GetArguments().OfType<MatchQuery>().Any(q => q.Sort == MatchSort.Newest));
         MatchQuery.DefaultTake.Should().BePositive();
         new MatchQuery(Sort: MatchSort.TopicAscending).Order(Both()).Select(m => m.Topic).Should().Equal("the thermostat", "who forgot the bins");
         new MatchQuery(Sort: MatchSort.TopicDescending).Order(Both()).Select(m => m.Topic).Should().Equal("who forgot the bins", "the thermostat");
-    }
 
-    [Fact]
-    public async Task The_dates_and_the_order_wait_behind_one_filters_button_and_the_order_is_asked_of_the_server()
-    {
-        var cut = RenderHistory();
+        // The dates and the order wait behind one filters button, and the order is asked of the server.
         cut.FindAll(".filters").Should().BeEmpty("one row of controls until somebody wants more");
 
         await cut.FindAll(".narrow .rz-button").Single(b => b.TextContent.Contains("Filters", StringComparison.Ordinal)).ClickAsync(new());
@@ -116,14 +113,6 @@ public class HistoryPageTests : BunitContext
 
         await cut.WaitForAssertionAsync(() => _api.ReceivedCalls().Should()
             .Contain(c => c.GetArguments().OfType<MatchQuery>().Any(q => q.Sort == MatchSort.TopicAscending)));
-    }
-
-    [Fact]
-    public void One_page_of_history_has_no_pager()
-    {
-        var cut = RenderHistory();
-
-        cut.FindAll(".rz-pager").Should().BeEmpty("two arguments fit on the first page");
     }
 
     [Fact]
@@ -191,25 +180,12 @@ public class StandingsTests : BunitContext, IAsyncLifetime
         new(id, name, matches, wins, (double)wins / matches, 61.5);
 
     [Fact]
-    public async Task The_fighter_standings_are_on_the_page_that_lists_the_fighters()
+    public async Task The_page_titled_leaderboard_ranks_the_fighters_and_the_cast_is_one_switch_away()
     {
-        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns(
-        [
-            FighterStatsDto.Empty("AB", "Alex") with { Fights = 3, Wins = 2, Losses = 1 },
-        ]);
+        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex") with { Fights = 3, Wins = 2, Losses = 1 }]);
 
         var cut = Render<FightersPage>();
-
-        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows
-            .Select(r => r.DisplayName).Should().Equal("Alex"));
-    }
-
-    [Fact]
-    public async Task The_cast_standings_are_on_the_leaderboard_one_switch_away()
-    {
-        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex")]);
-
-        var cut = Render<FightersPage>();
+        await cut.WaitForAssertionAsync(() => cut.Find("h1").TextContent.Should().Be("Leaderboard", "it is the page the nav calls leaderboard"));
         await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows.Select(r => r.DisplayName).Should().Equal("Alex"));
 
         await cut.FindAll(".boards .rz-button").Single(b => b.TextContent.Contains("Cast", StringComparison.Ordinal)).ClickAsync(new());
@@ -231,15 +207,5 @@ public class StandingsTests : BunitContext, IAsyncLifetime
         await cut.WaitForAssertionAsync(() => cut.FindAll(".cast").Should().NotBeEmpty());
         cut.FindComponents<Board>().Should().BeEmpty();
         await _api.DidNotReceive().GetLeaderboardAsync(Arg.Any<MatchMode>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task The_page_the_nav_calls_leaderboard_is_titled_leaderboard()
-    {
-        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex")]);
-
-        var cut = Render<FightersPage>();
-
-        await cut.WaitForAssertionAsync(() => cut.Find("h1").TextContent.Should().Be("Leaderboard"));
     }
 }

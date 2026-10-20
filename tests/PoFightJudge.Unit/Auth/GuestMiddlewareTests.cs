@@ -28,7 +28,7 @@ public class GuestMiddlewareTests
 
     /// <summary>Guest sign-in is the dev door into a real session, so what opens it is worth pinning exactly.</summary>
     [Fact]
-    public async Task A_guest_session_needs_a_credible_cookie_or_header_and_nothing_less()
+    public async Task A_guest_session_needs_a_credible_cookie_or_header_and_fake_auth_a_non_production_environment_and_the_flag()
     {
         // Development cookie sets guest principal
         {
@@ -76,11 +76,8 @@ public class GuestMiddlewareTests
             GuestMiddleware.IsCredible("GUEST-" + new string('a', 31)).Should().BeFalse();
             GuestMiddleware.IsCredible("guest-" + new string('a', 32)).Should().BeFalse("the prefix is case-sensitive");
         }
-    }
 
-    [Fact]
-    public void Fake_auth_needs_a_non_production_environment_and_the_explicit_flag()
-    {
+        // Fake auth needs a non-production environment and the explicit flag.
         (string Environment, bool Flag, bool Expected)[] cases =
         [
             ("Production", true, false), ("Development", false, false), ("Development", true, true),

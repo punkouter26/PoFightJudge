@@ -14,10 +14,7 @@ public class StageCueTests
     [InlineData("(coldly) You again.", "You again.")]
     [InlineData("Fine (snaps) — whatever you say.", "Fine — whatever you say.")]
     [InlineData("No cue here.", "No cue here.")]
-    public void Shown_drops_the_cue_and_tidies_the_gap(string line, string shown) =>
+    [InlineData("(sighs)", "(sighs)")]
+    public void Shown_drops_the_cue_and_tidies_the_gap_but_never_blanks_a_line_that_is_only_a_cue(string line, string shown) =>
         WatchTurns.Shown(line).Should().Be(shown);
-
-    [Fact]
-    public void A_line_that_is_only_a_cue_is_left_alone_rather_than_blanked() =>
-        WatchTurns.Shown("(sighs)").Should().Be("(sighs)");
 }

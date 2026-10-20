@@ -33,7 +33,7 @@ public class GeminiRetryHandlerTests
     }
 
     [Fact]
-    public async Task Retries_a_throttled_call_resends_the_body_and_honours_retry_after()
+    public async Task Retries_a_throttled_call_with_its_body_honours_retry_after_and_neither_retries_a_client_error_nor_passes_the_cap()
     {
         _inner.Enqueue(HttpStatusCode.TooManyRequests, "slow down");
         _inner.Enqueue(HttpStatusCode.OK, """{"ok":true}""");
@@ -58,18 +58,15 @@ public class GeminiRetryHandlerTests
 
         honoured.StatusCode.Should().Be(HttpStatusCode.OK);
         _inner.Requests.Should().HaveCount(4);
-    }
 
-    [Fact]
-    public async Task A_client_error_is_not_retried_and_the_cap_hands_back_the_last_failure()
-    {
+        // A client error is not retried, and the cap hands back the last failure.
         _inner.Enqueue(HttpStatusCode.BadRequest, "malformed");
         using var bad = new HttpRequestMessage(HttpMethod.Post, "v1beta/x");
 
         using var rejected = await SendAsync(bad);
 
         rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        _inner.Requests.Should().ContainSingle();
+        _inner.Requests.Should().HaveCount(4 + 1, "the bad request is sent once and only once");
 
         for (var i = 0; i < GeminiRetryHandler.MaxAttempts; i++)
         {
@@ -80,6 +77,6 @@ public class GeminiRetryHandlerTests
         using var gaveUp = await SendAsync(down);
 
         gaveUp.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        _inner.Requests.Should().HaveCount(1 + GeminiRetryHandler.MaxAttempts);
+        _inner.Requests.Should().HaveCount(4 + 1 + GeminiRetryHandler.MaxAttempts);
     }
 }

@@ -20,7 +20,7 @@ public class AnalysisSchemaTests
     private static JsonObject Property(JsonObject schema, string name) => (JsonObject)schema["properties"]![name]!;
 
     [Fact]
-    public void Every_field_the_report_reads_is_asked_for()
+    public void Every_field_the_report_reads_is_asked_for_and_the_ruling_also_writes_the_recap()
     {
         var assessment = AnalysisSchema.PlayerAssessment();
         var asked = assessment["properties"]!.AsObject().Select(p => p.Key).ToList();
@@ -31,11 +31,8 @@ public class AnalysisSchemaTests
 
         asked.Should().BeEquivalentTo(expected);
         assessment["required"]!.AsArray().Should().HaveCount(asked.Count, "a field that is optional comes back missing");
-    }
 
-    [Fact]
-    public void The_ruling_also_writes_the_recap_and_a_report_from_before_it_still_reads()
-    {
+        // The ruling also writes the recap, and a report from before it still reads.
         AnalysisSchema.Overall()["required"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Contain("recap",
             "the ruling call already reads the whole fight, so the recap costs a field rather than a model call");
 

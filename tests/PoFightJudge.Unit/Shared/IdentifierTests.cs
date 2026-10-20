@@ -15,18 +15,14 @@ namespace PoFightJudge.Unit.Shared;
 public class IdentifierTests
 {
     [Fact]
-    public void ProfileId_upper_cases_and_is_the_initials()
+    public void ProfileId_upper_cases_the_initials_and_FighterId_is_an_arcade_tag_of_one_to_three_alphanumerics()
     {
         var id = ProfileId.From("kdh");
 
         id.Value.Should().Be("KDH");
         id.ToString().Should().Be("KDH");
         ProfileId.From(" k.d.h ").Should().Be(id, "punctuation and whitespace are stripped like PoArgueJudge's Initials");
-    }
 
-    [Fact]
-    public void FighterId_is_an_arcade_tag_of_one_to_three_alphanumerics()
-    {
         FighterId.From("mlt").Value.Should().Be("MLT");
         FighterId.From("a1").Value.Should().Be("A1");
         FighterId.From("SELF").Value.Should().Be("SEL", "tags truncate to three characters — SELF is a WATCH concept, never a fighter");

@@ -18,7 +18,7 @@ public class FightLiveComponentTests : BunitContext
     }
 
     [Fact]
-    public void Captions_are_labelled_with_the_tag_that_said_them()
+    public void Captions_are_labelled_with_their_tag_and_capped_and_the_momentum_bar_splits_the_room_between_the_two()
     {
         var log = new CaptionLog();
         log.Add(new CaptionDto(Speaker.Player1, "you never listen", true));
@@ -35,20 +35,28 @@ public class FightLiveComponentTests : BunitContext
         lines[0].ClassList.Should().Contain("p1");
         lines[1].TextContent.Should().Contain("The Referee");
         lines[1].ClassList.Should().Contain("host");
-    }
 
-    [Fact]
-    public void The_momentum_bar_splits_the_room_between_the_two_tags()
-    {
-        var cut = Render<MomentumBar>(p => p
+        // The momentum bar splits the room between the two tags.
+        var bar = Render<MomentumBar>(p => p
             .Add(b => b.Player1, "AL")
             .Add(b => b.Player2, "SM")
             .Add(b => b.Share, 0.624));
 
-        cut.Find(".name.p1").TextContent.Should().Contain("AL").And.Contain("62%");
-        cut.Find(".name.p2").TextContent.Should().Contain("38%").And.Contain("SM");
-        cut.Find(".rope").GetAttribute("aria-valuenow").Should().Be("62");
-        cut.Find(".momentum").GetAttribute("style").Should().Contain("--share: 0.624");
+        bar.Find(".name.p1").TextContent.Should().Contain("AL").And.Contain("62%");
+        bar.Find(".name.p2").TextContent.Should().Contain("38%").And.Contain("SM");
+        bar.Find(".rope").GetAttribute("aria-valuenow").Should().Be("62");
+        bar.Find(".momentum").GetAttribute("style").Should().Contain("--share: 0.624");
+
+        // A long fight does not grow the page without limit.
+        var longFight = new CaptionLog();
+
+        for (var i = 0; i < CaptionLog.MaxLines + 40; i++)
+        {
+            longFight.Add(new CaptionDto(Speaker.Player1, $"line {i}", true));
+        }
+
+        longFight.Lines.Should().HaveCount(CaptionLog.MaxLines);
+        longFight.Lines[^1].Text.Should().Be($"line {CaptionLog.MaxLines + 39}", "it is the oldest lines that fall off");
     }
 }
 
@@ -68,30 +76,4 @@ public class RiserTests
     [InlineData(SessionPhase.Debate, int.MaxValue, 180, false)]
     public void A_riser_marks_half_a_minute_and_ten_seconds_left(SessionPhase phase, int before, int now, bool due) =>
         PoFightJudge.Client.Pages.FightLive.RiserDue(phase, before, now).Should().Be(due);
-}
-
-/// <summary>
-/// A caption arrives in pieces and is rewritten as it grows, so the log has to replace rather than append — or a
-/// sentence would appear a fragment at a time, each one a line of its own.
-/// </summary>
-/// <summary>
-/// A caption arrives in pieces and is rewritten as it grows, so the log has to replace rather than append — or a
-/// sentence would appear a fragment at a time, each one a line of its own.
-/// </summary>
-public class CaptionLogTests
-{
-
-    [Fact]
-    public void A_long_fight_does_not_grow_the_page_without_limit()
-    {
-        var log = new CaptionLog();
-
-        for (var i = 0; i < CaptionLog.MaxLines + 40; i++)
-        {
-            log.Add(new CaptionDto(Speaker.Player1, $"line {i}", true));
-        }
-
-        log.Lines.Should().HaveCount(CaptionLog.MaxLines);
-        log.Lines[^1].Text.Should().Be($"line {CaptionLog.MaxLines + 39}", "it is the oldest lines that fall off");
-    }
 }

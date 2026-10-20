@@ -123,7 +123,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     }
 
     [Fact(Timeout = 60_000)]
-    public async Task Two_personas_argue_their_rounds_out_and_the_judge_rules()
+    public async Task Two_personas_argue_their_rounds_out_voicing_but_not_printing_the_cue_and_the_judge_rules()
     {
         _simulation.Set(Matthew, Kimberly, "the thermostat");
 
@@ -139,17 +139,8 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
         _asked.Should().OnlyContain(a => a.Topic == "the thermostat");
         cut.Markup.Should().Contain("He answered the point");
         cut.Markup.Should().Contain("Matthew", "the ruling names the winner rather than printing initials alone");
-    }
 
-    [Fact(Timeout = 60_000)]
-    public async Task The_stage_cue_is_voiced_but_not_printed()
-    {
-        _simulation.Set(Matthew, Kimberly, "the thermostat");
-
-        var cut = Render<WatchPlay>();
-        await RunToTheEndAsync(cut, _clock);
-
-        await cut.WaitForAssertionAsync(() => cut.FindAll("section.verdict").Should().HaveCount(1), TimeSpan.FromSeconds(10));
+        // The stage cue is voiced but not printed.
         cut.FindAll("article.line p").Select(p => p.TextContent).Should().Equal(
             ["line 6"], "the cue is for the voice, not the page, and the page shows the last line only");
         _api.ReceivedCalls()

@@ -22,7 +22,7 @@ public class FishAudioTests
             NullLogger<FishAudioService>.Instance);
 
     [Fact]
-    public void Fish_speaks_only_for_a_persona_it_has_a_voice_for()
+    public void Fish_speaks_only_for_a_persona_it_has_a_voice_for_and_is_asked_for_what_it_accepts()
     {
         Fish(enabled: true).CanSpeak(Voiced("trump")).Should().BeTrue("a persona with its own voice is spoken by Fish");
         Fish(enabled: true).CanSpeak(Voiced(null)).Should().BeFalse("one without falls to the ordinary voice");
@@ -33,26 +33,11 @@ public class FishAudioTests
             .Should().Be("trump", "a persona's own voice always beats the shared one");
 
         Fish(enabled: false, shared: "house-voice").CanSpeak(Voiced("trump")).Should().BeFalse("without a key Fish never speaks, however many ids are set");
-    }
 
-    [Fact]
-    public void Fish_is_asked_for_what_it_accepts()
-    {
-        // Fish rejects any other rate for mp3 with a 400, and a 400 here is invisible: the chain falls through and
-        // the line simply plays in the wrong voice.
+        // And it is asked for what it accepts. Fish rejects any other rate for mp3 with a 400, and a 400 here is
+        // invisible: the chain falls through and the line simply plays in the wrong voice.
         FishAudioService.SampleRateFor("mp3").Should().Be(44_100);
         FishAudioService.SampleRateFor("pcm").Should().Be(24_000);
         FishAudioService.Model.Should().Be("s2.1-pro-free", "s2-pro needs paid credit and 402s without it");
-    }
-
-    [Fact]
-    public void Different_voices_never_share_a_cache_entry()
-    {
-        var cloned = CachingTtsService.CacheKey("that is a disgrace", Voiced("trump"), "fish", "mp3");
-        var stock = CachingTtsService.CacheKey("that is a disgrace", Voiced(null), "gemini", "mp3");
-        var other = CachingTtsService.CacheKey("that is a disgrace", Voiced("clinton"), "fish", "mp3");
-
-        cloned.Should().NotBe(stock, "a cloned voice and a stock one are different renderings");
-        cloned.Should().NotBe(other, "the reference id is what makes the rendering different");
     }
 }

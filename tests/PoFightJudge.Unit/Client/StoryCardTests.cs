@@ -14,7 +14,7 @@ public class StoryCardTests
     private static readonly MatchId Match = MatchId.From("0123456789abcdef0123456789abcdef");
 
     [Fact]
-    public void The_card_names_the_winner_and_carries_the_losers_slip()
+    public void The_card_names_the_winner_and_carries_the_losers_slip_and_a_fight_nobody_took_says_so()
     {
         var card = Verdict.Story(Report(ruled: true), rehearsal: false);
 
@@ -26,15 +26,12 @@ public class StoryCardTests
         card.Fallacy.Should().Be("Moving the goalposts", "the loser's slip, not the winner's");
         card.FallacyQuote.Should().Be("that is not what I meant");
         card.FileName.Should().Be("the-thermostat-ruling.png");
-    }
 
-    [Fact]
-    public void A_fight_nobody_took_says_so()
-    {
-        var card = Verdict.Story(Report(ruled: false), rehearsal: true);
+        // A fight nobody took says so.
+        var unruled = Verdict.Story(Report(ruled: false), rehearsal: true);
 
-        card.Headline.Should().Be("Nobody took it.");
-        card.Rehearsal.Should().BeTrue("a rehearsal is marked as one on the picture as well as the page");
+        unruled.Headline.Should().Be("Nobody took it.");
+        unruled.Rehearsal.Should().BeTrue("a rehearsal is marked as one on the picture as well as the page");
     }
 
     private static AnalysisReportDto Report(bool ruled)

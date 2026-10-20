@@ -15,7 +15,7 @@ public class LiveMessageParserTests
 {
 
     [Fact]
-    public void A_tool_call_carries_its_id_name_and_arguments()
+    public void A_tool_call_carries_its_id_name_and_arguments_and_nonsense_and_novelty_are_both_survivable()
     {
         var events = LiveMessageParser.Parse(
             """{"toolCall":{"functionCalls":[{"id":"fc-1","name":"set_players","args":{"player1":"AB","player2":"CD"}}]}}""");
@@ -24,11 +24,7 @@ public class LiveMessageParserTests
         call.Id.Should().Be("fc-1");
         call.Name.Should().Be("set_players");
         call.Args.GetProperty("player1").GetString().Should().Be("AB");
-    }
 
-    [Fact]
-    public void Nonsense_and_novelty_are_both_survivable()
-    {
         // Neither a broken frame nor a field Google adds tomorrow may end a debate.
         LiveMessageParser.Parse("not json at all").Should().BeEmpty();
         LiveMessageParser.Parse("[]").Should().BeEmpty();

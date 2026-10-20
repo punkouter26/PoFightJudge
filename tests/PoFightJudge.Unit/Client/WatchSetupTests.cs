@@ -75,9 +75,15 @@ public class WatchSetupTests : BunitContext
     }
 
     [Fact]
-    public async Task The_match_cannot_start_until_both_sides_are_chosen()
+    public async Task On_a_desktop_setup_is_one_screen_under_the_channel_switch_and_the_match_cannot_start_until_both_sides_are_chosen()
     {
         var cut = RenderSetup();
+        var nav = Services.GetRequiredService<BunitNavigationManager>();
+
+        cut.FindAll(".rz-steps").Should().BeEmpty("the steps are a phone's way of fitting it in");
+        cut.FindAll("input[name=topic]").Should().ContainSingle();
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal))
+            .HasAttribute("disabled").Should().BeTrue("nobody has been picked yet");
 
         cut.Markup.Should().Contain("Pick both sides.");
         CanGoOn(cut).Should().BeFalse();
@@ -88,6 +94,12 @@ public class WatchSetupTests : BunitContext
         await ChooseAsync(cut, wife: true, MatchSide.Persona("KSH", "Kimberly"));
         CanGoOn(cut).Should().BeTrue();
         (await StartButtonAsync(cut)).HasAttribute("disabled").Should().BeFalse();
+
+        // The three channels are one switch on the setup screen.
+        cut.FindAll(".channel-switch .rz-button").Select(b => b.TextContent.Trim()).Should().Equal("CPU", "1P", "2P");
+        await cut.FindAll(".channel-switch .rz-button").Single(b => string.Equals(b.TextContent.Trim(), "2P", StringComparison.Ordinal)).ClickAsync(new());
+
+        nav.Uri.Should().EndWith("2p");
     }
 
     [Fact]
@@ -140,29 +152,6 @@ public class WatchSetupTests : BunitContext
     /// </summary>
     private static bool CanGoOn(IRenderedComponent<WatchPage> cut) =>
         !cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal)).HasAttribute("disabled");
-
-    [Fact]
-    public void On_a_desktop_the_cast_the_topic_and_the_start_are_one_screen()
-    {
-        var cut = RenderSetup();
-
-        cut.FindAll(".rz-steps").Should().BeEmpty("the steps are a phone's way of fitting it in");
-        cut.FindAll("input[name=topic]").Should().ContainSingle();
-        cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal))
-            .HasAttribute("disabled").Should().BeTrue("nobody has been picked yet");
-    }
-
-    [Fact]
-    public async Task The_three_channels_are_one_switch_on_the_setup_screen()
-    {
-        var cut = RenderSetup();
-        var nav = Services.GetRequiredService<BunitNavigationManager>();
-
-        cut.FindAll(".channel-switch .rz-button").Select(b => b.TextContent.Trim()).Should().Equal("CPU", "1P", "2P");
-        await cut.FindAll(".channel-switch .rz-button").Single(b => string.Equals(b.TextContent.Trim(), "2P", StringComparison.Ordinal)).ClickAsync(new());
-
-        nav.Uri.Should().EndWith("2p");
-    }
 
     /// <summary>The topic is the second step's question, so getting to it is part of asking it.</summary>
     private static async Task<IElement> TopicBoxAsync(IRenderedComponent<WatchPage> cut)
