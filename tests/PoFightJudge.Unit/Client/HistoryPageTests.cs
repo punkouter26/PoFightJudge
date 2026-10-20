@@ -147,6 +147,7 @@ public class StandingsTests : BunitContext, IAsyncLifetime
         Services.AddSingleton(TimeProvider.System);
         // A cast card previews the persona's voice, so the page needs the interop even though nothing here clicks it.
         Services.AddScoped<AudioInterop>();
+        Services.AddScoped<SfxInterop>();
         // Under bunit JS is loose, so the viewport reports the wide layout — the one that declares every column.
         Services.AddScoped<Viewport>();
         JSInterop.Mode = JSRuntimeMode.Loose;
@@ -178,6 +179,35 @@ public class StandingsTests : BunitContext, IAsyncLifetime
 
         await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows
             .Select(r => r.DisplayName).Should().Equal("Alex"));
+    }
+
+    [Fact]
+    public async Task The_cast_standings_are_on_the_leaderboard_one_switch_away()
+    {
+        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex")]);
+
+        var cut = Render<FightersPage>();
+        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows.Select(r => r.DisplayName).Should().Equal("Alex"));
+
+        await cut.FindAll(".boards .rz-button").Single(b => b.TextContent.Contains("Cast", StringComparison.Ordinal)).ClickAsync(new());
+
+        await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows
+            .Select(r => r.DisplayName).Should().Equal("Married Husband", "Karen"));
+    }
+
+    [Fact]
+    public async Task The_profiles_page_no_longer_keeps_a_second_leaderboard()
+    {
+        _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            new ProfileDto { Id = ProfileId.From("MAH"), Persona = new CreateProfileRequest { Initials = "MAH", Name = "Married Husband", Role = ProfileRole.Husband } },
+        ]);
+
+        var cut = Render<ProfilesPage>();
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".cast").Should().NotBeEmpty());
+        cut.FindComponents<Board>().Should().BeEmpty();
+        await _api.DidNotReceive().GetLeaderboardAsync(Arg.Any<MatchMode>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

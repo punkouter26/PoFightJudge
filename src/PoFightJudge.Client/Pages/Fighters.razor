@@ -10,7 +10,7 @@
 <PageTitle>Leaderboard · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="The card" Title="Leaderboard"
-           Lead="Everyone who has stepped up to the microphone. A tag is the person; the name is theirs to change.">
+           Lead="Who is winning, at the microphone and in the cast. A tag is the person; the name is theirs to change.">
     <Actions>
         <RadzenButton Text="New fight" Icon="mic" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo("fight"))" />
     </Actions>
@@ -26,7 +26,7 @@
         {
             <PageAlert Kind="AlertStyle.Danger">@_error</PageAlert>
         }
-        else if (_roster.Count == 0)
+        else if (_roster.Count == 0 && _castBoard.Count == 0)
         {
             <EmptyState Icon="sports_mma" Title="Nobody on the card" Text="Fighters are created the first time their tag steps up to the mic.">
                 <Action>
@@ -51,8 +51,23 @@
                 </section>
             }
 
+            @* Every "who is winning" in the app, on one page: the people at the microphone and the cast that argues
+               on its own, one switch apart. The profiles page used to keep the second one at the foot of its cards. *@
             <RadzenTabs RenderMode="TabRenderMode.Client" class="views">
                 <Tabs>
+                    <RadzenTabsItem Text="Standings" Icon="leaderboard">
+                        <div class="boards">
+                            <RadzenSelectBar @bind-Value="_cast" TValue="bool" Size="ButtonSize.Small" aria-label="Whose standings">
+                                <Items>
+                                    <RadzenSelectBarItem Text="Fighters" Value="false" />
+                                    <RadzenSelectBarItem Text="Cast" Value="true" />
+                                </Items>
+                            </RadzenSelectBar>
+                            <p class="po-muted cut-off">Anybody with fewer than @MinimumMatches @(_cast ? "arguments" : "fights") is left off.</p>
+                        </div>
+                        <Board Rows="@(_cast ? _castBoard : _board)"
+                               Empty="@(_cast ? "Nobody in the cast has argued twice yet." : "No one has argued twice on the microphone yet.")" />
+                    </RadzenTabsItem>
                     <RadzenTabsItem Text="Roster" Icon="groups">
             <div class="find">
                 <RadzenFormField Text="Find a fighter" Variant="Variant.Outlined">
@@ -133,10 +148,6 @@
             </RadzenDataGrid>
 
                     </RadzenTabsItem>
-                    <RadzenTabsItem Text="Standings" Icon="leaderboard">
-                        <p class="po-muted cut-off">Anybody with fewer than @MinimumMatches fights is left off.</p>
-                        <Board Rows="_board" Empty="No one has argued twice on the microphone yet." />
-                    </RadzenTabsItem>
                 </Tabs>
             </RadzenTabs>
         }
@@ -147,6 +158,10 @@
 @code {
     private IReadOnlyList<FighterStatsDto> _roster = [];
     private IReadOnlyList<LeaderboardRowDto> _board = [];
+    private IReadOnlyList<LeaderboardRowDto> _castBoard = [];
+
+    /// <summary>Whether the standings show the cast (watch results) rather than the fighters.</summary>
+    private bool _cast;
 
     /// <summary>The top three by rating, for the cards above the tabs.</summary>
     private IReadOnlyList<FighterStatsDto> _podium = [];
@@ -173,6 +188,7 @@
             _roster = await Api.GetRosterAsync();
             _podium = FoilCard.Podium(_roster);
             _board = await Api.GetLeaderboardAsync(MatchMode.Fight);
+            _castBoard = await Api.GetLeaderboardAsync(MatchMode.Watch);
         }
         catch (Exception ex) when (ApiFailure.Describe(ex, "The card could not be read") is { } why)
         {

@@ -6,7 +6,15 @@
 
 .find { max-width: 22rem; margin-bottom: var(--po-space-3); }
 
-.cut-off { margin: 0 0 var(--po-space-3); font-size: var(--po-text-sm); }
+.boards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--po-space-3);
+  margin-bottom: var(--po-space-3);
+}
+
+.cut-off { margin: 0; font-size: var(--po-text-sm); }
 
 /* The top three, side by side above the tabs; on anything wider than a phone, a podium — second, first, third. */
 .podium {
