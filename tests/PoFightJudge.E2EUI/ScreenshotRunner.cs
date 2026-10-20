@@ -149,7 +149,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/2p", user: "e2e-shots", effects: Effects);
         try
         {
-            foreach (var (name, tag) in new[] { ("player1Tag", "AL"), ("player2Tag", "SM") })
+            foreach (var (name, tag) in new[] { ("player1Tag", "ALI"), ("player2Tag", "SAM") })
             {
                 var input = page.Locator($"div.tag-input[data-name={name}] input");
                 await input.WaitForAsync(new() { Timeout = 30_000 });
@@ -267,8 +267,8 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             // tab of its own — the rematch is live, and its guard would hold a navigation away from it.
             var profile = await context.NewPageAsync();
             await profile.GotoAsync(app.BaseUrl + "/fighters", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
-            await profile.EvaluateAsync("() => localStorage.setItem('po-tier-AL', 'Bronze')");
-            await profile.GotoAsync(app.BaseUrl + "/fighters/AL", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
+            await profile.EvaluateAsync("() => localStorage.setItem('po-tier-ALI', 'Bronze')");
+            await profile.GotoAsync(app.BaseUrl + "/fighters/ALI", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
             await profile.Locator(".tier.promoted").First.WaitForAsync(new() { Timeout = 30_000 });
             await profile.EvaluateAsync("() => document.getAnimations().filter(a => a.playState === 'running').forEach(a => { a.pause(); a.currentTime = 300; })");
             Report($"  fighter-promoted: badge is \"{await profile.Locator(".tier").First.GetAttributeAsync("class")}\"");

@@ -25,8 +25,8 @@ public class FightFlowTests(AppFixture app)
         await using var _ = context;
 
         await TagBox(page, "player1Tag").WaitForAsync(new() { Timeout = 30_000 });
-        await TypeTagAsync(page, "player1Tag", "AL");
-        await TypeTagAsync(page, "player2Tag", "SM");
+        await TypeTagAsync(page, "player1Tag", "ALI");
+        await TypeTagAsync(page, "player2Tag", "SAM");
         await ShootAsync(page, "fight-setup");
 
         // On a desktop the setup is one screen: who, what about and the sound check, then the button.
@@ -36,8 +36,8 @@ public class FightFlowTests(AppFixture app)
         // The fight page owns the microphone from here; the fake device plays the fixture into it.
         await page.WaitForURLAsync(u => u.Contains("/fight/", StringComparison.Ordinal), new() { Timeout = 30_000 });
         // The scoreboard renders before the first snapshot lands, so wait for the tags rather than for the section.
-        await page.Locator("section.scoreboard .side[data-tag=AL]").WaitForAsync(new() { Timeout = 60_000 });
-        await page.Locator("section.scoreboard .side[data-tag=SM]").WaitForAsync(new() { Timeout = 30_000 });
+        await page.Locator("section.scoreboard .side[data-tag=ALI]").WaitForAsync(new() { Timeout = 60_000 });
+        await page.Locator("section.scoreboard .side[data-tag=SAM]").WaitForAsync(new() { Timeout = 30_000 });
 
         await page.Locator(".meter--on").WaitForAsync(new() { Timeout = 30_000 });
 
@@ -71,14 +71,14 @@ public class FightFlowTests(AppFixture app)
         await page.WaitForURLAsync(u => u.EndsWith("/fighters", StringComparison.Ordinal), new() { Timeout = 30_000 });
         // The leaderboard opens on the standings, which need two fights; one fight each is on the roster.
         await page.Locator(".views .rz-tabview-nav li", new() { HasText = "Roster" }).ClickAsync();
-        var roster = page.Locator(".roster tbody tr", new() { HasText = "AL" }).First;
+        var roster = page.Locator(".roster tbody tr", new() { HasText = "ALI" }).First;
         await roster.WaitForAsync(new() { Timeout = 30_000 });
-        (await page.Locator(".roster tbody tr", new() { HasText = "SM" }).CountAsync()).Should().BeGreaterThan(0, "both of them are on the card");
+        (await page.Locator(".roster tbody tr", new() { HasText = "SAM" }).CountAsync()).Should().BeGreaterThan(0, "both of them are on the card");
         (await roster.InnerTextAsync()).Should().Contain("1", "one fight each so far");
 
         // Their own page carries what the host would be told about them, in the same words.
         await roster.ClickAsync();
-        await page.WaitForURLAsync(u => u.Contains("/fighters/AL", StringComparison.Ordinal), new() { Timeout = 30_000 });
+        await page.WaitForURLAsync(u => u.Contains("/fighters/ALI", StringComparison.Ordinal), new() { Timeout = 30_000 });
         await page.Locator("section.style").WaitForAsync(new() { Timeout = 30_000 });
         (await page.Locator("section.style").InnerTextAsync()).Should().ContainEquivalentOf("1 debate", "one fight is an anecdote and the panel says so");
         await ShootAsync(page, "fighter-profile");
@@ -93,8 +93,8 @@ public class FightFlowTests(AppFixture app)
         await using var _ = context;
 
         await TagBox(page, "player1Tag").WaitForAsync(new() { Timeout = 30_000 });
-        await TypeTagAsync(page, "player1Tag", "ZA");
-        await TypeTagAsync(page, "player2Tag", "ZB");
+        await TypeTagAsync(page, "player1Tag", "ZAA");
+        await TypeTagAsync(page, "player2Tag", "ZBB");
         await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();
 

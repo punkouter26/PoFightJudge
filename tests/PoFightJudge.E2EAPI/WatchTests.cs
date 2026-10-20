@@ -96,7 +96,7 @@ public class WatchTests(ApiFactory factory)
     {
         using var client = User("watch-human");
         var (husband, _) = await CastAsync("04");
-        var person = MatchSide.Human("KD", "Kim");
+        var person = MatchSide.Human("KDX", "Kim");
 
         var response = await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, person, Transcript(6), "the thermostat"));
 
@@ -104,9 +104,16 @@ public class WatchTests(ApiFactory factory)
         (await response.Content.ReadFromJsonAsync<VerdictResponse>())!.Persisted.Should().BeTrue(
             "arguing an AI persona counts towards a person's record exactly as arguing another person does");
 
+        // A person plays under exactly three letters; anything else is refused before the judge is asked.
+        foreach (var tag in new[] { "KD", "K1D" })
+        {
+            (await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, MatchSide.Human(tag, "Kim"), Transcript(6), "the thermostat")))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{tag} is not three letters");
+        }
+
         // And what they said is kept as words, not only as a reading of them, so the persona written after any
         // later debate has this night to read as well.
-        var said = await factory.Services.GetRequiredService<IFighterWordsRepository>().ListAsync(FighterId.From("KD"));
+        var said = await factory.Services.GetRequiredService<IFighterWordsRepository>().ListAsync(FighterId.From("KDX"));
         said.Should().ContainSingle().Which.Said.Should().Contain("the thermostat");
         said[0].Mode.Should().Be(MatchMode.Watch);
 

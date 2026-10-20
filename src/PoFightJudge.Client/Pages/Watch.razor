@@ -81,10 +81,10 @@
                                     @* Published on every keystroke, so Start answers the tag as it is typed. *@
                                     <RadzenTextBox Value="@_tag" ValueChanged="@TagChangedAsync"
                                                    @oninput="@(e => TagChangedAsync(e.Value?.ToString() ?? string.Empty))"
-                                                   Name="yourTag" MaxLength="@Initials.MaxLength" Placeholder="AB"
+                                                   Name="yourTag" MaxLength="@Initials.MaxLength" Placeholder="ABC"
                                                    aria-label="Your fighter tag" />
                                 </ChildContent>
-                                <Helper><span class="po-muted">1–3 letters or digits. The same tag you argue under, so this counts towards your record.</span></Helper>
+                                <Helper><span class="po-muted">Three letters. The same tag you argue under, so this counts towards your record.</span></Helper>
                             </RadzenFormField>
                         </div>
                     }
@@ -164,7 +164,7 @@
     private string? OnePlayerProblem =>
         !CanSpeak ? "Nothing here can transcribe a spoken turn, so 1P is off."
         : _opponent is null ? "Pick who you are arguing with."
-        : Initials.Normalize(_tag).Length == 0 ? "Say who you are: 1–3 letters or digits."
+        : !Initials.IsTag(_tag) ? "Say who you are: exactly three letters."
         : string.Equals(Initials.Normalize(_tag), _opponent.Id, StringComparison.OrdinalIgnoreCase) ? "That tag belongs to the profile you are arguing with."
         : null;
 

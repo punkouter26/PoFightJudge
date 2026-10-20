@@ -41,22 +41,28 @@ public class FightTests(ApiFactory factory)
 
         var response = await client.PostAsJsonAsync(
             ApiRoutes.Fights.Base,
-            new CreateFightRequest(HostPersonaId.Referee, "aa1", "bb2", null, ProfileRole.Wife, ProfileRole.Husband));
+            new CreateFightRequest(HostPersonaId.Referee, "aax", "bbx", null, ProfileRole.Wife, ProfileRole.Husband));
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var id = (await response.Content.ReadFromJsonAsync<CreateFightResponse>())!.MatchId;
 
+        // A tag is exactly three letters: two, or one with a digit, is not somebody yet.
+        (await client.PostAsJsonAsync(ApiRoutes.Fights.Base, new CreateFightRequest(HostPersonaId.Referee, "aa", "bbx")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest, "two letters is not a tag");
+        (await client.PostAsJsonAsync(ApiRoutes.Fights.Base, new CreateFightRequest(HostPersonaId.Referee, "aa1", "bbx")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest, "letters only");
+
         // Read through the store rather than over HTTP: the roster endpoint is a later task, but the rows are the point.
         var fighters = factory.Services.GetRequiredService<IFighterRepository>();
-        var one = await fighters.GetAsync(FighterId.From("AA1"));
+        var one = await fighters.GetAsync(FighterId.From("AAX"));
         one.Should().NotBeNull("both fighters exist from the moment the fight starts");
         one!.Role.Should().Be(ProfileRole.Wife, "the seat chosen at setup is what their persona will argue from");
-        (await fighters.GetAsync(FighterId.From("BB2")))!.Role.Should().Be(ProfileRole.Husband);
+        (await fighters.GetAsync(FighterId.From("BBX")))!.Role.Should().Be(ProfileRole.Husband);
 
         var snapshot = await client.GetFromJsonAsync<DebateSnapshotDto>(ApiRoutes.Fights.ById(id));
         snapshot.Should().NotBeNull();
         snapshot!.MatchId.Should().Be(id);
         snapshot.Phase.Should().Be(SessionPhase.Intro);
-        snapshot.Player1Name.Should().Be("AA1");
+        snapshot.Player1Name.Should().Be("AAX");
         snapshot.Persona.Should().Be(HostPersonaId.Referee);
 
         await client.PostAsync(ApiRoutes.Fights.End(id), null);
@@ -67,7 +73,7 @@ public class FightTests(ApiFactory factory)
     {
         var mine = User("fight-owner");
         var theirs = User("fight-stranger");
-        var id = await StartAsync(mine, "cc1", "dd2");
+        var id = await StartAsync(mine, "ccx", "ddx");
 
         (await theirs.GetAsync(ApiRoutes.Fights.ById(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await theirs.PostAsync(ApiRoutes.Fights.End(id), null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -79,7 +85,7 @@ public class FightTests(ApiFactory factory)
     public async Task Ending_a_fight_stores_it_and_the_same_route_then_answers_with_the_record()
     {
         var client = User("fight-end");
-        var id = await StartAsync(client, "ee1", "ff2", "who does the dishes");
+        var id = await StartAsync(client, "eex", "ffx", "who does the dishes");
 
         var ended = await client.PostAsync(ApiRoutes.Fights.End(id), null);
         ended.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -87,8 +93,8 @@ public class FightTests(ApiFactory factory)
         var stored = await client.GetFromJsonAsync<MatchDto>(ApiRoutes.Fights.ById(id));
         stored.Should().NotBeNull();
         stored!.Mode.Should().Be(MatchMode.Fight);
-        stored.Side1.Id.Should().Be("EE1");
-        stored.Side2.Id.Should().Be("FF2");
+        stored.Side1.Id.Should().Be("EEX");
+        stored.Side2.Id.Should().Be("FFX");
         stored.Side1.IsHuman.Should().BeTrue("a fight is two people on one microphone");
         stored.IsFake.Should().BeTrue("this one was argued in front of the scripted host");
         stored.EndedAt.Should().NotBeNull();

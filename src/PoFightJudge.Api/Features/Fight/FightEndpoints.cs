@@ -66,12 +66,13 @@ public sealed class FightEndpoints : ICarterModule
             return Problem("There is no such host.");
         }
 
+        if (!Initials.AreNewPair(request.Player1Tag, request.Player2Tag))
+        {
+            return Problem("Both fighters need their own tag: exactly three letters, and not the same as each other.");
+        }
+
         var first = Initials.Normalize(request.Player1Tag);
         var second = Initials.Normalize(request.Player2Tag);
-        if (!Initials.ArePair(first, second))
-        {
-            return Problem("Both fighters need their own tag — 1 to 3 letters or digits, and not the same as each other.");
-        }
 
         // Both fighters exist from the moment the fight starts, so a record has somewhere to land even if it ends badly.
         var now = clock.GetUtcNow();

@@ -48,7 +48,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
     [InlineData(true, HostPersonaId.Coach)]
     public async Task The_host_is_the_setting_unless_a_rematch_brings_its_own(bool rematch, HostPersonaId expected)
     {
-        var card = new FightCard("AL", "SM", string.Empty, ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Coach);
+        var card = new FightCard("ALI", "SAM", string.Empty, ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Coach);
         if (rematch)
         {
             Services.GetRequiredService<SetupMemory>().Rematch(card);

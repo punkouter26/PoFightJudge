@@ -57,7 +57,7 @@ public class AnalysisTests(ApiFactory factory)
     {
         var mine = User("analysis-owner");
         var theirs = User("analysis-stranger");
-        var id = await FoughtAsync(mine, "o1", "o2");
+        var id = await FoughtAsync(mine, "oxa", "oxb");
 
         (await theirs.GetAsync(ApiRoutes.Fights.Analysis(id))).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await theirs.PostAsync(ApiRoutes.Fights.AnalysisRetry(id), null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -78,7 +78,7 @@ public class AnalysisTests(ApiFactory factory)
     public async Task A_fight_somebody_actually_argued_is_read_and_both_of_them_get_a_record()
     {
         var client = User("analysis-full");
-        var id = await FoughtAsync(client, "f1", "f2");
+        var id = await FoughtAsync(client, "fxa", "fxb");
 
         // The room is what feeds a fight; there is no room here, so the recording is put in by hand and re-read.
         await GiveItARecordingAsync(id);
@@ -97,16 +97,16 @@ public class AnalysisTests(ApiFactory factory)
         // Waited for, not read straight after Ready: the pipeline publishes the ruling before it writes the result
         // rows on purpose, so the room is not kept waiting on a record. Reading them the instant the status flips
         // races that write, and loses it under load.
-        (await WaitForResultAsync("F1", "analysis-full")).Should().ContainSingle();
-        (await WaitForResultAsync("F2", "analysis-full")).Should().ContainSingle();
+        (await WaitForResultAsync("FXA", "analysis-full")).Should().ContainSingle();
+        (await WaitForResultAsync("FXB", "analysis-full")).Should().ContainSingle();
 
         // And both of them are now somebody the CPU and 1P channels can put in a seat, read from this fight. The
         // persona is written after the ruling is readable, deliberately — the room is not kept waiting on it — so
         // it is allowed a moment to land.
-        var f1 = await WaitForPersonaAsync(client, "F1");
+        var f1 = await WaitForPersonaAsync(client, "FXA");
         f1.FromFights.Should().BeTrue();
         f1.Persona.Role.Should().Be(ProfileRole.Husband, "fighter one sits as the husband unless setup said otherwise");
-        (await WaitForPersonaAsync(client, "F2")).Persona.Role.Should().Be(ProfileRole.Wife);
+        (await WaitForPersonaAsync(client, "FXB")).Persona.Role.Should().Be(ProfileRole.Wife);
     }
 
     /// <summary>One fighter's rows, once the pipeline has written them. Same ten seconds the persona is given.</summary>

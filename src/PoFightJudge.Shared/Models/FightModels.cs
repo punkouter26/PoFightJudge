@@ -61,7 +61,8 @@ public enum AnalysisStatus
 }
 
 /// <summary>
-/// Arcade-style tags: 1–3 letters or digits, upper case. Fighter identity and the FightResults partition key are these
+/// Arcade-style tags, upper case: a new one is exactly three letters (<see cref="IsTag"/>); 1–3 letters or digits still
+/// read, because tags made before that rule are on the record. Fighter identity and the FightResults partition key are these
 /// tags, so they are normalised once (here) and never trusted from the model afterwards.
 /// </summary>
 public static class Initials
@@ -73,6 +74,17 @@ public static class Initials
         new([.. (value ?? string.Empty).ToUpperInvariant().Where(char.IsAsciiLetterOrDigit).Take(MaxLength)]);
 
     public static bool IsValid(string? value) => Normalize(value).Length > 0;
+
+    /// <summary>
+    /// A tag somebody types to play: exactly three letters, any case. Checked where a tag is entered (a 2P fight, a
+    /// person's seat in CPU or 1P). <see cref="Normalize"/> and <see cref="IsValid"/> stay looser on purpose, because
+    /// tags already on the record from before this rule still have to read.
+    /// </summary>
+    public static bool IsTag(string? value) => value?.Trim() is { Length: MaxLength } tag && tag.All(char.IsAsciiLetter);
+
+    /// <summary>Two new tags that are both three letters and not the same as each other.</summary>
+    public static bool AreNewPair(string? first, string? second) =>
+        IsTag(first) && IsTag(second) && !Normalize(first).Equals(Normalize(second), StringComparison.Ordinal);
 
     /// <summary>Both tags must be usable and different — stats and speaker attribution key on them.</summary>
     public static bool ArePair(string? first, string? second) =>

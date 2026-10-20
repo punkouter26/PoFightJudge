@@ -109,14 +109,19 @@ public class WatchSetupTests : BunitContext
         var nav = Services.GetRequiredService<BunitNavigationManager>();
 
         await ChooseOpponentAsync(cut, "MAH");
+
+        // A tag is exactly three letters; two is not somebody yet, and the button says so.
         await TypeTagAsync(cut, "KD");
+        (await StartButtonAsync(cut)).HasAttribute("disabled").Should().BeTrue("two letters is not a tag");
+        cut.Markup.Should().Contain("three letters");
+        await TypeTagAsync(cut, "KDX");
         await (await TopicBoxAsync(cut)).ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "the thermostat" });
         await (await StartButtonAsync(cut)).ClickAsync(new());
 
         _simulation.IsReady.Should().BeTrue();
         _simulation.Husband!.Id.Should().Be("MAH", "the profile keeps its own seat");
         _simulation.Wife!.IsHuman.Should().BeTrue("which leaves the other one for you");
-        _simulation.Human!.Id.Should().Be("KD", "the person's tag is what the debate is recorded under");
+        _simulation.Human!.Id.Should().Be("KDX", "the person's tag is what the debate is recorded under");
         _simulation.Topic.Should().Be("the thermostat");
         nav.Uri.Should().EndWith("watch/play");
     }

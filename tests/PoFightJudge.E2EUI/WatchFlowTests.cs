@@ -69,7 +69,7 @@ public class WatchFlowTests(AppFixture app)
 
         // 1P asks one thing: who you are arguing with. Matthew is a husband, so the wife's seat is yours.
         await ChooseAsync(page, side: 0, "Matthew");
-        await page.Locator("input[name=yourTag]").FillAsync("KD");
+        await page.Locator("input[name=yourTag]").FillAsync("KDX");
 
         await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
@@ -94,7 +94,7 @@ public class WatchFlowTests(AppFixture app)
         await page.EvaluateAsync("() => window.__streams.forEach(s => s.getAudioTracks().forEach(t => { t.enabled = false; }))");
 
         await page.WaitForFunctionAsync($"() => {AppFixture.LinesSaid} >= 3", null, new() { Timeout = 60_000 });
-        var theirs = (await AppFixture.SaidAsync(page)).Should().Contain(l => l.Contains("KD", StringComparison.OrdinalIgnoreCase), "the person's line was shown under their own tag").Subject;
+        var theirs = (await AppFixture.SaidAsync(page)).Should().Contain(l => l.Contains("KDX", StringComparison.OrdinalIgnoreCase), "the person's line was shown under their own tag").Subject;
         theirs.Should().MatchRegex("(?i)rich, coming from you|raised yours first|last weekend|know you are losing", "what the transcriber heard is what went on the record");
 
         errors.Should().BeEmpty();

@@ -24,7 +24,7 @@ public class WatchHardeningTests(AppFixture app)
 
         // Arguing with a wife leaves the husband's seat, which opens the argument: the very first turn is theirs.
         await ChooseAsync(page, side: 0, "Kimberly");
-        await page.Locator("input[name=yourTag]").FillAsync("AB");
+        await page.Locator("input[name=yourTag]").FillAsync("ABE");
         await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 

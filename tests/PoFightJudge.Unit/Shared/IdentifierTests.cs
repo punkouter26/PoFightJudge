@@ -1,6 +1,7 @@
 using System.Text.Json;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
+using PoFightJudge.Shared.Models;
 
 namespace PoFightJudge.Unit.Shared;
 
@@ -29,5 +30,15 @@ public class IdentifierTests
         FighterId.TryFrom("K-D", out var kd).Should().BeTrue();
         kd.Value.Should().Be("KD", "non-alphanumerics are dropped before validation");
         FighterId.TryFrom("---", out _).Should().BeFalse();
+        kd.Value.Should().Be("KD", "a tag already on the record still reads, however it was made");
+
+        // A new tag is exactly three letters: what a person types to play, at either seat.
+        Initials.IsTag("mah").Should().BeTrue("case does not matter");
+        Initials.IsTag(" KSH ").Should().BeTrue("the edges are trimmed");
+        Initials.IsTag("KD").Should().BeFalse("two letters is not a tag");
+        Initials.IsTag("KDHX").Should().BeFalse("nor is four");
+        Initials.IsTag("A1B").Should().BeFalse("letters only");
+        Initials.IsTag("K-D").Should().BeFalse("nothing is dropped to make one fit");
+        Initials.IsTag(null).Should().BeFalse();
     }
 }

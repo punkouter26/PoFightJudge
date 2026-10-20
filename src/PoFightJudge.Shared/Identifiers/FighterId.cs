@@ -4,7 +4,8 @@ using Vogen;
 namespace PoFightJudge.Shared.Identifiers;
 
 /// <summary>
-/// A real fighter's tag — <see cref="Initials"/> rules (1–3 alphanumerics, upper case). Auto-created on first fight;
+/// A real fighter's tag, upper case. A new one is exactly three letters (<see cref="Initials.IsTag"/>, checked where it is
+/// entered); reading accepts the 1–3 alphanumerics older tags were made with. Auto-created on first fight;
 /// the FightResults partition key.
 /// </summary>
 [ValueObject<string>(conversions: Conversions.SystemTextJson | Conversions.TypeConverter, comparison: ComparisonGeneration.Omit)]

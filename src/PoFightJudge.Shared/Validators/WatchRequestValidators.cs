@@ -28,6 +28,8 @@ public sealed class MatchSideValidator : AbstractValidator<MatchSide>
     public MatchSideValidator()
     {
         RuleFor(s => s.Id).NotEmpty().MaximumLength(WatchLimits.MaxIdLength);
+        // A person plays under exactly three letters; the cast's ids are the seed's and the server's own.
+        RuleFor(s => s.Id).Must(Initials.IsTag).When(s => s.IsHuman).WithMessage("A tag is exactly three letters.");
         RuleFor(s => s.DisplayName).NotNull().MaximumLength(WatchLimits.MaxNameLength);
         RuleFor(s => s.Kind).IsInEnum();
     }

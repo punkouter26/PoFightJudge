@@ -151,6 +151,7 @@
     /// <summary>Why the fight cannot start yet, or null when it can.</summary>
     private string? Problem =>
         _one.Length == 0 || _two.Length == 0 ? "Both fighters need a tag."
+        : !Initials.IsTag(_one) || !Initials.IsTag(_two) ? "A tag is exactly three letters."
         : string.Equals(_one, _two, StringComparison.OrdinalIgnoreCase) ? "Two people cannot share one tag."
         : null;
 
