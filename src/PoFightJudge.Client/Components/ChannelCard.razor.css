@@ -1,11 +1,13 @@
+/* A row rather than a poster, at every width: the mark, the name, one line about it, and the button that opens it.
+   Three of these used to be 225 px of a desktop home page; as rows they leave the lists below on the first screen. */
 .channel {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: var(--po-space-2);
-  min-height: 200px;
-  padding: var(--po-space-4);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "mark title" "mark blurb" "mark cta";
+  align-items: center;
+  gap: var(--po-space-1) var(--po-space-3);
+  padding: var(--po-space-3) var(--po-space-4);
   overflow: hidden;
   isolation: isolate;
   border-radius: var(--po-radius-md);
@@ -16,12 +18,6 @@
   transform: translateY(-2px);
 }
 
-/* The badge is pinned to the top corner and the content sits at the bottom. On a wide card the content is tall
-   enough to reach the badge, and the title ran underneath it; this keeps the badge's strip clear. */
-@media (min-width: 40rem) {
-  .channel { padding-top: calc(var(--po-space-3) + 2rem); }
-}
-
 .channel.p1 { background: linear-gradient(165deg, var(--po-p1-soft) 0%, var(--po-surface) 62%); }
 .channel.p2 { background: linear-gradient(165deg, var(--po-p2-soft) 0%, var(--po-surface) 62%); }
 .channel.accent { background: linear-gradient(165deg, var(--po-surface-3) 0%, var(--po-surface) 62%); }
@@ -30,20 +26,11 @@
 .channel.p2:hover { border-color: var(--po-p2); }
 .channel.accent:hover { border-color: var(--po-accent); }
 
-.badge {
-  position: absolute;
-  top: var(--po-space-3);
-  left: var(--po-space-4);
-}
-
 .number {
-  position: absolute;
-  top: var(--po-space-1);
-  right: var(--po-space-3);
-  z-index: -1;
-  font-size: var(--po-text-4xl);
-  line-height: 0.8;
-  opacity: 0.08;
+  grid-area: mark;
+  align-self: start;
+  font-size: var(--po-text-3xl);
+  line-height: 0.9;
 }
 
 .channel.p1 .number { color: var(--po-p1); }
@@ -51,20 +38,20 @@
 .channel.accent .number { color: var(--po-accent); }
 
 h2 {
-  font-size: var(--po-text-2xl);
+  grid-area: title;
+  font-size: var(--po-text-xl);
   letter-spacing: 0.02em;
 }
 
-p {
+.blurb {
+  grid-area: blurb;
   font-size: var(--po-text-sm);
   line-height: 1.4;
-  max-width: 40ch;
 }
 
-.short { display: none; }
-
 .channel ::deep .cta {
-  align-self: flex-start;
+  grid-area: cta;
+  justify-self: start;
   color: var(--po-fg-invert);
   margin-top: var(--po-space-1);
 }
@@ -73,48 +60,27 @@ p {
 .channel.p2 ::deep .cta { background: var(--po-p2); }
 .channel.accent ::deep .cta { background: var(--po-accent); color: var(--po-accent-fg); }
 
-/* On a phone the card is a row rather than a poster: the mark, the name, one line about it, and the button that
-   opens it. Three of these and the two lists below them then fit on one screen. */
+/* On a phone the button moves beside the text, so each card is two lines tall. */
 @media (max-width: 40rem) {
   .channel {
-    display: grid;
     grid-template-columns: auto 1fr auto;
     grid-template-areas: "mark title cta" "mark blurb cta";
-    align-items: center;
-    justify-content: unset;
-    gap: var(--po-space-1) var(--po-space-3);
-    min-height: 0;
-    padding: var(--po-space-3) var(--po-space-4);
   }
-
-  .badge { display: none; }
 
   .number {
-    position: static;
-    grid-area: mark;
-    z-index: auto;
+    align-self: center;
     font-size: var(--po-text-2xl);
-    opacity: 1;
   }
 
-  h2 {
-    grid-area: title;
-    font-size: var(--po-text-xl);
-    align-self: end;
-  }
+  h2 { align-self: end; }
 
-  .full { display: none; }
-
-  .short {
-    display: block;
-    grid-area: blurb;
+  .blurb {
     align-self: start;
     font-size: var(--po-text-xs);
-    max-width: none;
   }
 
   .channel ::deep .cta {
-    grid-area: cta;
     align-self: center;
+    margin-top: 0;
   }
 }

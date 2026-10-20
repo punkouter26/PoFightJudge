@@ -2,14 +2,11 @@
 
 @* One of the three "channels" on Home: CPU, 1P or 2P. The big number and the tinted corner are the broadcast idiom. *@
 <article class="channel po-card @Accent.ToString().ToLowerInvariant()" data-channel="@Number">
-    <span class="po-chip po-chip--muted badge">Channel @Number</span>
     <span class="number po-display" aria-hidden="true">@Number</span>
     <h2>@Title</h2>
-    @* Two lengths. Three of these cards at their full description came to 1419 px of home page on an 844 px phone,
-       and the two lists under them were off the bottom of it. The short form is the same offer in a sentence, not
-       the long one with its end cut off. *@
-    <p class="po-muted full">@Description</p>
-    <p class="po-muted short">@Shortest</p>
+    @* One sentence. Three cards at a paragraph each came to 1419 px of home page on an 844 px phone and 225 px of
+       a desktop one; the offer fits in a line. *@
+    <p class="po-muted blurb">@Description</p>
     <RadzenButton Text="@Cta" Icon="@Icon" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Large" class="cta" Click="@(() => Nav.NavigateTo(Href))" />
 </article>
 
@@ -28,10 +25,8 @@
 
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
 
+    /// <summary>The offer, in one line.</summary>
     [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
-
-    /// <summary>The same offer in one line, for a phone. Falls back to the long one rather than showing nothing.</summary>
-    [Parameter] public string? Short { get; set; }
 
     [Parameter, EditorRequired] public string Cta { get; set; } = string.Empty;
 
@@ -40,6 +35,4 @@
     [Parameter] public string Icon { get; set; } = "play_arrow";
 
     [Parameter] public ChannelAccent Accent { get; set; } = ChannelAccent.P1;
-
-    private string Shortest => string.IsNullOrWhiteSpace(Short) ? Description : Short;
 }

@@ -133,3 +133,28 @@ h2 {
 }
 
 .hero-side { display: flex; align-items: center; gap: var(--po-space-2); }
+
+.tally { margin: 0; font-size: var(--po-text-sm); }
+
+.recent-find { margin-bottom: var(--po-space-3); }
+.recent-find ::deep .rz-textbox { width: 100%; }
+
+.standings ::deep .board-switch { margin-bottom: var(--po-space-3); }
+
+/* The counts are links, and a link is something pressed: 24 px tall at the least. */
+.tally ::deep a { display: inline-block; padding-block: 4px; }
+
+/* A phone shows the two sections as tabs, which already say "Recent" and "Standings" and are one tap from the pages
+   behind them in the nav: the section headings are not drawn. Searching is the history page's on a phone; the field
+   here was the 60 px that pushed the page past the bottom of an 844 px screen. The tour keeps its icon and its
+   name (as a label), and the LIVE chip goes, so the tally has the width for one line. */
+@media (max-width: 40rem) {
+  .section-head { display: none; }
+
+  .recent-find { display: none; }
+
+  .tally { font-size: var(--po-text-xs); }
+
+  .hero-side ::deep .rz-button-text,
+  .hero-side .po-chip--live { display: none; }
+}

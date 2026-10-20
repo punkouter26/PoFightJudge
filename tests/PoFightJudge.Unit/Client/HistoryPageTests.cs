@@ -219,18 +219,4 @@ public class StandingsTests : BunitContext, IAsyncLifetime
 
         await cut.WaitForAssertionAsync(() => cut.Find("h1").TextContent.Should().Be("Leaderboard"));
     }
-
-    [Fact]
-    public async Task Home_does_not_say_nobody_is_on_the_card_when_people_are_but_have_no_judged_fight()
-    {
-        Services.AddSingleton<SimulationState>();
-        Services.AddScoped<GfxInterop>();
-        _api.GetMatchesAsync(Arg.Any<MatchMode?>(), Arg.Any<CancellationToken>()).Returns([]);
-        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex")]);
-
-        var cut = Render<Home>();
-
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("No judged fights yet"));
-        cut.Markup.Should().NotContain("Nobody on the card");
-    }
 }

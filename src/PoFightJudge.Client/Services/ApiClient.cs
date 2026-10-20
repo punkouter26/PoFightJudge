@@ -87,9 +87,6 @@ public interface IApiClient
     /// <summary>One highlight, cut out of the recording. Null when there is nothing there to cut.</summary>
     Task<byte[]?> GetClipAsync(MatchId id, int index, CancellationToken ct = default);
 
-    /// <summary>Everything the signed-in person has been part of, newest first.</summary>
-    Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default);
-
     /// <summary>One page of history, narrowed. What the history screen reads; the whole list is never fetched.</summary>
     Task<MatchPageDto> GetMatchPageAsync(MatchQuery query, CancellationToken ct = default);
 
@@ -432,13 +429,6 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
         using var response = await http.GetAsync(Relative(ApiRoutes.Fights.Clip(id, index)), ct);
         return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync(ct) : null;
     }
-
-    /// <summary>
-    /// The convenience over the paged route, for the places that want the newest few and nothing else — Home's
-    /// replay strip and the palette. It asks for one page rather than the whole history.
-    /// </summary>
-    public async Task<IReadOnlyList<MatchDto>> GetMatchesAsync(MatchMode? mode = null, CancellationToken ct = default) =>
-        (await GetMatchPageAsync(new MatchQuery(mode), ct)).Matches;
 
     public async Task<MatchPageDto> GetMatchPageAsync(MatchQuery query, CancellationToken ct = default)
     {
