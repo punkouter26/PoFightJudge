@@ -4,8 +4,6 @@
 
 ::deep .tag { letter-spacing: 0.06em; color: inherit; }
 
-.find { max-width: 22rem; margin-bottom: var(--po-space-3); }
-
 .boards {
   display: flex;
   flex-wrap: wrap;
@@ -16,19 +14,21 @@
 
 .cut-off { margin: 0; font-size: var(--po-text-sm); }
 
-/* The top three, side by side above the tabs; on anything wider than a phone, a podium — second, first, third. */
+/* The top three, side by side above the tabs; on anything wider than a phone, a podium — second, first, third.
+   A card is at most 18rem wide, so one fighter is a card rather than a banner across the page. */
 .podium {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: var(--po-space-4);
-  margin-bottom: var(--po-space-5);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 18rem));
+  justify-content: center;
+  gap: var(--po-space-3);
+  margin-bottom: var(--po-space-3);
 }
 
 .podium-link,
 .podium-link:hover { display: block; color: inherit; text-decoration: none; }
 
 @media (min-width: 48rem) {
-  .podium { grid-template-columns: repeat(3, 1fr); align-items: end; }
+  .podium { grid-template-columns: repeat(auto-fit, minmax(14rem, 18rem)); align-items: end; }
   .podium-link:nth-child(1) { order: 2; }
   .podium-link:nth-child(2) { order: 1; }
   .podium-link:nth-child(3) { order: 3; }

@@ -9,8 +9,7 @@
 
 <PageTitle>Leaderboard · PoFightJudge</PageTitle>
 
-<PageShell Width="PageShell.ShellWidth.Standard" Eyebrow="The card" Title="Leaderboard"
-           Lead="Who is winning, at the microphone and in the cast. A tag is the person; the name is theirs to change.">
+<PageShell Width="PageShell.ShellWidth.Standard" Title="Leaderboard">
     <Actions>
         <RadzenButton Text="New fight" Icon="mic" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo("fight"))" />
     </Actions>
@@ -69,19 +68,12 @@
                                Empty="@(_cast ? "Nobody in the cast has argued twice yet." : "No one has argued twice on the microphone yet.")" />
                     </RadzenTabsItem>
                     <RadzenTabsItem Text="Roster" Icon="groups">
-            <div class="find">
-                <RadzenFormField Text="Find a fighter" Variant="Variant.Outlined">
-                    <ChildContent>
-                        <RadzenTextBox Value="@_find" @oninput="@(e => _find = e.Value?.ToString() ?? string.Empty)" Name="find" MaxLength="40"
-                                       Placeholder="a tag or a name" aria-label="Find a fighter" />
-                    </ChildContent>
-                </RadzenFormField>
-            </div>
-            <RadzenDataGrid Data="@Shown" TItem="FighterStatsDto" AllowSorting="true" AllowPaging="true" PageSize="20" Density="Density.Compact" class="roster"
+            <RadzenDataGrid Data="@_roster" TItem="FighterStatsDto" AllowSorting="true" AllowPaging="true" PageSize="20" Density="Density.Compact" class="roster"
                             RowClick="@(args => Open(args.Data))" RowRender="@(args => args.Attributes["class"] = "openable")">
                 <Columns>
-                    @* 5.5 + 6 + 6 + 6 + 9 + 10rem of declared width, before the name column, is 840 px of table. A phone
-                       gets the tag, the name, the record and the form in one cell; nothing is dropped, it is stacked. *@
+                    @* 5 + 8 + 5 + 5 + 8rem of declared width, before the name column: about 500 px of table, so a narrow
+                       window does not scroll sideways. A phone gets the tag, the name, the record and the form in one
+                       cell; nothing is dropped, it is stacked. When someone last fought is on their own page. *@
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fighter" Visible="@Viewport.IsPhone" Sortable="false">
                         <Template Context="row">
                             <div class="po-stacked">
@@ -107,7 +99,7 @@
                             </div>
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Tag" Width="5.5rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Tag)">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Tag" Width="5rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Tag)">
                         <Template Context="row"><RadzenLink Path="@($"fighters/{row.Tag}")" Text="@row.Tag" class="tag po-display" /></Template>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="FighterStatsDto" Title="Name" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.DisplayName)">
@@ -122,27 +114,15 @@
                             }
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Rating" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Rating)">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Rating" Width="8rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Rating)">
                         <Template Context="row">@row.Rating <RankBadge Rating="@row.Rating" Fights="@row.Fights" /></Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fights" Width="6rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Fights)" />
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="W–L" Width="6rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Fights" Width="5rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.Fights)" />
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="W–L" Width="5rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="row">@row.Wins–@row.Losses@(row.Draws > 0 ? $"–{row.Draws}" : string.Empty)</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Form" Width="9rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
+                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Form" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="row"><FormSparkline Scores="@row.Form" /></Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FighterStatsDto" Title="Last seen" Width="10rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterStatsDto.LastFoughtAt)">
-                        <Template Context="row">
-                            @if (row.LastFoughtAt is { } seen)
-                            {
-                                @seen.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)
-                            }
-                            else
-                            {
-                                <span class="po-muted">never</span>
-                            }
-                        </Template>
                     </RadzenDataGridColumn>
                 </Columns>
             </RadzenDataGrid>
@@ -169,12 +149,6 @@
     private bool _foiled;
     private bool _loading = true;
     private string? _error;
-    private string _find = string.Empty;
-
-    /// <summary>The roster, narrowed to whoever's tag or name has what was typed in it. A new list each time: the grid is bound to the instance.</summary>
-    private IReadOnlyList<FighterStatsDto> Shown => _find.Trim() is not { Length: > 0 } find
-        ? _roster
-        : [.. _roster.Where(f => f.Tag.Contains(find, StringComparison.OrdinalIgnoreCase) || f.DisplayName.Contains(find, StringComparison.OrdinalIgnoreCase))];
 
     /// <summary>The cut-off the server applies, repeated here so the page can explain the gap rather than look wrong.</summary>
     private const int MinimumMatches = 2;
