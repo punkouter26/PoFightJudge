@@ -14,11 +14,16 @@ run it. This file is the operating detail that does not live there.
 
 | | Development | Test | Production |
 |---|---|---|---|
-| Auth | FakeAuth (`X-Fake-User`) + guest cookie | the same | Entra ID, JWT bearer |
+| Auth | FakeAuth (`X-Fake-User`) + guest cookie, and Entra ID sign-in beside them | FakeAuth + guest cookie | Entra ID, JWT bearer |
 | Storage | Azurite over HTTPS with OAuth, ports 12000/12002 | in-memory repositories | Azure Storage, managed identity |
 | Secrets | Key Vault via `az login` | none needed | Key Vault via managed identity |
 | AI | real when a key is present, deterministic fakes when not | fakes, unless `POFIGHTJUDGE_E2E_REAL=1` | **real only** — the fakes refuse to register |
 | Logs | console + Seq (5341) | console | Serilog → Application Insights |
+
+In Development a request with a bearer token (or the live hub's `access_token`) goes to Entra and anything else to
+the guest cookie or FakeAuth (`AuthServiceExtensions.SchemeFor`); the client registers MSAL there too, puts a token on
+a call only when there is one (`OptionalTokenHandler`), and reads who is signed in from `/auth/me`. Entra is added
+only when `AzureAd:ClientId` is configured, so the Test host stays offline.
 
 `Test` is its own environment name, used by `ApiFactory` and by the E2EUI host. Anything that must never happen in
 Production is written as `!environment.IsProduction()`, never as `IsDevelopment()`.

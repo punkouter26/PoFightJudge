@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 namespace PoFightJudge.Client.Services;
 
@@ -10,6 +11,16 @@ namespace PoFightJudge.Client.Services;
 /// </summary>
 public static class MicrosoftSignIn
 {
+    /// <summary>
+    /// Where MSAL is registered: Production, and Development beside the guest door. Not the Test host, whose browser
+    /// tests run offline on the guest door and FakeAuth alone.
+    /// </summary>
+    public static bool IsAvailable(IWebAssemblyHostEnvironment env)
+    {
+        ArgumentNullException.ThrowIfNull(env);
+        return env.IsProduction() || env.IsDevelopment();
+    }
+
     /// <summary>
     /// Sends the browser to Microsoft, and always asks which account: the one the browser would have picked by
     /// itself is very often a work account this app cannot use.

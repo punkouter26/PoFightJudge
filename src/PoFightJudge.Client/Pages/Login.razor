@@ -18,13 +18,13 @@
         <p class="po-muted">Sign in to pick a couple to watch, or step up to the mic with your own.</p>
 
         <div class="buttons">
-            @* One door per environment: Microsoft in Production, the guest door outside it. *@
-            @if (Env.IsProduction())
+            @* Microsoft wherever MSAL is registered (Production and Development); the guest door outside Production. *@
+            @if (MicrosoftSignIn.IsAvailable(Env))
             {
                 <RadzenButton Text="Sign in with Microsoft" Icon="login" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
                               Click="SignInWithMicrosoft" />
             }
-            else if (Features.Flags.DevGuestEnabled)
+            @if (!Env.IsProduction() && Features.Flags.DevGuestEnabled)
             {
                 <RadzenButton Text="Continue as Guest (Dev)" Icon="person" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large"
                               Click="ContinueAsGuestAsync" IsBusy="@_busy" BusyText="Signing in…" />
@@ -38,7 +38,7 @@
         @if (!Env.IsProduction() && Features.Loaded && !Features.Flags.DevGuestEnabled)
         {
             <PageAlert Kind="AlertStyle.Warning">
-                The guest door is off, and it is the only door outside Production. Set
+                The guest door is off. To open it, set
                 <code>PoFightJudge:Auth:AllowFakeAuth</code>.
             </PageAlert>
         }
@@ -71,7 +71,7 @@
         }
     }
 
-    /// <summary>Production only: MSAL handles the code flow on the client.</summary>
+    /// <summary>MSAL handles the code flow on the client.</summary>
     private void SignInWithMicrosoft() => MicrosoftSignIn.Start(Nav, SafeReturnUrl());
 
     private async Task ContinueAsGuestAsync()

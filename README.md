@@ -32,6 +32,9 @@ az login                                     # DefaultAzureCredential reads kv-p
 dotnet run --project src/PoFightJudge.Api  # https://localhost:5001
 ```
 
+**Signing in locally:** the login page offers **Sign in with Microsoft** (the same Entra registration as the
+deployed site; `https://localhost:5001/authentication/login-callback` is registered on it) and **Continue as Guest**.
+
 **With no Gemini key it still works.** Every AI seam has a deterministic stand-in — the rounds, the voices, the live
 host, the transcription and the judge — so a whole watch and a whole fight run end to end offline, and the app says
 so with a banner. The fakes are refused outright in Production.

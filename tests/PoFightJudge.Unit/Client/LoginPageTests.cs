@@ -12,8 +12,8 @@ using Radzen;
 namespace PoFightJudge.Unit.Client;
 
 /// <summary>
-/// One door per environment: Microsoft in Production, the guest door outside it. These run as Development, so what
-/// is being checked is the guest door and what the page says when it is shut.
+/// Microsoft is a door everywhere but the Test host; Development adds the guest door beside it. These run as
+/// Development, so both doors are checked, and what the page says when the guest one is shut.
 /// </summary>
 public class LoginPageTests : BunitContext
 {
@@ -41,11 +41,11 @@ public class LoginPageTests : BunitContext
         var cut = Render<Login>();
 
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("The guest door is off"));
-        cut.Markup.Should().NotContain("Continue as Guest").And.NotContain("Sign in with Microsoft");
+        cut.Markup.Should().NotContain("Continue as Guest").And.Contain("Sign in with Microsoft", "Microsoft does not depend on the guest flag");
     }
 
     [Fact]
-    public async Task Outside_production_the_guest_door_is_the_only_door_and_it_returns_to_a_safe_url_only()
+    public async Task In_development_both_doors_are_open_and_the_guest_door_returns_to_a_safe_url_only()
     {
         _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, true, true, FishVoices: false));
         _api.GuestSignInAsync(Arg.Any<CancellationToken>()).Returns(new AuthMeDto(true, "GUEST-1", "GUEST-1", "DevGuest"));
@@ -55,7 +55,7 @@ public class LoginPageTests : BunitContext
         nav.NavigateTo("login?returnUrl=https%3A%2F%2Fevil.example%2Fphish");
         var cut = Render<Login>();
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Continue as Guest (Dev)"));
-        cut.Markup.Should().NotContain("Sign in with Microsoft", "MSAL is the production path, and this is Development");
+        cut.Markup.Should().Contain("Sign in with Microsoft", "Development offers Microsoft sign-in beside the guest door");
 
         await cut.Find(".rz-button.rz-secondary").ClickAsync(new());
 

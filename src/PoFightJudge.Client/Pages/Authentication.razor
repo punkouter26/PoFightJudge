@@ -6,9 +6,9 @@
 
 <PageTitle>Signing in · PoFightJudge</PageTitle>
 
-@if (Env.IsProduction())
+@if (MicrosoftSignIn.IsAvailable(Env))
 {
-    @* MSAL's redirect handler. Only registered in Production, so rendering it elsewhere would throw. *@
+    @* MSAL's redirect handler. Registered only where MicrosoftSignIn.IsAvailable, so rendering it elsewhere would throw. *@
     <RemoteAuthenticatorView Action="@Action">
         <LoggingIn><p class="po-boot">Signing you in…</p></LoggingIn>
         <CompletingLoggingIn><p class="po-boot">Completing sign-in…</p></CompletingLoggingIn>
@@ -35,7 +35,7 @@ else
 {
     <PageShell Width="PageShell.ShellWidth.Narrow" Title="Microsoft sign-in">
         <PageAlert Kind="AlertStyle.Info">
-            Microsoft sign-in is a Production feature. In Development use <a href="login">Continue as Guest</a>.
+            Microsoft sign-in is not set up on this host. Use <a href="login">Continue as Guest</a>.
         </PageAlert>
     </PageShell>
 }

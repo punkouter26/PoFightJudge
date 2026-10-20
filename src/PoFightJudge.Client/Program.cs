@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Authentication.WebAssembly.Msal.Models;
 using Microsoft.Extensions.DependencyInjection;
 using PoFightJudge.Client;
 using PoFightJudge.Client.Services;
@@ -45,8 +46,9 @@ builder.Services.AddScoped<ConnectionWatchHandler>();
 builder.Services.AddScoped<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
 
 // Environment split (SPEC §2): Production = Microsoft Entra ID via MSAL, API calls to our own origin carry the access
-// token. Everything else = the guest cookie / FakeAuth header the API understands; auth state is whatever /auth/me says.
-if (builder.HostEnvironment.IsProduction())
+// token. Development = MSAL *and* the guest cookie: a token goes on a call when there is one, and auth state is
+// whatever /auth/me says, which answers for either. Test = the guest cookie / FakeAuth header alone, offline.
+if (MicrosoftSignIn.IsAvailable(builder.HostEnvironment))
 {
     builder.Services.AddMsalAuthentication(options =>
     {
@@ -58,6 +60,10 @@ if (builder.HostEnvironment.IsProduction())
 
         options.ProviderOptions.LoginMode = "redirect";
     });
+}
+
+if (builder.HostEnvironment.IsProduction())
+{
     builder.Services.AddScoped<BaseAddressAuthorizationMessageHandler>();
     builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = baseAddress)
         .AddHttpMessageHandler<ConnectionWatchHandler>()
@@ -66,9 +72,21 @@ if (builder.HostEnvironment.IsProduction())
 }
 else
 {
-    builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = baseAddress)
+    var api = builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = baseAddress)
         .AddHttpMessageHandler<ConnectionWatchHandler>();
     builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClients.Api));
+
+    if (MicrosoftSignIn.IsAvailable(builder.HostEnvironment))
+    {
+        // MSAL registered its own state provider and points its token provider and redirect service at it by a
+        // cast. Those two are pinned to MSAL's concrete service here, so /auth/me can be the state provider.
+        builder.Services.AddScoped<RemoteAuthenticationService<RemoteAuthenticationState, RemoteUserAccount, MsalProviderOptions>>();
+        builder.Services.AddScoped<IAccessTokenProvider>(sp => sp.GetRequiredService<RemoteAuthenticationService<RemoteAuthenticationState, RemoteUserAccount, MsalProviderOptions>>());
+        builder.Services.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationState>>(sp => sp.GetRequiredService<RemoteAuthenticationService<RemoteAuthenticationState, RemoteUserAccount, MsalProviderOptions>>());
+        builder.Services.AddScoped<OptionalTokenHandler>();
+        api.AddHttpMessageHandler<OptionalTokenHandler>();
+    }
+
     builder.Services.AddScoped<ApiAuthStateProvider>();
     builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<ApiAuthStateProvider>());
 }

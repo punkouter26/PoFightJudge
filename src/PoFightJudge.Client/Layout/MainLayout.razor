@@ -2,6 +2,8 @@
 @using PoFightJudge.Client.Components
 @inject HttpClient Http
 @inject NavigationManager Nav
+@inject IServiceProvider Services
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 
 <div class="shell">
     <FakeAiBanner />
@@ -280,7 +282,17 @@
         }
         finally
         {
-            Nav.NavigateTo(RedirectToLogin.LoginPath, forceLoad: true);
+            // A Microsoft sign-in lives in MSAL's cache as well; ending only the cookie would sign them straight back
+            // in. MSAL's logout clears it and comes back to the login page.
+            if (Services.GetService(typeof(IAccessTokenProvider)) is IAccessTokenProvider tokens
+                && (await tokens.RequestAccessToken()).TryGetToken(out _))
+            {
+                Nav.NavigateToLogout("authentication/logout", RedirectToLogin.LoginPath);
+            }
+            else
+            {
+                Nav.NavigateTo(RedirectToLogin.LoginPath, forceLoad: true);
+            }
         }
     }
 }
