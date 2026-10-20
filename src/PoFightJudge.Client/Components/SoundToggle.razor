@@ -17,8 +17,6 @@
               class="po-volume" aria-label="Volume" title="Volume" />
 
 @code {
-    protected override async Task OnInitializedAsync() => await Sound.InitializeAsync();
-
     private Task SetVolumeAsync(int percent) => Sound.SetVolumeAsync(percent);
 
     private async Task ToggleAsync()

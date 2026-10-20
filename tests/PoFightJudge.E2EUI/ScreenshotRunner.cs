@@ -71,6 +71,34 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
                 }
             }
         }
+
+        if (routes.Any(r => string.Equals(r.Name, "home", StringComparison.Ordinal)))
+        {
+            await MenusAsync(folder!);
+        }
+    }
+
+    /// <summary>The two things the bar opens on a desktop: the Play menu, and the settings panel.</summary>
+    private async Task MenusAsync(string folder)
+    {
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/");
+        try
+        {
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            await page.Locator("header.topbar nav").GetByText("Play", new() { Exact = true }).ClickAsync();
+            await page.WaitForTimeoutAsync(400);
+            await ShootAsync(page, folder, "home-play", "/", errors);
+            await page.Keyboard.PressAsync("Escape");
+            await page.Mouse.ClickAsync(5, 300);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
+            await page.Locator(".po-settings").WaitForAsync(new() { Timeout = 10_000 });
+            await page.WaitForTimeoutAsync(400);
+            await ShootAsync(page, folder, "home-settings", "/", errors);
+        }
+        finally
+        {
+            await context.CloseAsync();
+        }
     }
 
     /// <summary>The default cast, and one whole argument between two of them, so no page is photographed empty.</summary>

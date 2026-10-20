@@ -19,7 +19,8 @@ public class ThemeAndViewportTests(AppFixture app)
         await page.Locator("article.channel").First.WaitForAsync(new() { Timeout = 30_000 });
         page.Url.Should().Be(app.BaseUrl + "/");
         (await page.Locator("article.channel").CountAsync()).Should().Be(3, "CPU, 1P and 2P");
-        (await page.Locator("header.topbar .user").InnerTextAsync()).Should().Contain("GUEST-");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
+        (await page.Locator(".po-settings .user").InnerTextAsync()).Should().Contain("GUEST-");
         errors.Should().BeEmpty();
     }
 
@@ -31,6 +32,7 @@ public class ThemeAndViewportTests(AppFixture app)
 
         (await page.EvaluateAsync<string?>("document.documentElement.getAttribute('data-theme')")).Should().Be("dark", "dark is the default");
 
+        await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Switch to light theme" }).ClickAsync();
         await page.WaitForFunctionAsync("() => document.documentElement.getAttribute('data-theme') === 'light'");
         const string Chrome = "document.querySelector('meta[name=theme-color]').content";
@@ -46,6 +48,7 @@ public class ThemeAndViewportTests(AppFixture app)
         (await page.EvaluateAsync<string?>("localStorage.getItem('po-theme')")).Should().Be("light");
         (await page.EvaluateAsync<string>(Chrome)).Should().Be("#f4f1ea", "the browser's own chrome is light before the app has even started");
         (await page.EvaluateAsync<double>("window.PoSfx.volume()")).Should().Be(0.4);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
         (await page.Locator(".po-volume input, .po-volume [role=slider]").First.GetAttributeAsync("aria-valuenow") ?? await page.Locator(".po-volume input").First.InputValueAsync())
             .Should().Be("40", "the slider opens where it was left");
         errors.Should().BeEmpty();

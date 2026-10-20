@@ -11,8 +11,6 @@
               title="Theme" />
 
 @code {
-    protected override async Task OnInitializedAsync() => await Theme.InitializeAsync();
-
     private async Task ToggleAsync()
     {
         await Theme.ToggleAsync();

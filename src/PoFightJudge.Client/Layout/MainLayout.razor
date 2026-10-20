@@ -19,9 +19,22 @@
            first frame is already the right one. *@
         <nav class="nav" aria-label="Primary">
             <RadzenMenu Responsive="false">
-                @foreach (var (text, path, icon) in Destinations)
+                @foreach (var place in Destinations)
                 {
-                    <RadzenMenuItem Text="@text" Path="@path" Icon="@icon" />
+                    @if (place.Children is null)
+                    {
+                        <RadzenMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" />
+                    }
+                    else
+                    {
+                        @* The three channels are one choice, "play", made three ways: one item on the bar, not three. *@
+                        <RadzenMenuItem Text="@place.Text" Icon="@place.Icon">
+                            @foreach (var child in place.Children)
+                            {
+                                <RadzenMenuItem Text="@child.Text" Path="@child.Path" Icon="@child.Icon" />
+                            }
+                        </RadzenMenuItem>
+                    }
                 }
             </RadzenMenu>
         </nav>
@@ -29,17 +42,33 @@
             <RadzenButton class="drawer-toggle" Icon="menu" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
                           aria-label="Menu" title="Menu" aria-expanded="@(_drawer ? "true" : "false")" aria-controls="po-drawer"
                           Click="@(() => _drawer = !_drawer)" />
+            @* Who you are, the sound, the volume, the theme and the way out: five things nobody needs every minute,
+               behind one button rather than five across the bar. *@
+            <RadzenButton class="settings-toggle" Icon="tune" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text"
+                          aria-label="Settings" title="Settings" aria-expanded="@(_settings ? "true" : "false")" aria-controls="po-settings"
+                          Click="@(() => _settings = !_settings)" />
+        </div>
+    </header>
+    @if (_settings)
+    {
+        <div class="po-settings-scrim" @onclick="@(() => _settings = false)" aria-hidden="true"></div>
+        <section class="po-settings po-card" id="po-settings" role="dialog" aria-label="Settings" tabindex="-1"
+                 @ref="_settingsPanel" @onkeydown="@OnSettingsKey">
             <AuthorizeView>
                 <Authorized>
                     <span class="user"><RadzenIcon Icon="person" /><span class="user-name">@context.User.Identity?.Name</span></span>
-                    <RadzenButton ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Icon="logout" Click="SignOutAsync"
-                                  aria-label="Sign out" title="Sign out" Disabled="@_signingOut" />
                 </Authorized>
             </AuthorizeView>
-            <SoundToggle />
-            <ThemeToggle />
-        </div>
-    </header>
+            <div class="setting"><span class="po-eyebrow">Sound</span><SoundToggle /></div>
+            <div class="setting"><span class="po-eyebrow">Theme</span><ThemeToggle /></div>
+            <AuthorizeView>
+                <Authorized>
+                    <RadzenButton Text="Sign out" Icon="logout" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                  Click="SignOutAsync" Disabled="@_signingOut" />
+                </Authorized>
+            </AuthorizeView>
+        </section>
+    }
     @* Opened by the toggle above, and closed by anything that leads out of it. Rendered only when it is open, so a
        phone that never asks for the nav never pays for it and a screen reader is never offered a hidden copy of
        every destination. *@
@@ -50,9 +79,22 @@
         <div class="po-drawer-scrim" @onclick="@(() => _drawer = false)" aria-hidden="true"></div>
         <nav class="po-drawer" id="po-drawer" aria-label="Primary" tabindex="-1" @ref="_drawerNav" @onkeydown="@OnDrawerKey">
             <RadzenPanelMenu Click="@(_ => _drawer = false)" AriaLabel="Primary">
-                @foreach (var (text, path, icon) in Destinations)
+                @foreach (var place in Destinations)
                 {
-                    <RadzenPanelMenuItem Text="@text" Path="@path" Icon="@icon" Match="@(path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
+                    @if (place.Children is null)
+                    {
+                        <RadzenPanelMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" Match="@(place.Path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
+                    }
+                    else
+                    {
+                        @* Open from the start: the drawer has the room, and a channel is one tap rather than two. *@
+                        <RadzenPanelMenuItem Text="@place.Text" Icon="@place.Icon" Expanded="true">
+                            @foreach (var child in place.Children)
+                            {
+                                <RadzenPanelMenuItem Text="@child.Text" Path="@child.Path" Icon="@child.Icon" Match="NavLinkMatch.Prefix" />
+                            }
+                        </RadzenPanelMenuItem>
+                    }
                 }
             </RadzenPanelMenu>
         </nav>
@@ -84,17 +126,49 @@
 </div>
 
 @code {
-    /// <summary>The seven destinations, written once and rendered twice: as the bar, and as the drawer.</summary>
-    private static readonly (string Text, string Path, string Icon)[] Destinations =
+    /// <summary>A place in the nav, or a group of them.</summary>
+    private sealed record Destination(string Text, string Path, string Icon, Destination[]? Children = null);
+
+    /// <summary>The destinations, written once and rendered twice: as the bar, and as the drawer.</summary>
+    private static readonly Destination[] Destinations =
     [
-        ("Home", "", "home"),
-        ("CPU", "cpu", "theaters"),
-        ("1P", "1p", "record_voice_over"),
-        ("2P", "2p", "mic"),
-        ("Profiles", "profiles", "groups"),
-        ("Leaderboard", "fighters", "person"),
-        ("History", "history", "history"),
+        new("Home", "", "home"),
+        new("Play", "", "sports_mma",
+        [
+            new("CPU", "cpu", "theaters"),
+            new("1P", "1p", "record_voice_over"),
+            new("2P", "2p", "mic"),
+        ]),
+        new("Profiles", "profiles", "groups"),
+        new("Leaderboard", "fighters", "emoji_events"),
+        new("History", "history", "history"),
     ];
+
+    [Inject] private SfxInterop Sound { get; set; } = default!;
+    [Inject] private ThemeInterop Theme { get; set; } = default!;
+
+    /// <summary>Whether the settings panel is open.</summary>
+    private bool _settings;
+    private ElementReference _settingsPanel;
+    private bool _settingsFocused;
+
+    /// <summary>
+    /// The stored sound and theme are applied here, once, rather than by the toggles: those live in a panel that is
+    /// only in the document while it is open.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await Sound.InitializeAsync();
+        await Theme.InitializeAsync();
+    }
+
+    private void OnSettingsKey(KeyboardEventArgs e)
+    {
+        if (string.Equals(e.Key, "Escape", StringComparison.Ordinal))
+        {
+            _settings = false;
+        }
+    }
 
     private bool _signingOut;
 
@@ -123,6 +197,17 @@
         {
             _drawerFocused = false;
         }
+
+        // The same for the settings panel, so Escape closes it from the first key.
+        if (_settings && !_settingsFocused)
+        {
+            _settingsFocused = true;
+            await _settingsPanel.FocusAsync();
+        }
+        else if (!_settings)
+        {
+            _settingsFocused = false;
+        }
     }
 
     private ErrorBoundary? _boundary;
@@ -140,6 +225,7 @@
     protected override void OnParametersSet()
     {
         _drawer = false;
+        _settings = false;
         _boundary?.Recover();
     }
 
