@@ -71,8 +71,10 @@
   margin-top: var(--po-space-4);
 }
 
+/* Two across, four dials in a square. The editor is a 40rem drawer now, and three across ran each dial's labels into
+   its neighbour's. */
 @media (min-width: 48rem) {
-  .sliders { grid-template-columns: repeat(3, 1fr); }
+  .sliders { grid-template-columns: repeat(2, 1fr); column-gap: var(--po-space-5); }
 }
 
 .slider {
@@ -119,3 +121,6 @@
 .generate .hint {
   text-align: left;
 }
+
+/* The track runs the width of its labels, so the two ends of the scale sit over the two ends of the bar. */
+.slider ::deep .rz-slider { width: 100%; }

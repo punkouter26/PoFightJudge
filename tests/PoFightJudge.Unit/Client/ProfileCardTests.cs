@@ -1,10 +1,14 @@
 using Bunit;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using PoFightJudge.Client.Components;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
+using PoFightJudge.Shared.Validators;
+using Radzen;
+using Radzen.Blazor;
 
 namespace PoFightJudge.Unit.Client;
 
@@ -55,5 +59,47 @@ public sealed class ProfileCardTests : BunitContext, IAsyncLifetime
         cut.FindAll("summary .mini-fill").Select(f => f.GetAttribute("style"))
             .Should().Equal("--stat-value:20%", "--stat-value:70%", "--stat-value:40%", "--stat-value:90%");
         cut.Find(".quote").TextContent.Should().Contain("Stay chill.");
+    }
+}
+
+/// <summary>The profiles page opens its editor as a drawer, so the cast it is editing stays on screen.</summary>
+public sealed class ProfilesEditorTests : BunitContext, IAsyncLifetime
+{
+    private readonly IApiClient _api = Substitute.For<IApiClient>();
+
+    public ProfilesEditorTests()
+    {
+        Services.AddRadzenComponents();
+        Services.AddSingleton(_api);
+        Services.AddSingleton(TimeProvider.System);
+        Services.AddScoped<AudioInterop>();
+        Services.AddScoped<SfxInterop>();
+        Services.AddSingleton(Substitute.For<Blazored.LocalStorage.ILocalStorageService>());
+        Services.AddSingleton<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
+        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, false, FishVoices: false));
+        Services.AddSingleton(new FeatureGate(_api));
+        _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns([]);
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public new async Task DisposeAsync() => await base.DisposeAsync().ConfigureAwait(false);
+
+    [Fact]
+    public async Task New_profile_opens_the_editor_as_a_side_drawer()
+    {
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<RadzenDialog>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<PoFightJudge.Client.Pages.Profiles>(1);
+            builder.CloseComponent();
+        });
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".rz-button").Should().Contain(b => b.TextContent.Contains("New profile", StringComparison.Ordinal)));
+
+        _ = cut.FindAll(".rz-button").First(b => b.TextContent.Contains("New profile", StringComparison.Ordinal)).ClickAsync(new());
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".rz-dialog-side .editor").Should().ContainSingle());
     }
 }

@@ -16,7 +16,8 @@ public class ProfileFlowTests(AppFixture app)
         await newProfile.First.WaitForAsync(new() { Timeout = 30_000 });
         await newProfile.First.ClickAsync();
 
-        var dialog = page.Locator(".rz-dialog");
+        // A drawer from the right rather than a modal in the middle: the cast stays in view beside it.
+        var dialog = page.Locator(".rz-dialog-side");
         await dialog.WaitForAsync(new() { Timeout = 15_000 });
 
         // The dialog's own stylesheet reaches the Radzen form inside it. It did not for a long time: a scoped rule

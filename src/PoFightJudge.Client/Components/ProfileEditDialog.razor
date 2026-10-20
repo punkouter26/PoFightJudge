@@ -8,7 +8,7 @@
 @inject DialogService Dialog
 @inject IJSRuntime JS
 
-@* Create or edit a persona. Hosted by DialogService (the page awaits the saved ProfileDto) and rendered on its own in
+@* Create or edit a persona. Hosted by DialogService as a side drawer (the page awaits the saved ProfileDto) and rendered on its own in
    tests. The form edits a copy; the list only changes when the server has accepted it. *@
 <div class="po-scope">
 <RadzenTemplateForm TItem="CreateProfileRequest" Data="@_model" Submit="@SaveAsync" InvalidSubmit="@OnInvalidAsync" class="editor">
@@ -180,7 +180,7 @@
     }
 
     <div class="footer">
-        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Click="@(() => Dialog.Close(null))" Disabled="@_busy" />
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Click="@(() => Dialog.CloseSide(null))" Disabled="@_busy" />
         <RadzenButton ButtonType="ButtonType.Submit" Text="@(IsEdit ? "Save changes" : "Create profile")" Icon="check" ButtonStyle="ButtonStyle.Primary" IsBusy="@_busy" BusyText="Saving…" />
     </div>
 </RadzenTemplateForm>
@@ -318,7 +318,7 @@
             }
 
             await OnSaved.InvokeAsync(saved);
-            Dialog.Close(saved);
+            Dialog.CloseSide(saved);
         }
         catch (JSException)
         {

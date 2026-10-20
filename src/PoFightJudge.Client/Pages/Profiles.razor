@@ -135,10 +135,12 @@
             parameters[nameof(ProfileEditDialog.Existing)] = existing;
         }
 
-        var result = (object?)await Dialog.OpenAsync<ProfileEditDialog>(
+        // A drawer from the right rather than a modal over the middle: the cast being edited stays in view, and a
+        // long form scrolls inside a full-height panel instead of a box. Clicking beside it does not throw away the edit.
+        var result = (object?)await Dialog.OpenSideAsync<ProfileEditDialog>(
             existing is null ? "New profile" : $"Edit {existing.Persona.Initials}",
             parameters,
-            new DialogOptions { Width = "min(780px, 96vw)", CloseDialogOnOverlayClick = false, CloseDialogOnEsc = false, Resizable = false, Draggable = false });
+            new SideDialogOptions { Position = DialogPosition.Right, Width = "min(40rem, 100vw)", ShowMask = true, CloseDialogOnOverlayClick = false });
 
         if (result is ProfileDto saved)
         {
