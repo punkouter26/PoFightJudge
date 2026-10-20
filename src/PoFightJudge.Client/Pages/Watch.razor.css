@@ -21,3 +21,7 @@
 
   .you .seat { font-size: var(--po-text-md); }
 }
+
+/* A desktop asks both questions on one screen. */
+.sheet { display: grid; gap: var(--po-space-5); }
+.step { display: grid; gap: var(--po-space-4); align-content: start; }

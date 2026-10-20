@@ -1,0 +1,22 @@
+@inject NavigationManager Nav
+
+@* The three channels as one choice at the top of whichever setup screen is open: CPU and 1P are one page and 2P is
+   another, but to somebody setting up an argument they are one question — who is arguing — asked three ways. *@
+<RadzenSelectBar TValue="string" Value="@Current" Change="@(v => Nav.NavigateTo(v))" Size="ButtonSize.Small"
+                 class="channel-switch" aria-label="Channel">
+    <Items>
+        <RadzenSelectBarItem Text="CPU" Value="@("cpu")" />
+        <RadzenSelectBarItem Text="1P" Value="@("1p")" />
+        <RadzenSelectBarItem Text="2P" Value="@("2p")" />
+    </Items>
+</RadzenSelectBar>
+
+@code {
+    /// <summary>Which channel this is, as its route. /watch and /fight are older names for CPU and 2P.</summary>
+    private string Current => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/').ToLowerInvariant() switch
+    {
+        "1p" => "1p",
+        "2p" or "fight" => "2p",
+        _ => "cpu",
+    };
+}

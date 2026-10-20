@@ -21,3 +21,12 @@
   font-size: var(--po-text-sm);
   text-align: right;
 }
+
+/* A desktop asks all three on one screen: who, then what about beside the sound check, then the button. */
+.sheet { display: grid; gap: var(--po-space-5); }
+.step { display: grid; gap: var(--po-space-4); align-content: start; }
+.pair { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--po-space-5); align-items: start; }
+
+@media (max-width: 64rem) {
+  .pair { grid-template-columns: 1fr; }
+}

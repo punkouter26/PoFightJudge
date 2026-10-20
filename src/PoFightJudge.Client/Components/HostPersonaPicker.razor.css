@@ -2,7 +2,4 @@
 
 ::deep .field { width: 100%; }
 
-::deep .host-list {
-  display: grid;
-  gap: var(--po-space-2);
-}
+::deep .host-list { width: 100%; }

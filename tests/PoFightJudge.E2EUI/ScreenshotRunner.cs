@@ -212,8 +212,6 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
                 await input.PressAsync("Tab", new() { Delay = 20 });
             }
 
-            await page.Locator("button.rz-steps-next").ClickAsync();
-
             // Spinning for a topic, mid-reel and landed — then the topic the rest of the shots expect, typed over it.
             await page.GetByText("Spicy").ClickAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Spin" }).ClickAsync();

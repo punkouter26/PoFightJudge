@@ -1,25 +1,20 @@
-@* Who runs the fight. A radio list rather than cards, so arrow keys work and a screen reader reads it as one choice. *@
+@* Who runs the fight. One dropdown rather than a five-row radio list: the same single choice, from the keyboard as
+   well, in one line of the setup screen instead of 210 px of it — the room that lets a desktop ask the whole setup
+   at once. *@
 <div class="hosts">
     <RadzenFormField Text="Who is hosting?" Variant="Variant.Outlined" class="field">
         <ChildContent>
-            <RadzenRadioButtonList TValue="HostPersonaId"
-                                   Value="@Persona"
-                                   ValueChanged="@OnPicked"
-                                   Orientation="Orientation.Vertical"
-                                   Name="host"
-                                   class="host-list">
-                <Items>
-                    @foreach (var host in HostPersonaCatalogue.All)
-                    {
-                        <RadzenRadioButtonListItem TValue="HostPersonaId" Value="@host.Id" Text="@($"{host.Emoji} {host.Name} — {host.Tagline}")" />
-                    }
-                </Items>
-            </RadzenRadioButtonList>
+            <RadzenDropDown TValue="HostPersonaId" Value="@Persona" ValueChanged="@OnPicked" Data="@Hosts"
+                            TextProperty="Text" ValueProperty="Id" Name="host" aria-label="Who is hosting?" class="host-list" />
         </ChildContent>
     </RadzenFormField>
 </div>
 
 @code {
+    /// <summary>Each host as one line: the face, the name and what they are like.</summary>
+    private static readonly IEnumerable<object> Hosts =
+        [.. HostPersonaCatalogue.All.Select(h => new { h.Id, Text = $"{h.Emoji} {h.Name} — {h.Tagline}" })];
+
     [Parameter] public HostPersonaId Persona { get; set; } = HostPersonaId.Referee;
 
     [Parameter] public EventCallback<HostPersonaId> PersonaChanged { get; set; }

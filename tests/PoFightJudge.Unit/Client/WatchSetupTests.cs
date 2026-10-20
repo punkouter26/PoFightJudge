@@ -134,9 +134,35 @@ public class WatchSetupTests : BunitContext
         return cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal));
     }
 
-    /// <summary>Whether the page will let anyone past the cast. The reason it will not is stated beside it.</summary>
+    /// <summary>
+    /// Whether the page will let the argument start. On a desktop the whole setup is one screen, so that is the
+    /// start button; the reason it will not is stated beside the sides.
+    /// </summary>
     private static bool CanGoOn(IRenderedComponent<WatchPage> cut) =>
-        cut.FindAll("button.rz-steps-next").SingleOrDefault() is { } next && !next.HasAttribute("disabled");
+        !cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal)).HasAttribute("disabled");
+
+    [Fact]
+    public void On_a_desktop_the_cast_the_topic_and_the_start_are_one_screen()
+    {
+        var cut = RenderSetup();
+
+        cut.FindAll(".rz-steps").Should().BeEmpty("the steps are a phone's way of fitting it in");
+        cut.FindAll("input[name=topic]").Should().ContainSingle();
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Start the argument", StringComparison.Ordinal))
+            .HasAttribute("disabled").Should().BeTrue("nobody has been picked yet");
+    }
+
+    [Fact]
+    public async Task The_three_channels_are_one_switch_on_the_setup_screen()
+    {
+        var cut = RenderSetup();
+        var nav = Services.GetRequiredService<BunitNavigationManager>();
+
+        cut.FindAll(".channel-switch .rz-button").Select(b => b.TextContent.Trim()).Should().Equal("CPU", "1P", "2P");
+        await cut.FindAll(".channel-switch .rz-button").Single(b => string.Equals(b.TextContent.Trim(), "2P", StringComparison.Ordinal)).ClickAsync(new());
+
+        nav.Uri.Should().EndWith("2p");
+    }
 
     /// <summary>The topic is the second step's question, so getting to it is part of asking it.</summary>
     private static async Task<IElement> TopicBoxAsync(IRenderedComponent<WatchPage> cut)

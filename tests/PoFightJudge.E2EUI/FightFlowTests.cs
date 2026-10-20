@@ -29,11 +29,8 @@ public class FightFlowTests(AppFixture app)
         await TypeTagAsync(page, "player2Tag", "SM");
         await ShootAsync(page, "fight-setup");
 
-        // The topic is the second of the three questions the setup asks.
-        await page.Locator("button.rz-steps-next").ClickAsync();
+        // On a desktop the setup is one screen: who, what about and the sound check, then the button.
         await page.Locator("input[name=topic]").FillAsync("who does the dishes");
-
-        await AppFixture.ToTheLastStepAsync(page);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the fight" }).ClickAsync();
 
         // The fight page owns the microphone from here; the fake device plays the fixture into it.
