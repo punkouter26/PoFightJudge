@@ -11,7 +11,7 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Api.Features.Diagnostics;
 
 /// <summary>
-/// Health surface. <c>/api/health</c> and <c>/healthz</c> run only the <c>ready</c> checks (configuration, storage)
+/// Health surface. <c>/api/health</c> runs only the <c>ready</c> checks (configuration, storage)
 /// — no network probes, so the deploy gate and the tests never depend on a third party being up.
 /// <c>/api/health/details</c> adds the <c>ai</c> reachability probes and a masked configuration/feature report for
 /// the Blazor /health page. All anonymous; all presence-only.
@@ -25,8 +25,6 @@ public sealed class HealthEndpoints : ICarterModule
     {
         var ready = new HealthCheckOptions { Predicate = h => h.Tags.Contains(ReadyTag) };
         app.MapHealthChecks(ApiRoutes.Health.Url, ready).AllowAnonymous().WithTags("Health");
-        app.MapHealthChecks(ApiRoutes.Health.ProbeUrl, ready).AllowAnonymous();
-        app.MapHealthChecks(ApiRoutes.Health.ReadyProbeUrl, ready).AllowAnonymous();
 
         app.MapGet(ApiRoutes.Health.DetailsUrl, async (HttpContext http, HealthCheckService health, IConfiguration config, IHostEnvironment env, TimeProvider clock, AiLatencyTracker tracker, CancellationToken ct) =>
         {

@@ -17,8 +17,6 @@ public partial class HealthTests(ApiFactory factory)
         using var client = factory.CreateClient();
 
         (await client.GetAsync(ApiRoutes.Health.Url)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await client.GetAsync(ApiRoutes.Health.ProbeUrl)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await client.GetAsync(ApiRoutes.Health.ReadyProbeUrl)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

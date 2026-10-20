@@ -19,11 +19,8 @@ public static class ApiRoutes
         public const string DetailsSegment = "/details";
         public const string DetailsUrl = $"{Url}{DetailsSegment}";
 
-        /// <summary>Client-side Blazor page. Owns bare <c>/health</c>; the machine probes live under <c>/healthz</c> so a server route never shadows it.</summary>
+        /// <summary>Client-side Blazor page. Owns bare <c>/health</c>; the machine probe is <see cref="Url"/>, under <c>/api</c>, so a server route never shadows it.</summary>
         public const string PageUrl = "/health";
-
-        public const string ProbeUrl = "/healthz";
-        public const string ReadyProbeUrl = "/healthz/ready";
     }
 
     public static class Diag
