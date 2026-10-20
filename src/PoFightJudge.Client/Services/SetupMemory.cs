@@ -29,6 +29,9 @@ public sealed class SetupMemory(ILocalStorageService storage)
     private FightCard? _pendingFight;
     private WatchCard? _pendingWatch;
 
+    /// <summary>Whether the next <see cref="FightAsync"/> is a rematch, which brings its own host, rather than last night's card.</summary>
+    public bool FightRematchArmed => _pendingFight is not null;
+
     /// <summary>Arms a fight rematch. Read once by the setup screen, then gone.</summary>
     public void Rematch(FightCard card) => _pendingFight = card;
 

@@ -164,6 +164,8 @@
 
         // The same two people argue most nights, and typing both tags again every time is the tax on that. A rematch
         // takes precedence over the remembered card; both leave the topic to whatever it was, blank included.
+        // The host is the Settings choice, except on a rematch, which replays the host that fight had.
+        var rematch = Memory.FightRematchArmed;
         if (await Memory.FightAsync() is { } card)
         {
             _one = card.One;
@@ -171,6 +173,7 @@
             _topic = card.Topic;
             _oneRole = card.OneRole;
             _twoRole = card.TwoRole;
+            _persona = rematch ? card.Persona : _persona;
             _device = card.Device is { Length: > 0 } device ? device : null;
         }
     }
