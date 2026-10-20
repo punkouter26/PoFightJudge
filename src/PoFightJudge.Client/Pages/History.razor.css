@@ -1,31 +1,83 @@
-::deep .history { width: 100%; }
-
-/* The two buttons do not shrink. Radzen does not mark these icon-only — they carry a label span either way — so
-   the 44 px floor from T71 does not reach them, and in a 7rem cell flex squeezed each to 28 px around 51 px of
-   content: a button three times taller than it is wide, with its own icon hanging out of it. */
-.row-actions { display: flex; gap: var(--po-space-1); justify-content: flex-end; }
-
-.row-actions ::deep .rz-button { flex: none; }
-
+/* One row of controls: the kind, the words (which take the room), the filters button and, when there is something
+   to clear, Clear. */
 .narrow {
   display: flex;
-  gap: var(--po-space-3);
+  gap: var(--po-space-2) var(--po-space-3);
   align-items: center;
   flex-wrap: wrap;
+  margin-bottom: var(--po-space-3);
+}
+
+.find { flex: 1 1 14rem; min-width: 0; }
+.find ::deep .rz-textbox { width: 100%; }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--po-space-3);
   margin-bottom: var(--po-space-4);
 }
 
-/* The search box takes the room; the two dates sit at their natural width beside it. */
-.narrow ::deep .find {
-  flex: 1 1 16rem;
+/* Two columns of cards above the tablet breakpoint, one below it. */
+::deep .history .rz-datalist-data {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--po-space-3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
-/* Radzen pads a cell for a table that has room to spare; a phone does not. */
+::deep .history .rz-datalist-data > li { padding: 0; margin: 0; border: 0; background: none; }
+
+.match {
+  display: grid;
+  gap: var(--po-space-1);
+  padding: var(--po-space-3) var(--po-space-4);
+}
+
+/* A long topic wraps rather than being cut short at an ellipsis. */
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--po-space-2) var(--po-space-3);
+  min-width: 0;
+}
+
+.topic {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--po-font-body);
+  font-size: var(--po-text-md);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.when { flex: none; font-size: var(--po-text-xs); }
+
+.who {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--po-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.result { display: inline-flex; align-items: center; gap: var(--po-space-2); flex: none; }
+
+/* The buttons do not shrink: Radzen gives each a label span either way, and squeezed they hang their icons out. */
+.row-actions { display: flex; gap: 0; flex: none; }
+.row-actions ::deep .rz-button { flex: none; }
+
+@media (max-width: 64rem) {
+  ::deep .history .rz-datalist-data { grid-template-columns: 1fr; }
+}
+
+/* A phone puts the names on a line of their own, and the result and the buttons under them. */
 @media (max-width: 40rem) {
-  ::deep .history .rz-cell-data { padding-block: var(--po-space-2); }
-
-  /* The two buttons are 44 px wide each and the column is 7rem; the cell keeps its own padding out of the way. */
-  ::deep .history td .rz-cell-data { padding-inline: 0; }
-
-  .row-actions { gap: 0; }
+  .line:last-child { flex-wrap: wrap; }
+  .who { flex-basis: 100%; }
+  .result { flex: 1; }
 }

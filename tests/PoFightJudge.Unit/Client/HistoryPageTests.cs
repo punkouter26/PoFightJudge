@@ -74,7 +74,7 @@ public class HistoryPageTests : BunitContext
             builder.CloseComponent();
         });
 
-        cut.WaitForAssertion(() => cut.FindAll(".history tbody tr").Should().HaveCount(2));
+        cut.WaitForAssertion(() => cut.FindAll(".history .match").Should().HaveCount(2));
         return cut;
     }
 
@@ -96,11 +96,34 @@ public class HistoryPageTests : BunitContext
             .Should().BeEquivalentTo([MatchMode.Watch, MatchMode.Fight]);
         cut.Markup.Should().Contain("the thermostat").And.Contain("who forgot the bins");
 
-        // A click on a column header is an order the server is asked for, not one the page pretends to have.
         _api.ReceivedCalls().Should().Contain(c => c.GetArguments().OfType<MatchQuery>().Any(q => q.Sort == MatchSort.Newest));
         MatchQuery.DefaultTake.Should().BePositive();
         new MatchQuery(Sort: MatchSort.TopicAscending).Order(Both()).Select(m => m.Topic).Should().Equal("the thermostat", "who forgot the bins");
         new MatchQuery(Sort: MatchSort.TopicDescending).Order(Both()).Select(m => m.Topic).Should().Equal("who forgot the bins", "the thermostat");
+    }
+
+    [Fact]
+    public async Task The_dates_and_the_order_wait_behind_one_filters_button_and_the_order_is_asked_of_the_server()
+    {
+        var cut = RenderHistory();
+        cut.FindAll(".filters").Should().BeEmpty("one row of controls until somebody wants more");
+
+        await cut.FindAll(".narrow .rz-button").Single(b => b.TextContent.Contains("Filters", StringComparison.Ordinal)).ClickAsync(new());
+        cut.FindAll(".filters .rz-datepicker").Should().HaveCount(2);
+
+        await cut.FindComponent<RadzenDropDown<MatchSort>>().InvokeAsync(() =>
+            cut.FindComponent<RadzenDropDown<MatchSort>>().Instance.Change.InvokeAsync(MatchSort.TopicAscending));
+
+        await cut.WaitForAssertionAsync(() => _api.ReceivedCalls().Should()
+            .Contain(c => c.GetArguments().OfType<MatchQuery>().Any(q => q.Sort == MatchSort.TopicAscending)));
+    }
+
+    [Fact]
+    public void One_page_of_history_has_no_pager()
+    {
+        var cut = RenderHistory();
+
+        cut.FindAll(".rz-pager").Should().BeEmpty("two arguments fit on the first page");
     }
 
     [Fact]
@@ -122,12 +145,12 @@ public class HistoryPageTests : BunitContext
     {
         var cut = RenderHistory();
 
-        var clicked = cut.Find("tbody tr button[aria-label='Delete the thermostat']").ClickAsync(new());
+        var clicked = cut.Find(".match button[aria-label='Delete the thermostat']").ClickAsync(new());
         await AnswerConfirmAsync(cut, answer: true);
         await clicked;
 
         await _api.Received(1).DeleteMatchAsync(_watch, Arg.Any<CancellationToken>());
-        await cut.WaitForAssertionAsync(() => cut.FindAll(".history tbody tr").Should().HaveCount(1));
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".history .match").Should().HaveCount(1));
         cut.Markup.Should().NotContain("the thermostat");
     }
 }
