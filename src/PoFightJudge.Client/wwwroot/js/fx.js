@@ -187,27 +187,5 @@ window.PoFx = (function () {
     }
   });
 
-  // The tour's spotlight: one element at a time brought into view and lifted above a scrim (app.css, .po-spotlit),
-  // and its box handed back so the page can put a bubble beside it. Null takes the light down.
-  let spotlit = null;
-
-  function spot(selector) {
-    if (spotlit) {
-      spotlit.classList.remove("po-spotlit");
-      spotlit = null;
-    }
-
-    const el = selector ? document.querySelector(selector) : null;
-    if (!el) {
-      return null;
-    }
-
-    el.scrollIntoView({ block: "center" });
-    el.classList.add("po-spotlit");
-    spotlit = el;
-    const box = el.getBoundingClientRect();
-    return { top: box.top, left: box.left, width: box.width, height: box.height, viewWidth: window.innerWidth, viewHeight: window.innerHeight };
-  }
-
-  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal, table: table, stamps: stamps, holo: holo, spot: spot };
+  return { burst: burst, scrollBottom: scrollBottom, reveal: reveal, table: table, stamps: stamps, holo: holo };
 })();

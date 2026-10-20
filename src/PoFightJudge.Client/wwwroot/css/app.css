@@ -314,6 +314,16 @@ body { background: transparent; }
 }
 
 /* ── Typography helpers ── */
+/* Read by a screen reader, not drawn: a page's title when the page itself is the only heading it needs. */
+.po-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .po-eyebrow {
   font-size: var(--po-text-xs);
   font-weight: 600;
@@ -459,13 +469,3 @@ body { background: transparent; }
    chrome belongs to the layout and the decision belongs to the fight page. */
 html.po-table .shell > :not(main) { display: none; }
 
-/* ── The first-visit tour's spotlight (PoFx.spot) ──
-   One element lifted over a scrim the size of the screen, ringed in the accent. Global, because the tour points at
-   whatever page markup it is told to, and none of that markup knows it is being pointed at. */
-.po-spotlit {
-  position: relative;
-  z-index: 70;
-  border-radius: var(--po-radius-md);
-  box-shadow: 0 0 0 4px var(--po-accent), 0 0 0 100vmax var(--po-scrim);
-  transition: box-shadow var(--po-dur-base) var(--po-ease);
-}

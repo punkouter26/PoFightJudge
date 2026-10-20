@@ -75,7 +75,7 @@ other through `Shared` contracts and repositories, not through each other's serv
   `gfx.js` runs the WebGL2 shaders — single passes, plus two simulated kinds: `fluid` (stable fluids in half-float
   ping-pong targets) and `swarm` (particles stepped by transform feedback) — `particles.js` the canvas physics
   (sparks, confetti, shards, Verlet streamers), `terrain.js` a clip's spectrum drawn as mountains, and `fx.js` the
-  one-shot CSS classes, the stamps, the holo foil, table mode and the tour's spotlight. Each entry point answers "no"
+  one-shot CSS classes, the stamps, the holo foil and table mode. Each entry point answers "no"
   rather than throwing, the drawn half is off until the Settings panel's **Stage effects** switch turns it on
   (`po-effects`, read by `PoMotion.still()` in `theme.js`) and off whatever the switch when reduced motion is asked for, and the sound switch is stored where JS
   can read it before Blazor boots. The catalogues are spelled twice — `Sfx`/`Shaders` in C#, the voices and shaders
@@ -85,7 +85,7 @@ other through `Shared` contracts and repositories, not through each other's serv
   holds stage effects (off), spin heat (Medium) and the 2P host (the Referee), each defaulting to the simplest app.
 - `ScreenshotRunner` with `SEED=1` plays a watch and a fight on the fakes and photographs the moments the effects
   live in (the tape, the glitch, the heat, table mode, the verdict's reveal, shatter, story image, rematch, the
-  podium, the tour). A CSS effect too quick to catch is frozen part-way; a canvas is whatever frame it lands on.
+  podium). A CSS effect too quick to catch is frozen part-way; a canvas is whatever frame it lands on.
 
 ## Deviations from the plan
 
