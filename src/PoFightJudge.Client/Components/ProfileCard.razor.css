@@ -1,6 +1,7 @@
 .profile {
   display: grid;
-  gap: var(--po-space-4);
+  align-content: start;
+  gap: var(--po-space-3);
   height: 100%;
   border-top: 3px solid var(--po-p1);
 }
@@ -15,12 +16,12 @@ header {
 }
 
 ::deep .face,
-.face { --po-face-size: 4.5rem; }
+.face { --po-face-size: 3rem; }
 
 .face--blank {
   display: grid;
   place-items: center;
-  font-size: var(--po-text-xl);
+  font-size: var(--po-text-md);
   color: var(--po-muted);
   letter-spacing: 0.04em;
 }
@@ -37,7 +38,7 @@ header {
 h3 {
   margin: 0;
   font-family: var(--po-font-display);
-  font-size: var(--po-text-xl);
+  font-size: var(--po-text-lg);
   line-height: 1.1;
   overflow-wrap: anywhere;
 }
@@ -55,9 +56,58 @@ h3 {
   gap: var(--po-space-1);
 }
 
+.traits summary {
+  display: flex;
+  align-items: center;
+  gap: var(--po-space-3);
+  min-height: 32px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.traits summary::-webkit-details-marker { display: none; }
+
+/* The open/closed mark, drawn rather than the browser's own triangle so it sits at the end of the strip. */
+.traits summary::after {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid var(--po-muted);
+  border-bottom: 2px solid var(--po-muted);
+  transform: rotate(45deg);
+  transition: transform var(--po-dur-fast) var(--po-ease);
+}
+
+.traits[open] summary::after { transform: rotate(-135deg); }
+
+.mini {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--po-space-2);
+}
+
+.mini-track {
+  height: 4px;
+  border-radius: var(--po-radius-pill);
+  background: var(--po-surface-3);
+  overflow: hidden;
+}
+
+.mini-fill {
+  display: block;
+  width: var(--stat-value);
+  height: 100%;
+  background: var(--po-p1);
+}
+
+.profile.p2 .mini-fill { background: var(--po-p2); }
+
 .bars {
   display: grid;
   gap: var(--po-space-3);
+  padding-top: var(--po-space-3);
 }
 
 .quote {

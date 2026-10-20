@@ -1,4 +1,4 @@
-@* One persona on the cast: portrait, who they are, four trait bars, the traits that are on, their line. *@
+@* One persona on the cast: portrait, who they are, how they lean, their line. *@
 <article class="profile po-card @(IsWife ? "p2" : "p1")" data-initials="@Persona.Initials">
     <header>
         @if (Profile.HasFace)
@@ -34,14 +34,28 @@
         </div>
     </header>
 
-    <div class="bars">
-        <StatBar LeftLabel="Logic" RightLabel="Emotion" Value="@Persona.LogicVsEmotion" Color="@Accent" />
-        @* The same four scales, the same way round and in the same order as the editor's sliders. The patience bar
-           used to be drawn backwards under different words, so a slider pushed right moved its bar left. *@
-        <StatBar LeftLabel="Impatient" RightLabel="Patient" Value="@Persona.Patience" Color="@Accent" />
-        <StatBar LeftLabel="Forgiving" RightLabel="Holds grudges" Value="@Persona.HoldsGrudges" Color="@Accent" />
-        <StatBar LeftLabel="Secure" RightLabel="Jealous" Value="@Persona.Jealousy" Color="@Accent" />
-    </div>
+    @* Folded: the four labelled scales were 140 px of every card, and twelve cards made the page 2339 px. The strip
+       in the summary keeps their shape on the card — four thin bars in the same order — and opening it gives the
+       words. A native details element: it opens from the keyboard and needs no script. *@
+    <details class="traits">
+        <summary>
+            <span class="po-eyebrow">Temperament</span>
+            <span class="mini" aria-hidden="true">
+                @foreach (var value in Traits)
+                {
+                    <span class="mini-track"><span class="mini-fill" style="@($"--stat-value:{Math.Clamp(value, 0, 100)}%")"></span></span>
+                }
+            </span>
+        </summary>
+        <div class="bars">
+            <StatBar LeftLabel="Logic" RightLabel="Emotion" Value="@Persona.LogicVsEmotion" Color="@Accent" />
+            @* The same four scales, the same way round and in the same order as the editor's sliders. The patience bar
+               used to be drawn backwards under different words, so a slider pushed right moved its bar left. *@
+            <StatBar LeftLabel="Impatient" RightLabel="Patient" Value="@Persona.Patience" Color="@Accent" />
+            <StatBar LeftLabel="Forgiving" RightLabel="Holds grudges" Value="@Persona.HoldsGrudges" Color="@Accent" />
+            <StatBar LeftLabel="Secure" RightLabel="Jealous" Value="@Persona.Jealousy" Color="@Accent" />
+        </div>
+    </details>
 
     @if (!string.IsNullOrWhiteSpace(Persona.Philosophy))
     {
@@ -82,6 +96,9 @@
     private bool IsWife => Persona.Role == ProfileRole.Wife;
 
     private string Accent => IsWife ? "var(--po-p2)" : "var(--po-p1)";
+
+    /// <summary>The four scales in the order the bars draw them.</summary>
+    private int[] Traits => [Persona.LogicVsEmotion, Persona.Patience, Persona.HoldsGrudges, Persona.Jealousy];
 
     private string DisplayName => string.IsNullOrWhiteSpace(Persona.Name) ? Persona.Initials : Persona.Name;
 
