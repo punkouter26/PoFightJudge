@@ -5,7 +5,7 @@
 # SDK refuses to send a bearer token over plain HTTP, so the cert is mandatory; SCRIPTS/azurite.ps1 exports the ASP.NET
 # Core dev cert (already trusted on the machine) into ./certs.
 #
-# Ports are 12000–12002 because PoArgueJudge (10000–10002) and PoMarriedLife (11000–11002) already bind the others.
+# Ports are 12000 (blob) and 12002 (table) because PoArgueJudge (10000–10002) and PoMarriedLife (11000–11002) already bind the others.
 #
 # seq — structured log viewer at http://localhost:5341 (Serilog.Sinks.Seq, Development only).
 services:
@@ -16,7 +16,6 @@ services:
     command: >
       azurite
       --blobHost 0.0.0.0
-      --queueHost 0.0.0.0
       --tableHost 0.0.0.0
       --oauth basic
       --cert /certs/azurite.pfx
@@ -25,7 +24,6 @@ services:
       --location /data
     ports:
       - "12000:10000"   # blob
-      - "12001:10001"   # queue (unused; exposed for parity)
       - "12002:10002"   # table
     volumes:
       - ./certs:/certs:ro

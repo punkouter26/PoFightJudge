@@ -13,7 +13,7 @@
       5. Restore, build (Release), Playwright's Chromium, and the whole test suite
       6. -Run: starts the API
 
-    Nothing here writes to Azure. Seeding secrets is a separate, deliberate script: SCRIPTS/seed-secrets.ps1.
+    Nothing here writes to Azure. A missing secret is set in kv-poshared by hand.
 
 .PARAMETER Run
     Start the API when setup finishes.
@@ -107,8 +107,7 @@ if (-not $names) {
             Write-Ok "secret $name"
         } else {
             $key = $name.Replace('--', ':')
-            Write-Todo "secret $name ($key) is missing from kv-poshared."
-            Write-Host '      Copy them all across: ./SCRIPTS/seed-secrets.ps1 prints the plan, -Apply carries it out' -ForegroundColor DarkGray
+            Write-Todo "secret $name ($key) is missing from kv-poshared. Set it there by hand."
         }
     }
 }

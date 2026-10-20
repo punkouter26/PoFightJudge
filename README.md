@@ -77,10 +77,8 @@ committed.
 one caller may spend per UTC day. Past it, every rate-limited AI route answers 429 until midnight UTC, and `/health`
 shows the caller where they stand. The count is in memory, so a restart forgives the day.
 
-```powershell
-./SCRIPTS/seed-secrets.ps1          # prints what it would copy into kv-poshared; writes nothing
-./SCRIPTS/seed-secrets.ps1 -Apply   # carries it out
-```
+The three secrets (`GeminiApiKey`, `AzureAd--TenantId`, `AzureAd--ClientId`) are set in `kv-poshared` by hand;
+`./SCRIPTS/setup.ps1` checks the names are there and never reads a value.
 
 ## Deploy
 
