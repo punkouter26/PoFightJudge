@@ -1,5 +1,4 @@
 using Blazored.LocalStorage;
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -9,8 +8,6 @@ using Microsoft.Authentication.WebAssembly.Msal.Models;
 using Microsoft.Extensions.DependencyInjection;
 using PoFightJudge.Client;
 using PoFightJudge.Client.Services;
-using PoFightJudge.Shared.Models;
-using PoFightJudge.Shared.Validators;
 using Radzen;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -42,8 +39,6 @@ builder.Services.AddScoped<ConnectionState>();
 builder.Services.AddScoped<FeatureGate>();
 builder.Services.AddScoped<Viewport>();
 builder.Services.AddScoped<ConnectionWatchHandler>();
-// The same rules the API enforces, for <FluentValidationValidator> (registered explicitly: no assembly scanning under trimming).
-builder.Services.AddScoped<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
 
 // Environment split (SPEC §2): Production = Microsoft Entra ID via MSAL, API calls to our own origin carry the access
 // token. Development = MSAL *and* the guest cookie: a token goes on a call when there is one, and auth state is

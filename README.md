@@ -6,6 +6,10 @@ One app, two ways to have a married-couple fight and get judged.
 it out three rounds each in their own synthesised voices while a judge scores it. You can take one of the two seats
 yourself.
 
+**Profiles are never written by hand.** The cast is the pre-made personas (added at startup) plus everybody who has
+played, whose persona is written from their own debates. Each profile's record (wins, losses, rating) is counted from
+its games on read: `GET /api/profiles` is read-only and returns it with every profile.
+
 **FIGHT** — you two, one microphone. A Gemini Live host introduces you, interrupts, cross-examines and rules, and
 afterwards the recording is transcribed, diarised, measured and judged: claims, fallacies, traits, thirty
 measurements each, and the moments worth listening to again.
@@ -59,7 +63,7 @@ src/PoFightJudge.Client   Blazor WebAssembly, Radzen, one set of design tokens
 infra/                      Bicep: resource group, storage, F1 Linux plan, web app, role assignments
 ```
 
-The slices: `Profiles` (the cast) · `Watch` (the round loop and its judge) · `Fight` + `Live` (the show, the state
+The slices: `Profiles` (the cast, read-only) · `Watch` (the round loop and its judge) · `Fight` + `Live` (the show, the state
 machine and the Gemini socket) · `Analysis` (transcribe, measure, judge, highlight) · `Fighters` (people, and how
 they argue) · `Records` (matches, results, history, leaderboards) · `Auth` · `Diagnostics` · `Storage` · `Voice`.
 

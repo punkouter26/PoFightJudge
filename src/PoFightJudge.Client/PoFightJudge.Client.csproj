@@ -22,6 +22,5 @@
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Radzen.Blazor" />
     <PackageReference Include="Blazored.LocalStorage" />
-    <PackageReference Include="Blazored.FluentValidation" />
   </ItemGroup>
 </Project>

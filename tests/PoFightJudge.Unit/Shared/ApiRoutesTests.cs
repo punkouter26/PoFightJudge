@@ -36,7 +36,6 @@ public class ApiRoutesTests
 
         ApiRoutes.Profiles.ById(profile).Should().Be("/api/profiles/KDH");
         ApiRoutes.Profiles.Face(profile).Should().Be("/api/profiles/KDH/face");
-        ApiRoutes.Profiles.Generate("wife").Should().Be("/api/profiles/generate?role=wife");
         ApiRoutes.Fighters.ByTag(fighter).Should().Be("/api/fighters/MLT");
         ApiRoutes.Fights.ById(match).Should().Be($"/api/fights/{match.Value}");
         ApiRoutes.Fights.Analysis(match).Should().Be($"/api/fights/{match.Value}/analysis");

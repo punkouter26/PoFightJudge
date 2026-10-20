@@ -27,20 +27,7 @@ public interface IApiClient
 
     Task<IReadOnlyList<ProfileDto>> GetProfilesAsync(CancellationToken ct = default);
 
-    /// <summary>Throws <see cref="ApiException"/> for a 400 (field errors) or 409 (initials taken).</summary>
-    Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, CancellationToken ct = default);
-
-    Task<ProfileDto> UpdateProfileAsync(ProfileId id, CreateProfileRequest request, CancellationToken ct = default);
-
-    Task DeleteProfileAsync(ProfileId id, CancellationToken ct = default);
-
-    /// <summary>Sends the raw image; the server re-encodes it to the 512 px PNG the cards show.</summary>
-    Task<ProfileDto> UploadFaceAsync(ProfileId id, byte[] image, string contentType, CancellationToken ct = default);
-
     Task<SeedResultDto> SeedProfilesAsync(CancellationToken ct = default);
-
-    /// <summary>An AI-invented, unsaved persona draft for the editor.</summary>
-    Task<CreateProfileRequest> GenerateProfileAsync(ProfileRole role, CancellationToken ct = default);
 
     /// <summary>One in-character line spoken in the persona's own voice; nothing is saved.</summary>
     Task<PreviewLineResponse> PreviewLineAsync(CreateProfileRequest persona, CancellationToken ct = default);
@@ -246,45 +233,10 @@ public sealed class ApiClient(IHttpClientFactory clients) : IApiClient
     public async Task<IReadOnlyList<ProfileDto>> GetProfilesAsync(CancellationToken ct = default) =>
         await http.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base, ct) ?? [];
 
-    public async Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, CancellationToken ct = default)
-    {
-        using var response = await http.PostAsJsonAsync(Relative(ApiRoutes.Profiles.Base), request, ct);
-        return await ReadAsync<ProfileDto>(response, ct);
-    }
-
-    public async Task<ProfileDto> UpdateProfileAsync(ProfileId id, CreateProfileRequest request, CancellationToken ct = default)
-    {
-        using var response = await http.PutAsJsonAsync(Relative(ApiRoutes.Profiles.ById(id)), request, ct);
-        return await ReadAsync<ProfileDto>(response, ct);
-    }
-
-    public async Task DeleteProfileAsync(ProfileId id, CancellationToken ct = default)
-    {
-        using var response = await http.DeleteAsync(Relative(ApiRoutes.Profiles.ById(id)), ct);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw await ApiException.FromAsync(response, ct);
-        }
-    }
-
-    public async Task<ProfileDto> UploadFaceAsync(ProfileId id, byte[] image, string contentType, CancellationToken ct = default)
-    {
-        using var content = new ByteArrayContent(image);
-        content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-        using var response = await http.PostAsync(Relative(ApiRoutes.Profiles.Face(id)), content, ct);
-        return await ReadAsync<ProfileDto>(response, ct);
-    }
-
     public async Task<SeedResultDto> SeedProfilesAsync(CancellationToken ct = default)
     {
         using var response = await http.PostAsync(Relative(ApiRoutes.Seed.ProfilesUrl), null, ct);
         return await ReadAsync<SeedResultDto>(response, ct);
-    }
-
-    public async Task<CreateProfileRequest> GenerateProfileAsync(ProfileRole role, CancellationToken ct = default)
-    {
-        using var response = await http.PostAsync(Relative(ApiRoutes.Profiles.Generate(role.ToString())), null, ct);
-        return await ReadAsync<CreateProfileRequest>(response, ct);
     }
 
     public async Task<PreviewLineResponse> PreviewLineAsync(CreateProfileRequest persona, CancellationToken ct = default)

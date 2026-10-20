@@ -69,7 +69,11 @@ other through `Shared` contracts and repositories, not through each other's serv
 - `ILiveSocket` is the WebSocket; `IGeminiLiveClient` is the protocol; `DebateSession` is the rules with no I/O at
   all. The scripted host replaces the client, so the state machine under test is the real one.
 - Records are computed on read by `FighterStatsBuilder` and `StyleProfileBuilder` from
-  result rows. Nothing anywhere increments a counter.
+  result rows. Nothing anywhere increments a counter. A profile's record (`ProfileDto.Record`) is the same:
+  `ProfileRecords` counts the cast's watches, or a person's fights, when `/api/profiles` is read.
+- Profiles are read-only. They are the pre-made cast (`SeedOnStartup`; the seed endpoint behind "Load default cast"
+  puts it back) or written from play by `FighterPersonaWriter`. There is no create, edit, delete, generate or face
+  upload route, and no editor in the client.
 - The effects layer is five files in `wwwroot/js` and nothing in the app depends on any of it: `sfx.js` synthesizes
   every sound that is not a voice (HRTF-placed when it has a side, a made-up courtroom reverb when it wants one),
   `gfx.js` runs the WebGL2 shaders — single passes, plus two simulated kinds: `fluid` (stable fluids in half-float

@@ -1,7 +1,8 @@
+using System.Security.Claims;
 using Carter;
-using Microsoft.AspNetCore.Mvc;
 using PoFightJudge.Api.Common;
 using PoFightJudge.Api.Features.Ai;
+using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Api.Features.Records;
 using PoFightJudge.Api.Features.Voice;
 using PoFightJudge.Api.Features.Watch;
@@ -12,9 +13,10 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Api.Features.Profiles;
 
 /// <summary>
-/// WATCH persona CRUD plus the face image. Profiles are global (SPEC §6), so there is no ownership check; every route
-/// needs a signed-in user through the fallback policy except the face itself, which is fetched by <c>&lt;img&gt;</c>
-/// without a bearer token.
+/// The cast, read-only. A profile is never written by hand: it is the pre-made cast (seeded at startup, restored by
+/// the seed endpoint) or written from somebody's play by <see cref="Fighters.FighterPersonaWriter"/>. Each one comes
+/// back with its record, counted from result rows on read. Profiles are global (SPEC §6); every route needs a
+/// signed-in user through the fallback policy except the face itself, which is fetched by <c>&lt;img&gt;</c>.
 /// </summary>
 public sealed class ProfileEndpoints : ICarterModule
 {
@@ -24,84 +26,38 @@ public sealed class ProfileEndpoints : ICarterModule
 
         profiles.MapGet(string.Empty, ListAsync).Produces<List<ProfileDto>>();
         profiles.MapGet(ApiRoutes.Profiles.ByIdSegment, GetAsync).Produces<ProfileDto>().Produces(StatusCodes.Status404NotFound);
-
-        profiles.MapPost(string.Empty, CreateAsync).WithValidation<CreateProfileRequest>()
-            .Produces<ProfileDto>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status409Conflict);
-        profiles.MapPut(ApiRoutes.Profiles.ByIdSegment, UpdateAsync).WithValidation<CreateProfileRequest>()
-            .Produces<ProfileDto>().Produces(StatusCodes.Status404NotFound);
-        profiles.MapDelete(ApiRoutes.Profiles.ByIdSegment, DeleteAsync).Produces(StatusCodes.Status204NoContent);
-        profiles.MapPost(ApiRoutes.Profiles.GenerateSegment, GenerateAsync).RequireRateLimiting(WatchServiceExtensions.AiPolicy).Produces<CreateProfileRequest>().ProducesValidationProblem();
         profiles.MapPost(ApiRoutes.Profiles.PreviewLineSegment, PreviewLineAsync).RequireRateLimiting(WatchServiceExtensions.AiPolicy).WithValidation<CreateProfileRequest>().Produces<PreviewLineResponse>();
 
         profiles.MapGet(ApiRoutes.Profiles.FaceSegment, GetFaceAsync).AllowAnonymous()
             .Produces(StatusCodes.Status200OK, contentType: ProfileImageService.ContentType).Produces(StatusCodes.Status404NotFound);
-        profiles.MapPost(ApiRoutes.Profiles.FaceSegment, UploadFaceAsync)
-            .RequireRateLimiting(WatchServiceExtensions.AiPolicy)
-            .WithMetadata(new RequestSizeLimitAttribute(ProfileImageService.MaxUploadBytes))
-            .Produces<ProfileDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status415UnsupportedMediaType).Produces(StatusCodes.Status404NotFound);
     }
 
-    private static async Task<IResult> ListAsync(IProfileRepository repo, CancellationToken ct) =>
-        Results.Ok((await repo.GetAllAsync(ct)).Select(p => p.ToDto()).ToList());
-    private static async Task<IResult> GetAsync(ProfileId id, IProfileRepository repo, CancellationToken ct) =>
-        await repo.GetByIdAsync(id, ct) is { } profile ? Results.Ok(profile.ToDto()) : Results.NotFound();
-
-    /// <summary>Create must not clobber: initials are the key, and an upsert here silently replaced an existing persona in PoMarriedLife.</summary>
-    private static async Task<IResult> CreateAsync(CreateProfileRequest request, IProfileRepository repo, CancellationToken ct)
+    private static async Task<IResult> ListAsync(ClaimsPrincipal user, IProfileRepository repo, IWatchResultRepository watches, IFighterResultRepository fights, CancellationToken ct)
     {
-        var profile = request.ToDomain();
-        if (await repo.GetByIdAsync(profile.Id, ct) is not null)
-        {
-            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: $"A profile with initials {profile.Initials} already exists.");
-        }
-
-        await repo.UpsertAsync(profile, ct);
-        return Results.Created(ApiRoutes.Profiles.ById(profile.Id), profile.ToDto());
+        var records = await RecordsAsync(user, watches, fights, ct);
+        return Results.Ok((await repo.GetAllAsync(ct)).Select(p => WithRecord(p, records)).ToList());
     }
 
-    private static async Task<IResult> UpdateAsync(ProfileId id, CreateProfileRequest request, IProfileRepository repo, CancellationToken ct)
-    {
-        var existing = await repo.GetByIdAsync(id, ct);
-        if (existing is null)
+    private static async Task<IResult> GetAsync(ProfileId id, ClaimsPrincipal user, IProfileRepository repo, IWatchResultRepository watches, IFighterResultRepository fights, CancellationToken ct) =>
+        await repo.GetByIdAsync(id, ct) is { } profile
+            ? Results.Ok(WithRecord(profile, await RecordsAsync(user, watches, fights, ct)))
+            : Results.NotFound();
+
+    /// <summary>The cast's records from the watches they were argued in; people's from the fights this account ran.</summary>
+    private static async Task<(IReadOnlyDictionary<string, ProfileRecordDto> Cast, IReadOnlyDictionary<string, ProfileRecordDto> People)> RecordsAsync(
+        ClaimsPrincipal user, IWatchResultRepository watches, IFighterResultRepository fights, CancellationToken ct) =>
+        (ProfileRecords.From(await watches.ListAllAsync(ct)), ProfileRecords.From(await fights.ListAllAsync(user.UserId(), ct)));
+
+    /// <summary>A persona read from somebody's play is that person, so its record is theirs; the cast's is the watches'.</summary>
+    private static ProfileDto WithRecord(Profile profile, (IReadOnlyDictionary<string, ProfileRecordDto> Cast, IReadOnlyDictionary<string, ProfileRecordDto> People) records) =>
+        profile.ToDto() with
         {
-            return Results.NotFound();
-        }
-
-        if (!string.Equals(Initials.Normalize(request.Initials), id.Value, StringComparison.Ordinal))
-        {
-            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
-            {
-                [nameof(CreateProfileRequest.Initials)] = ["Initials are the key and cannot change; create a new profile instead."],
-            });
-        }
-
-        var profile = request.ToDomain();
-        profile.UpdateFacePic(existing.FacePic); // the face has its own endpoint; an edit never drops it
-        if (existing.FromFights)
-        {
-            // Still theirs, still rewritten after their next fight; an edit here lasts until then.
-            profile.MarkFromFights();
-        }
-
-        await repo.UpsertAsync(profile, ct);
-        return Results.Ok(profile.ToDto());
-    }
-
-    /// <summary>An unsaved draft for the editor: the user reviews it, edits, and only then creates the profile.</summary>
-    private static async Task<IResult> GenerateAsync(string? role, ProfileGenerator generator, IProfileRepository repo, CancellationToken ct)
-    {
-        if (!Enum.TryParse<ProfileRole>(role, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
-        {
-            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal) { ["role"] = ["role must be Husband or Wife."] });
-        }
-
-        var existing = await repo.GetAllAsync(ct);
-        return Results.Ok(await generator.GenerateAsync(parsed, existing, ct));
-    }
+            Record = (profile.FromFights ? records.People : records.Cast).GetValueOrDefault(profile.Initials, ProfileRecordDto.None),
+        };
 
     /// <summary>
-    /// One in-character line from the persona as it stands in the editor, spoken in its own voice — the quickest way
-    /// to hear what the voice and the sliders actually do before committing them. Never persisted. The
+    /// One in-character line from the persona, spoken in its own voice — what the speaker button on a profile card
+    /// plays. Never persisted. The
     /// prompt here is deliberately minimal; the real round prompts belong to the WATCH slice.
     /// </summary>
     private static async Task<IResult> PreviewLineAsync(CreateProfileRequest persona, IGeminiText gemini, GeminiModelOptions models, CachingTtsService voice, CancellationToken ct)
@@ -165,13 +121,6 @@ public sealed class ProfileEndpoints : ICarterModule
         return (WatchAi.Readable(raw, WatchAi.ExtractLinePrefix(raw)), "angry");
     }
 
-    private static async Task<IResult> DeleteAsync(ProfileId id, IProfileRepository repo, IProfileImageService images, CancellationToken ct)
-    {
-        await images.DeleteFaceAsync(id, ct);
-        await repo.DeleteAsync(id, ct);
-        return Results.NoContent();
-    }
-
     private static async Task<IResult> GetFaceAsync(ProfileId id, IProfileImageService images, HttpContext http, CancellationToken ct)
     {
         var face = await images.GetFaceAsync(id, ct);
@@ -183,30 +132,5 @@ public sealed class ProfileEndpoints : ICarterModule
         // Anonymous and same-origin as the SPA: the browser must never sniff a stored blob into something script-capable.
         http.Response.Headers.XContentTypeOptions = "nosniff";
         return Results.Bytes(face.Bytes, face.ContentType);
-    }
-
-    /// <summary>The body is the portrait itself: a 512 px square PNG, which the client crops before sending.</summary>
-    private static async Task<IResult> UploadFaceAsync(ProfileId id, HttpRequest request, IProfileRepository repo, IProfileImageService images, CancellationToken ct)
-    {
-        if (request.ContentType is not { } type || !type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Send the image bytes with an image/* content type.");
-        }
-
-        var profile = await repo.GetByIdAsync(id, ct);
-        if (profile is null)
-        {
-            return Results.NotFound();
-        }
-
-        var stored = await images.StoreFaceAsync(id, request.Body, ct);
-        if (!stored.IsSuccess)
-        {
-            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal) { ["face"] = [stored.Error!] });
-        }
-
-        profile.UpdateFacePic(stored.Value);
-        await repo.UpsertAsync(profile, ct);
-        return Results.Ok(profile.ToDto());
     }
 }

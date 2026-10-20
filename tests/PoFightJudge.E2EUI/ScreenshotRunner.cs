@@ -80,27 +80,6 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await MenusAsync(folder!);
         }
 
-        if (routes.Any(r => string.Equals(r.Name, "profiles", StringComparison.Ordinal)))
-        {
-            await EditorAsync(folder!);
-        }
-    }
-
-    /// <summary>The profile editor, open beside the cast.</summary>
-    private async Task EditorAsync(string folder)
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", effects: Effects);
-        try
-        {
-            await page.GetByRole(AriaRole.Button, new() { Name = "New profile" }).First.ClickAsync();
-            await page.Locator(".rz-dialog-side .editor").WaitForAsync(new() { Timeout = 15_000 });
-            await page.WaitForTimeoutAsync(600);
-            await ShootAsync(page, folder, "profiles-editor", "/profiles", errors);
-        }
-        finally
-        {
-            await context.CloseAsync();
-        }
     }
 
     /// <summary>What the bar opens on a desktop: the settings panel.</summary>

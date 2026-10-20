@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using PoFightJudge.Api.Features.Auth;
 using PoFightJudge.Api.Features.Fighters;
+using PoFightJudge.Api.Features.Profiles;
 using PoFightJudge.Api.Features.Watch;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
@@ -23,9 +24,14 @@ public class WatchTests(ApiFactory factory)
         return client;
     }
 
-    /// <summary>Casts two personas, so a match has real profiles to argue from.</summary>
-    private static async Task<(MatchSide Husband, MatchSide Wife)> CastAsync(HttpClient client, string suffix)
+    /// <summary>
+    /// Casts two personas, so a match has real profiles to argue from. Straight into the store: nobody creates a
+    /// profile through the API any more, so a test puts its cast where the seed would.
+    /// </summary>
+    private async Task<(MatchSide Husband, MatchSide Wife)> CastAsync(string suffix)
     {
+        var profiles = factory.Services.GetRequiredService<IProfileRepository>();
+
         async Task<MatchSide> CreateAsync(string initials, ProfileRole role, string name)
         {
             var persona = new CreateProfileRequest
@@ -39,8 +45,7 @@ public class WatchTests(ApiFactory factory)
                 Philosophy = "say it once",
                 TtsSettings = new TtsSettingsDto { VoiceName = role == ProfileRole.Wife ? "Kore" : "Charon" },
             };
-            var response = await client.PostAsJsonAsync(ApiRoutes.Profiles.Base, persona);
-            response.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
+            await profiles.UpsertAsync(persona.ToDomain());
             return MatchSide.Persona(initials, name);
         }
 
@@ -57,7 +62,7 @@ public class WatchTests(ApiFactory factory)
     public async Task A_full_match_is_judged_and_persisted_with_a_result_for_each_persona()
     {
         using var client = User("watch-verdict");
-        var (husband, wife) = await CastAsync(client, "02");
+        var (husband, wife) = await CastAsync("02");
 
         var response = await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, wife, Transcript(6), "the thermostat"));
 
@@ -69,6 +74,11 @@ public class WatchTests(ApiFactory factory)
         verdict.Winner.Should().BeOneOf(husband.Id, wife.Id, string.Empty);
         verdict.HusbandStats.Should().NotBe(AdvancedStatsDto.Empty, "the analytics come from what was actually said");
         verdict.HusbandScore.Should().BeInRange(0, 100);
+
+        // A profile's stats are its games: both of them now carry this one on their record.
+        var cast = (await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!;
+        cast.Single(p => string.Equals(p.Persona.Initials, husband.Id, StringComparison.Ordinal)).Record.Matches.Should().BeGreaterThanOrEqualTo(1);
+        cast.Single(p => string.Equals(p.Persona.Initials, wife.Id, StringComparison.Ordinal)).Record.Matches.Should().BeGreaterThanOrEqualTo(1);
 
         // The client holds the match and posts it back, so every part of it is bounded before anything is paid for.
         var endless = new WatchRoundDto("husband", new string('x', WatchLimits.MaxLineLength + 1), "angry");
@@ -85,7 +95,7 @@ public class WatchTests(ApiFactory factory)
     public async Task A_person_arguing_a_persona_is_recorded_under_their_tag_so_their_profile_can_grow()
     {
         using var client = User("watch-human");
-        var (husband, _) = await CastAsync(client, "04");
+        var (husband, _) = await CastAsync("04");
         var person = MatchSide.Human("KD", "Kim");
 
         var response = await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, person, Transcript(6), "the thermostat"));

@@ -7,16 +7,13 @@ using PoFightJudge.Shared.Models;
 namespace PoFightJudge.Api.Features.Profiles;
 
 /// <summary>
-/// Invents a WATCH persona for a role, distinct from the cast that already exists, and returns an unsaved draft for
-/// the editor. One schema-constrained <c>gemini-3.7-flash</c> call (the fake answers the same schema). The schema carries
-/// <c>minLength</c> on every free-text field so a thin result is rejected by the API rather than by us; one retry
-/// remains for the rare answer that satisfies the schema and is still filler. The draft gets unique initials and a
-/// role voice here; the user reviews it in the editor and decides whether it joins the cast.
+/// The shape a persona is written in when it is read from somebody's play (<see cref="Fighters.FighterPersonaWriter"/>):
+/// the schema the model answers against, the tolerant parse of its answer, and the role voice. The schema carries
+/// <c>minLength</c> on every free-text field so a thin answer is refused by the API rather than by us. Nobody invents a
+/// persona by hand any more, so there is no generator of its own: profiles are the pre-made cast or come from play.
 /// </summary>
-public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOptions models, ILogger<ProfileGenerator> logger)
+public static class ProfileGenerator
 {
-    public const string Operation = "profile";
-
     public const int FieldMinLength = 40;
 
     public const int MaxOutputTokens = 2048;
@@ -60,58 +57,6 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
         }
     }
 
-    public async Task<CreateProfileRequest> GenerateAsync(ProfileRole role, IReadOnlyList<Profile> existing, CancellationToken ct = default)
-    {
-        var roster = existing.Select(p => $"{p.Name ?? p.Initials} — {p.Occupation ?? "?"}").ToList();
-        CreateProfileRequest draft = new();
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            var request = new GeminiTextRequest(BuildPrompt(role, roster, attempt), models.Profile, Operation, Schema, Temperature: 1.0, MaxOutputTokens: MaxOutputTokens, ThinkingLevel: "low");
-            draft = Parse(await gemini.GenerateAsync(request, ct), role);
-            if (IsComplete(draft))
-            {
-                break;
-            }
-        }
-
-        draft.Initials = MakeUniqueInitials(draft.Name ?? string.Empty, existing.Select(p => p.Initials));
-        draft.TtsSettings = VoiceFor(role, draft.Name ?? draft.Initials);
-        LogGenerated(logger, role, draft.Initials, draft.Name ?? "?");
-        return draft;
-    }
-
-    /// <summary>
-    /// The instructions are identical for every persona ever generated; only the roster to avoid changes — so the
-    /// constant half is cacheable across a whole seeding run instead of being re-sent per character.
-    /// </summary>
-    public static GeminiPrompt BuildPrompt(ProfileRole role, IReadOnlyList<string> roster, int attempt)
-    {
-        var avoid = roster.Count == 0 ? "(none yet)" : string.Join("\n", roster.Select(d => $"  • {d}"));
-        var nudge = attempt == 0
-            ? string.Empty
-            : "\nThe previous attempt was too thin — this time fill EVERY field with vivid, specific detail and make the character even more unlike the roster above.";
-
-        const string system = """
-            You are creating fictional characters for a satirical "married couple argument simulator".
-            Every character must be memorable and specific — an unusual job, oddly specific pet peeves,
-            and a personality that is clearly their own. Vary wildly from typical characters; surprise me.
-
-            Fill the JSON schema. Every field is required. The likes, dislikes, commonArguments and
-            philosophy MUST be unique to this character — never generic filler like "coffee, walks"
-            or "keep it simple". Age 24-68. Sliders are 0-100.
-            """;
-
-        var user = $"""
-            Invent ONE vivid, distinctive {role.ToString().ToLowerInvariant()}.
-
-            MUST BE CLEARLY DIFFERENT from these existing characters (different name, occupation,
-            vibe, likes/dislikes — do not echo them):
-            {avoid}{nudge}
-            """;
-
-        return new GeminiPrompt(system, user);
-    }
-
     /// <summary>Tolerant of fences, missing fields and free-form enum spellings; sliders clamp to 0–100, age into the validator's range.</summary>
     public static CreateProfileRequest Parse(string raw, ProfileRole role)
     {
@@ -147,44 +92,6 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
         && !string.IsNullOrWhiteSpace(p.Likes) && !string.IsNullOrWhiteSpace(p.Dislikes)
         && !string.IsNullOrWhiteSpace(p.CommonArguments) && !string.IsNullOrWhiteSpace(p.Philosophy);
 
-    /// <summary>First letters of up to three name words, padded from the first word; a taken tag gets its last character cycled.</summary>
-    public static string MakeUniqueInitials(string name, IEnumerable<string> existing)
-    {
-        var taken = new HashSet<string>(existing.Select(Initials.Normalize), StringComparer.Ordinal);
-        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(w => new string([.. w.Where(char.IsAsciiLetterOrDigit)]))
-            .Where(w => w.Length > 0)
-            .ToList();
-        var seed = string.Concat(words.Take(3).Select(w => w[0]));
-        foreach (var extra in words.SelectMany(w => w.Skip(1)))
-        {
-            if (seed.Length >= 3)
-            {
-                break;
-            }
-
-            seed += extra;
-        }
-
-        var candidate = Initials.Normalize(seed.Length == 0 ? "AI" : seed);
-        if (!taken.Contains(candidate))
-        {
-            return candidate;
-        }
-
-        var head = candidate.Length >= 2 ? candidate[..2] : candidate;
-        foreach (var tail in "23456789ABCDEFGHJKLMNPQRSTUVWXYZ")
-        {
-            var next = head + tail;
-            if (!taken.Contains(next))
-            {
-                return next;
-            }
-        }
-
-        return Initials.Normalize(Guid.NewGuid().ToString("N")[..3]);
-    }
-
     /// <summary>A role voice with a little prosody variety, derived from the name so regenerating the same character sounds the same.</summary>
     public static TtsSettingsDto VoiceFor(ProfileRole role, string name)
     {
@@ -199,9 +106,6 @@ public sealed partial class ProfileGenerator(IGeminiText gemini, GeminiModelOpti
     }
 
     private static int Clamp(int? v) => Math.Clamp(v ?? 50, 0, 100);
-
-    [LoggerMessage(EventId = 1101, Level = LogLevel.Information, Message = "Generated a {Role} persona {Initials} ({Name})")]
-    private static partial void LogGenerated(ILogger logger, ProfileRole role, string initials, string name);
 
     /// <summary>Deserialization target (Web/camelCase JSON); every member optional so a partial answer still parses.</summary>
     private sealed record Generated(

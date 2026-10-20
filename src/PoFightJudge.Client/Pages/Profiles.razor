@@ -7,7 +7,7 @@
 <PageTitle>Profiles · PoFightJudge</PageTitle>
 
 <PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="The cast" Title="Profiles"
-           Lead="Every WATCH match is two of these. Build a husband and a wife, or load the default cast.">
+           Lead="Every CPU and 1P match is two of these: the default cast, and everybody who has played. Their records come from their games.">
     <Actions>
         @* One wrapping row this page owns: the search takes whatever room the switch leaves, so on a phone the two
            share a line and the buttons take the next, rather than four lines of controls above the first card. *@
@@ -22,7 +22,6 @@
         <RadzenTextBox Value="@_find" @oninput="@(e => _find = e.Value?.ToString() ?? string.Empty)" Name="find" MaxLength="40"
                        Placeholder="Find in the cast" aria-label="Find in the cast" class="cast-find" />
         <RadzenButton Text="Load default cast" Icon="groups" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@SeedAsync" IsBusy="@_seeding" BusyText="Loading…" />
-        <RadzenButton Text="New profile" Icon="person_add" ButtonStyle="ButtonStyle.Primary" Click="@(() => OpenEditorAsync(null))" />
         </div>
     </Actions>
     <ChildContent>
@@ -36,9 +35,8 @@
         }
         else if (_profiles.Count == 0)
         {
-            <EmptyState Icon="groups" Title="No profiles yet" Text="Create your first husband or wife, or load the default cast — eight personas, six with portraits.">
+            <EmptyState Icon="groups" Title="No profiles yet" Text="The default cast is added when the app starts, and everybody who plays joins it. Load it now if it is missing.">
                 <Action>
-                    <RadzenButton Text="New profile" Icon="person_add" ButtonStyle="ButtonStyle.Primary" Click="@(() => OpenEditorAsync(null))" />
                     <RadzenButton Text="Load default cast" Icon="groups" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@SeedAsync" IsBusy="@_seeding" BusyText="Loading…" />
                 </Action>
             </EmptyState>
@@ -62,7 +60,7 @@
                     </div>
                     <RadzenDataList TItem="ProfileDto" Data="@members" WrapItems="true" AllowPaging="false" class="cards">
                         <Template Context="profile">
-                            <ProfileCard Profile="@profile" FaceVersion="@_stamp" OnEdit="@(p => OpenEditorAsync(p))" OnDelete="@DeleteAsync" />
+                            <ProfileCard Profile="@profile" FaceVersion="@_stamp" />
                         </Template>
                     </RadzenDataList>
                 </section>
@@ -131,55 +129,10 @@
         }
     }
 
-    private async Task OpenEditorAsync(ProfileDto? existing)
-    {
-        var parameters = new Dictionary<string, object?>(StringComparer.Ordinal);
-        if (existing is not null)
-        {
-            parameters[nameof(ProfileEditDialog.Existing)] = existing;
-        }
-
-        // A drawer from the right rather than a modal over the middle: the cast being edited stays in view, and a
-        // long form scrolls inside a full-height panel instead of a box. Clicking beside it does not throw away the edit.
-        var result = (object?)await Dialog.OpenSideAsync<ProfileEditDialog>(
-            existing is null ? "New profile" : $"Edit {existing.Persona.Initials}",
-            parameters,
-            new SideDialogOptions { Position = DialogPosition.Right, Width = "min(40rem, 100vw)", ShowMask = true, CloseDialogOnOverlayClick = false });
-
-        if (result is ProfileDto saved)
-        {
-            Notify.Notify(NotificationSeverity.Success, "Saved", $"{saved.Persona.Initials} is on the cast.");
-            await LoadAsync();
-        }
-    }
-
-    private async Task DeleteAsync(ProfileDto profile)
-    {
-        var confirmed = await Dialog.Confirm(
-            $"Delete {profile.Persona.Initials}? Their WATCH record goes with them.",
-            "Delete profile",
-            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Keep" });
-        if (confirmed != true)
-        {
-            return;
-        }
-
-        try
-        {
-            await Api.DeleteProfileAsync(profile.Id);
-            Notify.Notify(NotificationSeverity.Info, "Deleted", $"{profile.Persona.Initials} is off the cast.");
-            await LoadAsync();
-        }
-        catch (ApiException ex)
-        {
-            Notify.Notify(NotificationSeverity.Error, "Could not delete", ex.Summary);
-        }
-    }
-
     private async Task SeedAsync()
     {
         var confirmed = await Dialog.Confirm(
-            "Load the eight default personas? Ones you have edited go back to their defaults; your own profiles are untouched.",
+            "Put the default cast back? Any of them that has changed goes back to how it was; people who have played are untouched.",
             "Load default cast",
             new ConfirmOptions { OkButtonText = "Load cast", CancelButtonText = "Not now" });
         if (confirmed != true)

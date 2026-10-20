@@ -17,9 +17,10 @@ public static partial class ProfileMapping
     [MapperIgnoreSource(nameof(Profile.IsHuman))]
     [MapProperty(nameof(Profile.FacePic), nameof(ProfileDto.HasFace), Use = nameof(HasValue))]
     [MapPropertyFromSource(nameof(ProfileDto.Persona))]
+    [MapperIgnoreTarget(nameof(ProfileDto.Record))]
     public static partial ProfileDto ToDto(this Profile profile);
 
-    /// <summary>The editable view of a stored persona — what the editor form is seeded with.</summary>
+    /// <summary>The persona half of a stored profile; <see cref="ToDto"/> builds its <c>Persona</c> from this.</summary>
     [MapperIgnoreSource(nameof(Profile.Id))]
     [MapperIgnoreSource(nameof(Profile.IsHuman))]
     [MapperIgnoreSource(nameof(Profile.FacePic))]

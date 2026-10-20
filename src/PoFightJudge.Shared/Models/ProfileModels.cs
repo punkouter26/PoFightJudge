@@ -74,7 +74,7 @@ public sealed class CreateProfileRequest
     public TtsSettingsDto TtsSettings { get; set; } = new();
 }
 
-/// <summary>A stored persona as the client sees it: identity, whether a face image exists, and the editable fields.</summary>
+/// <summary>A stored persona as the client sees it: identity, whether a face image exists, the persona, and its record.</summary>
 public sealed record ProfileDto
 {
     public required ProfileId Id { get; init; }
@@ -86,9 +86,22 @@ public sealed record ProfileDto
 
     /// <summary>
     /// True for a persona read from somebody's 2P fights, which is rewritten after each one. The authored cast is
-    /// never touched, and the editor cannot set this: it is the pipeline's mark, not a field.
+    /// never touched: it is the pipeline's mark, not a field.
     /// </summary>
     public bool FromFights { get; init; }
+
+    /// <summary>
+    /// How it has done in real games, counted on read: the watches a pre-made persona was argued in, or the fights a
+    /// person had. Profiles are never written by hand, so this is the only stat that moves.
+    /// </summary>
+    public ProfileRecordDto Record { get; init; } = ProfileRecordDto.None;
+}
+
+/// <summary>A profile's record. <see cref="Rating"/> is the same Elo the leaderboards use.</summary>
+public sealed record ProfileRecordDto(int Matches, int Wins, int Losses, int Draws, int Rating)
+{
+    /// <summary>No games yet: the rating everybody starts at (EloRatings.Start on the server).</summary>
+    public static ProfileRecordDto None { get; } = new(0, 0, 0, 0, 1000);
 }
 
 /// <summary>Result of <c>POST /api/seed/profiles</c>: how many personas were written and how many got a bundled face.</summary>

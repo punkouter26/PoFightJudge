@@ -1,60 +1,10 @@
 using Microsoft.Playwright;
-using PoFightJudge.TestSupport;
 
 namespace PoFightJudge.E2EUI;
 
 [Collection(AppCollection.Name)]
 public class ProfileFlowTests(AppFixture app)
 {
-    [SkippableFact]
-    public async Task Create_a_profile_in_the_dialog_see_it_on_the_cast_then_delete_it()
-    {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles");
-        await using var _ = context;
-
-        var newProfile = page.GetByRole(AriaRole.Button, new() { Name = "New profile" });
-        await newProfile.First.WaitForAsync(new() { Timeout = 30_000 });
-        await newProfile.First.ClickAsync();
-
-        // A drawer from the right rather than a modal in the middle: the cast stays in view beside it.
-        var dialog = page.Locator(".rz-dialog-side");
-        await dialog.WaitForAsync(new() { Timeout = 15_000 });
-
-        // The dialog's own stylesheet reaches the Radzen form inside it. It did not for a long time: a scoped rule
-        // needs an element the component wrote around the thing it styles, and there was none.
-        (await dialog.Locator(".editor").EvaluateAsync<string>("e => getComputedStyle(e).display")).Should().Be("grid");
-
-        // Validation first: an empty form must not leave the dialog.
-        await dialog.GetByRole(AriaRole.Button, new() { Name = "Create profile" }).ClickAsync();
-        await dialog.Locator(".validation-message", new() { HasText = "Initials are required." }).WaitForAsync(new() { Timeout = 10_000 });
-
-        await dialog.Locator("input[name=Initials]").FillAsync("zzq");
-        await dialog.Locator("input[name=Name]").FillAsync("Zed Quill");
-        await dialog.Locator("textarea[name=Likes]").FillAsync("quiet mornings");
-        await dialog.Locator("textarea[name=Dislikes]").FillAsync("loud chewing");
-
-        // A wide picture: the browser has to crop it, because the server only takes the finished square.
-        await dialog.Locator("input[type=file]").SetInputFilesAsync(new FilePayload { Name = "wide.png", MimeType = "image/png", Buffer = TestPng.Solid(300, 120) });
-        await dialog.Locator("img.face").WaitForAsync(new() { Timeout = 10_000 });
-        await dialog.GetByRole(AriaRole.Button, new() { Name = "Create profile" }).ClickAsync();
-
-        await dialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
-        var card = page.Locator("article.profile", new() { HasText = "ZZQ" });
-        await card.WaitForAsync(new() { Timeout = 15_000 });
-        (await card.InnerTextAsync()).Should().ContainEquivalentOf("Zed Quill", "innerText reflects the display font uppercase transform");
-        await card.Locator("img.face").WaitForAsync(new() { Timeout = 15_000 });
-        (await card.Locator("img.face").EvaluateAsync<bool>("async img => { await img.decode(); return img.naturalWidth === 512 && img.naturalHeight === 512; }"))
-            .Should().BeTrue("the portrait was cropped to the 512 px square before it was sent");
-
-        await card.GetByRole(AriaRole.Button, new() { Name = "Delete ZZQ" }).ClickAsync();
-        var confirm = page.Locator(".rz-dialog");
-        await confirm.WaitForAsync(new() { Timeout = 10_000 });
-        await confirm.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
-        await card.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 15_000 });
-
-        errors.Should().BeEmpty();
-    }
-
     [SkippableFact]
     public async Task Loading_the_default_cast_fills_both_role_sections_with_portraits()
     {

@@ -1,4 +1,5 @@
-@* One persona on the cast: portrait, who they are, how they lean, their line. *@
+@* One persona on the cast: portrait, who they are, how they have done in games, how they lean, their line. Read-only:
+   a profile is the default cast or written from play, never edited by hand. *@
 <article class="profile po-card @(IsWife ? "p2" : "p1")" data-initials="@Persona.Initials">
     <header>
         @if (Profile.HasFace)
@@ -27,12 +28,22 @@
         <div class="actions">
             <RadzenButton Icon="@(_playing ? "graphic_eq" : "volume_up")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
                           title="Preview voice" aria-label="@($"Preview {Persona.Initials}")" Click="@PreviewAsync" IsBusy="@_previewing" Disabled="@_playing" />
-            <RadzenButton Icon="edit" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
-                          title="Edit" aria-label="@($"Edit {Persona.Initials}")" Click="@(() => OnEdit.InvokeAsync(Profile))" />
-            <RadzenButton Icon="delete" Variant="Variant.Text" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
-                          title="Delete" aria-label="@($"Delete {Persona.Initials}")" Click="@(() => OnDelete.InvokeAsync(Profile))" />
         </div>
     </header>
+
+    @* The stats that move: counted from the games they played, never typed. *@
+    <div class="record">
+        @if (Profile.Record.Matches == 0)
+        {
+            <span class="po-muted">No games yet</span>
+        }
+        else
+        {
+            <span class="po-num">@Profile.Record.Wins–@Profile.Record.Losses@(Profile.Record.Draws > 0 ? $"–{Profile.Record.Draws}" : string.Empty)</span>
+            <span class="po-muted">over @Profile.Record.Matches · rating <span class="po-num">@Profile.Record.Rating</span></span>
+            <RankBadge Rating="@Profile.Record.Rating" Fights="@Profile.Record.Matches" />
+        }
+    </div>
 
     @* Folded: the four labelled scales were 140 px of every card, and twelve cards made the page 2339 px. The strip
        in the summary keeps their shape on the card — four thin bars in the same order — and opening it gives the
@@ -49,7 +60,7 @@
         </summary>
         <div class="bars">
             <StatBar LeftLabel="Logic" RightLabel="Emotion" Value="@Persona.LogicVsEmotion" Color="@Accent" />
-            @* The same four scales, the same way round and in the same order as the editor's sliders. The patience bar
+            @* The same four scales, the same way round and in the same order everywhere they appear. The patience bar
                used to be drawn backwards under different words, so a slider pushed right moved its bar left. *@
             <StatBar LeftLabel="Impatient" RightLabel="Patient" Value="@Persona.Patience" Color="@Accent" />
             <StatBar LeftLabel="Forgiving" RightLabel="Holds grudges" Value="@Persona.HoldsGrudges" Color="@Accent" />
@@ -86,10 +97,6 @@
 
     /// <summary>Changes whenever the list reloads, so a replaced portrait is not served from the browser cache.</summary>
     [Parameter] public string FaceVersion { get; set; } = string.Empty;
-
-    [Parameter] public EventCallback<ProfileDto> OnEdit { get; set; }
-
-    [Parameter] public EventCallback<ProfileDto> OnDelete { get; set; }
 
     private CreateProfileRequest Persona => Profile.Persona;
 

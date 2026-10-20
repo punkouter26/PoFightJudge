@@ -151,3 +151,12 @@ h3 {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* The record: wins–losses, how many, the rating and its tier, on one line that wraps on a narrow card. */
+.record {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--po-space-1) var(--po-space-2);
+  font-size: var(--po-text-sm);
+}

@@ -46,15 +46,12 @@ public static class ApiRoutes
         public const string Base = $"{ApiPrefix}/profiles";
         public const string ByIdSegment = "/{id}";
         public const string FaceSegment = "/{id}/face";
-        public const string GenerateSegment = "/generate";
         public const string PreviewLineSegment = "/preview-line";
 
-        public const string GenerateUrl = $"{Base}{GenerateSegment}";
         public const string PreviewLineUrl = $"{Base}{PreviewLineSegment}";
 
         public static string ById(ProfileId id) => $"{Base}/{Uri.EscapeDataString(id.Value)}";
         public static string Face(ProfileId id) => $"{ById(id)}/face";
-        public static string Generate(string role) => $"{GenerateUrl}?role={Uri.EscapeDataString(role)}";
     }
 
     public static class Fighters

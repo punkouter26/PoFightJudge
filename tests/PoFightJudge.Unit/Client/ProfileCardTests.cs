@@ -1,20 +1,17 @@
 using Bunit;
-using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using PoFightJudge.Client.Components;
 using PoFightJudge.Client.Services;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
-using PoFightJudge.Shared.Validators;
 using Radzen;
-using Radzen.Blazor;
 
 namespace PoFightJudge.Unit.Client;
 
 /// <summary>
-/// A cast card is a glance: who, what they do, how they lean and their line. The four labelled scales are one
-/// press away rather than two thirds of the card.
+/// A cast card is a glance: who, what they do, how they have done in games, how they lean and their line. The four
+/// labelled scales are one press away rather than two thirds of the card.
 /// </summary>
 public sealed class ProfileCardTests : BunitContext, IAsyncLifetime
 {
@@ -49,9 +46,14 @@ public sealed class ProfileCardTests : BunitContext, IAsyncLifetime
                 Jealousy = 90,
                 Philosophy = "Stay chill.",
             },
+            Record = new ProfileRecordDto(Matches: 4, Wins: 2, Losses: 1, Draws: 1, Rating: 1032),
         };
 
         var cut = Render<ProfileCard>(p => p.Add(c => c.Profile, profile));
+
+        // Its stats are its games, and nothing on the card writes to it.
+        cut.Find(".record").TextContent.Should().Contain("2–1–1").And.Contain("1032");
+        cut.FindAll("button[aria-label^='Edit'], button[aria-label^='Delete']").Should().BeEmpty("a profile is never edited by hand");
 
         var traits = cut.Find("details.traits");
         traits.HasAttribute("open").Should().BeFalse("the card opens folded");
@@ -62,23 +64,31 @@ public sealed class ProfileCardTests : BunitContext, IAsyncLifetime
     }
 }
 
-/// <summary>The profiles page opens its editor as a drawer, so the cast it is editing stays on screen.</summary>
-public sealed class ProfilesEditorTests : BunitContext, IAsyncLifetime
+/// <summary>
+/// The cast page lists the cast with their records. Profiles are the pre-made cast or come from play, so the only
+/// thing it offers to change is putting the pre-made cast back.
+/// </summary>
+public sealed class ProfilesPageTests : BunitContext, IAsyncLifetime
 {
     private readonly IApiClient _api = Substitute.For<IApiClient>();
 
-    public ProfilesEditorTests()
+    public ProfilesPageTests()
     {
         Services.AddRadzenComponents();
-        Services.AddSingleton(_api);
         Services.AddSingleton(TimeProvider.System);
+        Services.AddSingleton(_api);
         Services.AddScoped<AudioInterop>();
         Services.AddScoped<SfxInterop>();
         Services.AddSingleton(Substitute.For<Blazored.LocalStorage.ILocalStorageService>());
-        Services.AddSingleton<IValidator<CreateProfileRequest>, CreateProfileRequestValidator>();
-        _api.GetFeaturesAsync(Arg.Any<CancellationToken>()).Returns(new FeatureFlagsDto(false, false, false, FishVoices: false));
-        Services.AddSingleton(new FeatureGate(_api));
-        _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns([]);
+        _api.GetProfilesAsync(Arg.Any<CancellationToken>()).Returns(
+        [
+            new ProfileDto
+            {
+                Id = ProfileId.From("KSH"),
+                Persona = new CreateProfileRequest { Initials = "KSH", Name = "Kimberly", Role = ProfileRole.Wife },
+                Record = new ProfileRecordDto(3, 2, 1, 0, 1021),
+            },
+        ]);
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
@@ -87,19 +97,14 @@ public sealed class ProfilesEditorTests : BunitContext, IAsyncLifetime
     public new async Task DisposeAsync() => await base.DisposeAsync().ConfigureAwait(false);
 
     [Fact]
-    public async Task New_profile_opens_the_editor_as_a_side_drawer()
+    public async Task The_cast_is_listed_with_records_and_only_the_default_cast_can_be_put_back()
     {
-        var cut = Render(builder =>
-        {
-            builder.OpenComponent<RadzenDialog>(0);
-            builder.CloseComponent();
-            builder.OpenComponent<PoFightJudge.Client.Pages.Profiles>(1);
-            builder.CloseComponent();
-        });
-        await cut.WaitForAssertionAsync(() => cut.FindAll(".rz-button").Should().Contain(b => b.TextContent.Contains("New profile", StringComparison.Ordinal)));
+        var cut = Render<PoFightJudge.Client.Pages.Profiles>();
 
-        _ = cut.FindAll(".rz-button").First(b => b.TextContent.Contains("New profile", StringComparison.Ordinal)).ClickAsync(new());
-
-        await cut.WaitForAssertionAsync(() => cut.FindAll(".rz-dialog-side .editor").Should().ContainSingle());
+        await cut.WaitForAssertionAsync(() => cut.FindAll("article.profile").Should().ContainSingle());
+        cut.Find("article.profile .record").TextContent.Should().Contain("2–1");
+        var buttons = cut.FindAll(".rz-button").Select(b => b.TextContent).ToList();
+        buttons.Should().Contain(t => t.Contains("Load default cast", StringComparison.Ordinal));
+        buttons.Should().NotContain(t => t.Contains("New profile", StringComparison.Ordinal), "nobody writes a profile by hand");
     }
 }
