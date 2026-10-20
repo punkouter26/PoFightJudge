@@ -17,6 +17,10 @@ public sealed record RoundContext(string Speaker, string Text, string Mood);
 /// diverged within their first hundred characters and none of the boilerplate could ever be cached. That failure is
 /// invisible: the prompt reads correctly, the model answers correctly, and the only symptom is the bill. Hence the
 /// fixed husband-first order and the rule that every per-turn value lives under CURRENT STATE.
+///
+/// Measured 2026-10-20, it buys nothing yet: 24 real rounds averaged 1,145 prompt tokens with 0 cached, because the
+/// published implicit-cache floor for Gemini 3.x Flash is 4,096 input tokens. The layout costs nothing and is kept
+/// for the day a prompt or a model crosses the floor; padding a prompt up to it would cost more than it saves.
 /// </remarks>
 public static class RoundPromptBuilder
 {

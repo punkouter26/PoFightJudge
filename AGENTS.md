@@ -131,6 +131,10 @@ Each was a deliberate decision made while building; the commit that made it says
   published reference, the fallback to inline parts is tested, and a refusal is logged rather than fatal — but
   whether a real fight's prefix clears the minimum token count is a measurement nobody has taken. The log line at
   event 5302/5303 says which way it went on any given fight.
+- **WATCH prompts are never cached.** Measured 2026-10-20: rounds average about 1,145 prompt tokens and the judge
+  about 790, and `round`/`judge` show a 0% `CacheHitRatio` on `/api/diag`. The published implicit-cache floor for
+  Gemini 3.x Flash is 4,096 input tokens, so the cache-friendly round layout is kept but pays nothing until a
+  prompt or a model crosses it.
 
 The real-key measurements for WATCH, FIGHT and the analysis were taken on 2026-09-07. They were worth running:
 nine defects came out of them, seven of which no test on the stand-ins could have seen. The write-ups were
