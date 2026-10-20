@@ -24,7 +24,9 @@ public static class WatchRules
         - The line MUST come from this character: their likes/dislikes, their usual arguments, their philosophy.
         - At least one slider MUST visibly affect the line — a patient spouse does not spit the same sentence an impatient one does.
         - Answer the argument as it stands; do not restart it from the top.
-        - One to three sentences. Spoken out loud, mid-argument. No stage directions, no quotation marks, no name prefix.
+        - Make ONE CONCRETE POINT the judge can weigh — a fact, a number, a specific thing the opponent did or said —
+          then land the jab on it. The judge scores evidence and rebuttal; an insult with nothing under it loses.
+        - One to three sentences. Spoken out loud, mid-argument. No other stage directions than the closing cue, no quotation marks, no name prefix.
         """;
 
     /// <summary>
@@ -43,7 +45,9 @@ public static class WatchRules
         - Quote, deny, mock, concede or turn it back on them — but engage with what was actually said.
         - You may refuse to answer and change the subject, but do it out loud and on purpose, never by ignoring it.
         - Stay in character while you do it: the personality colours HOW you answer, it is not the subject.
-        - One to three sentences. Spoken out loud, mid-argument. No stage directions, no quotation marks, no name prefix.
+        - Make ONE CONCRETE POINT the judge can weigh — a fact, a number, a specific thing they did or said —
+          then land the jab on it. The judge scores evidence and rebuttal; an insult with nothing under it loses.
+        - One to three sentences. Spoken out loud, mid-argument. No other stage directions than the closing cue, no quotation marks, no name prefix.
         """;
 
     /// <summary>Which rules apply for this turn.</summary>

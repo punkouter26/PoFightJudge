@@ -51,6 +51,17 @@ public class WatchRulesTests
         WatchRules.HumanReplyLineRules.Should().Contain("never by ignoring it", "refusing to answer is legitimate; silently changing the subject is the failure mode");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Every_line_carries_a_point_the_judge_can_weigh_and_keeps_its_closing_cue(bool opponentIsHuman)
+    {
+        var rules = WatchRules.LineRulesFor(opponentIsHuman);
+
+        rules.Should().Contain("ONE CONCRETE POINT", "the judge scores on evidence and rebuttal; two sides trading only insults came back a draw in two of four real matches");
+        rules.Should().NotContain("No stage directions,", "the output contract asks for a closing stage cue, and the rules must not forbid what the contract demands");
+    }
+
     [Fact]
     public void A_match_is_complete_only_when_both_sides_have_had_all_their_rounds()
     {
