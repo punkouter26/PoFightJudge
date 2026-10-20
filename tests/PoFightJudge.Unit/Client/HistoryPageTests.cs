@@ -104,6 +104,20 @@ public class HistoryPageTests : BunitContext
     }
 
     [Fact]
+    public void An_argument_with_no_topic_says_so_rather_than_leaving_a_blank()
+    {
+        _api.GetMatchPageAsync(Arg.Any<MatchQuery>(), Arg.Any<CancellationToken>()).Returns(_ => Page(
+        [
+            Match(_watch, MatchMode.Watch, string.Empty, MatchSide.Persona("MAH", "Married Husband"), MatchSide.Persona("KSH", "Karen")),
+        ]));
+
+        var cut = Render<History>();
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("an open topic"));
+        cut.FindAll("button[aria-label='Delete an open topic']").Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task A_yes_deletes_the_argument_and_takes_the_row_with_it()
     {
         var cut = RenderHistory();
@@ -164,5 +178,29 @@ public class StandingsTests : BunitContext, IAsyncLifetime
 
         await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows
             .Select(r => r.DisplayName).Should().Equal("Alex"));
+    }
+
+    [Fact]
+    public async Task The_page_the_nav_calls_leaderboard_is_titled_leaderboard()
+    {
+        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex")]);
+
+        var cut = Render<FightersPage>();
+
+        await cut.WaitForAssertionAsync(() => cut.Find("h1").TextContent.Should().Be("Leaderboard"));
+    }
+
+    [Fact]
+    public async Task Home_does_not_say_nobody_is_on_the_card_when_people_are_but_have_no_judged_fight()
+    {
+        Services.AddSingleton<SimulationState>();
+        Services.AddScoped<GfxInterop>();
+        _api.GetMatchesAsync(Arg.Any<MatchMode?>(), Arg.Any<CancellationToken>()).Returns([]);
+        _api.GetRosterAsync(Arg.Any<CancellationToken>()).Returns([FighterStatsDto.Empty("AB", "Alex")]);
+
+        var cut = Render<Home>();
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("No judged fights yet"));
+        cut.Markup.Should().NotContain("Nobody on the card");
     }
 }

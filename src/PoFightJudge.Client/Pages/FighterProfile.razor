@@ -122,7 +122,7 @@
                                 <div class="po-stacked">
                                     <span class="po-stacked__head">
                                         <ModeBadge Mode="@row.Mode" />
-                                        <span class="po-stacked__strong">@row.Topic</span>
+                                        <span class="po-stacked__strong">@StatFormat.Topic(row.Topic)</span>
                                     </span>
                                     <span class="po-stacked__fine po-muted">
                                         vs @row.Opponent · @(row.Draw ? "draw" : row.Won ? "won" : "lost") @row.Score
@@ -138,7 +138,9 @@
                             <Template Context="row"><ModeBadge Mode="@row.Mode" /></Template>
                         </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="FighterResultDto" Title="Against" Width="8rem" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.Opponent)" />
-                        <RadzenDataGridColumn TItem="FighterResultDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.Topic)" />
+                        <RadzenDataGridColumn TItem="FighterResultDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(FighterResultDto.Topic)">
+                            <Template Context="row">@StatFormat.Topic(row.Topic)</Template>
+                        </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="FighterResultDto" Title="Result" Width="8rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                             <Template Context="row">@(row.Draw ? "Draw" : row.Won ? "Won" : "Lost") <span class="po-muted">@row.Score</span></Template>
                         </RadzenDataGridColumn>

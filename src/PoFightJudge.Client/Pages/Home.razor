@@ -100,7 +100,7 @@
                         <li>
                             <RadzenLink Path="@Href(match)" class="replay">
                                 <ModeBadge Mode="@match.Mode" />
-                                <span class="topic">@match.Topic</span>
+                                <span class="topic">@StatFormat.Topic(match.Topic)</span>
                                 <span class="who po-muted">@match.Side1.DisplayName vs @match.Side2.DisplayName</span>
                                 <span class="when po-muted">@match.StartedAt.LocalDateTime.ToString("d MMM", System.Globalization.CultureInfo.CurrentCulture)</span>
                             </RadzenLink>
@@ -121,7 +121,7 @@
             }
             else if (_fighters.Count == 0)
             {
-                <EmptyState Icon="sports_mma" Title="Nobody on the card" Text="Fighters are created the first time their tag steps up to the mic." />
+                <EmptyState Icon="sports_mma" Title="No judged fights yet" Text="A record starts with the first fight a judge rules on. Rehearsals do not count." />
             }
             else
             {

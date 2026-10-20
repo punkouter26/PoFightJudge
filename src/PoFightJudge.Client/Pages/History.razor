@@ -96,7 +96,7 @@
                             <div class="po-stacked">
                                 <span class="po-stacked__head">
                                     <ModeBadge Mode="@match.Mode" />
-                                    <span class="po-stacked__strong">@match.Topic</span>
+                                    <span class="po-stacked__strong">@StatFormat.Topic(match.Topic)</span>
                                 </span>
                                 <span class="po-stacked__fine po-muted">
                                     @match.Side1.DisplayName vs @match.Side2.DisplayName
@@ -130,7 +130,9 @@
                     <RadzenDataGridColumn TItem="MatchDto" Title="Who" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="match">@match.Side1.DisplayName <span class="po-muted">vs</span> @match.Side2.DisplayName</Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="MatchDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(MatchDto.Topic)" />
+                    <RadzenDataGridColumn TItem="MatchDto" Title="About" Visible="@(!Viewport.IsPhone)" Property="@nameof(MatchDto.Topic)">
+                        <Template Context="match">@StatFormat.Topic(match.Topic)</Template>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="MatchDto" Title="Result" Width="9rem" Visible="@(!Viewport.IsPhone)" Sortable="false">
                         <Template Context="match">
                             @if (match.IsDraw)
@@ -163,10 +165,10 @@
                                                   Size="ButtonSize.Small" Click="@(() => Nav.NavigateTo($"watch/replay/{match.Id.Value}"))" />
                                 }
                                 <RadzenButton Icon="replay" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
-                                              title="@($"Argue {match.Topic} again")" aria-label="@($"Argue {match.Topic} again")"
+                                              title="@($"Argue {StatFormat.Topic(match.Topic)} again")" aria-label="@($"Argue {StatFormat.Topic(match.Topic)} again")"
                                               Click="@(() => RunItBackAsync(match))" />
                                 <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.Small"
-                                              title="@($"Delete {match.Topic}")" aria-label="@($"Delete {match.Topic}")" Click="@(() => ConfirmAsync(match))" />
+                                              title="@($"Delete {StatFormat.Topic(match.Topic)}")" aria-label="@($"Delete {StatFormat.Topic(match.Topic)}")" Click="@(() => ConfirmAsync(match))" />
                             </div>
                         </Template>
                     </RadzenDataGridColumn>

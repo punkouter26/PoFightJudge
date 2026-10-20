@@ -120,6 +120,9 @@ public static class StatFormat
 
     public static string Count(int value) => value.ToString(CultureInfo.CurrentCulture);
 
+    /// <summary>What an argument was about, or that nobody set it: a blank cell reads as a fault.</summary>
+    public static string Topic(string? topic) => string.IsNullOrWhiteSpace(topic) ? "an open topic" : topic;
+
     private static string Ratio(double value) => string.Create(CultureInfo.CurrentCulture, $"{value:0.00}");
 
     private static string Text(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;

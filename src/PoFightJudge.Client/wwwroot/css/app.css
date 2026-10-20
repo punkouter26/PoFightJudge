@@ -319,7 +319,7 @@ body { background: transparent; }
 
 /* ── Typography helpers ── */
 .po-eyebrow {
-  font-size: var(--po-text-2xs);
+  font-size: var(--po-text-xs);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;

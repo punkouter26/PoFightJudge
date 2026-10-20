@@ -51,7 +51,7 @@
                     <li>
                         <RadzenLink Path="@(meeting.Mode == MatchMode.Fight ? $"verdict/{meeting.MatchId.Value}" : $"watch/replay/{meeting.MatchId.Value}")" class="meeting">
                             <ModeBadge Mode="@meeting.Mode" />
-                            <span class="topic">@(string.IsNullOrWhiteSpace(meeting.Topic) ? "an open topic" : meeting.Topic)</span>
+                            <span class="topic">@StatFormat.Topic(meeting.Topic)</span>
                             <span class="score po-num">@meeting.Score–@meeting.OpponentScore</span>
                             <strong>@(meeting.IsDraw ? "drawn" : string.Equals(meeting.Winner, _series.Tag, StringComparison.OrdinalIgnoreCase) ? _series.DisplayName : _series.OpponentDisplayName)</strong>
                             <span class="po-muted">@meeting.At.LocalDateTime.ToString("d MMM yyyy", CultureInfo.CurrentCulture)</span>
