@@ -288,7 +288,9 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(folder, "verdict-stamped.png") });
             Report($"SHOT verdict-stamped -> {Path.Combine(folder, "verdict-stamped.png")}");
 
-            // A moment played: the clip, cut from the fake microphone's recording, rolling past as mountains.
+            // A moment played: the clip, cut from the fake microphone's recording, rolling past as mountains. The
+            // highlights are the first tab's, so it is opened again after the claims.
+            await page.Locator(".detail .rz-tabview-nav li", new() { HasText = "The fight" }).ClickAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Hear it" }).First.ClickAsync();
             var terrain = page.Locator("canvas.terrain").First;
             await terrain.WaitForAsync(new() { Timeout = 15_000 });

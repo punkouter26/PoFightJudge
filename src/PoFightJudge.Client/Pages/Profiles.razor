@@ -9,6 +9,9 @@
 <PageShell Width="PageShell.ShellWidth.Wide" Eyebrow="The cast" Title="Profiles"
            Lead="Every WATCH match is two of these. Build a husband and a wife, or load the default cast.">
     <Actions>
+        @* One wrapping row this page owns: the search takes whatever room the switch leaves, so on a phone the two
+           share a line and the buttons take the next, rather than four lines of controls above the first card. *@
+        <div class="cast-actions">
         <RadzenSelectBar TValue="RoleFilter" @bind-Value="_filter" Size="ButtonSize.Small" aria-label="Show">
             <Items>
                 <RadzenSelectBarItem Text="All" Value="RoleFilter.All" />
@@ -17,9 +20,10 @@
             </Items>
         </RadzenSelectBar>
         <RadzenTextBox Value="@_find" @oninput="@(e => _find = e.Value?.ToString() ?? string.Empty)" Name="find" MaxLength="40"
-                       Placeholder="Find in the cast" aria-label="Find in the cast" Style="width: 11rem" />
+                       Placeholder="Find in the cast" aria-label="Find in the cast" class="cast-find" />
         <RadzenButton Text="Load default cast" Icon="groups" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@SeedAsync" IsBusy="@_seeding" BusyText="Loading…" />
         <RadzenButton Text="New profile" Icon="person_add" ButtonStyle="ButtonStyle.Primary" Click="@(() => OpenEditorAsync(null))" />
+        </div>
     </Actions>
     <ChildContent>
         @if (_loading)
