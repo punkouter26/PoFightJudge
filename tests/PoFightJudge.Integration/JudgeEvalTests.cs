@@ -197,21 +197,36 @@ public class JudgeEvalTests(ITestOutputHelper output)
         var husband = Profile.Create("JD", ProfileRole.Husband, "golf, grilling", "clutter, being late", "money, chores", "measure twice, cut once");
         var wife = Profile.Create("MK", ProfileRole.Wife, "gardening, true crime", "waste, loud chewing", "in-laws, plans", "family above everything");
 
+        // Every fight is judged twice, the second time with the sides' labels swapped, so the stronger case moves to
+        // the other role and the other end of the participant block. A judge that reads the argument calls both the
+        // same way; one that favours the husband, or whoever is listed first, flips.
         var agreed = 0;
+        var flips = 0;
         foreach (var fight in Cases)
         {
-            var rounds = fight.Lines.Select(l => new RoundContext(l.Speaker, l.Text, "angry")).ToList();
-            var verdict = await judge.JudgeAsync(husband, wife, rounds);
-            var expected = string.Equals(fight.Winner, H, StringComparison.Ordinal) ? husband.Initials : wife.Initials;
-            var hit = string.Equals(verdict.Winner, expected, StringComparison.Ordinal);
-            agreed += hit ? 1 : 0;
-            output.WriteLine($"{(hit ? "ok  " : "MISS")} {fight.Name,-32} expected {expected} got {(verdict.Winner.Length == 0 ? "draw" : verdict.Winner)} ({verdict.HusbandScore}-{verdict.WifeScore})");
+            var hits = 0;
+            foreach (var swapped in new[] { false, true })
+            {
+                var rounds = fight.Lines.Select(l => new RoundContext(swapped ? Other(l.Speaker) : l.Speaker, l.Text, "angry")).ToList();
+                var verdict = await judge.JudgeAsync(husband, wife, rounds);
+                var winner = swapped ? Other(fight.Winner) : fight.Winner;
+                var expected = string.Equals(winner, H, StringComparison.Ordinal) ? husband.Initials : wife.Initials;
+                var hit = string.Equals(verdict.Winner, expected, StringComparison.Ordinal);
+                hits += hit ? 1 : 0;
+                output.WriteLine($"{(hit ? "ok  " : "MISS")} {fight.Name + (swapped ? " (swapped)" : string.Empty),-42} expected {expected} got {(verdict.Winner.Length == 0 ? "draw" : verdict.Winner)} ({verdict.HusbandScore}-{verdict.WifeScore})");
+            }
+
+            agreed += hits;
+            flips += hits == 1 ? 1 : 0;
         }
 
-        var agreement = (double)agreed / Cases.Count;
-        output.WriteLine($"{models.Judge}: {agreed}/{Cases.Count} = {agreement:P0}");
+        var agreement = (double)agreed / (Cases.Count * 2);
+        output.WriteLine($"{models.Judge}: {agreed}/{Cases.Count * 2} = {agreement:P0}, {flips} flipped when the sides swapped");
         agreement.Should().BeGreaterThanOrEqualTo(MinAgreement, "the judge has to call the golden fights the way a person did, traps included");
+        flips.Should().BeLessThanOrEqualTo(1, "the same argument must win whichever side of the marriage it is put in");
     }
+
+    private static string Other(string side) => string.Equals(side, H, StringComparison.Ordinal) ? W : H;
 
     public sealed record GoldenFight(string Name, string Topic, string Winner, IReadOnlyList<(string Speaker, string Text)> Lines);
 }

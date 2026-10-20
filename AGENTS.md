@@ -147,7 +147,8 @@ running when the wire format or a schema changes, and not otherwise.
 `JudgeEvalTests` (Integration, `GEMINI_API_KEY`) runs the WATCH judge over sixteen hand-labelled golden fights,
 half of them traps where the funnier, louder or more in-character side argued worse. It is what a judge model or a
 rubric change has to hold; `EVAL_JUDGE_MODEL` points it at another tier. On 2026-10-20 both `gemini-3.7-flash`
-and `gemini-3.1-flash-lite` called all sixteen (55 s against 25 s).
+and `gemini-3.1-flash-lite` called all sixteen both ways round — the sides swapped, no flips — which is why
+the judge has no order-bias correction: there was no bias to correct.
 
 ## Session rules
 
