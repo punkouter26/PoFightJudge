@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -105,7 +106,7 @@ public sealed class AnalysisPipelineTests : IDisposable
     private static JudgeOutputDto Judged(JudgeRequest request) => new(
         Assessment("clear", "you always say that"),
         Assessment("loud", "that is nonsense"),
-        new JudgeOverallDto("player1", "player2", "player1", ["clearer", "kinder", "right"], "One of them listened."));
+        new JudgeOverallDto("player1", "player2", "player1", ["clearer", "kinder", "right"], "One of them listened.", "AL opens strong and never lets go."));
 
     private static PlayerAssessmentDto Assessment(string tone, string quote) => new(
         "B2", "clear enough", 1, ["a slip"], 6, 7, 8, [new FallacyDto("Straw man", quote)], 5, 6, 7, 80, [],
@@ -133,6 +134,8 @@ public sealed class AnalysisPipelineTests : IDisposable
         var analysis = await AnalysisOf(match.Id);
         analysis!.Status.Should().Be(AnalysisStatus.Ready);
         analysis.ReportJson.Should().NotBeNullOrWhiteSpace();
+        JsonSerializer.Deserialize<AnalysisReportDto>(analysis.ReportJson!, GeminiJudgeClient.JsonOptions)!.Overall.Recap
+            .Should().Be("AL opens strong and never lets go.", "the recap rides the ruling into the stored report");
 
         var stored = await _matches.GetAsync("user-1", match.Id, CancellationToken.None);
         stored!.Status.Should().Be(SessionStatus.Ready);

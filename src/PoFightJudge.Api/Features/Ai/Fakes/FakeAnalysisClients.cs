@@ -75,7 +75,8 @@ public static class FakeAnalysisClients
                         $"{name} said more of the words in the transcript, which is all this stand-in can measure.",
                         "Set a Gemini key and argue again to find out who actually won.",
                     ],
-                    "(rehearsal ruling) Nobody read this argument. The numbers above were measured; the judgement was not.")));
+                    "(rehearsal ruling) Nobody read this argument. The numbers above were measured; the judgement was not.",
+                    $"(rehearsal recap) {name} talks more, and on a stand-in judge that is the whole fight. Set a Gemini key for the real call.")));
         }
 
         private static PlayerAssessmentDto Assess(string name, MappedTranscript transcript, Speaker side)

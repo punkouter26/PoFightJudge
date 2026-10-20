@@ -40,7 +40,8 @@ public sealed record PlayerAssessmentDto(
     string WorstMomentQuote,
     IReadOnlyList<string> CoachingTips);
 
-public sealed record OverallVerdictDto(Speaker WinnerLogic, Speaker WinnerCorrect, Speaker Overall, IReadOnlyList<string> Reasons, string Summary)
+/// <param name="Recap">A short sportscaster call of the fight, read aloud on the verdict page. Null on a report from before it existed, and on one with nothing to rule on.</param>
+public sealed record OverallVerdictDto(Speaker WinnerLogic, Speaker WinnerCorrect, Speaker Overall, IReadOnlyList<string> Reasons, string Summary, string? Recap = null)
 {
     /// <summary>
     /// False when too little was said to rule on. The winner fields still hold a value, because a stored report has
@@ -52,7 +53,7 @@ public sealed record OverallVerdictDto(Speaker WinnerLogic, Speaker WinnerCorrec
 /// <summary>The judge's structured output, before names and measurements are attached to it.</summary>
 public sealed record JudgeOutputDto(PlayerAssessmentDto Player1, PlayerAssessmentDto Player2, JudgeOverallDto Overall);
 
-public sealed record JudgeOverallDto(string WinnerLogic, string WinnerCorrect, string Overall, IReadOnlyList<string> Reasons, string Summary);
+public sealed record JudgeOverallDto(string WinnerLogic, string WinnerCorrect, string Overall, IReadOnlyList<string> Reasons, string Summary, string? Recap = null);
 
 public sealed record PlayerReportDto(string Name, PlayerMetricsDto Metrics, PlayerAssessmentDto Assessment);
 

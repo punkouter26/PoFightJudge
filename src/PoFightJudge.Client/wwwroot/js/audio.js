@@ -231,6 +231,26 @@ const PoAudio = (() => {
     pending() {
       return context ? Math.max(0, nextStartTime - context.currentTime) : 0;
     },
+
+    /**
+     * Reads text aloud in the browser's own voice — the verdict's recap, which needs no synthesis on the server and
+     * costs nothing. Answers false where the browser has no voice, rather than throwing.
+     */
+    say(text) {
+      if (!text || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+        return false;
+      }
+      speechSynthesis.cancel();
+      const line = new SpeechSynthesisUtterance(text);
+      line.rate = 1.1;
+      speechSynthesis.speak(line);
+      return true;
+    },
+
+    /** Stops whatever say() started. */
+    hush() {
+      window.speechSynthesis?.cancel();
+    },
   };
 })();
 

@@ -21,7 +21,8 @@ public static class AnalysisSchema
         ("winnerCorrect", Enum("player1", "player2")),
         ("overall", Enum("player1", "player2")),
         ("reasons", Arr(Str("One short reason"), "Exactly three reasons", min: 3, max: 3)),
-        ("summary", Str("One paragraph summarising the debate and the ruling")));
+        ("summary", Str("One paragraph summarising the debate and the ruling")),
+        ("recap", Str("A 40-60 word sportscaster call of the fight: present tense, both players named, the decisive moment quoted")));
 
     public static JsonObject PlayerAssessment() => Obj(
         ("cefr", Enum("A1", "A2", "B1", "B2", "C1", "C2")),

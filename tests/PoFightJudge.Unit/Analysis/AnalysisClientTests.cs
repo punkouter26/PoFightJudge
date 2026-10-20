@@ -32,6 +32,18 @@ public class AnalysisSchemaTests
         asked.Should().BeEquivalentTo(expected);
         assessment["required"]!.AsArray().Should().HaveCount(asked.Count, "a field that is optional comes back missing");
     }
+
+    [Fact]
+    public void The_ruling_also_writes_the_recap_and_a_report_from_before_it_still_reads()
+    {
+        AnalysisSchema.Overall()["required"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Contain("recap",
+            "the ruling call already reads the whole fight, so the recap costs a field rather than a model call");
+
+        var old = JsonSerializer.Deserialize<OverallVerdictDto>(
+            """{"winnerLogic":"Player1","winnerCorrect":"Player1","overall":"Player1","reasons":["a"],"summary":"s"}""",
+            GeminiJudgeClient.JsonOptions);
+        old!.Recap.Should().BeNull("a report stored before the recap existed must still open, and simply has none to play");
+    }
 }
 
 /// <summary>

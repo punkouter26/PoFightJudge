@@ -51,6 +51,13 @@
                         @* The ruling as a picture the size of a phone screen, for a story: to the share sheet, or saved. *@
                         <RadzenButton Text="@(_storying ? "Drawing it…" : "Story image")" Icon="photo_camera" ButtonStyle="ButtonStyle.Base"
                                       Variant="Variant.Outlined" Size="ButtonSize.Small" Disabled="@_storying" Click="@StoryAsync" class="story" />
+                        @* The judge's ringside call of the fight, in the browser's own voice: no synthesis, no bill. *@
+                        @if (_report.Overall.Ruled && !string.IsNullOrWhiteSpace(_report.Overall.Recap))
+                        {
+                            <RadzenButton Text="Hear the call" Icon="sports"
+                                          ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                          title="@_report.Overall.Recap" Click="@CallAsync" class="recap" />
+                        }
                     </div>
                     @if (_storyNote is not null)
                     {

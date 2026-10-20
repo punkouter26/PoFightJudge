@@ -174,7 +174,8 @@ public sealed partial class AnalysisPipeline(
             ToSpeaker(output.Overall.WinnerCorrect),
             ToSpeaker(output.Overall.Overall),
             output.Overall.Reasons,
-            output.Overall.Summary)
+            output.Overall.Summary,
+            output.Overall.Recap)
         { Ruled = ruled };
 
         var report = new AnalysisReportDto(

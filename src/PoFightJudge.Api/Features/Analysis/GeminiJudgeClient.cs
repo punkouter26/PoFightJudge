@@ -471,6 +471,7 @@ public sealed partial class GeminiJudgeClient(
         sb.AppendLine(CultureInfo.InvariantCulture, $"player1 ({PromptText.Inline(r.Player1Name, 60)}): logic {p1.Logic}, evidence {p1.EvidenceUse}, rebuttal {p1.RebuttalQuality}, persuasiveness {p1.Persuasiveness}, clarity {p1.Clarity}, correctness {p1.CorrectnessPercent}%, fallacies {p1.Fallacies.Count}.");
         sb.AppendLine(CultureInfo.InvariantCulture, $"player2 ({PromptText.Inline(r.Player2Name, 60)}): logic {p2.Logic}, evidence {p2.EvidenceUse}, rebuttal {p2.RebuttalQuality}, persuasiveness {p2.Persuasiveness}, clarity {p2.Clarity}, correctness {p2.CorrectnessPercent}%, fallacies {p2.Fallacies.Count}.");
         sb.AppendLine("Decide who argued more LOGICALLY, who was more factually CORRECT, and the overall winner. Give exactly three short reasons and one summary paragraph.");
+        sb.AppendLine("Then call it like a ringside sportscaster in 40 to 60 words for the recap: present tense, both players by name, the moment that decided it quoted from the transcript. Energetic, never cruel, and nothing the recording does not support.");
         return sb.ToString();
     }
 

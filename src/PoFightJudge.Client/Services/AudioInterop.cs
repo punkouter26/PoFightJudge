@@ -13,6 +13,8 @@ public sealed class AudioInterop(IJSRuntime js) : IAsyncDisposable
     public const string Enqueue = "PoAudio.enqueue";
     public const string Stop = "PoAudio.stop";
     public const string Pending = "PoAudio.pending";
+    public const string Say = "PoAudio.say";
+    public const string Hush = "PoAudio.hush";
 
     /// <summary>The middle of the stage: anybody who is not one of the two sides.</summary>
     public const double Centre = 0;
@@ -59,11 +61,17 @@ public sealed class AudioInterop(IJSRuntime js) : IAsyncDisposable
     public async Task<TimeSpan> PendingAsync(CancellationToken ct = default) =>
         TimeSpan.FromSeconds(await js.InvokeAsync<double>(Pending, ct));
 
+    /// <summary>Reads <paramref name="text"/> in the browser's own voice. False where the browser has none.</summary>
+    public ValueTask<bool> SayAsync(string text, CancellationToken ct = default) => js.InvokeAsync<bool>(Say, ct, text);
+
+    public ValueTask HushAsync(CancellationToken ct = default) => js.InvokeVoidAsync(Hush, ct);
+
     public async ValueTask DisposeAsync()
     {
         try
         {
             await js.InvokeVoidAsync(Stop);
+            await js.InvokeVoidAsync(Hush);
         }
         catch (JSException)
         {

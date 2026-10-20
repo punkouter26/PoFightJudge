@@ -86,6 +86,8 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     [Inject] private SaveInterop Save { get; set; } = default!;
 
+    [Inject] private AudioInterop Audio { get; set; } = default!;
+
     [Inject] private IJSRuntime Js { get; set; } = default!;
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
@@ -280,6 +282,14 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
     /// <summary>What happened to the story picture, when it is worth saying.</summary>
     private string? _storyNote;
+
+    /// <summary>Reads the recap aloud, from the top if it is already going. Leaving the page stops it.</summary>
+    private async Task CallAsync()
+    {
+        // No voice in this browser: the words are still on the button's tooltip, so say so where the story note goes.
+        var spoken = await Audio.SayAsync(_report!.Overall.Recap!);
+        _storyNote = spoken ? null : "This browser has no voice to read the call with.";
+    }
 
     private async Task StoryAsync()
     {
@@ -583,5 +593,6 @@ public sealed partial class Verdict : ComponentBase, IDisposable
 
         // Fire and forget, for the same reason: closing a socket on the way out has nothing to report.
         _ = _signal?.DisposeAsync().AsTask();
+        _ = Audio.HushAsync().AsTask();
     }
 }
