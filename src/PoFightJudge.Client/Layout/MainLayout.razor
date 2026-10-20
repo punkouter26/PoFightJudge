@@ -23,21 +23,8 @@
             <RadzenMenu Responsive="false">
                 @foreach (var place in Destinations)
                 {
-                    @if (place.Children is null)
-                    {
-                        @* Home's path is "", which every path starts with: matched as a prefix it was lit on every page. *@
-                        <RadzenMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" Match="@(place.Path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
-                    }
-                    else
-                    {
-                        @* The three channels are one choice, "play", made three ways: one item on the bar, not three. *@
-                        <RadzenMenuItem Text="@place.Text" Icon="@place.Icon">
-                            @foreach (var child in place.Children)
-                            {
-                                <RadzenMenuItem Text="@child.Text" Path="@child.Path" Icon="@child.Icon" />
-                            }
-                        </RadzenMenuItem>
-                    }
+                    @* Home's path is "", which every path starts with: matched as a prefix it was lit on every page. *@
+                    <RadzenMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" Match="@(place.Path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
                 }
             </RadzenMenu>
         </nav>
@@ -101,20 +88,7 @@
             <RadzenPanelMenu Click="@(_ => _drawer = false)" AriaLabel="Primary">
                 @foreach (var place in Destinations)
                 {
-                    @if (place.Children is null)
-                    {
-                        <RadzenPanelMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" Match="@(place.Path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
-                    }
-                    else
-                    {
-                        @* Open from the start: the drawer has the room, and a channel is one tap rather than two. *@
-                        <RadzenPanelMenuItem Text="@place.Text" Icon="@place.Icon" Expanded="true">
-                            @foreach (var child in place.Children)
-                            {
-                                <RadzenPanelMenuItem Text="@child.Text" Path="@child.Path" Icon="@child.Icon" Match="NavLinkMatch.Prefix" />
-                            }
-                        </RadzenPanelMenuItem>
-                    }
+                    <RadzenPanelMenuItem Text="@place.Text" Path="@place.Path" Icon="@place.Icon" Match="@(place.Path.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)" />
                 }
             </RadzenPanelMenu>
         </nav>
@@ -148,19 +122,16 @@
 </div>
 
 @code {
-    /// <summary>A place in the nav, or a group of them.</summary>
-    private sealed record Destination(string Text, string Path, string Icon, Destination[]? Children = null);
+    /// <summary>A place in the nav.</summary>
+    private sealed record Destination(string Text, string Path, string Icon);
 
-    /// <summary>The destinations, written once and rendered twice: as the bar, and as the drawer.</summary>
+    /// <summary>
+    /// The destinations, written once and rendered twice: as the bar, and as the drawer. The three channels are not
+    /// here: Home is nothing but them, one tap away.
+    /// </summary>
     private static readonly Destination[] Destinations =
     [
         new("Home", "", "home"),
-        new("Play", "", "sports_mma",
-        [
-            new("CPU", "cpu", "theaters"),
-            new("1P", "1p", "record_voice_over"),
-            new("2P", "2p", "mic"),
-        ]),
         new("Profiles", "profiles", "groups"),
         new("Leaderboard", "fighters", "emoji_events"),
         new("History", "history", "history"),

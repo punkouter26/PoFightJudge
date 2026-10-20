@@ -9,20 +9,19 @@ namespace PoFightJudge.E2EUI;
 [Collection(AppCollection.Name)]
 public class NavigationTests(AppFixture app)
 {
-    /// <summary>Every destination, and the group it sits under in the bar (null when it is on the bar itself).</summary>
-    private static readonly (string Label, string Path, string? Under)[] Destinations =
+    /// <summary>Every destination on the bar. The three channels are reached from Home, which is nothing but them.</summary>
+    private static readonly (string Label, string Path)[] Destinations =
     [
-        ("Home", "/", null), ("CPU", "/cpu", "Play"), ("1P", "/1p", "Play"), ("2P", "/2p", "Play"),
-        ("Profiles", "/profiles", null), ("Leaderboard", "/fighters", null), ("History", "/history", null),
+        ("Home", "/"), ("Profiles", "/profiles"), ("Leaderboard", "/fighters"), ("History", "/history"),
     ];
 
     [SkippableFact]
-    public async Task The_bar_holds_five_destinations_and_one_settings_button()
+    public async Task The_bar_holds_four_destinations_and_one_settings_button()
     {
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/");
         await using var _ = context;
 
-        (await page.Locator("header.topbar nav > ul > li").CountAsync()).Should().Be(5, "the three channels are one Play menu");
+        (await page.Locator("header.topbar nav > ul > li").CountAsync()).Should().Be(4, "no Play menu: Home is the three channels");
         (await page.Locator("header.topbar .session button:visible").CountAsync()).Should().Be(1, "user, sound, volume, theme and sign out are one panel");
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
@@ -47,14 +46,9 @@ public class NavigationTests(AppFixture app)
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/");
         await using (context)
         {
-            foreach (var (label, path, under) in Destinations)
+            foreach (var (label, path) in Destinations)
             {
                 var nav = page.Locator("header.topbar nav");
-                if (under is not null)
-                {
-                    await nav.GetByText(under, new() { Exact = true }).ClickAsync();
-                }
-
                 await nav.GetByRole(AriaRole.Link, new() { Name = label, Exact = true }).ClickAsync();
                 await page.WaitForFunctionAsync($"() => location.pathname === '{path}'", null, new() { Timeout = 15_000 });
 
@@ -73,7 +67,7 @@ public class NavigationTests(AppFixture app)
         var toggle = phonePage.GetByRole(AriaRole.Button, new() { Name = "Menu" });
         await toggle.WaitForAsync(new() { Timeout = 30_000 });
 
-        foreach (var (label, path, _) in Destinations)
+        foreach (var (label, path) in Destinations)
         {
             await toggle.ClickAsync();
             var drawer = phonePage.Locator(".po-drawer");
