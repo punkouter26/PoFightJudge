@@ -64,9 +64,11 @@ public class FightFlowTests(AppFixture app)
         (await page.Locator(".tips li").CountAsync()).Should().Be(6, "three pieces of advice each");
         await ShootAsync(page, "verdict");
 
-        // The card writes itself from the fight: both tags are on it, each with the one debate they have just had.
-        await page.GotoAsync(app.BaseUrl + "/fighters", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
-        await AppFixture.WaitForAppAsync(page, errors);
+        // The card writes itself from the fight: both tags are on it, each with the one debate they have just had. The
+        // leaderboard is not on the nav bar; the verdict is where it is reached from, and so is the history.
+        (await page.Locator("footer.after a[href='history']").CountAsync()).Should().Be(1, "the end of a match leads to the history");
+        await page.Locator("footer.after a[href='fighters']").ClickAsync();
+        await page.WaitForURLAsync(u => u.EndsWith("/fighters", StringComparison.Ordinal), new() { Timeout = 30_000 });
         // The leaderboard opens on the standings, which need two fights; one fight each is on the roster.
         await page.Locator(".views .rz-tabview-nav li", new() { HasText = "Roster" }).ClickAsync();
         var roster = page.Locator(".roster tbody tr", new() { HasText = "AL" }).First;

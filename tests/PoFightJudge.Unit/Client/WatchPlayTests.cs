@@ -138,6 +138,8 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
             "the husband opens and the two alternate");
         _asked.Should().OnlyContain(a => a.Topic == "the thermostat");
         cut.Markup.Should().Contain("He answered the point");
+        // History and the cast's standings are not on the nav bar: the end of a match is where they are reached from.
+        cut.FindAll("section.verdict a[href='history'], section.verdict a[href='fighters']").Should().HaveCount(2);
         cut.Markup.Should().Contain("Matthew", "the ruling names the winner rather than printing initials alone");
 
         // The stage cue is voiced but not printed.

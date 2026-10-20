@@ -209,6 +209,9 @@
                         }
                         <RadzenButton Text="Set up another" Icon="tune" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
                                       Click="@(() => Nav.NavigateTo("fight"))" />
+                        @* Not on the nav bar: the end of a match is where the history and the leaderboard are reached from. *@
+                        <RadzenLink Path="history" Text="History" Icon="history" />
+                        <RadzenLink Path="fighters" Text="Leaderboard" Icon="emoji_events" />
                     </div>
                     @if (_rematchProblem is not null)
                     {

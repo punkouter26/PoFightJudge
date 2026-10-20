@@ -9,19 +9,22 @@ namespace PoFightJudge.E2EUI;
 [Collection(AppCollection.Name)]
 public class NavigationTests(AppFixture app)
 {
-    /// <summary>Every destination on the bar. The three channels are reached from Home, which is nothing but them.</summary>
+    /// <summary>
+    /// Every destination on the bar. The three channels are reached from Home, which is nothing but them; history
+    /// and the leaderboard are reached from the end of a match, not from the bar.
+    /// </summary>
     private static readonly (string Label, string Path)[] Destinations =
     [
-        ("Home", "/"), ("Profiles", "/profiles"), ("Leaderboard", "/fighters"), ("History", "/history"),
+        ("Home", "/"), ("Profiles", "/profiles"),
     ];
 
     [SkippableFact]
-    public async Task The_bar_holds_four_destinations_and_one_settings_button()
+    public async Task The_bar_holds_two_destinations_and_one_settings_button()
     {
         var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/");
         await using var _ = context;
 
-        (await page.Locator("header.topbar nav > ul > li").CountAsync()).Should().Be(4, "no Play menu: Home is the three channels");
+        (await page.Locator("header.topbar nav > ul > li").CountAsync()).Should().Be(2, "Home and Profiles; history and the leaderboard follow a match");
         (await page.Locator("header.topbar .session button:visible").CountAsync()).Should().Be(1, "user, sound, volume, theme and sign out are one panel");
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();

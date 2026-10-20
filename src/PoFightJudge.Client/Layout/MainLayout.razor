@@ -127,14 +127,12 @@
 
     /// <summary>
     /// The destinations, written once and rendered twice: as the bar, and as the drawer. The three channels are not
-    /// here: Home is nothing but them, one tap away.
+    /// here (Home is nothing but them), and neither are history and the leaderboard: those are where a match leads.
     /// </summary>
     private static readonly Destination[] Destinations =
     [
         new("Home", "", "home"),
         new("Profiles", "profiles", "groups"),
-        new("Leaderboard", "fighters", "emoji_events"),
-        new("History", "history", "history"),
     ];
 
     [Inject] private SfxInterop Sound { get; set; } = default!;

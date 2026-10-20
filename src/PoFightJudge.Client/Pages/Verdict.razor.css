@@ -55,7 +55,7 @@
 
 ::deep .problem { margin: 0; }
 
-.again { display: flex; gap: var(--po-space-2); flex-wrap: wrap; }
+.again { display: flex; gap: var(--po-space-2); flex-wrap: wrap; align-items: center; }
 
 .failure, .after {
   display: flex;
