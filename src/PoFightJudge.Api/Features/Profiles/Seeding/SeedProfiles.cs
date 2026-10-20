@@ -35,7 +35,7 @@ public static class SeedProfiles
             LogicVsEmotion = 85, Patience = 10, HoldsGrudges = 95, Jealousy = 70,
             CommonArguments = "HOW SHE FIGHTS, whoever the opponent is: she never answers a criticism and never looks for agreement, a compromise or a solution. Every reply flips it onto the opponent and attacks them personally and aggressively, using something they said, did or are ('Me? What about YOU?', 'Oh, and you're perfect?'). She never concedes a point. TOPICS: Nick should sleep on the floor, not the couch or a bed; husband moving things around the house; husband thinking about his ex-wife; husband favoring his son Nick over their two kids.",
             Philosophy = "Don't you dare turn this on me. Let's talk about what's wrong with YOU.",
-            TtsSettings = new TtsSettingsDto { Pitch = 1.4, Speed = 1.3, VoiceName = "Kore", Accent = "Filipino" },
+            TtsSettings = new TtsSettingsDto { Pitch = 1.0, Speed = 1.3, VoiceName = "Kore", Accent = "Filipino" },
         },
         new()
         {
