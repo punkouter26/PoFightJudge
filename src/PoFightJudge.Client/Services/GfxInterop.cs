@@ -80,7 +80,7 @@ public sealed class GfxInterop(IJSRuntime js)
     }
 
     public Task UnmountAsync(string selector, CancellationToken ct = default) =>
-        SafelyAsync(() => js.InvokeVoidAsync(Unmount, ct, selector));
+        BestEffort.JsAsync(() => js.InvokeVoidAsync(Unmount, ct, selector));
 
     /// <summary>
     /// The same, for a page that can only dispose synchronously. Deliberately not awaited: the call cannot fail in
@@ -90,33 +90,14 @@ public sealed class GfxInterop(IJSRuntime js)
 
     /// <summary>Points the effect at a child of the mounted element — the card of whoever is speaking.</summary>
     public Task FocusAsync(string selector, string? childSelector, CancellationToken ct = default) =>
-        SafelyAsync(() => js.InvokeVoidAsync(Focus, ct, selector, childSelector));
+        BestEffort.JsAsync(() => js.InvokeVoidAsync(Focus, ct, selector, childSelector));
 
     /// <summary>Sends a ring out from the middle of the mounted element.</summary>
     public Task ShockAsync(string selector, CancellationToken ct = default) =>
-        SafelyAsync(() => js.InvokeVoidAsync(Shock, ct, selector));
+        BestEffort.JsAsync(() => js.InvokeVoidAsync(Shock, ct, selector));
 
     /// <summary>One numeric uniform the page drives: <c>side</c>, <c>mix</c> or <c>heat</c>.</summary>
     public Task SetAsync(string selector, string name, double value, CancellationToken ct = default) =>
-        SafelyAsync(() => js.InvokeVoidAsync(Set, ct, selector, name, value));
+        BestEffort.JsAsync(() => js.InvokeVoidAsync(Set, ct, selector, name, value));
 
-    private static async Task SafelyAsync(Func<ValueTask> call)
-    {
-        try
-        {
-            await call();
-        }
-        catch (JSException)
-        {
-            // Nothing is mounted, or the browser refused. The page is unaffected.
-        }
-        catch (InvalidOperationException)
-        {
-            // Prerendering: there is no canvas yet.
-        }
-        catch (TaskCanceledException)
-        {
-            // The page moved on.
-        }
-    }
 }

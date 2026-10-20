@@ -116,7 +116,7 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
     public async Task SetVolumeAsync(int percent, CancellationToken ct = default)
     {
         Volume = Math.Clamp(percent, 0, 100);
-        await SafelyAsync(() => js.InvokeVoidAsync(SetVolume, ct, Volume / 100.0));
+        await BestEffort.JsAsync(() => js.InvokeVoidAsync(SetVolume, ct, Volume / 100.0));
     }
 
     /// <summary>Reads the stored choice and tells the browser about it. Safe when storage is blocked.</summary>
@@ -149,7 +149,7 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
     private async Task ApplyAsync(bool on, bool persist, CancellationToken ct)
     {
         IsOn = on;
-        await SafelyAsync(() => js.InvokeVoidAsync(SetMuted, ct, !on));
+        await BestEffort.JsAsync(() => js.InvokeVoidAsync(SetMuted, ct, !on));
         if (!persist)
         {
             return;
@@ -169,15 +169,15 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
     /// Wakes the audio context on a user gesture. Worth calling from the click that starts something rather than
     /// leaving the first bell to be swallowed by the browser's autoplay policy.
     /// </summary>
-    public Task ArmAsync(CancellationToken ct = default) => SafelyAsync(() => js.InvokeVoidAsync(Arm, ct));
+    public Task ArmAsync(CancellationToken ct = default) => BestEffort.JsAsync(() => js.InvokeVoidAsync(Arm, ct));
 
     /// <summary>Plays one effect by name. <paramref name="value"/> is 0–1 for the voices that take one.</summary>
     public Task PlayAsync(string name, double value = 0, CancellationToken ct = default) =>
-        SafelyAsync(() => js.InvokeVoidAsync(Play, ct, name, value));
+        BestEffort.JsAsync(() => js.InvokeVoidAsync(Play, ct, name, value));
 
     /// <summary>Dips whatever voice is speaking for a moment, so an effect lands over the top of it.</summary>
     public Task DuckAsync(double seconds, CancellationToken ct = default) =>
-        SafelyAsync(() => js.InvokeVoidAsync(Duck, ct, seconds));
+        BestEffort.JsAsync(() => js.InvokeVoidAsync(Duck, ct, seconds));
 
     /// <summary>Plays an effect over the top of whoever is talking: the duck and the sound go together.</summary>
     public Task PlayOverAsync(string name, double duckSeconds, CancellationToken ct = default) =>
@@ -187,28 +187,9 @@ public sealed class SfxInterop(IJSRuntime js, ILocalStorageService storage)
     public async Task PlayOverAtAsync(string name, double duckSeconds, double pan, CancellationToken ct = default)
     {
         await DuckAsync(duckSeconds, ct);
-        await SafelyAsync(() => js.InvokeVoidAsync(Play, ct, name, 0, pan));
+        await BestEffort.JsAsync(() => js.InvokeVoidAsync(Play, ct, name, 0, pan));
     }
 
-    private static async Task SafelyAsync(Func<ValueTask> call)
-    {
-        try
-        {
-            await call();
-        }
-        catch (JSException)
-        {
-            // The browser would not play it. The app is unaffected.
-        }
-        catch (InvalidOperationException)
-        {
-            // Prerendering: there is no browser to play it in yet.
-        }
-        catch (TaskCanceledException)
-        {
-            // The page moved on before the sound started.
-        }
-    }
 }
 
 /// <summary>
