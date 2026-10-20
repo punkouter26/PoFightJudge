@@ -186,3 +186,5 @@ the judge has no order-bias correction: there was no bias to correct.
   marked, put them in `SCREENSHOTS/YYMMDD-feature-name.html`, and give its full path.
 - **3-tier diff summary.** A code change over 20 lines ends with three one-line summaries: *Toddler* (the
   simple idea), *Child* (what it does), *Adult* (the technical/architectural change).
+- **Direction questions.** After a code change over 100 lines, end with three optional, high-level questions
+  about where the app's purpose is heading — the kind whose answer could start more changes.
