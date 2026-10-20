@@ -29,6 +29,10 @@ Keys are `PoFightJudge:*` in configuration and `PoFightJudge--*` in Key Vault; `
 other. Every key has a constant in `Shared/Configuration/ConfigKeys.cs`, and that is where a new one goes — the
 host, the tests and the Bicep app settings all read the same name from there.
 
+`appsettings.json` carries only what differs from a code default or has to be supplied: endpoints, the model
+ids, the token budget, telemetry sampling and the toggles. Debate timings, analysis and the blob container names
+default on `DebateOptions`, `AnalysisOptions` and `StorageContainers`, and their keys still override them.
+
 Three switches are settable (`PoFightJudge:Toggles`, read once at startup): `UseFakes`, `UseAzurite` and
 `TtsCache`. Everything else that used to be called a feature flag is a question about the environment or the
 configuration and is answered where it is asked. `/api/features` tells the client what it needs to know —
