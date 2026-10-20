@@ -107,6 +107,10 @@ Each was a deliberate decision made while building; the commit that made it says
 | T134 | rank tiers with an Elo history chart | tiers, badges and a promotion, no chart | ratings are replayed whole on read, so there is no per-fight rating to draw without a change on the server |
 | T137 | WebGPU flocks with a WebGL2 fallback | WebGL2 transform feedback only | T68's reason: headless Chromium has no `navigator.gpu`, so a second backend would be untested code |
 | T138 | a demo fight on the stand-in AI | a demo watch on whatever AI the environment has | in Production the fakes refuse to register; the demo is a real watch there and counts against the daily allowance |
+| T140 | five client files (nav and settings) | plus `ScreenshotRunner` shots of the open Play menu and Settings panel | the runner is how a UI change is reviewed; a closed menu photographs as nothing |
+| T142 | Home only | plus the client's `GetMatchesAsync` removed from `ApiClient.cs` | Home now reads one page through `GetMatchPageAsync`; nothing else called it |
+| T143 | sortable column headers on History | an Order dropdown behind Filters | the grid became cards, which have no headers to click |
+| T146 | the 2P host as a radio list (keyboard + screen reader as one choice) | a `RadzenDropDown` of the same items | the same single, keyboard-operable choice in one line instead of 210 px, which is what lets a desktop show the whole 2P setup at once |
 | — | face uploads decoded and re-encoded on the server with ImageSharp | the browser crops to a 512 px PNG (`js/face.js`); the server checks the PNG header and size, and decodes nothing | every ImageSharp 3.x has open advisories (three high), the fixes are 4.1.2+ only, and 4.x will not build without a paid-for licence key |
 
 ## Still outstanding
