@@ -10,15 +10,8 @@
         <Helper><span class="po-muted">@Hint</span></Helper>
     </RadzenFormField>
 
-    @* The way out of a blank mind: pick how hot, pull the lever. *@
+    @* The way out of a blank mind: pull the lever. How hot it runs is a Settings choice (Medium unless changed). *@
     <div class="spin">
-        <RadzenSelectBar @bind-Value="_heat" TValue="Heat" Size="ButtonSize.Small" Name="heat" aria-label="How spicy a topic">
-            <Items>
-                <RadzenSelectBarItem Text="Mild" Value="@Heat.Mild" />
-                <RadzenSelectBarItem Text="Medium" Value="@Heat.Medium" />
-                <RadzenSelectBarItem Text="Spicy" Value="@Heat.Spicy" />
-            </Items>
-        </RadzenSelectBar>
         <RadzenButton Text="@(_spinning ? "Spinning…" : "Spin")" Icon="casino" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
                       Disabled="@_spinning" Click="@SpinAsync" />
     </div>
@@ -73,7 +66,8 @@
 
     [Parameter] public string Hint { get; set; } = "Leave it blank and they will find something.";
 
-    private Heat _heat = Heat.Medium;
+    /// <summary>Asked for rather than injected, like the clock: a page rendered without preferences spins medium.</summary>
+    private Heat SpinHeat => (Services.GetService(typeof(Preferences)) as Preferences)?.Heat ?? Heat.Medium;
 
     /// <summary>Asked for rather than injected: a page rendered without a clock registered still has a topic box.</summary>
     private TimeProvider Clock => Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
@@ -134,7 +128,7 @@
         }
 
         _spinning = true;
-        var reel = Reel(Random.Shared, _heat, Frames);
+        var reel = Reel(Random.Shared, SpinHeat, Frames);
         for (var frame = 0; frame < reel.Count; frame++)
         {
             _showing = reel[frame];

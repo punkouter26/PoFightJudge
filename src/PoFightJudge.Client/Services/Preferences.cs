@@ -1,41 +1,80 @@
 using Blazored.LocalStorage;
 using Microsoft.JSInterop;
+using PoFightJudge.Client.Components;
+using PoFightJudge.Shared.Models;
 
 namespace PoFightJudge.Client.Services;
 
 /// <summary>
-/// The optional choices the Settings panel holds, each defaulting to the simplest version of the app. Kept in
-/// LocalStorage like the theme; every read and write is guarded, because a blocked store means the defaults, not
-/// a broken page.
+/// The optional choices the Settings panel holds, each defaulting to the simplest version of the app, so the setup
+/// screens ask only what a match needs. Kept in LocalStorage like the theme; every read and write is guarded,
+/// because a blocked store means the defaults, not a broken page.
 /// </summary>
 public sealed class Preferences(ILocalStorageService storage)
 {
     /// <summary>The same key <c>js/theme.js</c>'s <c>PoMotion.still()</c> reads before any effect mounts.</summary>
     public const string EffectsKey = "po-effects";
+    public const string HeatKey = "po-heat";
+    public const string HostKey = "po-host";
     public const string On = "on";
     public const string Off = "off";
+
+    private Task? _loaded;
 
     /// <summary>Shaders, particles, terrain, stamps and foil. Off unless somebody turns them on.</summary>
     public bool Effects { get; private set; }
 
-    public async Task InitializeAsync()
+    /// <summary>How hot a topic the Spin button lands on.</summary>
+    public TopicField.Heat Heat { get; private set; } = TopicField.Heat.Medium;
+
+    /// <summary>Who hosts a 2P fight set up on this device.</summary>
+    public HostPersonaId Host { get; private set; } = HostPersonaId.Referee;
+
+    /// <summary>Loads once, however many components ask; a page awaits it before reading a choice.</summary>
+    public Task InitializeAsync() => _loaded ??= LoadAsync();
+
+    public Task SetEffectsAsync(bool on)
+    {
+        Effects = on;
+        return WriteAsync(EffectsKey, on ? On : Off);
+    }
+
+    public Task SetHeatAsync(TopicField.Heat heat)
+    {
+        Heat = heat;
+        return WriteAsync(HeatKey, heat.ToString());
+    }
+
+    public Task SetHostAsync(HostPersonaId host)
+    {
+        Host = host;
+        return WriteAsync(HostKey, host.ToString());
+    }
+
+    private async Task LoadAsync()
+    {
+        Effects = string.Equals(await ReadAsync(EffectsKey), On, StringComparison.Ordinal);
+        Heat = Enum.TryParse<TopicField.Heat>(await ReadAsync(HeatKey), out var heat) ? heat : Heat;
+        Host = Enum.TryParse<HostPersonaId>(await ReadAsync(HostKey), out var host) ? host : Host;
+    }
+
+    private async Task<string?> ReadAsync(string key)
     {
         try
         {
-            Effects = string.Equals((await storage.GetItemAsStringAsync(EffectsKey))?.Trim('"'), On, StringComparison.Ordinal);
+            return (await storage.GetItemAsStringAsync(key))?.Trim('"');
         }
         catch (Exception ex) when (ex is JSException or InvalidOperationException)
         {
-            // Storage blocked: the defaults stand.
+            return null; // Storage blocked: the default stands.
         }
     }
 
-    public async Task SetEffectsAsync(bool on)
+    private async Task WriteAsync(string key, string value)
     {
-        Effects = on;
         try
         {
-            await storage.SetItemAsStringAsync(EffectsKey, on ? On : Off);
+            await storage.SetItemAsStringAsync(key, value);
         }
         catch (Exception ex) when (ex is JSException or InvalidOperationException)
         {

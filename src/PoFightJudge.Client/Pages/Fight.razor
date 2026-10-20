@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject SetupMemory Memory
 @inject Viewport Viewport
+@inject Preferences Prefs
 @implements IDisposable
 
 <PageTitle>2P · PoFightJudge</PageTitle>
@@ -86,12 +87,10 @@
 </SetupStep>
         </div>;
 
-    /// <summary>What about, and who hosts it.</summary>
+    /// <summary>What about. Who hosts is a Settings choice (Referee unless changed), so setup does not ask.</summary>
     private RenderFragment AboutStep => @<div class="step">
 <TopicField @bind-Value="_topic" Label="What are you arguing about?" Placeholder="who does the dishes"
             Hint="Leave it blank and the host will ask you both at the top of the show." />
-
-<HostPersonaPicker Persona="@_persona" PersonaChanged="@(p => _persona = p)" />
         </div>;
 
     /// <summary>The microphone, checked before the bell.</summary>
@@ -160,6 +159,8 @@
         Viewport.Changed += OnViewportChanged;
         await Viewport.InitializeAsync();
         _known = await Api.GetFightersAsync();
+        await Prefs.InitializeAsync();
+        _persona = Prefs.Host;
 
         // The same two people argue most nights, and typing both tags again every time is the tax on that. A rematch
         // takes precedence over the remembered card; both leave the topic to whatever it was, blank included.
@@ -170,7 +171,6 @@
             _topic = card.Topic;
             _oneRole = card.OneRole;
             _twoRole = card.TwoRole;
-            _persona = card.Persona;
             _device = card.Device is { Length: > 0 } device ? device : null;
         }
     }

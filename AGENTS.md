@@ -72,6 +72,8 @@ other through `Shared` contracts and repositories, not through each other's serv
   can read it before Blazor boots. The catalogues are spelled twice — `Sfx`/`Shaders` in C#, the voices and shaders
   in JS — and `EffectCatalogueTests` holds the pairs together, because a name the browser does not know is silence
   rather than an error; `StageEffectTests` compiles every shader and plays every voice in a real browser.
+- The optional choices live in the Settings panel, not on the setup screens: `Preferences` (client, LocalStorage)
+  holds stage effects (off), spin heat (Medium) and the 2P host (the Referee), each defaulting to the simplest app.
 - `ScreenshotRunner` with `SEED=1` plays a watch and a fight on the fakes and photographs the moments the effects
   live in (the tape, the glitch, the heat, table mode, the verdict's reveal, shatter, story image, rematch, the
   podium, the tour). A CSS effect too quick to catch is frozen part-way; a canvas is whatever frame it lands on.

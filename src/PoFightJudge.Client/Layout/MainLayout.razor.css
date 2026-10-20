@@ -202,6 +202,9 @@
   display: grid;
   gap: var(--po-space-3);
   min-width: 15rem;
+  /* The host picker's taglines are long; the panel stays a card and the dropdown truncates. */
+  width: min(22rem, calc(100vw - 2 * var(--po-space-4)));
+  grid-template-columns: minmax(0, 1fr);
   padding: var(--po-space-4);
   box-shadow: var(--po-shadow-3);
   animation: po-fade var(--po-dur-fast) var(--po-ease);

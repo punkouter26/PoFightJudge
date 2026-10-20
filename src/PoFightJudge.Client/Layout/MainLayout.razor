@@ -67,6 +67,18 @@
                 <RadzenSwitch Value="@Prefs.Effects" ValueChanged="@((bool on) => Prefs.SetEffectsAsync(on))" Name="effects"
                               InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Stage effects" })" />
             </div>
+            <div class="setting">
+                <span class="po-eyebrow">Spin heat</span>
+                <RadzenSelectBar TValue="TopicField.Heat" Value="@Prefs.Heat" ValueChanged="@((TopicField.Heat h) => Prefs.SetHeatAsync(h))"
+                                 Size="ButtonSize.Small" Name="heat" aria-label="How spicy a topic">
+                    <Items>
+                        <RadzenSelectBarItem Text="Mild" Value="@TopicField.Heat.Mild" />
+                        <RadzenSelectBarItem Text="Medium" Value="@TopicField.Heat.Medium" />
+                        <RadzenSelectBarItem Text="Spicy" Value="@TopicField.Heat.Spicy" />
+                    </Items>
+                </RadzenSelectBar>
+            </div>
+            <HostPersonaPicker Persona="@Prefs.Host" PersonaChanged="@((HostPersonaId h) => Prefs.SetHostAsync(h))" />
             <AuthorizeView>
                 <Authorized>
                     <RadzenButton Text="Sign out" Icon="logout" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Size="ButtonSize.Small"
