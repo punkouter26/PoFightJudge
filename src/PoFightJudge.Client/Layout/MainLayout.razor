@@ -139,6 +139,8 @@
             </ErrorContent>
         </ErrorBoundary>
     </main>
+    @* Which build this is, for a screenshot or a bug report. Out of the way, and never in the way of a click. *@
+    <span class="build" aria-label="@($"Build {BuildStamp.Version}")">v@(BuildStamp.Version)</span>
     <RadzenDialog />
     <RadzenTooltip />
     @* Transient failures surface here; anything that blocks the page stays inline on the page itself. *@
