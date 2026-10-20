@@ -27,7 +27,7 @@ public class ThemeAndViewportTests(AppFixture app)
     [SkippableFact]
     public async Task Theme_toggle_persists_across_reload()
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/login");
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/login", effects: false);
         await using var _ = context;
 
         (await page.EvaluateAsync<string?>("document.documentElement.getAttribute('data-theme')")).Should().Be("dark", "dark is the default");
@@ -42,12 +42,20 @@ public class ThemeAndViewportTests(AppFixture app)
         await page.Locator(".po-volume").WaitForAsync(new() { Timeout = 10_000 });
         await page.EvaluateAsync("() => window.PoSfx.setVolume(0.4)");
 
+        // Stage effects are off until asked for, and kept like the theme.
+        // Radzen's switch is a visually hidden checkbox (role=switch) inside the span a person actually clicks.
+        var effects = page.Locator(".po-settings .rz-switch:has(input[aria-label='Stage effects'])");
+        (await effects.Locator("input").GetAttributeAsync("aria-checked")).Should().Be("false", "the simplest stage is the default");
+        await effects.ClickAsync();
+        await page.WaitForFunctionAsync("() => localStorage.getItem('po-effects') === 'on'", null, new() { Timeout = 5_000 });
+
         await page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
         await AppFixture.WaitForAppAsync(page, errors);
         (await page.EvaluateAsync<string?>("document.documentElement.getAttribute('data-theme')")).Should().Be("light");
         (await page.EvaluateAsync<string?>("localStorage.getItem('po-theme')")).Should().Be("light");
         (await page.EvaluateAsync<string>(Chrome)).Should().Be("#f4f1ea", "the browser's own chrome is light before the app has even started");
         (await page.EvaluateAsync<double>("window.PoSfx.volume()")).Should().Be(0.4);
+        (await page.EvaluateAsync<bool>("window.PoMotion.still()")).Should().BeFalse("the switch was turned on before the reload");
         await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
         (await page.Locator(".po-volume input, .po-volume [role=slider]").First.GetAttributeAsync("aria-valuenow") ?? await page.Locator(".po-volume input").First.InputValueAsync())
             .Should().Be("40", "the slider opens where it was left");

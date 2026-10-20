@@ -70,7 +70,7 @@ window.PoFx = (function () {
   function stamps(selector) {
     let still = false;
     try {
-      still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      still = window.PoMotion.still();
     } catch (e) {
       still = false;
     }
@@ -145,7 +145,7 @@ window.PoFx = (function () {
 
   function holo(selector) {
     try {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (window.PoMotion.still()) {
         return;
       }
     } catch (e) {

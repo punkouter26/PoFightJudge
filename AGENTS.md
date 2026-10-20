@@ -67,7 +67,8 @@ other through `Shared` contracts and repositories, not through each other's serv
   ping-pong targets) and `swarm` (particles stepped by transform feedback) — `particles.js` the canvas physics
   (sparks, confetti, shards, Verlet streamers), `terrain.js` a clip's spectrum drawn as mountains, and `fx.js` the
   one-shot CSS classes, the stamps, the holo foil, table mode and the tour's spotlight. Each entry point answers "no"
-  rather than throwing, reduced motion turns the drawn half off entirely, and the sound switch is stored where JS
+  rather than throwing, the drawn half is off until the Settings panel's **Stage effects** switch turns it on
+  (`po-effects`, read by `PoMotion.still()` in `theme.js`) and off whatever the switch when reduced motion is asked for, and the sound switch is stored where JS
   can read it before Blazor boots. The catalogues are spelled twice — `Sfx`/`Shaders` in C#, the voices and shaders
   in JS — and `EffectCatalogueTests` holds the pairs together, because a name the browser does not know is silence
   rather than an error; `StageEffectTests` compiles every shader and plays every voice in a real browser.

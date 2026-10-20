@@ -85,7 +85,7 @@ public sealed class AppFixture : IAsyncLifetime
     /// credentials (the anonymous path). Console errors, page errors and failed/4xx+ requests are collected so a
     /// failing test names the cause instead of timing out silently.
     /// </summary>
-    public async Task<(IBrowserContext Context, IPage Page, List<string> Errors)> OpenAsync(ViewportSize viewport, string path = "/", string? user = "e2e-ui", bool tour = false)
+    public async Task<(IBrowserContext Context, IPage Page, List<string> Errors)> OpenAsync(ViewportSize viewport, string path = "/", string? user = "e2e-ui", bool tour = false, bool effects = true)
     {
         Skip.If(Browser is null, Unavailable);
         var options = new BrowserNewContextOptions { ViewportSize = viewport, Permissions = ["microphone"] };
@@ -101,6 +101,13 @@ public sealed class AppFixture : IAsyncLifetime
         if (!tour)
         {
             await context.AddInitScriptAsync("try { localStorage.setItem('po-tour', 'done'); } catch (e) { }");
+        }
+
+        // Stage effects are off until somebody turns them on in Settings. The tests that exercise them, and the
+        // screenshots of the moments they live in, are about the effects, so they open with the switch on.
+        if (effects)
+        {
+            await context.AddInitScriptAsync("try { localStorage.setItem('po-effects', 'on'); } catch (e) { }");
         }
         // Extra headers apply to every request; keep the fake-auth header off third-party hosts (fonts) to avoid CORS noise.
         await context.RouteAsync(url => !url.StartsWith(BaseUrl, StringComparison.OrdinalIgnoreCase), route =>

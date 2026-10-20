@@ -47,3 +47,20 @@ window.PoTheme = {
   },
 };
 window.PoTheme.chrome(document.documentElement.getAttribute('data-theme'));
+
+// Stage effects (the shaders, the particles, the terrain, the stamps and the foil) are off unless somebody turns them
+// on in Settings, and off whatever the setting when the system asks for less motion. Read from localStorage, like
+// the theme, so the first mount already knows. Every drawn-effect entry point asks this one question.
+window.PoMotion = {
+  KEY: 'po-effects',
+  still: function () {
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    } catch (e) { /* no media queries: fall through to the setting */ }
+    try {
+      return (localStorage.getItem('po-effects') || '').replace(/^"|"$/g, '') !== 'on';
+    } catch (e) {
+      return true;
+    }
+  },
+};

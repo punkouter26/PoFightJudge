@@ -11,12 +11,15 @@ namespace PoFightJudge.E2EUI;
 /// <c>VIEWPORTS=desktop,phone</c> takes each page at both sizes (a phone shot is named <c>-phone</c>), and
 /// <c>SEED=1</c> loads the default cast and plays one watch through first, so the lists have something in them and
 /// the finished argument is captured as <c>watch-play</c>; then one fight is played on the fake microphone and
-/// captured as <c>fight-live</c>, <c>verdict-reveal</c> and <c>verdict</c>.
+/// captured as <c>fight-live</c>, <c>verdict-reveal</c> and <c>verdict</c>. <c>EFFECTS=off</c> photographs the
+/// pages as a first visit sees them, with stage effects at their default.
 /// </summary>
 [Collection(AppCollection.Name)]
 public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
 {
     /// <summary>Every page that renders without a match or a token in its URL. The one list to extend.</summary>
+    private static bool Effects => !string.Equals(Environment.GetEnvironmentVariable("EFFECTS"), "off", StringComparison.OrdinalIgnoreCase);
+
     public static readonly IReadOnlyList<(string Name, string Path)> Routes =
     [
         ("home", "/"),
@@ -58,7 +61,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
         {
             foreach (var (name, path) in routes)
             {
-                var (context, page, errors) = await app.OpenAsync(size, path);
+                var (context, page, errors) = await app.OpenAsync(size, path, effects: Effects);
                 try
                 {
                     await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
@@ -86,7 +89,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
     /// <summary>The profile editor, open beside the cast.</summary>
     private async Task EditorAsync(string folder)
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles");
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", effects: Effects);
         try
         {
             await page.GetByRole(AriaRole.Button, new() { Name = "New profile" }).First.ClickAsync();
@@ -103,7 +106,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
     /// <summary>The two things the bar opens on a desktop: the Play menu, and the settings panel.</summary>
     private async Task MenusAsync(string folder)
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/");
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/", effects: Effects);
         try
         {
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
@@ -126,7 +129,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
     /// <summary>The default cast, and one whole argument between two of them, so no page is photographed empty.</summary>
     private async Task SeedAsync(string folder)
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles");
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/profiles", effects: Effects);
         try
         {
             var load = page.GetByRole(AriaRole.Button, new() { Name = "Load default cast" });
@@ -169,7 +172,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
     /// </summary>
     private async Task TourAsync(string folder)
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/", user: "e2e-tour", tour: true);
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/", user: "e2e-tour", tour: true, effects: Effects);
         try
         {
             await page.Locator(".coach").WaitForAsync(new() { Timeout = 30_000 });
@@ -201,7 +204,7 @@ public sealed class ScreenshotRunner(AppFixture app, ITestOutputHelper output)
     /// </summary>
     private async Task FightAsync(string folder)
     {
-        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/2p", user: "e2e-shots");
+        var (context, page, errors) = await app.OpenAsync(AppFixture.Desktop, "/2p", user: "e2e-shots", effects: Effects);
         try
         {
             foreach (var (name, tag) in new[] { ("player1Tag", "AL"), ("player2Tag", "SM") })

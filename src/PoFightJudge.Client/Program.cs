@@ -28,6 +28,7 @@ builder.Services.AddScoped<IApiClient, ApiClient>();
 builder.Services.AddScoped<AudioInterop>();
 builder.Services.AddScoped<FxInterop>();
 builder.Services.AddScoped<SfxInterop>();
+builder.Services.AddScoped<Preferences>();
 builder.Services.AddScoped<GfxInterop>();
 builder.Services.AddScoped<ParticleInterop>();
 builder.Services.AddScoped<MicInterop>();

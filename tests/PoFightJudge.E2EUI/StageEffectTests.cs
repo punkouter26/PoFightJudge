@@ -44,17 +44,26 @@ public class StageEffectTests(AppFixture app)
         errors.Should().BeEmpty();
     }
 
-    /// <summary>Somebody who asked the whole system for less motion is not given the loudest thing in it.</summary>
-    [SkippableFact]
-    public async Task Reduced_motion_mounts_nothing()
+    /// <summary>
+    /// Nothing is drawn until somebody turns stage effects on, and somebody who asked the whole system for less motion
+    /// is not given the loudest thing in it even when the switch is on.
+    /// </summary>
+    [SkippableTheory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public async Task Effects_off_or_reduced_motion_mounts_nothing(bool switchedOn, bool reducedMotion)
     {
         Skip.If(app.Browser is null, app.Unavailable);
         var context = await app.Browser!.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = AppFixture.Desktop,
-            ReducedMotion = ReducedMotion.Reduce,
+            ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
         });
         await using var _ = context;
+        if (switchedOn)
+        {
+            await context.AddInitScriptAsync("try { localStorage.setItem('po-effects', 'on'); } catch (e) { }");
+        }
 
         var page = await context.NewPageAsync();
         await page.GotoAsync(app.BaseUrl + "/login", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 60_000 });
@@ -76,7 +85,7 @@ public class StageEffectTests(AppFixture app)
             }
             """);
 
-        mounted.Should().BeFalse("reduced motion is the app's one switch, and this is the most motion in it");
+        mounted.Should().BeFalse(switchedOn ? "reduced motion outranks the switch" : "stage effects are off by default");
     }
 
     /// <summary>The story picture is drawn at the size a story is, with a long topic and a slip on it.</summary>

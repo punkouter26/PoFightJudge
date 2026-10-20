@@ -62,6 +62,11 @@
             </AuthorizeView>
             <div class="setting"><span class="po-eyebrow">Sound</span><SoundToggle /></div>
             <div class="setting"><span class="po-eyebrow">Theme</span><ThemeToggle /></div>
+            <div class="setting">
+                <span class="po-eyebrow">Stage effects</span>
+                <RadzenSwitch Value="@Prefs.Effects" ValueChanged="@((bool on) => Prefs.SetEffectsAsync(on))" Name="effects"
+                              InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Stage effects" })" />
+            </div>
             <AuthorizeView>
                 <Authorized>
                     <RadzenButton Text="Sign out" Icon="logout" ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Size="ButtonSize.Small"
@@ -147,6 +152,7 @@
 
     [Inject] private SfxInterop Sound { get; set; } = default!;
     [Inject] private ThemeInterop Theme { get; set; } = default!;
+    [Inject] private Preferences Prefs { get; set; } = default!;
 
     /// <summary>Whether the settings panel is open.</summary>
     private bool _settings;
@@ -161,6 +167,7 @@
     {
         await Sound.InitializeAsync();
         await Theme.InitializeAsync();
+        await Prefs.InitializeAsync();
     }
 
     private void OnSettingsKey(KeyboardEventArgs e)
