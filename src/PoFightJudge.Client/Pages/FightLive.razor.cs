@@ -153,7 +153,7 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
         var started = await Audio.StartCaptureAsync(_connection, await Memory.MicAsync());
         if (!started.Started)
         {
-            _fatal = MicMessage(started.Error);
+            _fatal = MicError.Describe(started.Error);
             return;
         }
 
@@ -517,14 +517,6 @@ public sealed partial class FightLive : ComponentBase, ILiveFightListener, IAsyn
 
         StateHasChanged();
     });
-
-    private static string MicMessage(string error) => error switch
-    {
-        "NotAllowedError" or "SecurityError" => "The microphone was blocked, and a fight is nothing without it. Allow it for this site and start again.",
-        "NotFoundError" or "DevicesNotFoundError" => "No microphone was found. A fight needs one.",
-        "NotReadableError" or "TrackStartError" => "The microphone is in use by something else.",
-        _ => $"The microphone could not be started ({error}).",
-    };
 
     public async ValueTask DisposeAsync()
     {

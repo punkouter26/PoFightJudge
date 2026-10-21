@@ -143,7 +143,7 @@ public sealed partial class WatchPlay
         var error = await Mic.StartAsync(ct: _leaving.Token);
         if (error is not null)
         {
-            _micProblem = MicMessage(error);
+            _micProblem = MicError.Describe(error);
             return;
         }
 
@@ -260,15 +260,6 @@ public sealed partial class WatchPlay
         var colon = error.IndexOf(':', StringComparison.Ordinal);
         return colon >= 0 && colon < error.Length - 1 ? error[(colon + 1)..] : error;
     }
-
-    private static string MicMessage(string error) => error switch
-    {
-        "NotAllowedError" or "SecurityError" => "The microphone was blocked. Allow it for this site and try again.",
-        "NotFoundError" or "DevicesNotFoundError" => "No microphone was found. Type your line instead.",
-        "NotReadableError" or "TrackStartError" => "The microphone is in use by something else.",
-        "NotSupportedError" => "This browser will not record. Type your line instead.",
-        _ => $"The microphone could not be started ({error}).",
-    };
 
     /// <summary>Ctrl+Enter (or ⌘+Enter) says what is in the box, so nobody typing has to reach for the mouse to answer.</summary>
     private Task OnLineKeyAsync(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e) =>

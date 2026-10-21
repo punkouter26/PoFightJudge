@@ -98,7 +98,7 @@
         {
             if (await Mic.StartAsync(DeviceId, _leaving.Token) is { } error)
             {
-                _problem = Explain(error);
+                _problem = MicError.Describe(error);
                 return;
             }
 
@@ -183,20 +183,4 @@
         }
     }
 
-    /// <summary>
-    /// The browser's error name turned into what to do about it. A refused permission and a missing device are
-    /// different problems and the advice for one is useless for the other.
-    /// </summary>
-    private static string Explain(string error) => error switch
-    {
-        "NotAllowedError" or "SecurityError" =>
-            "The browser is blocking the microphone. Allow it for this site in the address bar, then test again.",
-        "NotFoundError" or "DevicesNotFoundError" =>
-            "No microphone was found. Plug one in, or check that the one you have is not switched off.",
-        "NotReadableError" or "TrackStartError" =>
-            "Something else is holding the microphone. Close whatever is using it and test again.",
-        "NotSupportedError" =>
-            "This browser will not give a page the microphone. Try Chrome or Edge over https.",
-        _ => $"The microphone could not be opened ({error}).",
-    };
 }

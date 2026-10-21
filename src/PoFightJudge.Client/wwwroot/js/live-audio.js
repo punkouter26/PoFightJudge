@@ -144,7 +144,14 @@ window.PoLive = (function () {
       stream = await navigator.mediaDevices.getUserMedia({ audio: audio });
 
       // Absolute: the fight page lives at /fight/{id}, where a relative path would resolve to /fight/js/...
-      await ctx.audioWorklet.addModule("/js/pcm-worklet.js");
+      // Renamed on failure, as in mic.js: a worklet that did not load is not a microphone that would not start.
+      try {
+        await ctx.audioWorklet.addModule("/js/pcm-worklet.js");
+      } catch (e) {
+        const loadError = new Error("the audio worklet did not load");
+        loadError.name = "AudioLoadError";
+        throw loadError;
+      }
       source = ctx.createMediaStreamSource(stream);
 
       // A second tap on the same source, for the meter's bars. The worklet reports one number a frame; a voice

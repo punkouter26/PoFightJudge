@@ -225,7 +225,15 @@ window.PoMic = (function () {
       }
 
       // Absolute: a watch lives at /watch/play, where a relative path would resolve to /watch/js/...
-      await ctx.audioWorklet.addModule("/js/pcm-worklet.js");
+      // A failed fetch of the worklet rejects with AbortError, the same name a stuck microphone gets; it is renamed
+      // so the page can tell "reload" from "the microphone would not start".
+      try {
+        await ctx.audioWorklet.addModule("/js/pcm-worklet.js");
+      } catch (e) {
+        const loadError = new Error("the audio worklet did not load");
+        loadError.name = "AudioLoadError";
+        throw loadError;
+      }
 
       source = ctx.createMediaStreamSource(stream);
 
