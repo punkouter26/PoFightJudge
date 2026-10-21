@@ -81,6 +81,7 @@ public sealed class FightEndpoints : ICarterModule
 
         var setup = new ShowSetup(request.Persona, first, second, Topic(request.Topic))
         {
+            Player1Stance = Topic(request.Topic) is null ? null : request.Player1Stance,
             Player1Digest = await DigestAsync(results, first, user.UserId(), ct),
             Player2Digest = await DigestAsync(results, second, user.UserId(), ct),
         };

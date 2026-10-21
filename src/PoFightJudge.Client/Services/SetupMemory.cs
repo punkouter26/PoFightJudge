@@ -8,6 +8,9 @@ public sealed record FightCard(string One, string Two, string Topic, ProfileRole
 {
     /// <summary>The microphone that was tested at setup. Empty means whichever one the browser picks.</summary>
     public string Device { get; init; } = string.Empty;
+
+    /// <summary>Whether fighter one was for the topic or against it; null without sides.</summary>
+    public Stance? OneStance { get; init; }
 }
 
 /// <summary>The same for a watch: two personas, or a persona and the tag a person argued under.</summary>

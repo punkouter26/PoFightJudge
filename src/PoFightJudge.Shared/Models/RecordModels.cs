@@ -63,6 +63,9 @@ public sealed record MatchDto(
     /// </summary>
     public string? ShareToken { get; init; }
 
+    /// <summary>Whether side one was for the topic or against it (side two is the opposite); null when no sides were chosen.</summary>
+    public Stance? Side1Stance { get; init; }
+
     /// <summary>True when the judge called neither side.</summary>
     public bool IsDraw => string.IsNullOrEmpty(Winner);
 

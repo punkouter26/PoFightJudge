@@ -79,6 +79,10 @@ other through `Shared` contracts and repositories, not through each other's serv
   their first match and rewritten from all their words after every one after that.
 - A person's tag is exactly three letters (`Initials.IsTag`), checked where it is entered: the 2P start, a human seat in
   CPU/1P, and the client's tag boxes. Reading still accepts the 1–3 alphanumerics older tags were made with.
+- Sides: with a topic, each person is For or Against it (`Stance`; only the first side's is carried, the second is
+  always the opposite). It rides on `GenerateRoundRequest`/`VerdictRequest.HusbandStance` and
+  `CreateFightRequest.Player1Stance`, is kept on `MatchDto.Side1Stance`, and reaches every prompt as one line from
+  `Sides.Describe` ("... (the husband is FOR it; the wife is AGAINST it)"): the personas, the 2P host and both judges.
 - One leaderboard: `GET /api/leaderboard` (`LeaderboardEndpoints.Together`) ranks this account's people and the cast
   on one Elo scale. A person whose persona was also argued appears once, as themselves; `IsPerson` marks which is which.
 - The effects layer is five files in `wwwroot/js` and nothing in the app depends on any of it: `sfx.js` synthesizes

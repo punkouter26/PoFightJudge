@@ -46,5 +46,5 @@ public interface IWatchAi
         string? topic = null,
         CancellationToken ct = default);
 
-    Task<JudgeVerdictResult> JudgeAsync(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds, CancellationToken ct = default);
+    Task<JudgeVerdictResult> JudgeAsync(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds, string? topic = null, CancellationToken ct = default);
 }

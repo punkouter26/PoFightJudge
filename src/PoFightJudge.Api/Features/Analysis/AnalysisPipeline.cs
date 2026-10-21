@@ -156,7 +156,7 @@ public sealed partial class AnalysisPipeline(
             await SaveStatusAsync(matches, matchId, AnalysisStatus.Judging, null, null, ct);
             output = await judge.JudgeAsync(
                 new JudgeRequest(
-                    match.Topic,
+                    Sides.Describe(match.Topic, match.Side1Stance, "player1", "player2") ?? match.Topic,
                     match.Side1.DisplayName,
                     match.Side2.DisplayName,
                     file.Uri,

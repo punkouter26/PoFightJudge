@@ -82,6 +82,9 @@ public sealed class MatchEntity : ITableEntity
     /// </summary>
     public string? ShareToken { get; set; }
 
+    /// <summary>"For" or "Against" for side one; empty when no sides were chosen (and on every match from before them).</summary>
+    public string Side1Stance { get; set; } = string.Empty;
+
     public static MatchEntity From(MatchDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -107,6 +110,7 @@ public sealed class MatchEntity : ITableEntity
             AudioBlobName = dto.AudioBlobName,
             IsFake = dto.IsFake,
             ShareToken = dto.ShareToken,
+            Side1Stance = dto.Side1Stance?.ToString() ?? string.Empty,
         };
     }
 
@@ -128,6 +132,7 @@ public sealed class MatchEntity : ITableEntity
         Persona = Persona,
         AudioBlobName = AudioBlobName,
         ShareToken = ShareToken,
+        Side1Stance = Enum.TryParse<Stance>(Side1Stance, ignoreCase: true, out var stance) ? stance : null,
     };
 
     private static SideKind ParseKind(string? kind) => Enum.TryParse<SideKind>(kind, ignoreCase: true, out var parsed) ? parsed : SideKind.Persona;

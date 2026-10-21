@@ -66,7 +66,7 @@ public sealed class WatchEndpoints : ICarterModule
             RoundNumber(history, speakingHusband ? WatchRound.Husband : WatchRound.Wife),
             request.WasSlapped);
 
-        var result = await ai.GenerateArgumentAsync(husband, wife, history, request.Speaker, attitude, request.WasSlapped, request.Interjection, request.Topic, ct);
+        var result = await ai.GenerateArgumentAsync(husband, wife, history, request.Speaker, attitude, request.WasSlapped, request.Interjection, PoFightJudge.Shared.Models.Sides.Describe(request.Topic, request.HusbandStance, "the husband", "the wife"), ct);
         return Results.Ok(new GenerateRoundResponse(result.Text, result.Mood, attitude, ai.IsFake));
     }
 
@@ -103,7 +103,7 @@ public sealed class WatchEndpoints : ICarterModule
             request.WasSlapped);
 
         http.Response.ContentType = "application/x-ndjson";
-        await foreach (var part in ai.StreamArgumentAsync(husband, wife, history, request.Speaker, attitude, request.WasSlapped, request.Interjection, request.Topic, ct))
+        await foreach (var part in ai.StreamArgumentAsync(husband, wife, history, request.Speaker, attitude, request.WasSlapped, request.Interjection, PoFightJudge.Shared.Models.Sides.Describe(request.Topic, request.HusbandStance, "the husband", "the wife"), ct))
         {
             if (part.Delta is { } delta)
             {
@@ -211,7 +211,7 @@ public sealed class WatchEndpoints : ICarterModule
 
         var (husband, wife) = sides.Value;
         var history = ToContext(request.Rounds);
-        var verdict = await ai.JudgeAsync(husband, wife, history, ct);
+        var verdict = await ai.JudgeAsync(husband, wife, history, PoFightJudge.Shared.Models.Sides.Describe(request.Topic, request.HusbandStance, "the husband", "the wife"), ct);
 
         var totalWords = history.Sum(r => ArgueScoreCalculator.WordCount(r.Text));
         var husbandStats = ArgueScoreCalculator.Compute(LinesOf(history, WatchRound.Husband), totalWords);
@@ -229,7 +229,7 @@ public sealed class WatchEndpoints : ICarterModule
         }
 
         var match = WatchMatch.Complete(matchId, request.Husband, request.Wife, userId, request.Topic, rounds, verdict.Winner, verdict.Verdict, husbandStats, wifeStats, now);
-        await PersistAsync(match, ai.IsFake, matches, watchResults, fighters, fighterResults, fighterWords, now, ct);
+        await PersistAsync(match, ai.IsFake, string.IsNullOrWhiteSpace(request.Topic) ? null : request.HusbandStance, matches, watchResults, fighters, fighterResults, fighterWords, now, ct);
 
         // A person who argued here has said one more thing about how they argue, so their card is rewritten from
         // everything they have said — after this reply, because the room is not waiting on it.
@@ -244,6 +244,7 @@ public sealed class WatchEndpoints : ICarterModule
     private static async Task PersistAsync(
         WatchMatch match,
         bool isFake,
+        Stance? husbandStance,
         IMatchRepository matches,
         IWatchResultRepository watchResults,
         IFighterRepository fighters,
@@ -266,7 +267,10 @@ public sealed class WatchEndpoints : ICarterModule
                 SessionStatus.Ready,
                 match.Winner,
                 match.Verdict,
-                isFake),
+                isFake)
+            {
+                Side1Stance = husbandStance,
+            },
             ct);
 
         await matches.SaveTurnsAsync(

@@ -18,7 +18,7 @@
             <div class="play">
                 <section class="stage" aria-label="The matchup">
                     <div class="corner @(IsSpeaking(WatchTurns.Husband) ? "speaking" : null)">
-                        <SpeakerCard Side="@Simulation.Husband" Profile="@ProfileFor(Simulation.Husband)" IsWife="false" />
+                        <SpeakerCard Side="@Simulation.Husband" Profile="@ProfileFor(Simulation.Husband)" IsWife="false" Stance="@Simulation.HusbandStance" />
                     </div>
 
                     <div class="middle">
@@ -30,7 +30,7 @@
                     </div>
 
                     <div class="corner @(IsSpeaking(WatchTurns.Wife) ? "speaking" : null)">
-                        <SpeakerCard Side="@Simulation.Wife" Profile="@ProfileFor(Simulation.Wife)" IsWife="true" />
+                        <SpeakerCard Side="@Simulation.Wife" Profile="@ProfileFor(Simulation.Wife)" IsWife="true" Stance="@Simulation.HusbandStance?.Opposite()" />
                     </div>
                 </section>
 

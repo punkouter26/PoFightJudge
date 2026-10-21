@@ -48,7 +48,7 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
     [InlineData(true, HostPersonaId.Coach)]
     public async Task The_host_is_the_setting_unless_a_rematch_brings_its_own(bool rematch, HostPersonaId expected)
     {
-        var card = new FightCard("ALI", "SAM", string.Empty, ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Coach);
+        var card = new FightCard("ALI", "SAM", "the thermostat", ProfileRole.Husband, ProfileRole.Wife, HostPersonaId.Coach);
         if (rematch)
         {
             Services.GetRequiredService<SetupMemory>().Rematch(card);
@@ -64,6 +64,6 @@ public class FightSetupTests : BunitContext, IAsyncLifetime
             .HasAttribute("disabled").Should().BeFalse());
         await cut.FindAll(".rz-button").Single(b => b.TextContent.Contains("Start the fight", StringComparison.Ordinal)).ClickAsync(new());
 
-        await _api.Received().StartFightAsync(Arg.Is<CreateFightRequest>(r => r.Persona == expected), Arg.Any<CancellationToken>());
+        await _api.Received().StartFightAsync(Arg.Is<CreateFightRequest>(r => r.Persona == expected && r.Player1Stance == Stance.For), Arg.Any<CancellationToken>());
     }
 }

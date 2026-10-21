@@ -13,6 +13,10 @@ page to the built-in personas: every other profile is removed (records stay; a p
 next match). The pre-made cast never
 changes; a person's profile is first written after their first match and refined after every one after that.
 
+**Sides.** Give a topic and each person picks For or Against it on the setup screen (the other is always the
+opposite). The side shows on the cards and the stage, the AI argues its side, the 2P host announces them, and the
+judges weigh them. The fight and round requests carry it as an optional stance.
+
 **One leaderboard.** `GET /api/leaderboard` ranks the people you have argued with and the cast together, on one Elo
 scale, with the cast marked. There is no nav bar: Home is every destination (CPU, 1P, 2P, Profiles, Leaderboard),
 the logo leads back to it, and the end of a match links to History and the Leaderboard.

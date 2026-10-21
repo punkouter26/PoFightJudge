@@ -97,13 +97,13 @@ public sealed class WatchAi(IGeminiText gemini, GeminiModelOptions models) : IWa
         yield return new ArgumentStreamPart(null, ParseArgument(raw.ToString()));
     }
 
-    public async Task<JudgeVerdictResult> JudgeAsync(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds, CancellationToken ct = default)
+    public async Task<JudgeVerdictResult> JudgeAsync(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds, string? topic = null, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(husband);
         ArgumentNullException.ThrowIfNull(wife);
 
         var request = new GeminiTextRequest(
-            JudgePromptBuilder.Build(husband, wife, rounds),
+            JudgePromptBuilder.Build(husband, wife, rounds, topic),
             models.Judge,
             JudgeOperation,
             JudgeSchema(husband.Initials, wife.Initials),

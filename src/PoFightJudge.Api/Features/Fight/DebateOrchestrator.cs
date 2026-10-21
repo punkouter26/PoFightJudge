@@ -695,6 +695,7 @@ public sealed partial class DebateOrchestrator : IAsyncDisposable
         _isFake)
     {
         Persona = Setup.Persona.ToString(),
+        Side1Stance = Setup.Player1Stance,
     };
 
     /// <summary>The winning tag, or empty while there is no ruling yet.</summary>

@@ -57,4 +57,7 @@ public sealed record DebateSnapshotDto(
     /// Seconds since the match was created. The recorded track is padded to this clock, so anything timestamped in
     /// the browser has to be shifted by it before it lines up with the turn timeline.
     /// </summary>
-    int SessionElapsedSeconds = 0);
+    int SessionElapsedSeconds = 0,
+
+    /// <summary>Whether fighter one is for the topic or against it (fighter two is the opposite); null without sides.</summary>
+    Stance? Player1Stance = null);

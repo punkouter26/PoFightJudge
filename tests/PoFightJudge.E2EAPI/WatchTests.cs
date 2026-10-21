@@ -64,11 +64,13 @@ public class WatchTests(ApiFactory factory)
         using var client = User("watch-verdict");
         var (husband, wife) = await CastAsync("02");
 
-        var response = await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, wife, Transcript(6), "the thermostat"));
+        var response = await client.PostAsJsonAsync(ApiRoutes.Watch.VerdictUrl, new VerdictRequest(husband, wife, Transcript(6), "the thermostat", HusbandStance: Stance.Against));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var verdict = (await response.Content.ReadFromJsonAsync<VerdictResponse>())!;
         verdict.Persisted.Should().BeTrue();
+        (await client.GetFromJsonAsync<MatchDto>(ApiRoutes.Matches.ById(verdict.MatchId)))!.Side1Stance
+            .Should().Be(Stance.Against, "who was for and who against is kept with the match");
         verdict.MatchId.Value.Should().NotBeNullOrWhiteSpace();
         verdict.Verdict.Should().NotBeNullOrWhiteSpace();
         verdict.Winner.Should().BeOneOf(husband.Id, wife.Id, string.Empty);

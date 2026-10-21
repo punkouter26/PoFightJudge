@@ -42,7 +42,7 @@ public static class JudgePromptBuilder
         for each spouse.
         """;
 
-    public static GeminiPrompt Build(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds)
+    public static GeminiPrompt Build(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds, string? topic = null)
     {
         ArgumentNullException.ThrowIfNull(husband);
         ArgumentNullException.ThrowIfNull(wife);
@@ -50,8 +50,11 @@ public static class JudgePromptBuilder
 
         var transcript = string.Join("\n", rounds.Select(r => $"[{RoundPromptBuilder.Side(r.Speaker)}]: {PromptText.Inline(r.Text, RoundPromptBuilder.MaxHistoryLineChars)}"));
 
+        // The topic, with who was for it and who against when sides were chosen: a side held is worth weighing.
+        var about = string.IsNullOrWhiteSpace(topic) ? string.Empty : $"THE FIGHT WAS ABOUT: \"{PromptText.Inline(topic)}\"\n";
+
         var user = $"""
-            PARTICIPANTS:
+            {about}PARTICIPANTS:
             - Husband {husband.Initials} — {Persona(husband)}
             - Wife {wife.Initials} — {Persona(wife)}
 

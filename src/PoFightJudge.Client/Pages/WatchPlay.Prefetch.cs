@@ -231,5 +231,6 @@ public sealed partial class WatchPlay
         speaker,
         Simulation.Topic.Length == 0 ? null : Simulation.Topic,
         interjection,
-        string.Equals(interjection, Interjections.SlapKey, StringComparison.Ordinal));
+        string.Equals(interjection, Interjections.SlapKey, StringComparison.Ordinal),
+        Simulation.HusbandStance);
 }

@@ -2,6 +2,11 @@
 @* Who is about to argue: their tag, and whether the room has met them before. *@
 <article class="fighter po-card @(IsSecond ? "p2" : "p1")" data-tag="@Tag">
     <div class="corner po-eyebrow">@(IsSecond ? "Fighter two" : "Fighter one")</div>
+    @if (Stance is { } side)
+    {
+        @* Which side of the topic this one argues, before a word is said. *@
+        <span class="po-chip stance stance--@(side.ToString().ToLowerInvariant())">@side.Label()</span>
+    }
 
     @if (Tag.Length == 0)
     {
@@ -39,4 +44,7 @@
     [Parameter] public FighterDto? Fighter { get; set; }
 
     [Parameter] public bool IsSecond { get; set; }
+
+    /// <summary>Which side of the topic this one argues; null when there is no topic, or no sides.</summary>
+    [Parameter] public Stance? Stance { get; set; }
 }

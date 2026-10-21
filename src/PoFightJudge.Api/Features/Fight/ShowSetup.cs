@@ -24,4 +24,7 @@ public sealed record ShowSetup(HostPersonaId Persona, string Player1, string Pla
     public bool HasPlayers => Initials.ArePair(Player1, Player2);
 
     public bool HasTopic => !string.IsNullOrWhiteSpace(Topic);
+
+    /// <summary>Whether player one is for the topic or against it (player two is the opposite); null without sides.</summary>
+    public Stance? Player1Stance { get; init; }
 }

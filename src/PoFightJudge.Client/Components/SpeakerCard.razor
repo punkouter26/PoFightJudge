@@ -1,6 +1,11 @@
 @* One side of a matchup as it will be argued: a cast portrait, or the person at the microphone. *@
 <article class="speaker po-card @(IsWife ? "p2" : "p1")" data-side="@(IsWife ? "wife" : "husband")" data-kind="@(Side?.Kind.ToString().ToLowerInvariant() ?? "empty")">
     <div class="role po-eyebrow">@(IsWife ? "Wife" : "Husband")</div>
+    @if (Stance is { } side)
+    {
+        @* Which side of the topic this one argues, before a word is said. *@
+        <span class="po-chip stance stance--@(side.ToString().ToLowerInvariant())">@side.Label()</span>
+    }
 
     @if (Side is null)
     {
@@ -53,6 +58,9 @@
     [Parameter] public ProfileDto? Profile { get; set; }
 
     [Parameter] public bool IsWife { get; set; }
+
+    /// <summary>Which side of the topic this one argues; null when there is no topic, or no sides.</summary>
+    [Parameter] public Stance? Stance { get; set; }
 
     private string FaceUrl => Profile is null ? string.Empty : ApiRoutes.Profiles.Face(Profile.Id);
 }

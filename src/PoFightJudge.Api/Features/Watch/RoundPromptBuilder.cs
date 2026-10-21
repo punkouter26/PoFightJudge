@@ -101,7 +101,8 @@ public static class RoundPromptBuilder
         var topicBlock = string.IsNullOrWhiteSpace(topic)
             ? string.Empty
             : $"\nTHE FIGHT IS ABOUT: \"{PromptText.Inline(topic)}\" — every line must stay on this exact topic. "
-                + "Attack the opponent THROUGH this topic; do not drift to a different fight.\n";
+                + "Attack the opponent THROUGH this topic; do not drift to a different fight. "
+                + "Where it says who is FOR it and who is AGAINST it, argue your own side and never concede it.\n";
 
         var historyText = history.Count == 0
             ? "This is the opening statement."

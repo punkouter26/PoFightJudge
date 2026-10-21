@@ -82,15 +82,20 @@
             </div>
         </div>
     </Sides>
-    <First><FighterCard Tag="@_one" Fighter="@Known(_one)" /></First>
-    <Second><FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" /></Second>
+    <First><FighterCard Tag="@_one" Fighter="@Known(_one)" Stance="@OneStance" /></First>
+    <Second><FighterCard Tag="@_two" Fighter="@Known(_two)" IsSecond="true" Stance="@OneStance?.Opposite()" /></Second>
 </SetupStep>
         </div>;
 
     /// <summary>What about. Who hosts is a Settings choice (Referee unless changed), so setup does not ask.</summary>
     private RenderFragment AboutStep => @<div class="step">
-<TopicField @bind-Value="_topic" Label="What are you arguing about?" Placeholder="who does the dishes"
-            Hint="Leave it blank and the host will ask you both at the top of the show." />
+<TopicField @bind-Value="_topic" Label="What are you arguing about?" Placeholder="loading the dishwasher my way"
+            Hint="Something to be for or against. Leave it blank and the host will ask you both at the top of the show." />
+@if (_topic.Trim().Length > 0)
+{
+    <SideChoice First="@_oneStance" FirstChanged="@(s => _oneStance = s)"
+                FirstName="@(_one.Length > 0 ? _one : "Fighter one")" SecondName="@(_two.Length > 0 ? _two : "Fighter two")" />
+}
         </div>;
 
     /// <summary>The microphone, checked before the bell.</summary>
@@ -131,6 +136,12 @@
     private string _one = string.Empty;
     private string _two = string.Empty;
     private string _topic = string.Empty;
+
+    /// <summary>Whether fighter one is for the topic or against it; fighter two takes the other side.</summary>
+    private Stance _oneStance = Stance.For;
+
+    /// <summary>Fighter one's side, once there is a topic to be for or against.</summary>
+    private Stance? OneStance => Sides.For(_topic, _oneStance);
     private ProfileRole _oneRole = ProfileRole.Husband;
     private ProfileRole _twoRole = ProfileRole.Wife;
     private HostPersonaId _persona = HostPersonaId.Referee;
@@ -172,6 +183,7 @@
             _one = card.One;
             _two = card.Two;
             _topic = card.Topic;
+            _oneStance = card.OneStance ?? Stance.For;
             _oneRole = card.OneRole;
             _twoRole = card.TwoRole;
             _persona = rematch ? card.Persona : _persona;
@@ -197,8 +209,8 @@
         _error = null;
         try
         {
-            var started = await Api.StartFightAsync(new CreateFightRequest(_persona, _one, _two, _topic.Trim() is { Length: > 0 } t ? t : null, _oneRole, _twoRole));
-            await Memory.RememberAsync(new FightCard(_one, _two, _topic.Trim(), _oneRole, _twoRole, _persona) { Device = _device ?? string.Empty });
+            var started = await Api.StartFightAsync(new CreateFightRequest(_persona, _one, _two, _topic.Trim() is { Length: > 0 } t ? t : null, _oneRole, _twoRole, OneStance));
+            await Memory.RememberAsync(new FightCard(_one, _two, _topic.Trim(), _oneRole, _twoRole, _persona) { Device = _device ?? string.Empty, OneStance = OneStance });
             Nav.NavigateTo($"fight/{started.MatchId.Value}");
         }
         catch (Exception ex) when (ApiFailure.Describe(ex, "The fight could not be started") is { } why)

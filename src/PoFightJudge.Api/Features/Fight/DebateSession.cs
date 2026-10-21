@@ -426,7 +426,8 @@ public sealed class DebateSession(DebateOptions options, MatchId matchId, DateTi
         (int)DebateRemaining(now).TotalSeconds,
         Verdict is null ? null : new VerdictDto(Verdict.WinnerLogic.ToSpeaker(), Verdict.WinnerCorrect.ToSpeaker(), Verdict.Overall.ToSpeaker(), Verdict.Reasons),
         Persona,
-        (int)(now - StartedAt).TotalSeconds));
+        (int)(now - StartedAt).TotalSeconds,
+        setup?.Player1Stance));
 
     /// <summary>
     /// Every entry point takes this. The hub thread reports speech, the registry's ticker reads the clocks, the

@@ -358,6 +358,9 @@ body { background: transparent; }
 .po-chip--live { background: var(--po-live); color: var(--po-danger-fg); }
 .po-chip--p1 { background: var(--po-p1); color: var(--po-fg-invert); }
 .po-chip--p2 { background: var(--po-p2); color: var(--po-fg-invert); }
+/* Which side of the topic somebody argues: For takes the accent, Against stays neutral, so the two never read alike. */
+.stance--for { background: var(--po-accent); color: var(--po-accent-fg); }
+.stance--against { background: var(--po-surface-3); color: var(--po-fg); box-shadow: inset 0 0 0 1px var(--po-border); }
 .po-chip--muted { color: var(--po-muted); }
 .po-chip--live::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; }
 

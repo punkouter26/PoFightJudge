@@ -94,7 +94,7 @@ public sealed class FakeWatchAi(TimeSpan? chunkDelay = null) : IWatchAi
     /// Scores the transcript rather than inventing a ruling: more words, more concrete detail and fewer bare
     /// exclamations win. It is not a judge, but it is defensible, deterministic, and it moves when the argument does.
     /// </summary>
-    public Task<JudgeVerdictResult> JudgeAsync(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds, CancellationToken ct = default)
+    public Task<JudgeVerdictResult> JudgeAsync(Profile husband, Profile wife, IReadOnlyList<RoundContext> rounds, string? topic = null, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(husband);
         ArgumentNullException.ThrowIfNull(wife);

@@ -512,7 +512,7 @@ public sealed partial class WatchPlay : IAsyncDisposable
         try
         {
             var topic = Simulation.Topic.Length == 0 ? null : Simulation.Topic;
-            _verdict = await Api.VerdictAsync(new VerdictRequest(Simulation.Husband!, Simulation.Wife!, WithClips(), topic), ct);
+            _verdict = await Api.VerdictAsync(new VerdictRequest(Simulation.Husband!, Simulation.Wife!, WithClips(), topic, HusbandStance: Simulation.HusbandStance), ct);
             _stage = Stage.Done;
             _error = null;
             await Sound.PlayOverAsync(Sfx.GavelThree, 0.9, ct);
@@ -602,13 +602,13 @@ public sealed partial class WatchPlay : IAsyncDisposable
     /// </summary>
     private const string MatchupKey = "po-watch-matchup";
 
-    private sealed record Matchup(MatchSide Husband, MatchSide Wife, string Topic);
+    private sealed record Matchup(MatchSide Husband, MatchSide Wife, string Topic, Stance? HusbandStance = null);
 
     private async Task RememberMatchupAsync()
     {
         try
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(new Matchup(Simulation.Husband!, Simulation.Wife!, Simulation.Topic), System.Text.Json.JsonSerializerOptions.Web);
+            var json = System.Text.Json.JsonSerializer.Serialize(new Matchup(Simulation.Husband!, Simulation.Wife!, Simulation.Topic, Simulation.HusbandStance), System.Text.Json.JsonSerializerOptions.Web);
             await JS.InvokeVoidAsync("sessionStorage.setItem", _leaving.Token, MatchupKey, json);
         }
         catch (Exception ex) when (ex is JSException or InvalidOperationException)

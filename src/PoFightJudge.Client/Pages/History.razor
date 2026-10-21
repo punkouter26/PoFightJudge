@@ -360,7 +360,7 @@
                 match.Topic,
                 same ? last!.OneRole : ProfileRole.Husband,
                 same ? last!.TwoRole : ProfileRole.Wife,
-                same ? last!.Persona : HostPersonaId.Referee));
+                same ? last!.Persona : HostPersonaId.Referee) { OneStance = match.Side1Stance });
             Nav.NavigateTo("2p");
             return;
         }

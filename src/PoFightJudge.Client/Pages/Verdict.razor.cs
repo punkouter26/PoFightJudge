@@ -242,7 +242,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             }
         }
 
-        return new FightCard(one, two, match.Topic, oneRole, twoRole, persona) { Device = last?.Device ?? string.Empty };
+        return new FightCard(one, two, match.Topic, oneRole, twoRole, persona) { Device = last?.Device ?? string.Empty, OneStance = match.Side1Stance };
 
         static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
     }
@@ -338,7 +338,7 @@ public sealed partial class Verdict : ComponentBase, IDisposable
             await Sound.ArmAsync(_leaving.Token);
             var card = RematchCard(_match, await Memory.LastFightAsync());
             var started = await Api.StartFightAsync(
-                new CreateFightRequest(card.Persona, card.One, card.Two, card.Topic.Length > 0 ? card.Topic : null, card.OneRole, card.TwoRole),
+                new CreateFightRequest(card.Persona, card.One, card.Two, card.Topic.Length > 0 ? card.Topic : null, card.OneRole, card.TwoRole, card.OneStance),
                 _leaving.Token);
             await Memory.RememberAsync(card);
             Nav.NavigateTo($"fight/{started.MatchId.Value}");

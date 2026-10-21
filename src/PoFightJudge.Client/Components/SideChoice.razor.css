@@ -1,0 +1,23 @@
+/* Two short rows under the topic: a name, then For / Against. */
+.sides {
+  display: grid;
+  gap: var(--po-space-2);
+  margin: var(--po-space-3) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--po-space-2) var(--po-space-3);
+}
+
+.name {
+  min-width: 8rem;
+  font-weight: 600;
+}
+
+.side.p1 .name { color: var(--po-p1); }
+.side.p2 .name { color: var(--po-p2); }

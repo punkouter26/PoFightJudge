@@ -116,6 +116,11 @@ public class WatchSetupTests : BunitContext
         cut.Markup.Should().Contain("three letters");
         await TypeTagAsync(cut, "KDX");
         await (await TopicBoxAsync(cut)).ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "the thermostat" });
+
+        // With a topic, each side is for it or against it, and the other side is always the opposite.
+        var sides = cut.FindComponent<SideChoice>();
+        await cut.InvokeAsync(() => sides.Instance.FirstChanged.InvokeAsync(Stance.Against));
+        cut.FindAll("article.speaker .stance").Select(s => s.TextContent.Trim()).Should().Equal(["Against", "For"], "both cards say which side they argue");
         await (await StartButtonAsync(cut)).ClickAsync(new());
 
         _simulation.IsReady.Should().BeTrue();
@@ -123,6 +128,7 @@ public class WatchSetupTests : BunitContext
         _simulation.Wife!.IsHuman.Should().BeTrue("which leaves the other one for you");
         _simulation.Human!.Id.Should().Be("KDX", "the person's tag is what the debate is recorded under");
         _simulation.Topic.Should().Be("the thermostat");
+        _simulation.HusbandStance.Should().Be(Stance.Against, "the side chosen is the side argued");
         nav.Uri.Should().EndWith("watch/play");
     }
 

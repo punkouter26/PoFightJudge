@@ -70,7 +70,8 @@ public sealed record GenerateRoundRequest(
     string Speaker,
     string? Topic = null,
     string? Interjection = null,
-    bool WasSlapped = false);
+    bool WasSlapped = false,
+    Stance? HusbandStance = null);
 
 /// <summary>One generated line plus the attitude it was asked for, so the UI can show why it landed the way it did.</summary>
 public sealed record GenerateRoundResponse(string Text, string Mood, string Attitude, bool IsFake);
@@ -104,7 +105,7 @@ public sealed record RoundStreamPart(string? Delta, GenerateRoundResponse? Final
 /// result; a person's side gets a fighter result, so their profile grows from this debate too.
 /// <paramref name="MatchId"/> is only for re-judging a match the caller already owns.
 /// </summary>
-public sealed record VerdictRequest(MatchSide Husband, MatchSide Wife, IReadOnlyList<WatchRoundDto> Rounds, string? Topic = null, MatchId? MatchId = null);
+public sealed record VerdictRequest(MatchSide Husband, MatchSide Wife, IReadOnlyList<WatchRoundDto> Rounds, string? Topic = null, MatchId? MatchId = null, Stance? HusbandStance = null);
 
 /// <summary>The ruling. <paramref name="Winner"/> is the winning side's id, or empty when the judge called neither.</summary>
 public sealed record VerdictResponse(

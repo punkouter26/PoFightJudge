@@ -1,0 +1,36 @@
+@* Who is for the topic and who is against it, chosen before the first word. One radio row per person; the two
+   always oppose, so choosing one side for either person sets the other person to the other side. *@
+<fieldset class="sides">
+    <legend class="po-eyebrow">Who is for it?</legend>
+    <div class="side p1">
+        <span class="name">@FirstName</span>
+        <RadzenRadioButtonList TValue="Stance" Value="@First" ValueChanged="@(s => FirstChanged.InvokeAsync(s))"
+                               Orientation="Orientation.Horizontal" Name="firstStance" aria-label="@($"{FirstName}'s side")">
+            <Items>
+                <RadzenRadioButtonListItem Text="For" Value="Stance.For" />
+                <RadzenRadioButtonListItem Text="Against" Value="Stance.Against" />
+            </Items>
+        </RadzenRadioButtonList>
+    </div>
+    <div class="side p2">
+        <span class="name">@SecondName</span>
+        <RadzenRadioButtonList TValue="Stance" Value="@First.Opposite()" ValueChanged="@(s => FirstChanged.InvokeAsync(s.Opposite()))"
+                               Orientation="Orientation.Horizontal" Name="secondStance" aria-label="@($"{SecondName}'s side")">
+            <Items>
+                <RadzenRadioButtonListItem Text="For" Value="Stance.For" />
+                <RadzenRadioButtonListItem Text="Against" Value="Stance.Against" />
+            </Items>
+        </RadzenRadioButtonList>
+    </div>
+</fieldset>
+
+@code {
+    /// <summary>The first person's side; the second's is always the opposite.</summary>
+    [Parameter] public Stance First { get; set; } = Stance.For;
+
+    [Parameter] public EventCallback<Stance> FirstChanged { get; set; }
+
+    [Parameter] public string FirstName { get; set; } = "Fighter one";
+
+    [Parameter] public string SecondName { get; set; } = "Fighter two";
+}
