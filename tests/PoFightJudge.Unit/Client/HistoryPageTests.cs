@@ -187,6 +187,9 @@ public class StandingsTests : BunitContext, IAsyncLifetime
         await cut.WaitForAssertionAsync(() => cut.FindComponent<Board>().Instance.Rows.Select(r => r.DisplayName)
             .Should().Equal(["Married Husband", "Alex", "Karen"], "one board, in the order the server ranked it"));
         cut.FindAll(".board .cast-mark").Should().HaveCount(2, "the two personas are marked; the person is not");
+        // Four columns, so it fits a narrow window without scrolling sideways or squeezing the names out.
+        cut.FindAll(".board thead th").Select(th => th.TextContent.Trim()).Should().Equal(["#", "Who", "Rating", "Record"]);
+        cut.Find(".board tbody tr").TextContent.Should().Contain("4 of 5").And.Contain("80%");
         cut.FindAll("[aria-label='Whose standings']").Should().BeEmpty("there is no switch between two boards");
     }
 

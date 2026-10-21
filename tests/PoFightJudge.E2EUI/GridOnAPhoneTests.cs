@@ -25,6 +25,8 @@ public class GridOnAPhoneTests(AppFixture app)
     {
         await RecordAsync(MatchMode.Watch, "the thermostat", MatchSide.Persona("MAH", "Married Husband"), MatchSide.Persona("KSH", "Karen"));
         await RecordAsync(MatchMode.Fight, "who forgot the bins and left them there all week", MatchSide.Human("HA1", "Alex"), MatchSide.Human("HA2", "Sam"));
+        // A second, so both have the two games the leaderboard asks for and its board is drawn, not its empty state.
+        await RecordAsync(MatchMode.Fight, "the thermostat, again", MatchSide.Human("HA1", "Alex"), MatchSide.Human("HA2", "Sam"));
 
         var offenders = new List<string>();
         foreach (var route in new[] { "/history", "/fighters", "/health", "/vs/HA1/HA2" })
@@ -37,6 +39,7 @@ public class GridOnAPhoneTests(AppFixture app)
             {
                 // Somebody is on the card, or this page is an empty state and says nothing about its grid.
                 (await page.Locator(".roster .po-stacked").CountAsync()).Should().BeGreaterThan(0, "two people have fought");
+                (await page.Locator(".board tbody tr").CountAsync()).Should().BeGreaterThan(0, "both have two games, so the board is drawn");
             }
 
             if (route.StartsWith("/vs/", StringComparison.Ordinal))

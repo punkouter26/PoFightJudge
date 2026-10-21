@@ -99,6 +99,8 @@
 .content {
   flex: 1;
   min-width: 0;
+  /* Room under the last of the page for the build stamp, which is fixed in the corner and would sit on it. */
+  padding-bottom: var(--po-space-5);
 }
 
 @media (max-width: 40rem) {

@@ -1,4 +1,5 @@
 @using System.Globalization
+@inject Viewport Viewport
 @* The leaderboard: people and the cast together. Rank is the row's place in the order the server returned, not a stored number. *@
 
 <div class="po-scope">
@@ -12,7 +13,10 @@ else
                     RowClick="@(args => Open(args.Data))"
                     RowRender="@(args => args.Attributes["class"] = OnOpen.HasDelegate ? "openable" : string.Empty)">
         <Columns>
-            <RadzenDataGridColumn TItem="Placed" Title="#" Width="3.5rem" Property="@nameof(Placed.Rank)" />
+            @* Four columns, about 18rem fixed beside the name (12rem on a phone, where the tier badge gives way to the
+               number): a narrow window does not scroll sideways, and the name keeps its room. The win rate is a
+               number in the record rather than a bar of its own. *@
+            <RadzenDataGridColumn TItem="Placed" Title="#" Width="@(Viewport.IsPhone ? "2rem" : "2.5rem")" Property="@nameof(Placed.Rank)" />
             <RadzenDataGridColumn TItem="Placed" Title="Who">
                 <Template Context="placed">
                     @placed.Row.DisplayName
@@ -23,20 +27,20 @@ else
                     }
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="Placed" Title="Rating" Width="10rem">
-                <Template Context="placed"><strong>@placed.Row.Rating</strong> <RankBadge Rating="@placed.Row.Rating" Fights="@placed.Row.Matches" /></Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="Placed" Title="Won" Width="7rem">
-                <Template Context="placed">@placed.Row.Wins of @placed.Row.Matches</Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="Placed" Title="Win rate" Width="12rem">
+            <RadzenDataGridColumn TItem="Placed" Title="Rating" Width="@(Viewport.IsPhone ? "4rem" : "8rem")">
                 <Template Context="placed">
-                    <RadzenProgressBar Value="@(placed.Row.WinRate * 100)" ShowValue="false" Mode="ProgressBarMode.Determinate" class="rate" />
-                    <span class="rate-value">@((placed.Row.WinRate * 100).ToString("0", CultureInfo.CurrentCulture))%</span>
+                    <strong>@placed.Row.Rating</strong>
+                    @if (!Viewport.IsPhone)
+                    {
+                        <RankBadge Rating="@placed.Row.Rating" Fights="@placed.Row.Matches" />
+                    }
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="Placed" Title="Average score" Width="9rem">
-                <Template Context="placed">@placed.Row.AverageScore.ToString("0.#", CultureInfo.CurrentCulture)</Template>
+            <RadzenDataGridColumn TItem="Placed" Title="Record" Width="@(Viewport.IsPhone ? "6.5rem" : "7.5rem")">
+                <Template Context="placed">
+                    @placed.Row.Wins of @placed.Row.Matches
+                    <span class="po-muted rate-value">@((placed.Row.WinRate * 100).ToString("0", CultureInfo.CurrentCulture))%</span>
+                </Template>
             </RadzenDataGridColumn>
         </Columns>
     </RadzenDataGrid>
