@@ -71,8 +71,10 @@ other through `Shared` contracts and repositories, not through each other's serv
 - Records are computed on read by `FighterStatsBuilder` and `StyleProfileBuilder` from
   result rows. Nothing anywhere increments a counter. A profile's record (`ProfileDto.Record`) is the same:
   `ProfileRecords` counts the cast's watches, or a person's fights, when `/api/profiles` is read.
-- Profiles are read-only. They are the pre-made cast (`SeedOnStartup`; the seed endpoint behind "Load default cast"
-  puts it back) or written from play by `FighterPersonaWriter`. There is no create, edit, delete, generate or face
+- Profiles are read-only. They are the pre-made cast (`SeedOnStartup` adds any that are missing) or written from play
+  by `FighterPersonaWriter`. "Load default cast" (`POST /api/seed/profiles`) is a reset: it removes every profile
+  that is not a built-in persona, the ones from play included, and writes the built-ins back. Records are untouched,
+  and a person's profile returns after their next match. There is no create, edit, delete, generate or face
   upload route, and no editor in the client. The pre-made cast never changes; a person's persona is written after
   their first match and rewritten from all their words after every one after that.
 - A person's tag is exactly three letters (`Initials.IsTag`), checked where it is entered: the 2P start, a human seat in

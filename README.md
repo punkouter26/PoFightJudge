@@ -8,7 +8,9 @@ yourself.
 
 **Profiles are never written by hand.** The cast is the pre-made personas (added at startup) plus everybody who has
 played, whose persona is written from their own debates. Each profile's record (wins, losses, rating) is counted from
-its games on read: `GET /api/profiles` is read-only and returns it with every profile. The pre-made cast never
+its games on read: `GET /api/profiles` is read-only and returns it with every profile. "Load default cast" resets the
+page to the built-in personas: every other profile is removed (records stay; a player's profile returns after their
+next match). The pre-made cast never
 changes; a person's profile is first written after their first match and refined after every one after that.
 
 **One leaderboard.** `GET /api/leaderboard` ranks the people you have argued with and the cast together, on one Elo

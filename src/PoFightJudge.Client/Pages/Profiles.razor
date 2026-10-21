@@ -132,7 +132,7 @@
     private async Task SeedAsync()
     {
         var confirmed = await Dialog.Confirm(
-            "Put the default cast back? Any of them that has changed goes back to how it was; people who have played are untouched.",
+            "Reset to the default cast? Every other profile is removed, including the ones written from play (they come back after that person's next match; their records stay).",
             "Load default cast",
             new ConfirmOptions { OkButtonText = "Load cast", CancelButtonText = "Not now" });
         if (confirmed != true)
@@ -144,7 +144,7 @@
         try
         {
             var result = await Api.SeedProfilesAsync();
-            Notify.Notify(NotificationSeverity.Success, "Cast loaded", $"{result.Seeded} personas, {result.Faces} with a portrait.");
+            Notify.Notify(NotificationSeverity.Success, "Cast loaded", $"{result.Seeded} personas, {result.Faces} with a portrait; {result.Removed} others removed.");
             await LoadAsync();
         }
         catch (ApiException ex)

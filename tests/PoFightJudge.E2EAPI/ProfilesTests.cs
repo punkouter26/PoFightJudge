@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using PoFightJudge.Api.Features.Auth;
+using PoFightJudge.Api.Features.Profiles;
+using PoFightJudge.Api.Features.Profiles.Seeding;
 using PoFightJudge.Shared;
 using PoFightJudge.Shared.Identifiers;
 using PoFightJudge.Shared.Models;
@@ -45,10 +48,22 @@ public class ProfilesTests(ApiFactory factory)
     public async Task Profiles_are_read_only_and_each_one_carries_its_record()
     {
         using var client = User();
-        (await client.PostAsync(ApiRoutes.Seed.ProfilesUrl, null)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // "Load default cast" is a reset: every profile that is not a built-in persona goes, the ones written from
+        // play included (they come back after that person's next match), and the built-ins are put back.
+        var store = factory.Services.GetRequiredService<IProfileRepository>();
+        await store.UpsertAsync(Persona("ZZZ").ToDomain());
+        var fromPlay = Persona("HAX").ToDomain();
+        fromPlay.MarkFromFights();
+        await store.UpsertAsync(fromPlay);
+
+        var seeded = await client.PostAsync(ApiRoutes.Seed.ProfilesUrl, null);
+        seeded.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await seeded.Content.ReadFromJsonAsync<SeedResultDto>())!.Removed.Should().BeGreaterThanOrEqualTo(2);
 
         var list = (await client.GetFromJsonAsync<List<ProfileDto>>(ApiRoutes.Profiles.Base))!;
-        list.Should().Contain(p => p.Persona.Initials == "KSH");
+        list.Select(p => p.Persona.Initials).Should().NotContain(["ZZZ", "HAX"], "a hand-made profile and one written from play are both gone");
+        list.Select(p => p.Persona.Initials).Should().Contain(SeedProfiles.All.Select(p => p.Initials), "every built-in persona is back");
         list.Should().OnlyContain(p => p.Record != null && p.Record.Rating > 0);
 
         var kim = ProfileId.From("KSH");

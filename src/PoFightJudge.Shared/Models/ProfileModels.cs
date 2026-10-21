@@ -104,8 +104,11 @@ public sealed record ProfileRecordDto(int Matches, int Wins, int Losses, int Dra
     public static ProfileRecordDto None { get; } = new(0, 0, 0, 0, 1000);
 }
 
-/// <summary>Result of <c>POST /api/seed/profiles</c>: how many personas were written and how many got a bundled face.</summary>
-public sealed record SeedResultDto(int Seeded, IReadOnlyList<string> Initials, int Faces);
+/// <summary>
+/// Result of <c>POST /api/seed/profiles</c>: how many built-in personas were written, how many got a bundled face, and
+/// how many other profiles were removed to leave only them.
+/// </summary>
+public sealed record SeedResultDto(int Seeded, IReadOnlyList<string> Initials, int Faces, int Removed = 0);
 
 /// <summary>
 /// Synthesized speech on the wire. The format is carried with the bytes because the server's provider chain can fall
