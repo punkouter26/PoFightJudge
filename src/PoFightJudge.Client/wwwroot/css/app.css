@@ -95,7 +95,6 @@
   --po-surface: light-dark(#ffffff, #151923);
   --po-surface-2: light-dark(#f5f2eb, #1c2230);
   --po-surface-3: light-dark(#e9e5dc, #232a3a);
-  --po-scrim: light-dark(rgba(20, 22, 28, 0.55), rgba(0, 0, 0, 0.7));
 
   /* ── Ink ── */
   --po-fg: light-dark(#15171d, #eef0f4);

@@ -12,7 +12,8 @@ its games on read: `GET /api/profiles` is read-only and returns it with every pr
 changes; a person's profile is first written after their first match and refined after every one after that.
 
 **One leaderboard.** `GET /api/leaderboard` ranks the people you have argued with and the cast together, on one Elo
-scale, with the cast marked. It is reached from the end of a match, not the nav bar.
+scale, with the cast marked. There is no nav bar: Home is every destination (CPU, 1P, 2P, Profiles, Leaderboard),
+the logo leads back to it, and the end of a match links to History and the Leaderboard.
 
 **FIGHT** — you two, one microphone. A Gemini Live host introduces you, interrupts, cross-examines and rules, and
 afterwards the recording is transcribed, diarised, measured and judged: claims, fallacies, traits, thirty

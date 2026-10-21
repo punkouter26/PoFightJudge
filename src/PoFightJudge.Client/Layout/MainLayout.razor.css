@@ -10,7 +10,7 @@
   color: var(--po-fg);
 }
 
-/* ── Top bar: [brand | primary nav | session] ── */
+/* ── Top bar: [brand | session]. No nav: Home is every destination, and the brand leads back to it. ── */
 .topbar {
   position: sticky;
   top: 0;
@@ -67,49 +67,6 @@
   color: var(--po-accent-text);
 }
 
-/* Radzen menu: broadcast tabs — flat, underlined when active. */
-.nav {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  justify-content: center;
-}
-
-/* Flat, so the bar is one surface rather than a grey block in the middle of it. */
-.nav ::deep .rz-menu { background: transparent; }
-
-/* Some of the channel icons are wider than they are tall; the slot is sized to the widest so none sits on its label. */
-.nav ::deep .rz-navigation-item-icon { width: auto; min-width: 1.25em; }
-
-.nav ::deep .rz-navigation-item-link {
-  padding: 0 var(--po-space-2);
-  border-radius: var(--po-radius-sm);
-  color: var(--po-muted);
-  font-size: var(--po-text-sm);
-  font-weight: 500;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  transition: color var(--po-dur-fast) var(--po-ease), background var(--po-dur-fast) var(--po-ease);
-}
-
-.nav ::deep .rz-navigation-item-link:hover {
-  color: var(--po-fg);
-  background: var(--po-surface-2);
-}
-
-.nav ::deep .rz-navigation-item-link.rz-navigation-item-link-active,
-.nav ::deep .rz-navigation-item-wrapper-active > .rz-navigation-item-link {
-  color: var(--po-fg);
-  font-weight: 700;
-  background: var(--po-surface-2);
-  border-bottom-color: var(--po-accent);
-}
-
-.nav ::deep .rz-navigation-item-icon {
-  color: inherit;
-  font-size: 1.125rem;
-  margin-inline-end: var(--po-space-1);
-}
 
 .session {
   flex: none;
@@ -142,27 +99,6 @@
 .content {
   flex: 1;
   min-width: 0;
-}
-
-/* The toggle belongs to the drawer, so it is not on a screen wide enough for the bar. Through ::deep: RadzenButton
-   renders its own markup in Radzen's assembly, which carries no scope attribute of ours. */
-.session ::deep .drawer-toggle { display: none; }
-
-/* ── Nav switches at 64rem: eight tabs, a brand and a session block do not fit sooner. ── */
-@media (max-width: 64rem) {
-  /* The bar goes, the drawer's button arrives. Both are decided here rather than by Radzen's own responsive menu,
-     which makes the same choice from JavaScript after measuring the bar — and until that ran, the first paint had
-     all eight items in flow and a 269 px top bar that then jumped 205 px when it collapsed. */
-  .nav { display: none; }
-
-  .session ::deep .drawer-toggle { display: inline-flex; }
-
-  .topbar {
-    grid-template-columns: auto 1fr auto;
-    gap: var(--po-space-3);
-    padding-inline: max(var(--po-space-4), var(--po-safe-l)) max(var(--po-space-4), var(--po-safe-r));
-  }
-
 }
 
 @media (max-width: 40rem) {
@@ -231,58 +167,10 @@
   flex-wrap: wrap;
 }
 
-/* ── The drawer ──
-   A sheet from the leading edge, over a scrim, above the sticky bar. Only in the document while it is open, so it
-   costs nothing on a screen that never asks for it. */
-.po-drawer-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  background: var(--po-scrim);
-  animation: po-fade var(--po-dur-fast) var(--po-ease);
-}
-
-.po-drawer {
-  position: fixed;
-  inset-block: 0;
-  inset-inline-start: 0;
-  z-index: 21;
-  width: min(18rem, 82vw);
-  padding: var(--po-space-4) var(--po-space-3);
-  padding-block-start: calc(var(--po-space-4) + var(--po-safe-t));
-  padding-block-end: calc(var(--po-space-4) + var(--po-safe-b));
-  padding-inline-start: max(var(--po-space-3), var(--po-safe-l));
-  overflow-y: auto;
-  background: var(--po-bg-elev);
-  border-inline-end: 1px solid var(--po-border);
-  box-shadow: var(--po-shadow-3);
-  animation: po-slide-in var(--po-dur-base) var(--po-ease);
-}
-
-.po-drawer ::deep .rz-navigation-item-link {
-  min-height: 48px;
-  border-radius: var(--po-radius-sm);
-  color: var(--po-fg);
-  font-family: var(--po-font-body);
-}
-
-.po-drawer ::deep .rz-navigation-item-link:hover {
-  background: var(--po-surface-2);
-}
-
-.po-drawer ::deep .rz-navigation-item-wrapper-active > .rz-navigation-item-link {
-  background: var(--po-surface-2);
-  font-weight: 700;
-  box-shadow: inset 3px 0 0 var(--po-accent);
-}
-
 @keyframes po-fade {
   from { opacity: 0; }
 }
 
-@keyframes po-slide-in {
-  from { transform: translateX(-100%); }
-}
 
 /* The build version, bottom right of every page. */
 .build {
