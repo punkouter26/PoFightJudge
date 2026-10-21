@@ -20,6 +20,10 @@ public class WatchFlowTests(AppFixture app)
         await ChooseAsync(page, side: 1, "Kimberly");
 
         await AppFixture.ToTheLastStepAsync(page);
+        // A topic gives each of them a side: For / Against is offered, and both cards say which side they argue.
+        await page.Locator("input[name=topic]").FillAsync("turning the heating up");
+        await page.Locator("fieldset.sides").WaitForAsync(new() { Timeout = 10_000 });
+        (await page.Locator("article.speaker .stance").AllInnerTextsAsync()).Select(t => t.Trim()).Should().Equal(["FOR", "AGAINST"]);
         await page.GetByRole(AriaRole.Button, new() { Name = "Start the argument" }).ClickAsync();
 
         // Six lines, spoken one after another, then the judge.
@@ -31,6 +35,11 @@ public class WatchFlowTests(AppFixture app)
         (await page.EvaluateAsync<int>(AppFixture.LinesSaid)).Should().Be(6, "three rounds each, no slap");
         (await page.Locator("article.line").CountAsync()).Should().Be(1, "only the line just said is on the page");
         (await verdict.InnerTextAsync()).Should().ContainEquivalentOf("took it", "the ruling says who took it, and innerText carries the display font uppercase");
+        if (await verdict.Locator("h2").InnerTextAsync() is var headline && !headline.Contains("NOBODY", StringComparison.OrdinalIgnoreCase))
+        {
+            (await verdict.Locator(".winning-side").InnerTextAsync()).Should().MatchRegex("(?i)^(for|against) wins$", "a sided argument says which side carried it");
+        }
+
         await WatchHardeningTests.ShootAsync(page, "watch-verdict");
 
         // A rematch starts a fresh argument rather than appending to the one just judged.

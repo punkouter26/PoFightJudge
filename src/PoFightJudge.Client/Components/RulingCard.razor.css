@@ -41,3 +41,6 @@
   gap: var(--po-space-2);
   line-height: 1.5;
 }
+
+/* The winning side is a chip, the width of its words, not a bar across the card. */
+.winning-side { justify-self: start; }

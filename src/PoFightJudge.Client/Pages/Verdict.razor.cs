@@ -110,6 +110,11 @@ public sealed partial class Verdict : ComponentBase, IDisposable
         ? null
         : _report.Overall.Overall == Speaker.Player1 ? _report.Player1.Name : _report.Player2.Name;
 
+    /// <summary>Which side of the topic took it: fighter one's own when they won, the other side when fighter two did.</summary>
+    private Stance? WinningSide => _report is not { Overall.Ruled: true } || _match?.Side1Stance is not { } first
+        ? null
+        : _report.Overall.Overall == Speaker.Player1 ? first : first.Opposite();
+
     /// <summary>Who did not take it, when somebody did.</summary>
     private string? Loser => _report is not { Overall.Ruled: true }
         ? null

@@ -125,7 +125,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
     [Fact(Timeout = 60_000)]
     public async Task Two_personas_argue_their_rounds_out_voicing_but_not_printing_the_cue_and_the_judge_rules()
     {
-        _simulation.Set(Matthew, Kimberly, "the thermostat");
+        _simulation.Set(Matthew, Kimberly, "the thermostat", Stance.For);
 
         var cut = Render<WatchPlay>();
         await RunToTheEndAsync(cut, _clock);
@@ -138,6 +138,7 @@ public sealed class WatchPlayTests : BunitContext, IAsyncLifetime
             "the husband opens and the two alternate");
         _asked.Should().OnlyContain(a => a.Topic == "the thermostat");
         cut.Markup.Should().Contain("He answered the point");
+        cut.Find("section.verdict .winning-side").TextContent.Trim().Should().Be("For wins", "Matthew took it, and he was for the thermostat");
         // History and the cast's standings are not on the nav bar: the end of a match is where they are reached from.
         cut.FindAll("section.verdict a[href='history'], section.verdict a[href='fighters']").Should().HaveCount(2);
         cut.Markup.Should().Contain("Matthew", "the ruling names the winner rather than printing initials alone");

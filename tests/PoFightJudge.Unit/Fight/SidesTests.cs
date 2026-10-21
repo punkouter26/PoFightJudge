@@ -24,6 +24,12 @@ public class SidesTests
         Sides.Describe("turning the heat up", null, "a", "b").Should().Be("turning the heat up", "no sides chosen, nothing added");
         Sides.Describe("  ", Stance.For, "a", "b").Should().BeNullOrWhiteSpace("a side of nothing is no side");
 
+        // Which side won: the winner's own, the other side's opposite, nothing for a draw or a match without sides.
+        Sides.OfWinner("SAM", "ALI", "SAM", Stance.For).Should().Be(Stance.Against);
+        Sides.OfWinner("ALI", "ALI", "SAM", Stance.For).Should().Be(Stance.For);
+        Sides.OfWinner(string.Empty, "ALI", "SAM", Stance.For).Should().BeNull("a draw has no winning side");
+        Sides.OfWinner("ALI", "ALI", "SAM", null).Should().BeNull();
+
         // CPU / 1P: each persona is told to argue its own side and never give it up.
         var husband = Profile.Create("HUS", ProfileRole.Husband, "a", "b", "c", "d");
         var wife = Profile.Create("WIF", ProfileRole.Wife, "a", "b", "c", "d");

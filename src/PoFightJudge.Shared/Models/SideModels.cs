@@ -30,6 +30,23 @@ public static class Sides
             ? topic
             : $"{topic.Trim()} ({first} is {Word(stance)} it; {second} is {Word(stance.Opposite())} it)";
 
+    /// <summary>
+    /// The side that won: the winner's own stance, the opposite of side one's when side two took it, and none for a draw
+    /// or a match argued without sides.
+    /// </summary>
+    public static Stance? OfWinner(string? winnerId, string side1Id, string side2Id, Stance? side1Stance) =>
+        side1Stance is not { } first || string.IsNullOrEmpty(winnerId) ? null
+        : string.Equals(winnerId, side1Id, StringComparison.OrdinalIgnoreCase) ? first
+        : string.Equals(winnerId, side2Id, StringComparison.OrdinalIgnoreCase) ? first.Opposite()
+        : null;
+
+    /// <summary>A side dealt at random, for a spun topic: nobody gets to pick the easy one.</summary>
+    public static Stance Deal(Random random)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        return random.Next(2) == 0 ? Stance.For : Stance.Against;
+    }
+
     /// <summary>The first side's stance if there is a topic to have one about, else none.</summary>
     public static Stance? For(string? topic, Stance stance) => string.IsNullOrWhiteSpace(topic) ? null : stance;
 

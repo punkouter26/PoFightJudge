@@ -35,7 +35,7 @@
                 @* The first screen is the answer: who took it and why on the left, the two of them in numbers on the
                    right. The timeline and the highlights are the first tab below, not 600 px between the two. *@
                 <div class="top">
-                <RulingCard Winner="@Winner" Summary="@_report.Overall.Summary" Reasons="@_report.Overall.Reasons">
+                <RulingCard Winner="@Winner" Summary="@_report.Overall.Summary" Reasons="@_report.Overall.Reasons" WinningSide="@WinningSide">
                     @if (_report.SpeakerMappingFlagged)
                     {
                         <PageAlert Kind="AlertStyle.Warning" Class="problem">

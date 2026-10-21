@@ -101,7 +101,8 @@
 
     /// <summary>The second: what about, and the button that starts it.</summary>
     private RenderFragment AboutStep => @<div class="step">
-            <TopicField @bind-Value="_topic" Placeholder="turning the heating up"
+            @* A spun topic deals the sides as well, so nobody picks the easy one; they can still be changed. *@
+            <TopicField @bind-Value="_topic" Spun="@(() => _husbandStance = Sides.Deal(Random.Shared))" Placeholder="turning the heating up"
                         Hint="Something to be for or against. Leave it blank and they will find something." />
             @if (_topic.Trim().Length > 0)
             {

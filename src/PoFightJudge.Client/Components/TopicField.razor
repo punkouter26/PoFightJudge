@@ -58,6 +58,9 @@
 
     [Parameter] public string Value { get; set; } = string.Empty;
 
+    /// <summary>Raised when a spin lands, so the page can deal the sides for the topic it landed on.</summary>
+    [Parameter] public EventCallback Spun { get; set; }
+
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
     [Parameter] public string Label { get; set; } = "What is the fight about?";
@@ -141,5 +144,6 @@
         _spinning = false;
         await Services.CueAsync(Sfx.Cue);
         await PublishAsync(reel[^1]);
+        await Spun.InvokeAsync();
     }
 }

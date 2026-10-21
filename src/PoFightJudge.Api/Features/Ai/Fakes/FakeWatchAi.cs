@@ -49,7 +49,8 @@ public sealed class FakeWatchAi(TimeSpan? chunkDelay = null) : IWatchAi
         var seed = Hash($"{self.Initials}|{other.Initials}|{round}|{attitude}|{wasSlapped}|{topic}");
         var opener = Openers[seed % Openers.Length];
         var cue = Cues[(seed / 7) % Cues.Length];
-        var subject = string.IsNullOrWhiteSpace(topic) ? Pick(self.CommonArguments, "the dishwasher") : topic.Trim();
+        // The topic as written, without the "(the husband is FOR it; ...)" the prompts get: a line names the subject, not the rules.
+        var subject = string.IsNullOrWhiteSpace(topic) ? Pick(self.CommonArguments, "the dishwasher") : topic.Split(" (", 2)[0].Trim();
         var jab = Pick(other.Dislikes, "everything I do");
         var mine = Pick(self.Likes, "a bit of peace");
 

@@ -89,7 +89,8 @@
 
     /// <summary>What about. Who hosts is a Settings choice (Referee unless changed), so setup does not ask.</summary>
     private RenderFragment AboutStep => @<div class="step">
-<TopicField @bind-Value="_topic" Label="What are you arguing about?" Placeholder="loading the dishwasher my way"
+@* A spun topic deals the sides as well, so nobody picks the easy one; they can still be changed. *@
+<TopicField @bind-Value="_topic" Spun="@(() => _oneStance = Sides.Deal(Random.Shared))" Label="What are you arguing about?" Placeholder="loading the dishwasher my way"
             Hint="Something to be for or against. Leave it blank and the host will ask you both at the top of the show." />
 @if (_topic.Trim().Length > 0)
 {

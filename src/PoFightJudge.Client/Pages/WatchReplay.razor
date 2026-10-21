@@ -31,7 +31,8 @@
         {
             <div class="replay">
                 <RulingCard Side1="@_match.Side1.DisplayName" Side2="@_match.Side2.DisplayName"
-                            Winner="@(_match.IsDraw ? null : _match.Winner)" Summary="@_match.Verdict">
+                            Winner="@(_match.IsDraw ? null : _match.Winner)" Summary="@_match.Verdict"
+                            WinningSide="@Sides.OfWinner(_match.Winner, _match.Side1.Id, _match.Side2.Id, _match.Side1Stance)">
                     <Header>
                         @if (_match.IsFake)
                         {

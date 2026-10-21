@@ -14,6 +14,11 @@
         </div>
     }
     <span class="po-eyebrow po-eyebrow--accent">The ruling</span>
+    @if (WinningSide is { } side)
+    {
+        @* Which side of the topic carried it, as well as who: the headline a sided argument is really about. *@
+        <span class="po-chip stance stance--@(side.ToString().ToLowerInvariant()) winning-side">@side.Label() wins</span>
+    }
     <h2 class="po-display">@Headline(Winner)</h2>
     @if (!string.IsNullOrWhiteSpace(Summary))
     {
@@ -41,6 +46,9 @@
     [Parameter] public string? Side2 { get; set; }
 
     [Parameter] public string? Summary { get; set; }
+
+    /// <summary>Which side of the topic won; null for a draw or a match argued without sides.</summary>
+    [Parameter] public Stance? WinningSide { get; set; }
 
     [Parameter] public IReadOnlyList<string>? Reasons { get; set; }
 
